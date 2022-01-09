@@ -1,0 +1,745 @@
+\input tex/epsf.tex
+\font\sixteen=cmbx15
+\font\twelve=cmr12
+\font\fonteautor=cmbx12
+\font\fonteemail=cmtt10
+\font\twelvenegit=cmbxti12
+\font\twelvebold=cmbx12
+\font\trezebold=cmbx13
+\font\twelveit=cmsl12
+\font\monodoze=cmtt12
+\font\it=cmti12
+\voffset=0,959994cm % 3,5cm de margem superior e 2,5cm inferior
+\parskip=6pt
+
+\def\titulo#1{{\noindent\sixteen\hbox to\hsize{\hfill#1\hfill}}}
+\def\autor#1{{\noindent\fonteautor\hbox to\hsize{\hfill#1\hfill}}}
+\def\email#1{{\noindent\fonteemail\hbox to\hsize{\hfill#1\hfill}}}
+\def\negrito#1{{\twelvebold#1}}
+\def\italico#1{{\twelveit#1}}
+\def\monoespaco#1{{\monodoze#1}}
+\def\iniciocodigo{\lineskip=0pt\parskip=0pt}
+\def\fimcodigo{\twelve\parskip=0pt plus 1pt\lineskip=1pt}
+
+\long\def\abstract#1{\parshape 10 0.8cm 13.4cm 0.8cm 13.4cm
+0.8cm 13.4cm 0.8cm 13.4cm 0.8cm 13.4cm 0.8cm 13.4cm 0.8cm 13.4cm
+0.8cm 13.4cm 0.8cm 13.4cm 0.8cm 13.4cm
+\noindent{{\twelvenegit Abstract: }\twelveit #1}}
+
+\def\resumo#1{\parshape  10 0.8cm 13.4cm 0.8cm 13.4cm
+0.8cm 13.4cm 0.8cm 13.4cm 0.8cm 13.4cm 0.8cm 13.4cm 0.8cm 13.4cm
+0.8cm 13.4cm 0.8cm 13.4cm 0.8cm 13.4cm
+\noindent{{\twelvenegit Resumo: }\twelveit #1}}
+
+\def\secao#1{\vskip12pt\noindent{\trezebold#1}\parshape 1 0cm 15cm}
+\def\subsecao#1{\vskip12pt\noindent{\twelvebold#1}}
+\def\subsubsecao#1{\vskip12pt\noindent{\negrito{#1}}}
+\def\referencia#1{\vskip6pt\parshape 5 0cm 15cm 0.5cm 14.5cm 0.5cm 14.5cm
+0.5cm 14.5cm 0.5cm 14.5cm {\twelve\noindent#1}}
+
+%@* .
+
+\twelve
+\vskip12pt
+\titulo{Weaver User Interface}
+\vskip12pt
+\autor{Thiago Leucz Astrizi}
+\vskip6pt
+\email{thiago@@bitbitbit.com.br}
+\vskip6pt
+
+\abstract{This article contains an implementation of an interpreter
+ for a subset of METAFONT language with some extensions. This subset
+ is aimed at allowing the definition of flexible and parameterized
+ typographic fonts that could be interpreted and redered on the fly.
+ Because of this, we sacrifice some flexibility on the language to be
+ able to produce faster results. The implementation will be used by
+ Weaver Game Engine as a module and uses modern OpenGL to render the
+ fonts.}
+
+\secao{1. Introduction}
+
+METAFONT is a language made to describe typographical fonts. It was
+created on 1984 by Donald Knuth and differs from other formats for
+allowing a designer to create different fonts merely by changing basic
+parameters in the base description of the font. This way, a designer
+should not create a single typographic font, but a meta-font from
+which new fonts could be obtained changing these basic parameters.
+
+The original specification for the METAFONT language can be found in
+[KNUTH, 1989], but the implementation described here will be just a
+subset of that language. Perhaps in the future we fill the gaps and
+this implementation becames more complete and compatible with the full
+specification.
+
+As this article defines a subsystem for Weaver Game Engine, and more
+specifically a subsystem for the user interface modulus, our objective
+here will be define the following function that will interpret a file
+with METAFONT source code and load as user interface using the letters
+read as texture:
+
+\iniciocodigo
+@<Function Declaration (metafont.h)@>=
+void _Wmetafont_loading(void *(*permanent_alloc)(size_t),
+		      void (*permanent_free)(void *),
+		      void *(*temporary_alloc)(size_t),
+		      void (*temporary_free)(void *),
+		      void (*before_loading_interface)(void),
+		      void (*after_loading_interface)(void),
+		      char *source_filename,
+                      struct user_interface *target);
+@
+\fimcodigo
+
+And we will need the header for Weaver user interfaces:
+
+\iniciociodigo
+@<Include General Headers (metafont.h)@>=
+#include "interface.h"
+@
+\fimcodigo
+
+But besides loading the typographical fonts to a texture, we also want
+to create a font structure that could be used to render text for other
+functions:
+
+\iniciocodigo
+@<Function Declaration (metafont.h)@>+=
+struct metafont *new_metafont(char *filename);
+@
+\fimcodigo
+
+\subsecao{1.1. Literate Programming}
+
+Our API will be written using the literate programming technique,
+proposed by Knuth on [Knuth, 1984]. It consist in writting a computer
+program explaining didactically in a text what is being done while
+presenting the code. The program is compiled extracting the computer
+code directly from the didactical text. The code shall be presented in
+a way and order such that it is best for explaining for a human. Not
+how it would be easier to compile.
+
+Using this technique, this document is not a simple documentation for
+our code. It is the code by itself. The part that will be extracted to
+be compiled can be identified by a gray background. We begin each
+piece of code by a title that names it. For example, immediately
+before this subsection we presented a series of function
+declarations. And how one could deduct by the title, most of them will
+be positioned in the file \monoespaco{metafont.h}.
+
+We can show the structure of the file \monoespaco{metafont.h}:
+
+\iniciocodigo
+@(src/metafont.h@>=
+#ifndef __WEAVER_METAFONT
+#define __WEAVER_METAFONT
+#ifdef __cplusplus
+extern "C" {
+#endif
+#include <stdbool.h> // Define  'bool' type
+#if !defined(_WIN32)
+#include <sys/param.h> // Needed on BSD, but does not exist on Windows
+#endif  
+@<Include General Headers (metafont.h)@>
+//@<General Macros (metafont.h)@>
+//@<Data Structures (metafont.h)@>
+@<Function Declaration (metafont.h)@>
+#ifdef __cplusplus
+}
+#endif
+#endif
+@
+\fimcodigo
+
+The cde above shows the default boureaucracy to define a header for
+our C API. The two first lines and the last one are macros that ensure
+that this header will not be inserted more than once in a single
+compiling unit. The lines 3, 4, 5 and the three lines before the last
+one make the header adequate to be used in C++ code. This tells the
+compiler that we are using C code and that therefore, the compiler is
+free to use optimizations assuming that we will not use C++ exclusive
+techniques, like operator overloading. Next we include a header that
+will let us to use boolean variables. And there are some parts in
+red. Note that one of them is called ``Function Declaration
+(weaver.h)'', the same title used in most of the code declared
+previously. This means that all the previous code with this title will
+be inserted in that position inside this file. The other parts in red
+represent code that we will define in the next sections.
+
+If you want to know how is the \monoespaco{metafont.c} file related
+with this header, its structure is:
+
+\iniciocodigo
+@(src/metafont.c@>=
+#include "metafont.h"
+@<Local Headers (metafont.c)@>
+//@<Local Macros (metafont.c)@>
+@<Local Data Structures (metafont.c)@>
+//@<Local Variables (metafont.c)@>
+@<Auxiliary Local Functions (metafont.c)@>
+//@<API Functions Definition (metafont.c)@>
+@
+\fimcodigo
+
+All the code presented in this document will be placed in one of these
+two files. Besides them, no other file will be created.
+
+\secao{2. Lexer}
+
+The first thing to be created for a language is its lexer. It will
+read the source code in a file and will output a list of tokens, where
+tokens are the most basic unit in the language. A token is like a
+word.
+
+METAFONT recognizes three kind of tokens: numeric, strings and
+symbolic. In practice we will subdivide the symbolic tokens in several
+kind of subtokens to store and read them in a more efficient way.
+
+A numeric token will be represented internally as a floating point
+number. This is different than specified in the original METAFONT,
+where a custom numeric representation was used. As here we are
+interested in more speed, we will choose floating point numbers
+because they have nowadays more hardware support. This is how a
+numeric token is represented:
+
+\iniciocodigo
+@<Local Data Structures (metafont.c)@>=
+#define TYPE_NUMERIC 1
+struct numeric_token{
+  int type;   // Should be equal 'TYPE_NUMERIC'
+  void *next;
+  float value;
+};
+@
+\fimcodigo
+
+And this is how we will represent string tokens:
+
+\iniciocodigo
+@<Local Data Structures (metafont.c)@>+=
+#define TYPE_STRING 2
+struct string_token{
+  int type;   // Should be equal 'TYPE_STRING'
+  void *next;
+  char value[5];
+};
+@
+\fimcodigo
+
+We will store only the first 5 bytes of each given string, even if in
+the source code the string is bigger. This is so because unlike in the
+original METAFONT, our only use for strings are saying wich Unicode
+character each glyph should represent. For this we need only 5 bytes
+(at most 4 for the character and a final byte 0). But we could use
+them to associate a glyph with ligatures like ``ff'', which also fits
+in these 5 bytes.
+
+In the case of symbolic tokens, we need to store their entire name to
+know which symbolic token we have. We shoul allocate dynamically
+a string to store its name:
+
+\iniciocodigo
+@<Local Data Structures (metafont.c)@>+=
+#define TYPE_SYMBOLIC 3
+struct symbolic_token{
+  int type;   // Should be equal 'TYPE_SYMBOLIC'
+  void *next;
+  char *value;
+};
+@
+\fimcodigo
+
+But this could consume much more memory than needed. Some symbols are
+very common and are embedded in the language. These symbols could use
+less space. For example, parenthesis and commas. We can represent them
+with the following structure:
+
+\iniciocodigo
+@<Local Data Structures (metafont.c)@>+=
+#define TYPE_OPEN_PARENTHESIS  4 // '('
+#define TYPE_CLOSE_PARENTHESIS 5 // ')'
+#define TYPE_COMMA             6 // ','
+//@<METAFONT: Symbolic Token Definition@>
+// (...)
+struct generic_token{
+  int type;   // Should be one of the above
+  void *next;
+};
+@
+\fimcodigo
+
+We can define later more reserved symbolic tokens. We just need to
+define them to an unique number greater than 6. Any token whose type
+is a number greater or equal than 3 is a symbolic token.
+
+Now the funtion that represents our lexer. It will get as argument an
+allocation function and a string with a path for the file with
+METAFONT source code. It will return a linked list of tokens:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>=
+void *lexer(void *(*alloc)(size_t), char *path){
+  FILE *fp;
+  char c;
+  void *first_token = NULL, *last_token = NULL;
+  fp = fopen(path, "r");
+  if(fp == NULL)
+    return NULL;
+  while((c = fgetc(fp)) != EOF){
+    char next_char = fgetc(fp);
+    ungetc(next_char, fp);
+    if(c == '\n')
+      continue;
+    @<Lexer: Rule 1@>
+    @<Lexer: Rule 2@>
+    @<Lexer: Rule 3@>
+    @<Lexer: Rule 4@>
+    @<Lexer: Rule 5@>
+    @<Lexer: Rule 6@>
+    // No rule applied: error
+    fprintf(stderr, "ERROR: Unknown character: '%c'\n", c);
+    return NULL;
+  }
+  return first_token;
+}
+@
+\fimcodigo
+
+Oh, we used the struct \monoespaco{FILE}, this means that we need to
+include the header with data about input/output to be able to read
+files:
+
+\iniciocodigo
+@<Local Headers (metafont.c)@>=
+#include <stdio.h>
+@
+\fimcodigo
+
+The rules to read tokens consist in reading each line in the source
+code applying the following rules for each character in the line:
+
+1) If the next character is a space or a period and is not followed by
+a period or a decimal digit, then ignore this character and go to the
+next one.
+
+\iniciocodigo
+@<Lexer: Rule 1@>=
+if(c == ' ' || (c == '.' && next_char != '.' && !isdigit(next_char)))
+  continue;
+@
+\fimcodigo
+
+As we are using \monoespaco{isdigit} function, we need to insert the
+following header that declares this function:
+
+\iniciocodigo
+@<Local Headers (metafont.c)@>=
+#include <ctype.h>
+@
+\fimcodigo
+
+
+2) If the character is a percent sign, ignore it and also ignore all
+other following characters in this line. Percentage sign is how we
+start comments in the language.
+
+\iniciocodigo
+@<Lexer: Rule 2@>=
+if(c == '%'){
+  do{
+    c = fgetc(fp);
+  } while(c != '\n' && c != EOF);
+  continue;
+}
+@
+\fimcodigo
+
+3) If the next character is a decimal digit or a period, then the next
+token in numeric. It will be interpreted from the biggest sequence of
+decimal digests and a single optional period representing the decimal
+dot present in the input.
+
+\iniciocodigo
+@<Lexer: Rule 3@>=
+if((c == '.' && isdigit(next_char)) || isdigit(c)){
+  char buffer[256];
+  struct numeric_token *new_token = (struct numeric_token *)
+                                      alloc(sizeof(struct numeric_token));
+  if(new_token == NULL)
+    return NULL;
+  new_token -> type = TYPE_NUMERIC;
+  new_token -> next = NULL;
+  int i = 0;
+  int number_of_dots = (c == '.');
+  buffer[i] = c;
+  i ++;
+  do{
+    c = fgetc(fp);
+    if(c == '.')
+      number_of_dots ++;
+    buffer[i] = c;
+    i ++;
+  } while(isdigit(c) || (c == '.' && number_of_dots == 1));
+  ungetc(c, fp);
+  i --;
+  buffer[i] = '\0';
+  new_token -> value = atof(buffer);
+  if(first_token == NULL)
+    first_token = last_token = new_token;
+  else{
+    ((struct generic_token *) last_token) -> next = new_token;
+    last_token = new_token;
+  }
+  continue;
+}
+@
+\fimcodigo
+
+4) If the next character is a double quote, the next token will be a
+string. Its content will be all other chacarters until the next double
+quote that should be in the same line. If we have a double quote
+opening a string, but the same line do not have another double quote
+to close the string, this is an error.
+
+\iniciocodigo
+@<Lexer: Rule 4@>=
+if(c == '"'){
+  struct string_token *new_token = (struct string_token *)
+                                     alloc(sizeof(struct string_token));
+  if(new_token == NULL)
+    return NULL;
+  new_token -> type = TYPE_STRING;
+  new_token -> next = NULL;
+  int i = 0;
+  do{
+    c = fgetc(fp);
+    if(i < 5){
+      new_token -> value[i] = c;
+      i ++;
+    }
+  } while(c != '"' && c != '\n' && c != EOF);
+  i --;
+  new_token -> value[i] = '\0';
+  if(c == '\n' || c == EOF){
+    fprintf(stderr, "ERROR: Incomplete String.\n");
+    return NULL;
+  }
+  if(first_token == NULL)
+    first_token = last_token = new_token;
+  else{
+    ((struct generic_token *) last_token) -> next = new_token;
+    last_token = new_token;
+  }
+  continue;
+}
+@
+\fimcodigo
+
+
+5) If the next character is a parenthesis or a comma, the next token
+will be symbolic and composed by that single character.
+
+\iniciocodigo
+@<Lexer: Rule 5@>=
+if(c == '(' || c == ')' || c == ','){
+  struct generic_token *new_token =
+     (struct generic_token *) alloc(sizeof(struct generic_token));
+  if(new_token == NULL)
+    return NULL;
+  if(c == '(')
+    new_token -> type = TYPE_OPEN_PARENTHESIS;
+  else if(c == ')')
+    new_token -> type = TYPE_CLOSE_PARENTHESIS;
+  else
+    new_token -> type = TYPE_COMMA;
+  new_token -> next = NULL;
+  if(first_token == NULL)
+    first_token = last_token = new_token;
+  else{
+    ((struct generic_token *) last_token) -> next = new_token;
+    last_token = new_token;
+  }
+  continue;
+}
+@
+\fimcodigo
+
+6) Otherwise, the next token will be symbolic and will be composed by
+the longest sequence of 12 families of characteres:
+
+\iniciocodigo
+@<Lexer: Rule 6@>=
+{
+  char buffer[256];
+  int i = 0;
+  buffer[0] = '\0';
+  // Buffer is read according with subrules 6-a to 6-l
+  @<Lexer: Rule A@>
+  @<Lexer: Rule B@>
+  @<Lexer: Rule C@>
+  @<Lexer: Rule D@>
+  @<Lexer: Rule E@>
+  @<Lexer: Rule F@>
+  @<Lexer: Rule G@>
+  @<Lexer: Rule H@>
+  @<Lexer: Rule I@>
+  @<Lexer: Rule J@>
+  @<Lexer: Rule K@>
+  @<Lexer: Rule L@>
+  // Depending on buffer content, generates next token
+  //@<Lexer: New Reserved Symbolic Token@>
+  @<Lexer: New Generic Symbolic Token@>
+}
+@
+\fimcodigo
+
+a) The first family of letters are the uppercase and lowercase
+alphabetic letters and underline.
+
+\iniciocodigo
+@<Lexer: Rule A@>=
+if(isalpha(c) || c == '_'){
+  do{
+    buffer[i] = c;
+    i ++;
+    c = fgetc(fp);
+  } while(isalpha(c) || c == '_');
+  ungetc(c, fp);
+  buffer[i] = '\0';
+}
+@
+\fimcodigo
+
+b) The second family is composed by the symbols for greater, equal and
+lesser, colon and ``|''.
+
+\iniciocodigo
+@<Lexer: Rule B@>=
+else if(c == '>' || c == '<' || c == '=' || c == ':' || c == '|'){
+  do{
+    buffer[i] = c;
+    i ++;
+    c = fgetc(fp);
+  } while(c == '>' || c == '<' || c == '=' || c == ':' || c == '|');
+  ungetc(c, fp);
+  buffer[i] = '\0';
+}
+@
+\fimcodigo
+
+c) Acute and grave accents.
+
+\iniciocodigo
+@<Lexer: Rule C@>=
+else if(c == '`' || c == '\''){
+  do{
+    buffer[i] = c;
+    i ++;
+    c = fgetc(fp);
+  } while(c == '`' || c == '\'');
+  ungetc(c, fp);
+  buffer[i] = '\0';
+}
+@
+\fimcodigo
+
+d) Plus and minus.
+
+\iniciocodigo
+@<Lexer: Rule D@>=
+else if(c == '+' || c == '-'){
+  do{
+    buffer[i] = c;
+    i ++;
+    c = fgetc(fp);
+  } while(c == '+' || c == '-');
+  ungetc(c, fp);
+  buffer[i] = '\0';
+}
+@
+\fimcodigo
+
+e) Slash, backslash and multiplication symbol.
+
+\iniciocodigo
+@<Lexer: Rule E@>=
+else if(c == '\\' || c == '/' || c == '*'){
+  do{
+    buffer[i] = c;
+    i ++;
+    c = fgetc(fp);
+  } while(c == '\\' || c == '/' || c == '*');
+  ungetc(c, fp);
+  buffer[i] = '\0';
+}
+@
+\fimcodigo
+
+f) Opening brackets
+
+\iniciocodigo
+@<Lexer: Rule F@>=
+else if(c == '?' || c == '!'){
+  do{
+    buffer[i] = c;
+    i ++;
+    c = fgetc(fp);
+  } while(c == '?' || c == '!');
+  ungetc(c, fp);
+  buffer[i] = '\0';
+}
+@
+\fimcodigo
+
+g) Hash sign, ampersand, at sign and dollar sign.
+
+\iniciocodigo
+@<Lexer: Rule G@>=
+else if(c == '#' || c == '&' || c == '@@' || c == '$'){
+  do{
+    buffer[i] = c;
+    i ++;
+    c = fgetc(fp);
+  } while(c == '#' || c == '&' || c == '@@' || c == '$');
+  ungetc(c, fp);
+  buffer[i] = '\0';
+}
+@
+\fimcodigo
+
+h) Circumflex accent and tilde.
+
+\iniciocodigo
+@<Lexer: Rule H@>=
+else if(c == '^' || c == '~'){
+  do{
+    buffer[i] = c;
+    i ++;
+    c = fgetc(fp);
+  } while(c == '^' || c == '~');
+  ungetc(c, fp);
+  buffer[i] = '\0';
+}
+@
+\fimcodigo
+
+i) Opening brackets.
+
+\iniciocodigo
+@<Lexer: Rule I@>=
+else if(c == '['){
+  do{
+    buffer[i] = c;
+    i ++;
+    c = fgetc(fp);
+  } while(c == '[');
+  ungetc(c, fp);
+  buffer[i] = '\0';
+}
+@
+\fimcodigo
+
+j) Closing brackets.
+
+\iniciocodigo
+@<Lexer: Rule J@>=
+else if(c == ']'){
+  do{
+    buffer[i] = c;
+    i ++;
+    c = fgetc(fp);
+  } while(c == ']');
+  ungetc(c, fp);
+  buffer[i] = '\0';
+}
+@
+\fimcodigo
+
+k) Opening and closing braces.
+
+\iniciocodigo
+@<Lexer: Rule K@>=
+else if(c == '{' || c == '}'){
+  do{
+    buffer[i] = c;
+    i ++;
+    c = fgetc(fp);
+  } while(c == '{' || c == '}');
+  ungetc(c, fp);
+  buffer[i] = '\0';
+}
+@
+\fimcodigo
+
+l) Ponto.
+
+\iniciocodigo
+@<Lexer: Rule L@>=
+else if(c == '.'){
+  do{
+    buffer[i] = c;
+    i ++;
+    c = fgetc(fp);
+  } while(c == '.');
+  ungetc(c, fp);
+  buffer[i] = '\0';
+}
+@
+\fimcodigo
+
+
+After reading the characters for our new symbolic token, we check if
+we have a reserved symbolic token: a token representing a language
+keyword. We can check this using function \monoespaco{strcmp}
+comparing the buffer with some keywords. For now we still will not
+show this code because we did not define any reserved symbol, but
+anyway we will already include the header to manipulate strings.
+
+\iniciocodigo
+@<Local Headers (metafont.c)@>=
+#include <string.h>
+@
+\fimcodigo
+
+
+If we do not have a reserved symbolic token, and if we have something
+in our buffer, then we generate a new generic symbolic token:
+
+\iniciocodigo
+@<Lexer: New Generic Symbolic Token@>=
+if(buffer[0] != '\0'){
+  buffer[255] = '\0';
+  size_t buffer_size = strlen(buffer) + 1;
+  struct symbolic_token *new_token =
+     (struct symbolic_token *) alloc(sizeof(struct symbolic_token));
+  if(new_token == NULL)
+    return NULL;
+  new_token -> type = TYPE_SYMBOLIC;
+  new_token -> next = NULL;
+  new_token -> value = (char *) alloc(buffer_size);
+  memcpy(new_token -> value, buffer, buffer_size);
+  if(first_token == NULL)
+    first_token = last_token = new_token;
+  else{
+    ((struct generic_token *) last_token) -> next = new_token;
+    last_token = new_token;
+  }
+  continue;
+}
+@
+\fimcodigo
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\secao{References}
+
+\referencia{Knuth, D. E. (1984) ``Literate Programming'', The Computer
+  Journal, Volume 27, Issue 2, Pages 97--111.}
+
+\referencia{Knuth, D. E. (1989) ``The METAFONT book'', Addison-Wesley
+ Longsman Publishing Co., Inc}
+
+
+\fim

@@ -1,0 +1,249 @@
+#include "metafont.c"
+
+#include <stdlib.h>
+#include <math.h>
+#if defined(_WIN32)
+#include <Windows.h>
+#else
+#include <sys/time.h>
+#endif
+
+#if defined(__EMSCRIPTEN__)
+#include <emscripten.h>
+#endif
+
+#include <string.h>
+
+int numero_de_testes = 0, acertos = 0, falhas = 0;
+void imprime_resultado(void){
+  printf("\n%d tests: %d sucess, %d fails\n\n",
+	 numero_de_testes, acertos, falhas);
+}
+
+void assert(char *descricao, bool valor){
+  char pontos[72], *s = descricao;
+  size_t tamanho_string = 0;
+  int i;
+  while(*s)
+    tamanho_string += (*s++ & 0xC0) != 0x80;
+  pontos[0] = ' ';
+  for(i = 1; i < 71 - (int) tamanho_string; i ++)
+    pontos[i] = '.';
+  pontos[i] = '\0';
+  numero_de_testes ++;
+  printf("%s%s", descricao, pontos);
+  if(valor){
+#if defined(__unix__) && !defined(__EMSCRIPTEN__)
+    printf("\e[32m[OK]\033[0m\n");
+#else
+    printf("[OK]\n");
+#endif
+    acertos ++;
+  }
+  else{
+#if defined(__unix__) && !defined(__EMSCRIPTEN__)
+    printf("\033[0;31m[FAIL]\033[0m\n");
+#else
+    printf("[FAIL]\n");
+#endif
+    falhas ++;
+  }
+}
+
+void test_lexer(void){
+  void *p, *token_pointer = lexer(malloc, "tests/ridiculous.mf");
+  bool ok = true;
+  p = token_pointer;
+  if(((struct symbolic_token *) p) -> type != TYPE_SYMBOLIC){
+    ok = false;
+    goto test_lexer_end;
+  }
+  if(strcmp(((struct symbolic_token *) p) -> value, "xx")){
+    printf("ERROR: Expected 'xx', found '%s'\n",
+	   ((struct symbolic_token *) p) -> value);
+    ok = false;
+    goto test_lexer_end;
+  }
+  p = ((struct generic_token *) p) -> next;
+  if(((struct numeric_token *) p) -> type != TYPE_NUMERIC){
+    ok = false;
+    goto test_lexer_end;
+  }
+  if(((struct numeric_token *) p) -> value - 3.1 > 0.00002){
+    printf("ERROR: Expected '%.f', found '%.f'\n", 3.1,
+	   ((struct numeric_token *) p) -> value);
+    ok = false;
+    goto test_lexer_end;
+  }
+  p = ((struct generic_token *) p) -> next;
+  if(((struct numeric_token *) p) -> type != TYPE_NUMERIC){
+    ok = false;
+    goto test_lexer_end;
+  }
+  if(((struct numeric_token *) p) -> value - 0.6 > 0.00002){
+    ok = false;
+    goto test_lexer_end;
+  }
+  p = ((struct generic_token *) p) -> next;
+  if(((struct symbolic_token *) p) -> type != TYPE_SYMBOLIC){
+    printf("ERROR: Expected '%d', found '%d'\n", TYPE_SYMBOLIC,
+	   ((struct symbolic_token *) p) -> type);
+    ok = false;
+    goto test_lexer_end;
+  }
+  if(strcmp(((struct symbolic_token *) p) -> value, "..")){
+    ok = false;
+    goto test_lexer_end;
+  }
+  p = ((struct generic_token *) p) -> next;
+  if(((struct symbolic_token *) p) -> type != TYPE_SYMBOLIC){
+    ok = false;
+    goto test_lexer_end;
+  }
+  if(strcmp(((struct symbolic_token *) p) -> value, "[[")){
+    ok = false;
+    goto test_lexer_end;
+  }
+  p = ((struct generic_token *) p) -> next;
+  if(((struct symbolic_token *) p) -> type != TYPE_SYMBOLIC){
+    ok = false;
+    goto test_lexer_end;
+  }
+  if(strcmp(((struct symbolic_token *) p) -> value, "a")){
+    printf("ERROR: Expected 'a', found '%s'\n",
+	   ((struct symbolic_token *) p) -> value);
+    ok = false;
+    goto test_lexer_end;
+  }
+  p = ((struct generic_token *) p) -> next;
+  if(((struct symbolic_token *) p) -> type != TYPE_SYMBOLIC){
+    ok = false;
+    goto test_lexer_end;
+  }
+  if(strcmp(((struct symbolic_token *) p) -> value, "+-")){
+    ok = false;
+    goto test_lexer_end;
+  }
+  p = ((struct generic_token *) p) -> next;
+  if(((struct symbolic_token *) p) -> type != TYPE_SYMBOLIC){
+    ok = false;
+    goto test_lexer_end;
+  }
+  if(strcmp(((struct symbolic_token *) p) -> value, "bc_d")){
+    ok = false;
+    goto test_lexer_end;
+  }
+  p = ((struct generic_token *) p) -> next;
+  if(((struct symbolic_token *) p) -> type != TYPE_SYMBOLIC){
+    ok = false;
+    goto test_lexer_end;
+  }
+  if(strcmp(((struct symbolic_token *) p) -> value, "e")){
+    ok = false;
+    goto test_lexer_end;
+  }
+  p = ((struct generic_token *) p) -> next;
+  if(((struct symbolic_token *) p) -> type != TYPE_SYMBOLIC){
+    ok = false;
+    goto test_lexer_end;
+  }
+  if(strcmp(((struct symbolic_token *) p) -> value, "]")){
+    ok = false;
+    goto test_lexer_end;
+  }
+  p = ((struct generic_token *) p) -> next;
+  if(((struct symbolic_token *) p) -> type != TYPE_SYMBOLIC){
+    ok = false;
+    goto test_lexer_end;
+  }
+  if(strcmp(((struct symbolic_token *) p) -> value, "]")){
+    ok = false;
+    goto test_lexer_end;
+  }
+  p = ((struct generic_token *) p) -> next;
+  if(((struct string_token *) p) -> type != TYPE_STRING){
+    ok = false;
+    goto test_lexer_end;
+  }
+  if(strcmp(((struct string_token *) p) -> value, "a %")){
+    ok = false;
+    goto test_lexer_end;
+  }
+  p = ((struct generic_token *) p) -> next; 
+  if(((struct symbolic_token *) p) -> type != TYPE_SYMBOLIC){
+    ok = false;
+    goto test_lexer_end;
+  }
+  if(strcmp(((struct symbolic_token *) p) -> value, "<|>")){
+    ok = false;
+    goto test_lexer_end;
+  }
+  p = ((struct generic_token *) p) -> next;
+  if(((struct symbolic_token *) p) -> type != TYPE_OPEN_PARENTHESIS){
+    ok = false;
+    goto test_lexer_end;
+  }
+  p = ((struct generic_token *) p) -> next;
+  if(((struct symbolic_token *) p) -> type != TYPE_OPEN_PARENTHESIS){
+    ok = false;
+    goto test_lexer_end;
+  }
+  p = ((struct generic_token *) p) -> next;
+  if(((struct symbolic_token *) p) -> type != TYPE_SYMBOLIC){
+    ok = false;
+    goto test_lexer_end;
+  }
+  if(strcmp(((struct symbolic_token *) p) -> value, "$")){
+    ok = false;
+    goto test_lexer_end;
+  }
+  p = ((struct generic_token *) p) -> next;
+  if(((struct numeric_token *) p) -> type != TYPE_NUMERIC){
+    ok = false;
+    goto test_lexer_end;
+  }
+  if(((struct numeric_token *) p) -> value - 1.0 > 0.00002){
+    ok = false;
+    goto test_lexer_end;
+  }
+  p = ((struct generic_token *) p) -> next;
+  if(((struct numeric_token *) p) -> type != TYPE_NUMERIC){
+    ok = false;
+    goto test_lexer_end;
+  }
+  if(((struct numeric_token *) p) -> value - 5.0 > 0.00002){
+    ok = false;
+    goto test_lexer_end;
+  }
+  p = ((struct generic_token *) p) -> next;
+  if(((struct string_token *) p) -> type != TYPE_STRING){
+    ok = false;
+    goto test_lexer_end;
+  }
+  if(strcmp(((struct string_token *) p) -> value, "+-")){
+    ok = false;
+    goto test_lexer_end;
+  }
+  p = ((struct generic_token *) p) -> next; 
+  if(((struct string_token *) p) -> type != TYPE_STRING){
+    ok = false;
+    goto test_lexer_end;
+  }
+  if(strcmp(((struct string_token *) p) -> value, "")){
+    ok = false;
+    goto test_lexer_end;
+  }
+  p = ((struct generic_token *) p) -> next; 
+  if(p != NULL){
+    ok = false;
+    goto test_lexer_end;
+  } 
+ test_lexer_end:
+  assert("Testing METAFONT Lexer", ok);
+}
+
+int main(int argc, char **argv){
+  test_lexer();
+  imprime_resultado();
+  return 0;
+}
