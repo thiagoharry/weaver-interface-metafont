@@ -160,7 +160,7 @@ extern "C" {
 #endif
 @<Inclui Cabeçalhos Gerais (metafont.h)@>
 //@<Macros Gerais (metafont.h)@>
-//@<Estrutura de Dados (metafont.h)@>
+@<Estrutura de Dados (metafont.h)@>
 @<Declaração de Função (metafont.h)@>
 #ifdef __cplusplus
 }
@@ -281,7 +281,7 @@ seguinte estrutura:
 #define TYPE_OPEN_PARENTHESIS  4 // '('
 #define TYPE_CLOSE_PARENTHESIS 5 // ')'
 #define TYPE_COMMA             6 // ','
-//@<METAFONT: Definição de Token Simbólico@>
+@<METAFONT: Definição de Token Simbólico@>
 // (...)
 struct generic_token{
   int type;   // Should be one of the above
@@ -295,6 +295,29 @@ simbólicos reservados. Basta definirmos eles associando a um número
 único maior do que 6. Qualquer token cujo tipo é um número igual ou
 maior que 3 é simbólico.
 
+Todo token possui um ponteiro para um próximo token. Isso ocorre
+porque eles geralmente formarão uma lista encadeada de tokens. Para
+desalocar a memória ocupada por uma lista de tokens dada uma função de
+desalocação e apagá-los, pode-se usar a seguinte função:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>=
+void free_token_list(void (*dealloc)(void *), void *token_list){
+  struct generic_token *p, *p_next;
+  if(dealloc == NULL || token_list == NULL)
+    return;
+  p = token_list;
+  while(p != NULL){
+    p_next = p -> next;
+    if(p -> type == TYPE_SYMBOLIC)
+      dealloc(((struct symbolic_token *) p) -> value);
+    dealloc(p);
+    p = p_next;
+  }
+}
+@
+\fimcodigo
+
 Agora a função que fará a análise léxica. Ela receberá como argumento
 uma função de alocação de memória e uma string com caminho para
 arquivo com código-fonte METAFONT. Ela retornará uma lista encadeada
@@ -302,7 +325,7 @@ de tokens:
 
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>=
-void *lexer(void *(*alloc)(size_t), char *path){
+void *lexer(void *(*alloc)(size_t), void (*dealloc)(void *), char *path){
   FILE *fp;
   char c;
   void *first_token = NULL, *last_token = NULL;
@@ -322,6 +345,7 @@ void *lexer(void *(*alloc)(size_t), char *path){
     @<Análise Léxica: Regra 6@>
     // Nenhuma regra aplicada: erro
     fprintf(stderr, "ERROR: Unknown character: '%c'\n", c);
+    free_token_list(dealloc, first_token);
     return NULL;
   }
   return first_token;
@@ -388,8 +412,10 @@ if((c == '.' && isdigit(next_char)) || isdigit(c)){
   char buffer[256];
   struct numeric_token *new_token = (struct numeric_token *)
                                       alloc(sizeof(struct numeric_token));
-  if(new_token == NULL)
+  if(new_token == NULL){
+    free_token_list(dealloc, first_token);
     return NULL;
+  }
   new_token -> type = TYPE_NUMERIC;
   new_token -> next = NULL;
   int i = 0;
@@ -430,8 +456,10 @@ string na mesma linha, um erro será gerado.
 if(c == '"'){
   struct string_token *new_token = (struct string_token *)
                                      alloc(sizeof(struct string_token));
-  if(new_token == NULL)
+  if(new_token == NULL){
+    free_token_list(dealloc, first_token);
     return NULL;
+  }
   new_token -> type = TYPE_STRING;
   new_token -> next = NULL;
   int i = 0;
@@ -446,6 +474,8 @@ if(c == '"'){
   new_token -> value[i] = '\0';
   if(c == '\n' || c == EOF){
     fprintf(stderr, "ERROR: Incomplete String.\n");
+    dealloc(new_token);
+    free_token_list(dealloc, first_token);
     return NULL;
   }
   if(first_token == NULL)
@@ -468,8 +498,10 @@ caractere.
 if(c == '(' || c == ')' || c == ','){
   struct generic_token *new_token =
      (struct generic_token *) alloc(sizeof(struct generic_token));
-  if(new_token == NULL)
+  if(new_token == NULL){
+    free_token_list(dealloc, first_token);
     return NULL;
+  }
   if(c == '(')
     new_token -> type = TYPE_OPEN_PARENTHESIS;
   else if(c == ')')
@@ -511,7 +543,7 @@ sequência mais longa dentre 12 famílias de caracteres:
   @<Análise Léxica: Regra K@>
   @<Análise Léxica: Regra L@>
   // De acordo com conteúdo do buffer, gera o próximo token
-  //@<Análise Léxica: Gera Token Simbólico Reservado@>
+  @<Análise Léxica: Gera Token Simbólico Reservado@>
   @<Análise Léxica: Gera Token Simbólico Genérico@>
 }
 @
@@ -736,8 +768,10 @@ if(buffer[0] != '\0'){
   size_t buffer_size = strlen(buffer) + 1;
   struct symbolic_token *new_token =
      (struct symbolic_token *) alloc(sizeof(struct symbolic_token));
-  if(new_token == NULL)
+  if(new_token == NULL){
+    free_token_list(dealloc, first_token);
     return NULL;
+  }
   new_token -> type = TYPE_SYMBOLIC;
   new_token -> next = NULL;
   new_token -> value = (char *) alloc(buffer_size);
@@ -750,6 +784,121 @@ if(buffer[0] != '\0'){
   }
   continue;
 }
+@
+\fimcodigo
+
+
+\secao{3. Programas METAFONT}
+
+Quando avaliamos um programa METAFONT, vamos precisar de duas
+extruturas adicionais. A primeira delas, a qual chamaremos
+de \monoespaco{struct metafont} irá conter as informações finais da
+fonte tipográfica que foi lida e que terá tudo que for necessário para
+que tal fonte possa ser usada para renderizar cada um dos glifos. A
+segunda estrutura, a qual chamaremos de \monoespaco{struct context}
+representa o estado atual do analisador sintático e representa
+informações que devemos saber para poder continuar interpretando
+corretamente uma lista de tokens. Essa segunda estrutura pode ser
+descartada depois de terminarmos de ler os tokens de nossa fonte.
+
+A primeira coisa que nosso analisador sintático precisa saber é que
+todo programa METAFONT é uma sequência de declarações (possivelmente
+vazia) finalizada por um token simbólico que
+representa \monoespaco{end} ou \monoespaco{dump}:
+
+\alinhaverbatim
+<Programa> -> <Lista de Declarações> end | <Lista de Declarações> dump
+\alinhanormal
+
+Para nós não haverá nenhuma diferença entre \monoespaco{end}
+e \monoespaco{dump}. No METAFONT original, o primeiro era usado para
+finalizar o programa de uma fonte tipográfica e o segundo para
+finalizar a descrição de um arquivo-base (algo como uma biblioteca
+padrão básica).
+
+Vamos definir então um novo tipo de token simbólico que será uma
+abreviação deste símbolo de finalização, seja qual ele for:
+
+\iniciocodigo
+@<METAFONT: Definição de Token Simbólico@>=
+#define TYPE_END             7 // O token simbólico 'end' ou 'dump'
+@
+\fimcodigo
+
+E geraremos esse tipo de token no nosso analisador léxico quando
+encontrarmos uma das duas palavras-chaves (tecnicamente METAFONT chama
+elas não de palavras-chaves, mas de ``sparks''):
+
+\iniciocodigo
+@<Análise Léxica: Gera Token Simbólico Reservado@>=
+if(!strcmp(buffer, "end") || !strcmp(buffer, "dump")){
+  struct generic_token *new_token =
+     (struct generic_token *) alloc(sizeof(struct generic_token));
+  if(new_token == NULL){
+    free_token_list(dealloc, first_token);
+    return NULL;
+  }
+  new_token -> type = TYPE_END;
+  new_token -> next = NULL;
+  if(first_token == NULL)
+    first_token = last_token = new_token;
+  else{
+    ((struct generic_token *) last_token) -> next = new_token;
+    last_token = new_token;
+  }
+  continue;
+}
+@
+\fimcodigo
+
+A primeira função de análise sintática que definiremos é a que
+reconhece um programa inteiro. Ela basicamente checa se o programa é
+corretamente finalizado e se não o for, retorna erro. Caso ele esteja
+corretamente finalizado, ela passa o programa para a próxima função de
+análise sintática que interpreta lista de declarações, marcando o
+começo e o fim da lista de declarações:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>=
+bool eval_program(struct metafont *mf, struct context *cx,
+                  void *token_list){
+  struct generic_token *end = (struct generic_token *) token_list;
+  //struct generic_token *previous;
+  while(end != NULL && end -> type != TYPE_END){
+    //previous = end;
+    end = (struct generic_token *) (end -> next);
+  }
+  if(end == NULL){
+    fprintf(stderr, "METAFONT: Error: %s: Program not finished with "
+                    "'end' or 'dump'.\n", mf -> file);
+    return false;
+  }
+  //return eval_list_of_statements(mf, cx, token_list, previous);
+  return true;
+}
+@
+\fimcodigo
+
+A estrutura de contexto ainda não será definida inteiramente. Iremos
+mostrar o conteúdo dela à medida que for necessário:
+
+\iniciocodigo
+@<Estrutura de Dados (metafont.h)@>=
+struct context{
+  //@<Atributos (struct context)@>
+};
+@
+\fimcodigo
+
+E como indicado acima, um dos conteúdos de \monoespaco{struct
+metafont} é o arquivo de onde saiu a fonte que ele representa:
+
+\iniciocodigo
+@<Estrutura de Dados (metafont.h)@>+=
+struct metafont{
+  char *file;
+  //@<Atributos (struct metafont)@>
+};
 @
 \fimcodigo
 

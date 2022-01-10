@@ -142,7 +142,7 @@ extern "C" {
 #endif  
 @<Include General Headers (metafont.h)@>
 //@<General Macros (metafont.h)@>
-//@<Data Structures (metafont.h)@>
+@<Data Structures (metafont.h)@>
 @<Function Declaration (metafont.h)@>
 #ifdef __cplusplus
 }
@@ -259,7 +259,7 @@ with the following structure:
 #define TYPE_OPEN_PARENTHESIS  4 // '('
 #define TYPE_CLOSE_PARENTHESIS 5 // ')'
 #define TYPE_COMMA             6 // ','
-//@<METAFONT: Symbolic Token Definition@>
+@<METAFONT: Symbolic Token Definition@>
 // (...)
 struct generic_token{
   int type;   // Should be one of the above
@@ -272,13 +272,36 @@ We can define later more reserved symbolic tokens. We just need to
 define them to an unique number greater than 6. Any token whose type
 is a number greater or equal than 3 is a symbolic token.
 
+Every token have a pointer to a next token. THis happens because
+usually they will be part of a linked list. To deallocate the memory
+occupied by a token list given a deallocation function and the given
+list, we can use the following function:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>=
+void free_token_list(void (*dealloc)(void *), void *token_list){
+  struct generic_token *p, *p_next;
+  if(dealloc == NULL || token_list == NULL)
+    return;
+  p = token_list;
+  while(p != NULL){
+    p_next = p -> next;
+    if(p -> type == TYPE_SYMBOLIC)
+      dealloc(((struct symbolic_token *) p) -> value);
+    dealloc(p);
+    p = p_next;
+  }
+}
+@
+\fimcodigo
+
 Now the funtion that represents our lexer. It will get as argument an
 allocation function and a string with a path for the file with
 METAFONT source code. It will return a linked list of tokens:
 
 \iniciocodigo
 @<Auxiliary Local Functions (metafont.c)@>=
-void *lexer(void *(*alloc)(size_t), char *path){
+void *lexer(void *(*alloc)(size_t), void (*dealloc)(void *), char *path){
   FILE *fp;
   char c;
   void *first_token = NULL, *last_token = NULL;
@@ -298,6 +321,7 @@ void *lexer(void *(*alloc)(size_t), char *path){
     @<Lexer: Rule 6@>
     // No rule applied: error
     fprintf(stderr, "ERROR: Unknown character: '%c'\n", c);
+    free_token_list(dealloc, first_token);
     return NULL;
   }
   return first_token;
@@ -365,8 +389,10 @@ if((c == '.' && isdigit(next_char)) || isdigit(c)){
   char buffer[256];
   struct numeric_token *new_token = (struct numeric_token *)
                                       alloc(sizeof(struct numeric_token));
-  if(new_token == NULL)
+  if(new_token == NULL){
+    free_token_list(dealloc, first_token);
     return NULL;
+  }
   new_token -> type = TYPE_NUMERIC;
   new_token -> next = NULL;
   int i = 0;
@@ -406,8 +432,10 @@ to close the string, this is an error.
 if(c == '"'){
   struct string_token *new_token = (struct string_token *)
                                      alloc(sizeof(struct string_token));
-  if(new_token == NULL)
+  if(new_token == NULL){
+    free_token_list(dealloc, first_token);
     return NULL;
+  }
   new_token -> type = TYPE_STRING;
   new_token -> next = NULL;
   int i = 0;
@@ -422,6 +450,8 @@ if(c == '"'){
   new_token -> value[i] = '\0';
   if(c == '\n' || c == EOF){
     fprintf(stderr, "ERROR: Incomplete String.\n");
+    dealloc(new_token);
+    free_token_list(dealloc, first_token);
     return NULL;
   }
   if(first_token == NULL)
@@ -444,8 +474,10 @@ will be symbolic and composed by that single character.
 if(c == '(' || c == ')' || c == ','){
   struct generic_token *new_token =
      (struct generic_token *) alloc(sizeof(struct generic_token));
-  if(new_token == NULL)
+  if(new_token == NULL){
+    free_token_list(dealloc, first_token);
     return NULL;
+  }
   if(c == '(')
     new_token -> type = TYPE_OPEN_PARENTHESIS;
   else if(c == ')')
@@ -487,7 +519,7 @@ the longest sequence of 12 families of characteres:
   @<Lexer: Rule K@>
   @<Lexer: Rule L@>
   // Depending on buffer content, generates next token
-  //@<Lexer: New Reserved Symbolic Token@>
+  @<Lexer: New Reserved Symbolic Token@>
   @<Lexer: New Generic Symbolic Token@>
 }
 @
@@ -712,8 +744,10 @@ if(buffer[0] != '\0'){
   size_t buffer_size = strlen(buffer) + 1;
   struct symbolic_token *new_token =
      (struct symbolic_token *) alloc(sizeof(struct symbolic_token));
-  if(new_token == NULL)
+  if(new_token == NULL){
+    free_token_list(dealloc, first_token);
     return NULL;
+  }
   new_token -> type = TYPE_SYMBOLIC;
   new_token -> next = NULL;
   new_token -> value = (char *) alloc(buffer_size);
@@ -729,6 +763,116 @@ if(buffer[0] != '\0'){
 @
 \fimcodigo
 
+\secao{3. METAFONT Programs}
+
+When we evaluate a METAFONT program, we need two additional
+structures. The first one, which we will call \monoespaco{struct
+metafont} will contain all the final information extracted from the
+typographical font and that will be needed to render each glyph. The
+second structure, which we will call \monoespaco{struct context}
+represents the current state in our parser and represents information
+that we need to know to interpret correctly the token list. This
+second structure can be discarded after we read all the tokens from
+our font.
+
+The first thing that our parser needs to know is that a METAFONT
+program is a list (possibly empty) of statements ended by a symbolic
+token \monoespaco{end} or \monoespaco{dump}:
+
+\alinhaverbatim
+<Program> -> <List of Statements> end | <List of Statements> dump
+\alinhanormal
+
+for us, there will be no difference between these two kind of programs
+and symbols \monoespaco{end} and \monoespaco{dump} will be
+equivalent. In the original METAFONT, one of them ends programs that
+define typographical fonts and the other ends the description of a
+base file (something like a basic standard library).
+
+We will define then a new kind of symbolic token to represent this
+end-of-file marking:
+
+\iniciocodigo
+@<METAFONT: Symbolic Token Definition@>=
+#define TYPE_END             7 // The symbolic token 'end' or 'dump'
+@
+\fimcodigo
+
+And we generate this kind of token when our lexer finds one of these
+two keywords (technically METAFONT call them ``sparks'', not
+``keywords''):
+
+\iniciocodigo
+@<Lexer: New Reserved Symbolic Token@>=
+if(!strcmp(buffer, "end") || !strcmp(buffer, "dump")){
+  struct generic_token *new_token =
+     (struct generic_token *) alloc(sizeof(struct generic_token));
+  if(new_token == NULL){
+    free_token_list(dealloc, first_token);
+    return NULL;
+  }
+  new_token -> type = TYPE_END;
+  new_token -> next = NULL;
+  if(first_token == NULL)
+    first_token = last_token = new_token;
+  else{
+    ((struct generic_token *) last_token) -> next = new_token;
+    last_token = new_token;
+  }
+  continue;
+}
+@
+\fimcodigo
+
+The first parser function to be defined is the one that recognizes an
+entire program. It basically checks if the program is ended correctly
+and if not, generates an error. If the program is ended correctly, it
+passes for the next parser function that evaluates list of statements,
+marking the beginning and end of such list:
+
+\iniciocodigo
+bool eval_program(struct metafont *mf, struct context *cx,
+                  void *token_list){
+  struct generic_token *end = (struct generic_token *) token_list;
+  //struct generic_token *previous;
+  while(end != NULL && end -> type != TYPE_END){
+    //previous = end;
+    end = (struct generic_token *) (end -> next);
+  }
+  if(end == NULL){
+    fprintf(stderr, "METAFONT: Error: %s: Program not finished with "
+                    "'end' or 'dump'.\n", mf -> file);
+    return false;
+  }
+  //return eval_list_of_statements(mf, cx, token_list, previous);
+  return true;
+}
+@
+\fimcodigo
+
+The context struct still will not be entirely defined. We will show
+its content while each attribute becames necessary:
+
+\iniciocodigo
+@<Data Structures (metafont.h)@>=
+struct context{
+  //@<Attributes (struct context)@>
+};
+@
+\fimcodigo
+
+
+And as seen above, one of the contents in \monoespaco{struct metafont} is
+the file name from where the font was read:
+
+\iniciocodigo
+@<Data Structures (metafont.h)@>+=
+struct metafont{
+  char *file;
+  //@<Attributes (struct metafont)@>
+};
+@
+\fimcodigo
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

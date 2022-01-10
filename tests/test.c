@@ -51,7 +51,7 @@ void assert(char *descricao, bool valor){
 }
 
 void test_lexer(void){
-  void *p, *token_pointer = lexer(malloc, "tests/ridiculous.mf");
+  void *p, *token_pointer = lexer(malloc, free, "tests/ridiculous.mf");
   bool ok = true;
   p = token_pointer;
   if(((struct symbolic_token *) p) -> type != TYPE_SYMBOLIC){
@@ -240,6 +240,7 @@ void test_lexer(void){
   } 
  test_lexer_end:
   assert("Testing METAFONT Lexer", ok);
+  free_token_list(free, token_pointer);
 }
 
 int main(int argc, char **argv){

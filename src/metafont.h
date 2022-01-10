@@ -18,6 +18,21 @@ extern"C"{
 #line 143 "weaver-interface-metafont_en.tex"
 
 
+/*37:*/
+#line 857 "weaver-interface-metafont_en.tex"
+
+struct context{
+
+};
+/*:37*//*38:*/
+#line 869 "weaver-interface-metafont_en.tex"
+
+struct metafont{
+char*file;
+
+};
+/*:38*/
+#line 145 "weaver-interface-metafont_en.tex"
 
 /*1:*/
 #line 82 "weaver-interface-metafont_en.tex"
