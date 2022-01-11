@@ -176,6 +176,7 @@ with this header, its structure is:
 //@<Local Macros (metafont.c)@>
 @<Local Data Structures (metafont.c)@>
 //@<Local Variables (metafont.c)@>
+@<Local Function Declaration (metafont.c)@>
 @<Auxiliary Local Functions (metafont.c)@>
 //@<API Functions Definition (metafont.c)@>
 @
@@ -251,14 +252,15 @@ struct symbolic_token{
 
 But this could consume much more memory than needed. Some symbols are
 very common and are embedded in the language. These symbols could use
-less space. For example, parenthesis and commas. We can represent them
-with the following structure:
+less space. For example, parenthesis, semicolon and commas. We can
+represent them with the following structure:
 
 \iniciocodigo
 @<Local Data Structures (metafont.c)@>+=
 #define TYPE_OPEN_PARENTHESIS  4 // '('
 #define TYPE_CLOSE_PARENTHESIS 5 // ')'
 #define TYPE_COMMA             6 // ','
+#define TYPE_SEMICOLON         7 // ';'
 @<METAFONT: Symbolic Token Definition@>
 // (...)
 struct generic_token{
@@ -466,12 +468,12 @@ if(c == '"'){
 \fimcodigo
 
 
-5) If the next character is a parenthesis or a comma, the next token
-will be symbolic and composed by that single character.
+5) If the next character is a parenthesis, semicolon or a comma, the
+next token will be symbolic and composed by that single character.
 
 \iniciocodigo
 @<Lexer: Rule 5@>=
-if(c == '(' || c == ')' || c == ','){
+if(c == '(' || c == ')' || c == ',' || c == ';'){
   struct generic_token *new_token =
      (struct generic_token *) alloc(sizeof(struct generic_token));
   if(new_token == NULL){
@@ -482,6 +484,8 @@ if(c == '(' || c == ')' || c == ','){
     new_token -> type = TYPE_OPEN_PARENTHESIS;
   else if(c == ')')
     new_token -> type = TYPE_CLOSE_PARENTHESIS;
+  else if(c == ';')
+    new_token -> type = TYPE_SEMICOLON;
   else
     new_token -> type = TYPE_COMMA;
   new_token -> next = NULL;
@@ -794,7 +798,7 @@ end-of-file marking:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>=
-#define TYPE_END             7 // The symbolic token 'end' or 'dump'
+#define TYPE_END             8 // The symbolic token 'end' or 'dump'
 @
 \fimcodigo
 
@@ -831,6 +835,7 @@ passes for the next parser function that evaluates list of statements,
 marking the beginning and end of such list:
 
 \iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
 bool eval_program(struct metafont *mf, struct context *cx,
                   void *token_list){
   struct generic_token *end = (struct generic_token *) token_list;
@@ -844,6 +849,8 @@ bool eval_program(struct metafont *mf, struct context *cx,
                     "'end' or 'dump'.\n", mf -> file);
     return false;
   }
+  if(end == token_list)
+    return true;
   //return eval_list_of_statements(mf, cx, token_list, previous);
   return true;
 }
@@ -873,6 +880,66 @@ struct metafont{
 };
 @
 \fimcodigo
+
+\secao{4. List of Statements}
+
+A list of potentially empty statements delimited by a semicolon:
+
+\alinhaverbatim
+<List of Statements> -> <Empty> | <Statement> ; <List of Statements>
+\alinhanormal
+
+The function that will evaluate and interpret a list of statements is:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>=
+bool eval_list_of_statements(struct metafont *mf, struct context *cx,
+                            void *begin_token_list, void *end_token_list);
+@
+\fimcodigo
+
+This function will iterate over each declaration and execute for all
+them, in the order thay appear, the function that evaluates individual
+statements. For this, the function will find all semicolons and use
+them to detect where each statement begins and where they end:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+bool eval_list_of_statements(struct metafont *mf, struct context *cx,
+                            void *begin_token_list, void *end_token_list){
+  bool ret = true;
+  struct generic_token *begin, *end = NULL;
+  begin = (struct generic_token *) begin_token_list;
+  while(begin != NULL){
+    while(begin -> type == TYPE_SEMICOLON){
+      if(begin != end_token_list)
+        begin = (struct generic_token *) begin -> next;
+      else
+        begin = NULL;
+    }
+    end = begin;
+    if(end != NULL){
+      while(end != end_token_list &&
+            ((struct generic_token *) (end -> next)) -> type !=
+              TYPE_SEMICOLON)
+        end = end -> next;
+    }
+    if(begin != NULL){
+      // eval_statement(mf, cx, begin, end);
+      begin = end -> next;
+    }
+  }
+  return ret;
+}
+@
+\fimcodigo
+
+The function above iterates over each statement, ignoring empty
+statements. For each non-empty statement, it assures that the
+pointers \monoespaco{begin} and \monoespaco{end} delimit the
+individual statement. During the iteration we always ensure that we do
+not go outside the region delimited by \monoespaco{begin\_token\_list}
+and \monoespaco{end\_token\_list}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

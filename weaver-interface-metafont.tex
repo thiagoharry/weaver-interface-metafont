@@ -196,6 +196,7 @@ associado a este cabeçaho, o código será este:
 //@<Macros Locais (metafont.c)@>
 @<Estrutura de Dados Locais (metafont.c)@>
 //@<Variáveis Locais (metafont.c)@>
+@<Declaração de Função Local (metafont.c)@>
 @<Funções Auxiliares Locais (metafont.c)@>
 //@<Definição de Funções da API (metafont.c)@>
 @
@@ -281,6 +282,7 @@ seguinte estrutura:
 #define TYPE_OPEN_PARENTHESIS  4 // '('
 #define TYPE_CLOSE_PARENTHESIS 5 // ')'
 #define TYPE_COMMA             6 // ','
+#define TYPE_SEMICOLON         7 // ';'
 @<METAFONT: Definição de Token Simbólico@>
 // (...)
 struct generic_token{
@@ -489,13 +491,13 @@ if(c == '"'){
 @
 \fimcodigo
 
-5) Se o próximo caractere for um parêntese ou uma vírgula, então o
-próximo token será um token simbólico formado por este único
-caractere.
+5) Se o próximo caractere for um parêntese, ponto-e-vírgula ou uma
+vírgula, então o próximo token será um token simbólico formado por
+este único caractere.
 
 \iniciocodigo
 @<Análise Léxica: Regra 5@>=
-if(c == '(' || c == ')' || c == ','){
+if(c == '(' || c == ')' || c == ',' || c == ';'){
   struct generic_token *new_token =
      (struct generic_token *) alloc(sizeof(struct generic_token));
   if(new_token == NULL){
@@ -506,6 +508,8 @@ if(c == '(' || c == ')' || c == ','){
     new_token -> type = TYPE_OPEN_PARENTHESIS;
   else if(c == ')')
     new_token -> type = TYPE_CLOSE_PARENTHESIS;
+  else if(c == ';')
+    new_token -> type = TYPE_SEMICOLON;
   else
     new_token -> type = TYPE_COMMA;
   new_token -> next = NULL;
@@ -821,7 +825,7 @@ abreviação deste símbolo de finalização, seja qual ele for:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>=
-#define TYPE_END             7 // O token simbólico 'end' ou 'dump'
+#define TYPE_END             8 // O token simbólico 'end' ou 'dump'
 @
 \fimcodigo
 
@@ -873,6 +877,8 @@ bool eval_program(struct metafont *mf, struct context *cx,
                     "'end' or 'dump'.\n", mf -> file);
     return false;
   }
+  if(end == token_list)
+    return true;
   //return eval_list_of_statements(mf, cx, token_list, previous);
   return true;
 }
@@ -901,6 +907,70 @@ struct metafont{
 };
 @
 \fimcodigo
+
+\secao{4. Listas de Declarações}
+
+Uma lista de declarações é uma série de declarações (potencialmente
+vazias) sempre separadas por ponto-e-vírgula:
+
+\alinhaverbatim
+<Lista de Declarações> -> <Vazio> | <Declaração> ; <Lista de Declarações>
+\alinhanormal
+
+A função que iremos usar para avaliar e interpretar uma lista de
+declarações é:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>=
+bool eval_list_of_statements(struct metafont *mf, struct context *cx,
+                            void *begin_token_list, void *end_token_list);
+@
+\fimcodigo
+
+O que esta função fará será iterar sobre cada declaração e executar em
+cada uma delas na ordem, a função de avaliação de declaração
+individual. Para isso seu trabalho será ver onde cada declaração é
+delimitada por cada ponto-e-vírgula e passar os limites de cada
+declaração para essa próxima função de avaliação:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>=
+bool eval_list_of_statements(struct metafont *mf, struct context *cx,
+                            void *begin_token_list, void *end_token_list){
+  bool ret = true;
+  struct generic_token *begin, *end = NULL;
+  begin = (struct generic_token *) begin_token_list;
+  while(begin != NULL){
+    while(begin -> type == TYPE_SEMICOLON){
+      if(begin != end_token_list)
+        begin = (struct generic_token *) begin -> next;
+      else
+        begin = NULL;
+    }
+    end = begin;
+    if(end != NULL){
+      while(end != end_token_list &&
+            ((struct generic_token *) (end -> next)) -> type !=
+              TYPE_SEMICOLON)
+        end = end -> next;
+    }
+    if(begin != NULL){
+      // eval_statement(mf, cx, begin, end);
+      begin = end -> next;
+    }
+  }
+  return ret;
+}
+@
+\fimcodigo
+
+A função acima itera sobre cada declaração, passando direto por
+declarações vazias, e para cada declaração não-vazia, faz com que os
+ponteiros \monoespaco{begin} e \monoespaco{end} a delimitem. Durante a
+iteração avançamos os ponteiros para os próximos tokens, mas cuidamos
+para nunca sair de dentro da região delimitada
+por \monoespaco{begin\_token\_list} e \monoespaco{end\_token\_list}.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
