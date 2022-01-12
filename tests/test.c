@@ -50,6 +50,22 @@ void assert(char *descricao, bool valor){
   }
 }
 
+void test_empty_programs(void){
+  struct metafont mf;
+  struct context cx;
+  char test_string[] = "test";
+  mf.file = test_string;
+  bool ret;
+  void *p = lexer(malloc, free, "tests/empty.mf");
+  ret = eval_program(&mf, &cx, p);
+  assert("Testing empty program", ret);
+  free_token_list(free, p);
+  p = lexer(malloc, free, "tests/empty_statements.mf");
+  ret = eval_program(&mf, &cx, p);
+  free_token_list(free, p);
+  assert("Testing program with empty statements", ret);
+}
+
 void test_lexer(void){
   void *p, *token_pointer = lexer(malloc, free, "tests/ridiculous.mf");
   bool ok = true;
@@ -245,6 +261,7 @@ void test_lexer(void){
 
 int main(int argc, char **argv){
   test_lexer();
+  test_empty_programs();
   imprime_resultado();
   return 0;
 }

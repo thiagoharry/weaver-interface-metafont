@@ -19,13 +19,13 @@ extern"C"{
 
 
 /*37:*/
-#line 892 "weaver-interface-metafont.tex"
+#line 926 "weaver-interface-metafont.tex"
 
 struct context{
 
 };
 /*:37*//*38:*/
-#line 903 "weaver-interface-metafont.tex"
+#line 937 "weaver-interface-metafont.tex"
 
 struct metafont{
 char*file;

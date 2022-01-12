@@ -209,6 +209,9 @@ numeric token is represented:
 struct numeric_token{
   int type;   // Should be equal 'TYPE_NUMERIC'
   void *next;
+#if defined(W_DEBUG_METAFONT)
+  int line;
+#endif
   float value;
 };
 @
@@ -222,6 +225,9 @@ And this is how we will represent string tokens:
 struct string_token{
   int type;   // Should be equal 'TYPE_STRING'
   void *next;
+#if defined(W_DEBUG_METAFONT)
+  int line;
+#endif
   char value[5];
 };
 @
@@ -245,6 +251,9 @@ a string to store its name:
 struct symbolic_token{
   int type;   // Should be equal 'TYPE_SYMBOLIC'
   void *next;
+#if defined(W_DEBUG_METAFONT)
+  int line;
+#endif
   char *value;
 };
 @
@@ -266,6 +275,9 @@ represent them with the following structure:
 struct generic_token{
   int type;   // Should be one of the above
   void *next;
+#if defined(W_DEBUG_METAFONT)
+  int line;
+#endif
 };
 @
 \fimcodigo
@@ -306,6 +318,7 @@ METAFONT source code. It will return a linked list of tokens:
 void *lexer(void *(*alloc)(size_t), void (*dealloc)(void *), char *path){
   FILE *fp;
   char c;
+  int line = 1;
   void *first_token = NULL, *last_token = NULL;
   fp = fopen(path, "r");
   if(fp == NULL)
@@ -313,8 +326,10 @@ void *lexer(void *(*alloc)(size_t), void (*dealloc)(void *), char *path){
   while((c = fgetc(fp)) != EOF){
     char next_char = fgetc(fp);
     ungetc(next_char, fp);
-    if(c == '\n')
+    if(c == '\n'){
+      line ++;
       continue;
+    }
     @<Lexer: Rule 1@>
     @<Lexer: Rule 2@>
     @<Lexer: Rule 3@>
@@ -322,7 +337,8 @@ void *lexer(void *(*alloc)(size_t), void (*dealloc)(void *), char *path){
     @<Lexer: Rule 5@>
     @<Lexer: Rule 6@>
     // No rule applied: error
-    fprintf(stderr, "ERROR: Unknown character: '%c'\n", c);
+    fprintf(stderr, "ERROR: %s:%d: Unknown character: '%c'\n",
+            path, line, c);
     free_token_list(dealloc, first_token);
     return NULL;
   }
@@ -375,6 +391,7 @@ if(c == '%'){
   do{
     c = fgetc(fp);
   } while(c != '\n' && c != EOF);
+  ungetc(c, fp);
   continue;
 }
 @
@@ -397,6 +414,9 @@ if((c == '.' && isdigit(next_char)) || isdigit(c)){
   }
   new_token -> type = TYPE_NUMERIC;
   new_token -> next = NULL;
+#if defined(W_DEBUG_METAFONT)
+  new_token -> line = line;
+#endif
   int i = 0;
   int number_of_dots = (c == '.');
   buffer[i] = c;
@@ -440,6 +460,9 @@ if(c == '"'){
   }
   new_token -> type = TYPE_STRING;
   new_token -> next = NULL;
+#if defined(W_DEBUG_METAFONT)
+  new_token -> line = line;
+#endif
   int i = 0;
   do{
     c = fgetc(fp);
@@ -451,7 +474,7 @@ if(c == '"'){
   i --;
   new_token -> value[i] = '\0';
   if(c == '\n' || c == EOF){
-    fprintf(stderr, "ERROR: Incomplete String.\n");
+    fprintf(stderr, "ERROR: %s:%d: Incomplete String.\n", path, line);
     dealloc(new_token);
     free_token_list(dealloc, first_token);
     return NULL;
@@ -489,6 +512,9 @@ if(c == '(' || c == ')' || c == ',' || c == ';'){
   else
     new_token -> type = TYPE_COMMA;
   new_token -> next = NULL;
+#if defined(W_DEBUG_METAFONT)
+  new_token -> line = line;
+#endif
   if(first_token == NULL)
     first_token = last_token = new_token;
   else{
@@ -754,6 +780,9 @@ if(buffer[0] != '\0'){
   }
   new_token -> type = TYPE_SYMBOLIC;
   new_token -> next = NULL;
+#if defined(W_DEBUG_METAFONT)
+  new_token -> line = line;
+#endif
   new_token -> value = (char *) alloc(buffer_size);
   memcpy(new_token -> value, buffer, buffer_size);
   if(first_token == NULL)
@@ -817,6 +846,9 @@ if(!strcmp(buffer, "end") || !strcmp(buffer, "dump")){
   }
   new_token -> type = TYPE_END;
   new_token -> next = NULL;
+#if defined(W_DEBUG_METAFONT)
+  new_token -> line = line;
+#endif
   if(first_token == NULL)
     first_token = last_token = new_token;
   else{
@@ -839,20 +871,22 @@ marking the beginning and end of such list:
 bool eval_program(struct metafont *mf, struct context *cx,
                   void *token_list){
   struct generic_token *end = (struct generic_token *) token_list;
-  //struct generic_token *previous;
+  struct generic_token *previous = NULL;
   while(end != NULL && end -> type != TYPE_END){
-    //previous = end;
+    previous = end;
     end = (struct generic_token *) (end -> next);
   }
   if(end == NULL){
-    fprintf(stderr, "METAFONT: Error: %s: Program not finished with "
-                    "'end' or 'dump'.\n", mf -> file);
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Program not finished with "
+                    "'end' or 'dump'.\n", mf -> file,
+                    (previous == NULL)?(1):(previous -> line));
+#endif
     return false;
   }
   if(end == token_list)
     return true;
-  //return eval_list_of_statements(mf, cx, token_list, previous);
-  return true;
+  return eval_list_of_statements(mf, cx, token_list, previous);
 }
 @
 \fimcodigo
@@ -911,7 +945,7 @@ bool eval_list_of_statements(struct metafont *mf, struct context *cx,
   struct generic_token *begin, *end = NULL;
   begin = (struct generic_token *) begin_token_list;
   while(begin != NULL){
-    while(begin -> type == TYPE_SEMICOLON){
+    while(begin != NULL && begin -> type == TYPE_SEMICOLON){
       if(begin != end_token_list)
         begin = (struct generic_token *) begin -> next;
       else
@@ -940,6 +974,65 @@ pointers \monoespaco{begin} and \monoespaco{end} delimit the
 individual statement. During the iteration we always ensure that we do
 not go outside the region delimited by \monoespaco{begin\_token\_list}
 and \monoespaco{end\_token\_list}.
+
+\secao{5. Compund Statements}
+
+An individual statement in the language can be composed by many other
+statements. The syntax for this is:
+
+\alinhaverbatim
+<Statement> -> <Empty> | <Compound> | <Title> | <Equation> |
+               <Assignment> | <Declaration> | <Definition> | <Command>
+<Compound> -> begingroup <List of Statements> <Non-Title> endgroup
+\alinhanormal
+
+We already know what is a list of statements and already have a
+function to eval them. The non-title declaration, for now, will be
+treated as any other statement, because we still do not support title
+statements (they are isolated strings). Therefore, a compund statement
+is just a list of statements delimited by
+tokens \monoespaco{begingroup} and \monoespaco{endgroup}.
+
+Then we need to take into account the existance of these two new kind
+of special symbolic tokens:
+
+\iniciocodigo
+@<METAFONT: Symbolic Token Definition@>+=
+#define TYPE_BEGINGROUP             9 // O token simbólico 'begingroup'
+#define TYPE_ENDGROUP              10 // O token simbólico 'endgroup'
+@
+\fimcodigo
+
+
+And we add in the lexer the recipe about how to generate these tokens:
+
+\iniciocodigo
+@<Lexer: New Reserved Symbolic Token@>+=
+else if(!strcmp(buffer, "begingroup") || !strcmp(buffer, "endgroup")){
+  struct generic_token *new_token =
+     (struct generic_token *) alloc(sizeof(struct generic_token));
+  if(new_token == NULL){
+    free_token_list(dealloc, first_token);
+    return NULL;
+  }
+  if(buffer[0] == 'b')
+    new_token -> type = TYPE_BEGINGROUP;
+  else
+    new_token -> type = TYPE_ENDGROUP;
+  new_token -> next = NULL;
+#if defined(W_DEBUG_METAFONT)
+  new_token -> line = line;
+#endif
+  if(first_token == NULL)
+    first_token = last_token = new_token;
+  else{
+    ((struct generic_token *) last_token) -> next = new_token;
+    last_token = new_token;
+  }
+  continue;
+}
+@
+\fimcodigo
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
