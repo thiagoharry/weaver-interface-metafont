@@ -66,7 +66,7 @@ char*value;
 
 #define TYPE_END             8 
 /*:34*//*41:*/
-#line 1031 "weaver-interface-metafont.tex"
+#line 1033 "weaver-interface-metafont.tex"
 
 #define TYPE_BEGINGROUP             9 
 #define TYPE_ENDGROUP              10 
@@ -90,7 +90,11 @@ int line;
 
 bool eval_list_of_statements(struct metafont*mf,struct context*cx,
 void*begin_token_list,void*end_token_list);
-/*:39*/
+/*:39*//*43:*/
+#line 1073 "weaver-interface-metafont.tex"
+
+bool eval_statement(struct metafont*,struct context*,void*,void**);
+/*:43*/
 #line 199 "weaver-interface-metafont.tex"
 
 /*10:*/
@@ -478,7 +482,7 @@ last_token= new_token;
 continue;
 }
 /*:35*//*42:*/
-#line 1040 "weaver-interface-metafont.tex"
+#line 1042 "weaver-interface-metafont.tex"
 
 else if(!strcmp(buffer,"begingroup")||!strcmp(buffer,"endgroup")){
 struct generic_token*new_token= 
@@ -594,13 +598,82 @@ TYPE_SEMICOLON)
 end= end->next;
 }
 if(begin!=NULL){
-
+ret= eval_statement(mf,cx,begin,(void**)&end);
+if(!ret)
+return false;
 begin= end->next;
 }
 }
 return ret;
 }
-/*:40*/
+/*:40*//*44:*/
+#line 1079 "weaver-interface-metafont.tex"
+
+bool eval_statement(struct metafont*mf,struct context*cx,
+void*begin_token_list,void**end_token_list){
+/*45:*/
+#line 1107 "weaver-interface-metafont.tex"
+
+if(begin_token_list==end_token_list&&begin_token_list==NULL)
+return true;
+/*:45*/
+#line 1082 "weaver-interface-metafont.tex"
+
+/*47:*/
+#line 1156 "weaver-interface-metafont.tex"
+
+else if(((struct generic_token*)begin_token_list)->type==
+TYPE_BEGINGROUP){
+struct generic_token*t= begin_token_list,*previous= NULL;
+int nesting_level= 0;
+while(t!=NULL){
+if(t->type==TYPE_BEGINGROUP)
+nesting_level++;
+else if(t->type==TYPE_ENDGROUP){
+nesting_level--;
+if(nesting_level==0)
+break;
+}
+previous= t;
+t= (struct generic_token*)(t->next);
+}
+*end_token_list= t;
+if(*end_token_list==NULL){
+#if defined(W_DEBUG_METAFONT)
+fprintf(stderr,"METAFONT: Error: %s:%d: Unclosed 'begingroup'.\n",
+mf->file,begin_token_list->line);
+#endif
+return false;
+}
+if(previous==begin_token_list)
+return true;
+else{
+bool ret;
+cx->nesting_level++;
+ret= eval_list_of_statements(mf,cx,((struct generic_token*)
+begin_token_list)->next,
+previous);
+cx->nesting_level--;
+return ret;
+}
+}
+/*:47*/
+#line 1083 "weaver-interface-metafont.tex"
+
+
+
+
+
+
+
+
+#if defined(W_DEBUG_METAFONT)
+fprintf(stderr,"METAFONT: Error: %s:%d: Unknown statement.\n",
+mf->file,begin_token_list->line);
+#endif
+return false;
+}
+/*:44*/
 #line 200 "weaver-interface-metafont.tex"
 
 

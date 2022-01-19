@@ -66,9 +66,28 @@ void test_empty_programs(void){
   assert("Testing program with empty statements", ret);
 }
 
+void test_compound_statemetns(void){
+  struct metafont mf;
+  struct context cx;
+  char test_string[] = "test";
+  mf.file = test_string;
+  bool ret;
+  void *p = lexer(malloc, free, "tests/compound.mf");
+  ret = eval_program(&mf, &cx, p);
+  assert("Testing compound statements", ret);
+  free_token_list(free, p);
+  p = lexer(malloc, free, "tests/compound_wrong.mf");
+  ret = eval_program(&mf, &cx, p);
+  free_token_list(free, p);
+  assert("Detecting wrong compound statements", !ret);
+}
+
+
 void test_lexer(void){
   void *p, *token_pointer = lexer(malloc, free, "tests/ridiculous.mf");
   bool ok = true;
+  struct metafont mf;
+  struct context cx;
   p = token_pointer;
   if(((struct symbolic_token *) p) -> type != TYPE_SYMBOLIC){
     ok = false;
@@ -256,12 +275,15 @@ void test_lexer(void){
   } 
  test_lexer_end:
   assert("Testing METAFONT Lexer", ok);
+  ok = eval_program(&mf, &cx, token_pointer);
+  assert("Wrong program not parsed", !ok);
   free_token_list(free, token_pointer);
 }
 
 int main(int argc, char **argv){
   test_lexer();
   test_empty_programs();
+  test_compound_statemetns();
   imprime_resultado();
   return 0;
 }

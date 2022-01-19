@@ -22,6 +22,12 @@ extern"C"{
 #line 926 "weaver-interface-metafont.tex"
 
 struct context{
+/*46:*/
+#line 1122 "weaver-interface-metafont.tex"
+
+int nesting_level;
+/*:46*/
+#line 928 "weaver-interface-metafont.tex"
 
 };
 /*:37*//*38:*/

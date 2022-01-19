@@ -925,7 +925,7 @@ mostrar o conteúdo dela à medida que for necessário:
 \iniciocodigo
 @<Estrutura de Dados (metafont.h)@>=
 struct context{
-  //@<Atributos (struct context)@>
+  @<Atributos (struct context)@>
 };
 @
 \fimcodigo
@@ -989,7 +989,9 @@ bool eval_list_of_statements(struct metafont *mf, struct context *cx,
         end = end -> next;
     }
     if(begin != NULL){
-      // eval_statement(mf, cx, begin, end);
+      ret = eval_statement(mf, cx, begin, (void **) &end);
+      if(!ret)
+        return false;
       begin = end -> next;
     }
   }
@@ -1064,7 +1066,131 @@ else if(!strcmp(buffer, "begingroup") || !strcmp(buffer, "endgroup")){
 @
 \fimcodigo
 
+E agora a função que irá avaliar uma declaração individual. Como
+visto, há 8 tipos diferentes de declarações:
 
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+bool eval_statement(struct metafont *, struct context *, void *, void **);
+@
+\fimcodigo
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>=
+bool eval_statement(struct metafont *mf, struct context *cx,
+                     void *begin_token_list, void **end_token_list){
+  @<Declaração: Vazia@>
+  @<Declaração: Composta@>
+  //@<Declaração: Título@>
+  //@<Declaração: Equação@>
+  //@<Declaração: Atribuição@>
+  //@<Declaração: Declaração de Variável@>
+  //@<Declaração: Definição@> 
+  //@<Declaração: Comando@>
+  // Se estamos aqui, não identificamos o tipo de declaração:
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Unknown statement.\n",
+            mf -> file, begin_token_list -> line);
+#endif
+  return false;
+}
+@
+\fimcodigo
+
+No caso da declaração vazia, geralmente não precisaremos lidar com
+ela. A função \monoespaco{eval\_list\_of\_statements} silenciosamente
+as ignora antes de passar para cá. Mas só para o caso de uma delas
+aparecer por outros motivo, vamos explicitamente aceitá-las como
+válidas abaixo:
+
+\iniciocodigo
+@<Declaração: Vazia@>=
+if(begin_token_list == end_token_list && begin_token_list == NULL)
+  return true;
+@
+\fimcodigo
+
+Agora vamos à declaração composta. A primeira coisa a lembrarmos é que
+será importante para a linguagem saber em qual nível de aninhamento
+estamos para saber o escopo de eventuais variáveis declaradas. Por
+causa disso, o contexto de nossa análise deve memorizar o nível de
+aninhamento atual. Cada \monoespaco{begingroup} aumenta esse nível em
+1 e cada \monoespaco{endgroup} diminui o nível em 1. Declaremos o
+nível de aninhamento atual abaixo:
+
+\iniciocodigo
+@<Atributos (struct context)@>=
+  int nesting_level; // Deve começar em 0
+@
+\fimcodigo
+
+
+A segunda coisa a lembrarmos é que se estivermos em uma declaração
+composta, isso significa que o ponteiro para o fim da declaração pode
+estar errado. Por exemplo, suponha que a função
+\monoespaco{eval\_list\_of\_statements} avaliou os seguintes tokens
+abaixo:
+
+\alinhaverbatim
+[begingroup][T1][T2][;][T3][T4][;][endgroup][;]
+\alinhanormal
+
+Corretamente a função marcou o começo da primeira declaração
+em \monoespaco{begingroup}, mas erroneamente ela
+marcou \monoespaco{T2} como o fim da primeira declaração porque ela
+funciona de maneira ingênua, tratando os ponto-e-vírgula como
+separador de declarações, sem levar em conta as declarações compostas
+que podem conter ponto-e-vírgula dentro delas. O fim da primeira
+declaração deveria ser ao invés de \monoespaco{T2}, o
+token \monoespaco{endgroup}.
+
+Ao invés de aumentar a complexidade da
+função \monoespaco{eval\_list\_of\_statements} fazendo ela levar em
+conta declarações compostas, ao invés disso vamos fazer com que a
+função \monoespaco{eval\_statements} seja capaz de corrigir o ponteiro
+passado, mudando ele para a verdadeira posição. Somente depois disso
+podemos passar a lista de declarações dentro do bloco para ser
+avaliada:
+
+\iniciocodigo
+@<Declaração: Composta@>=
+else if(((struct generic_token *) begin_token_list) -> type ==
+        TYPE_BEGINGROUP){
+  struct generic_token *t = begin_token_list, *previous = NULL;
+  int nesting_level = 0;
+  while(t != NULL){
+    if(t -> type == TYPE_BEGINGROUP)
+      nesting_level ++;
+    else if(t -> type == TYPE_ENDGROUP){
+      nesting_level --;
+      if(nesting_level == 0)
+        break;
+    }
+    previous = t;
+    t = (struct generic_token *) (t -> next);
+  }
+  *end_token_list = t; // Agora a declaração está demarcada corretamente
+  if(*end_token_list == NULL){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Unclosed 'begingroup'.\n",
+            mf -> file, begin_token_list -> line);
+#endif
+    return false;
+  }
+  if(previous == begin_token_list) // Declaração composta vazia
+    return true;
+  else{
+    bool ret;
+    cx -> nesting_level ++;
+    ret = eval_list_of_statements(mf, cx, ((struct generic_token *)
+                                         begin_token_list) -> next,
+                                  previous);
+    cx -> nesting_level --;
+    return ret;
+  }
+}
+@
+\fimcodigo
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

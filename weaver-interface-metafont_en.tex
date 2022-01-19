@@ -897,7 +897,7 @@ its content while each attribute becames necessary:
 \iniciocodigo
 @<Data Structures (metafont.h)@>=
 struct context{
-  //@<Attributes (struct context)@>
+  @<Attributes (struct context)@>
 };
 @
 \fimcodigo
@@ -959,7 +959,9 @@ bool eval_list_of_statements(struct metafont *mf, struct context *cx,
         end = end -> next;
     }
     if(begin != NULL){
-      // eval_statement(mf, cx, begin, end);
+      ret = eval_statement(mf, cx, begin, (void **) &end);
+        if(!ret)
+          return false;
       begin = end -> next;
     }
   }
@@ -1030,6 +1032,131 @@ else if(!strcmp(buffer, "begingroup") || !strcmp(buffer, "endgroup")){
     last_token = new_token;
   }
   continue;
+}
+@
+\fimcodigo
+
+And now the function that will evaluate individual statements. As
+seen, there are 8 different kinds of statements:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+bool eval_statement(struct metafont *, struct context *, void *, void **);
+@
+\fimcodigo
+
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+bool eval_statement(struct metafont *mf, struct context *cx,
+                     void *begin_token_list, void **end_token_list){
+  @<Statement: Empty@>
+  @<Statement: Compound@>
+  //@<Statement: Title@>
+  //@<Statement: Equation@>
+  //@<Statement: Assignment@>
+  //@<Statement: Declaration@>
+  //@<Statement: Definition@> 
+  //@<Statement: Command@>
+  // If we are here, we could not identify the statement:
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Unknown statement.\n",
+            mf -> file, begin_token_list -> line);
+#endif
+  return false;
+}
+@
+\fimcodigo
+
+In the case of an empty statement, probably we will not need to deal
+with them. The function \monoespaco{eval\_list\_of\_statements}
+silently ignore them before calling this function. But just in case an
+empty statement appear by different means, we will explicitly accept
+them with the code below:
+
+\iniciocodigo
+@<Statement: Empty@>=
+if(begin_token_list == end_token_list && begin_token_list == NULL)
+  return true;
+@
+\fimcodigo
+
+Now let's deal with the compound statement. The first thing to recall
+is that it will be important for the language to know in which nesting
+level we are to know the scope of each declared variable. Because of
+this, our context will store the current nesting
+level. Each \monoespaco{begingroup} should increase by 1 the nesting
+level and each \monoespaco{endgroup} should decrease by 1. We declare
+the nesting level below:
+
+\iniciocodigo
+@<Attributes (struct context)@>=
+  int nesting_level; // Should begin as 0
+@
+\fimcodigo
+
+The second thing to recall is that if we are in a compound statement,
+this means that the end of the declaration pointer could be wrong.
+For example, supose that the
+function \monoespaco{eval\_list\_of\_statements} evaluated the
+following tokens:
+
+\alinhaverbatim
+[begingroup][T1][T2][;][T3][T4][;][endgroup][;]
+\alinhanormal
+
+The function correctly would consider the beginning of the first
+statement the token \monoespaco{begingroup}. But wrongly would
+consider the token \monoespaco{T2} as the end of this statement.
+Because it works in a naive logic, always considering the semicolons
+as the delimiters for statements, not considering that statements
+could contain semicolons. The end of the first statement should be the
+token \monoespaco{endgroup} instead.
+
+Instead of increasing the complexity of
+function \monoespaco{eval\_list\_of\_statements} making it aware of
+compound statements, we will make the
+function \monoespaco{eval\_statements} correct the pointers, making
+the pointers to delimit correctly the statement. Only after correcting
+the pointers, we can pass the list of statements from the compouns
+statement to be evaluated:
+
+\iniciocodigo
+@<Statement: Compound@>=
+else if(((struct generic_token *) begin_token_list) -> type ==
+        TYPE_BEGINGROUP){
+  struct generic_token *t = begin_token_list, *previous = NULL;
+  int nesting_level = 0;
+  while(t != NULL){
+    if(t -> type == TYPE_BEGINGROUP)
+      nesting_level ++;
+    else if(t -> type == TYPE_ENDGROUP){
+      nesting_level --;
+      if(nesting_level == 0)
+        break;
+    }
+    previous = t;
+    t = (struct generic_token *) (t -> next);
+  }
+  *end_token_list = t; // Now the statement is correctly delimited
+  if(*end_token_list == NULL){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Unclosed 'begingroup'.\n",
+            mf -> file, begin_token_list -> line);
+#endif
+    return false;
+  }
+  if(previous == begin_token_list) // Empty compound statement
+    return true;
+  else{
+    bool ret;
+    cx -> nesting_level ++;
+    ret = eval_list_of_statements(mf, cx, ((struct generic_token *)
+                                         begin_token_list) -> next,
+                                  previous);
+    cx -> nesting_level --;
+    return ret;
+  }
 }
 @
 \fimcodigo
