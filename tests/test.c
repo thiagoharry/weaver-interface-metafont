@@ -93,7 +93,7 @@ void test_lexer(void){
     ok = false;
     goto test_lexer_end;
   }
-  if(strcmp(((struct symbolic_token *) p) -> value, "xx")){
+  if(strcmp(((struct symbolic_token *) p) -> value, "xx3")){
     printf("ERROR: Expected 'xx', found '%s'\n",
 	   ((struct symbolic_token *) p) -> value);
     ok = false;
@@ -104,7 +104,7 @@ void test_lexer(void){
     ok = false;
     goto test_lexer_end;
   }
-  if(((struct numeric_token *) p) -> value - 3.1 > 0.00002){
+  if(((struct numeric_token *) p) -> value - 0.1 > 0.00002){
     printf("ERROR: Expected '%.f', found '%.f'\n", 3.1,
 	   ((struct numeric_token *) p) -> value);
     ok = false;

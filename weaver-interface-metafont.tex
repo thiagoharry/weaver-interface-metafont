@@ -48,10 +48,10 @@
 \vskip6pt
 
 \abstract{This article contains an implementation of an interpreter
- for a subset of METAFONT language with some extensions. This subset
- is aimed at allowing the definition of flexible and parameterized
- typographic fonts that could be interpreted and redered on the fly.
- Because of this, we sacrifice some flexibility on the language to be
+ for a language based on METAFONT. This is aimed at allowing the
+ definition of flexible and parameterized typographic fonts that could
+ be interpreted and rendered on the fly.  Because of this, we
+ sacrifice some flexibility from the original METAFONT language to be
  able to produce faster results. The implementation will be used by
  Weaver Game Engine as a module and uses modern OpenGL to render the
  fonts.}
@@ -60,31 +60,30 @@
 \vskip 0.5cm plus 3pt minus 3pt
 
 \resumo{Este artigo contém uma implementação de um interpretador para
- um subconjunto da linguagem METAFONT, com algumas extensões. Este
- subconjunto foi escolhido para permitir a definição de fontes
- tipográficas flexíveis e parametrizadas que podem ser interpretadas
- e renderizadas rapidamente à medida que são lidas. Por causa disso,
- nós sacrificamos alguma flexibilidade da linguagem para sermos
- capazes de criar resultados mais rápidos. A implementação será usada
- pelo Motor de Jogos Weaver como um módulo e usará OpenGL moderno
- para renderizar as fontes.}
+ uma linguagem baseada no METAFONT. Esta linguagem é projetada para
+ permitir a definição de fontes tipográficas flexíveis e
+ parametrizadas que podem ser interpretadas e renderizadas rapidamente
+ à medida que são lidas. Por causa disso, nós sacrificamos alguma
+ flexibilidade da linguagem METAFONT original para sermos capazes de
+ criar resultados mais rápidos. A implementação será usada pelo Motor
+ de Jogos Weaver como um módulo e usará OpenGL moderno para renderizar
+ as fontes.}
 
 \secao{1. Introdução}
 
-METAFONT é uma linguagem feita para descrever fontes tipográficas. Ela
-foi criada em 1984 por Donald Knuth e difere de outros formatos de
-fontes tipográficas por permitir a criação de fontes à partir da
-modificação de parâmetros definidos na descrição básica da
-fonte. Desta forma, o projetista de uma fonte não deve criar uma
-simples fonte tipográfica, mas uma meta-fonte, a qual pode por sua vez
-gerar muitas outras fontes tipográficas diferentes mediante a simples
-modificação dos parâmetros.
+A linguagem METAFONT original é uma linguagem feita para descrever
+fontes tipográficas. Ela foi criada em 1984 por Donald Knuth e difere
+de outros formatos de fontes tipográficas por permitir a criação de
+fontes à partir da modificação de parâmetros definidos na descrição
+básica da fonte. Desta forma, o projetista de uma fonte não deve criar
+uma simples fonte tipográfica, mas uma meta-fonte, a qual pode por sua
+vez gerar muitas outras fontes tipográficas diferentes mediante a
+simples modificação dos parâmetros.
 
 A especificação original da linguagem METAFONT pode ser encontrada em
-[KNUTH, 1989], mas a implementação aqui será apenas de um subconjunto
-desta linguagem. Talvez em um futuro, à medida que esta implementação
-cresça, as lacunas sejam preenchidas e esta se torne uma implementação
-mais completa.
+[KNUTH, 1989], mas a implementação aqui não será compatível com a
+linguagem original. Ao invés disso uma nova linguagem será definida,
+mas ela terá objetivos similares.
 
 Como este artigo define um subsistema do Motor de Jogos Weaver, e mais
 especificamente um subsistema de interface de usuário, nosso objetivo
@@ -271,7 +270,7 @@ dinamicamente de acordo com o tamanho do símbolo:
 #define TYPE_SYMBOLIC 3
 struct symbolic_token{
   int type;   // Deve ser igual a 'TYPE_SYMBOLIC'
-  void *next;
+  void *next, *var;
 #if defined(W_DEBUG_METAFONT)
   int line;
 #endif
@@ -279,6 +278,10 @@ struct symbolic_token{
 };
 @
 \fimcodigo
+
+Também colocamos neste token o ponteiro \monoespaco{var}, já que ele
+pode corresponder a uma variável, e por isso pode precisar apontar
+para a região da memória com o conteúdo da variável.
 
 Mas isso pode consumir mais espaço na memória do que é
 necessário. Alguns símbolos são muito comuns e são definidos por
@@ -581,7 +584,10 @@ sequência mais longa dentre 12 famílias de caracteres:
 
 
 a) A primeira família de letras são as letras de A a Z maiúsculas e
-minúsculas além do ``underline''.
+minúsculas além do ``underline'' e dígitos. Um dígito não pode ser o
+primeiro caractere da sequência, ou ele seria interpretado como um
+token numérico.
+
 
 \iniciocodigo
 @<Análise Léxica: Regra A@>=
@@ -590,7 +596,7 @@ if(isalpha(c) || c == '_'){
     buffer[i] = c;
     i ++;
     c = fgetc(fp);
-  } while(isalpha(c) || c == '_');
+  } while(isalpha(c) || c == '_' || isdigit(c));
   ungetc(c, fp);
   buffer[i] = '\0';
 }
@@ -937,7 +943,7 @@ metafont} é o arquivo de onde saiu a fonte que ele representa:
 @<Estrutura de Dados (metafont.h)@>+=
 struct metafont{
   char *file;
-  //@<Atributos (struct metafont)@>
+  @<Atributos (struct metafont)@>
 };
 @
 \fimcodigo
@@ -1014,7 +1020,8 @@ por muitas outras declarações. A sintaxe para isso é:
 
 \alinhaverbatim
 <Declaração> -> <Vazia> | <Composta> | <Título> | <Equação> |
-                <Atribuição> | <Declaração> | <Definição> | <Comando>
+                <Atribuição> | <Declaração de Variável> | <Definição> |
+                <Comando>
 <Composta> -> begingroup <Lista de Declarações> <Não-Título> endgroup
 \alinhanormal
 
@@ -1191,6 +1198,129 @@ else if(((struct generic_token *) begin_token_list) -> type ==
 }
 @
 \fimcodigo
+
+\secao{6. Declaração de Variáveis e as Variáveis Numéricas}
+
+A sintaxe para declarar variáveis é:
+
+\alinhaverbatim
+<Declaração de Variável> -> <Tipo> <Lista de Declaração>
+<Tipo> -> boolean | string | path | pen | picture | transform | pair |
+          numeric
+<Lista de Declaração> -> <Tag> | <Tag> , <Lista de Declaração>
+\alinhanormal
+
+Uma ``tag'' é basicamente um token simbólico sem um significado
+pré-definido na linguagem.Por exemplo, ``\monoespaco{tag}'' é uma tag,
+mas ``\monoespaco{begingroup}'' não é.
+
+Para interpretar a declaração de variáveis, vamos então introduzir no
+nosso analisador léxico os seguintes tokens especiais:
+
+\iniciocodigo
+@<METAFONT: Definição de Token Simbólico@>+=
+#define TYPE_T_BOOLEAN               11 // O token simbólico 'boolean'
+#define TYPE_T_PATH                  12 // O token simbólico 'path'
+#define TYPE_T_PEN                   13 // O token simbólico 'pen'
+#define TYPE_T_PICTURE               14 // O token simbólico 'picture'
+#define TYPE_T_TRANSFORM             15 // O token simbólico 'transform'
+#define TYPE_T_PAIR                  16 // O token simbólico 'pair'
+#define TYPE_T_NUMERIC               17 // O token simbólico 'numeric'
+@
+\fimcodigo
+
+E este é o código do analisador léxico que os identifica:
+
+\iniciocodigo
+@<Análise Léxica: Gera Token Simbólico Reservado@>+=
+else if(!strcmp(buffer, "boolean") || !strcmp(buffer, "path") ||
+        !strcmp(buffer, "pen") || !strcmp(buffer, "picture") ||
+        !strcmp(buffer, "transform") || !strcmp(buffer, "pair") ||
+        !strcmp(buffer, "numeric")){
+  struct generic_token *new_token =
+     (struct generic_token *) alloc(sizeof(struct generic_token));
+  if(new_token == NULL){
+    free_token_list(dealloc, first_token);
+    return NULL;
+  }
+  switch(buffer[0]){
+  case 'b':
+    new_token -> type = TYPE_T_BOOLEAN; break;
+  case 'n':
+    new_token -> type = TYPE_T_NUMERIC; break;    
+  case 't':
+    new_token -> type = TYPE_T_TRANSFORM; break;
+  default: // paTh, peN, piCture, paIr
+    switch(buffer[2]){
+      case 't':
+        new_token -> type = TYPE_T_PATH; break;
+      case 'n':
+        new_token -> type = TYPE_T_PEN; break;
+      case 'c':
+        new_token -> type = TYPE_T_PICTURE; break;
+      default:
+        new_token -> type = TYPE_T_PAIR; break;
+    }
+  }
+  new_token -> next = NULL;
+#if defined(W_DEBUG_METAFONT)
+  new_token -> line = line;
+#endif
+  if(first_token == NULL)
+    first_token = last_token = new_token;
+  else{
+    ((struct generic_token *) last_token) -> next = new_token;
+    last_token = new_token;
+  }
+  continue;
+}
+@
+\fimcodigo
+
+Quando uma variável é declarada, devemos fazer três coisas:
+
+1) Se a variável não existir, devemos alocar uma estrutura da memória
+para armazenar seu conteúdo.
+
+2) O conteúdo da variável deve ser esvaziado e um valor padrão
+representando ``valor desconhecido'' deve ser colocado.
+
+3) Se a variável é nova e não existia antes, devemos percorrer a lista
+de tokens e procurar por ocorrências desta variável mais adiante. E
+devemos atualizar o ponteiro destes tokens para que apontem para a
+região de memória recém-alocada para esta variável.
+
+Uma variável numérica será representada pela seguinte estrutura:
+
+\iniciocodigo
+@<Estrutura de Dados Locais (metafont.c)@>+=
+// Variável genérica
+struct variable{
+  int type;
+  int nesting_level;
+  void *next;  
+};
+// Variável numérica:
+struct numeric_variable{
+  int type;          // Deve ser: TYPE_T_NUMERIC
+  int nesting_level;
+  void *next;
+  float value;      // Inicializado como NaN = desconhecido
+};
+@
+\fimcodigo
+
+Se for uma variável global, tal variável deve ser posicionada na
+estrutura da fonte:
+
+\iniciocodigo
+@<Atributos (struct metafont)@>=
+void *global_variables;
+void *(*alloc)(size_t); // Como alocá-las
+@
+\fimcodigo
+
+Se não for uma variável global, 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

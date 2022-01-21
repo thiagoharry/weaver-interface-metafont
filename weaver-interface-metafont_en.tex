@@ -49,28 +49,31 @@
 \vskip6pt
 
 \abstract{This article contains an implementation of an interpreter
- for a subset of METAFONT language with some extensions. This subset
- is aimed at allowing the definition of flexible and parameterized
- typographic fonts that could be interpreted and redered on the fly.
- Because of this, we sacrifice some flexibility on the language to be
+ for a language based on METAFONT. This is aimed at allowing the
+ definition of flexible and parameterized typographic fonts that could
+ be interpreted and rendered on the fly.  Because of this, we
+ sacrifice some flexibility from the original METAFONT language to be
  able to produce faster results. The implementation will be used by
  Weaver Game Engine as a module and uses modern OpenGL to render the
  fonts.}
 
 \secao{1. Introduction}
 
-METAFONT is a language made to describe typographical fonts. It was
-created on 1984 by Donald Knuth and differs from other formats for
-allowing a designer to create different fonts merely by changing basic
-parameters in the base description of the font. This way, a designer
-should not create a single typographic font, but a meta-font from
-which new fonts could be obtained changing these basic parameters.
+The original METAFONT is a language made to describe typographical
+fonts. It was created on 1984 by Donald Knuth and differs from other
+formats for allowing a designer to create different fonts merely by
+changing basic parameters in the base description of the font. This
+way, a designer should not create a single typographic font, but a
+meta-font from which new fonts could be obtained changing these basic
+parameters.
 
 The original specification for the METAFONT language can be found in
-[KNUTH, 1989], but the implementation described here will be just a
-subset of that language. Perhaps in the future we fill the gaps and
-this implementation becames more complete and compatible with the full
-specification.
+[KNUTH, 1989], but the implementation described here will not be
+compatible with that language. Instead, a new language will be
+defined, strongly based on the original METAFONT, but with a different
+grammar. The new language will have similar objectives, but it will be
+focused on defining typographical fonts that could be interpreted and
+rendered on the fly.
 
 As this article defines a subsystem for Weaver Game Engine, and more
 specifically a subsystem for the user interface modulus, our objective
@@ -250,7 +253,7 @@ a string to store its name:
 #define TYPE_SYMBOLIC 3
 struct symbolic_token{
   int type;   // Should be equal 'TYPE_SYMBOLIC'
-  void *next;
+  void *next, *var;
 #if defined(W_DEBUG_METAFONT)
   int line;
 #endif
@@ -258,6 +261,10 @@ struct symbolic_token{
 };
 @
 \fimcodigo
+
+We also added in this token a pointer \monoespaco{var}, because the
+token can represent a variable, and therefore could need to point to
+the memory region with its content.
 
 But this could consume much more memory than needed. Some symbols are
 very common and are embedded in the language. These symbols could use
@@ -556,7 +563,9 @@ the longest sequence of 12 families of characteres:
 \fimcodigo
 
 a) The first family of letters are the uppercase and lowercase
-alphabetic letters and underline.
+alphabetic letters, digits and underline. A digit cannot be the first
+character in the sequence, otherwise it would be considered part of a
+numeric token.
 
 \iniciocodigo
 @<Lexer: Rule A@>=
@@ -565,7 +574,7 @@ if(isalpha(c) || c == '_'){
     buffer[i] = c;
     i ++;
     c = fgetc(fp);
-  } while(isalpha(c) || c == '_');
+  } while(isalpha(c) || c == '_' || isdigit(c));
   ungetc(c, fp);
   buffer[i] = '\0';
 }
@@ -977,7 +986,7 @@ individual statement. During the iteration we always ensure that we do
 not go outside the region delimited by \monoespaco{begin\_token\_list}
 and \monoespaco{end\_token\_list}.
 
-\secao{5. Compund Statements}
+\secao{5. Compound Statements}
 
 An individual statement in the language can be composed by many other
 statements. The syntax for this is:
