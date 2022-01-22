@@ -50,35 +50,44 @@ void assert(char *descricao, bool valor){
   }
 }
 
+// Random number function
+uint64_t my_rand(void){
+  return 5;
+}
+
 void test_empty_programs(void){
-  struct metafont mf;
-  struct context cx;
-  char test_string[] = "test";
-  mf.file = test_string;
+  struct metafont *mf;
+  struct context *cx;
   bool ret;
+  mf = init_metafont(malloc, free, "tests/empty.mf");
+  cx = init_context();
   void *p = lexer(malloc, free, "tests/empty.mf");
-  ret = eval_program(&mf, &cx, p);
+  ret = eval_program(mf, cx, p);
   assert("Testing empty program", ret);
   free_token_list(free, p);
   p = lexer(malloc, free, "tests/empty_statements.mf");
-  ret = eval_program(&mf, &cx, p);
+  ret = eval_program(mf, cx, p);
   free_token_list(free, p);
+  destroy_metafont(mf);
+  destroy_context(cx);
   assert("Testing program with empty statements", ret);
 }
 
-void test_compound_statemetns(void){
-  struct metafont mf;
-  struct context cx;
-  char test_string[] = "test";
-  mf.file = test_string;
+void test_compound_statements(void){
+  struct metafont *mf;
+  struct context *cx;
   bool ret;
+  mf = init_metafont(malloc, free, "tests/compound.mf");
+  cx = init_context();
   void *p = lexer(malloc, free, "tests/compound.mf");
-  ret = eval_program(&mf, &cx, p);
+  ret = eval_program(mf, cx, p);
   assert("Testing compound statements", ret);
   free_token_list(free, p);
   p = lexer(malloc, free, "tests/compound_wrong.mf");
-  ret = eval_program(&mf, &cx, p);
+  ret = eval_program(mf, cx, p);
   free_token_list(free, p);
+  destroy_metafont(mf);
+  destroy_context(cx);
   assert("Detecting wrong compound statements", !ret);
 }
 
@@ -86,8 +95,10 @@ void test_compound_statemetns(void){
 void test_lexer(void){
   void *p, *token_pointer = lexer(malloc, free, "tests/ridiculous.mf");
   bool ok = true;
-  struct metafont mf;
-  struct context cx;
+  struct metafont *mf;
+  struct context *cx;
+  mf = init_metafont(malloc, free, "tests/ridiculous.mf");
+  cx = init_context();
   p = token_pointer;
   if(((struct symbolic_token *) p) -> type != TYPE_SYMBOLIC){
     ok = false;
@@ -275,15 +286,19 @@ void test_lexer(void){
   } 
  test_lexer_end:
   assert("Testing METAFONT Lexer", ok);
-  ok = eval_program(&mf, &cx, token_pointer);
+  ok = eval_program(mf, cx, token_pointer);
   assert("Wrong program not parsed", !ok);
   free_token_list(free, token_pointer);
+  destroy_metafont(mf);
+  destroy_context(cx);
 }
 
+
 int main(int argc, char **argv){
+  Winit_metafont(malloc, free, malloc, free, my_rand, 36);
   test_lexer();
   test_empty_programs();
-  test_compound_statemetns();
+  test_compound_statements();
   imprime_resultado();
   return 0;
 }

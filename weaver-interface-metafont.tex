@@ -123,6 +123,29 @@ struct metafont *new_metafont(char *filename);
 @
 \fimcodigo
 
+Antes de chamar qualquer uma das funções acima, será importante chamar
+a seguinte função de inicialização que especifica ãlgumas das funções
+que devem ser usadas, e além disso nos informa quantos píxels
+correspontem à unidade de medida de ``1pt'':
+
+\iniciocodigo
+@<Declaração de Função (metafont.h)@>+=
+void Winit_metafont(void *(*temporary_alloc)(size_t),
+                    void (*temporary_free)(void *),
+                    void *(*permanent_alloc)(size_t),
+                    void (*permanent_free)(void *),
+                    uint64_t (*rand)(void), int pt);
+@
+\fimcodigo
+
+As funções passadas como argumento para tal inicializador são
+respectivamente uma para fazer alocações temporárias de memória, outra
+para desalocar o que foi alocado com ela (pode ser NULL), outra para
+fazer alocações mais permanentes, outra para desalocar o que foi
+alocado com ela (pode ser NULL também), uma para gerar 64 bits
+aleatórios e por fim a medida de quantos píxels correspondem a 1pt.
+
+
 \subsecao{1.1. Programação Literária}
 
 Nossa API será escrita usando a técnica de Programação Literária,
@@ -194,15 +217,52 @@ associado a este cabeçaho, o código será este:
 @<Cabeçalhos Locais (metafont.c)@>
 //@<Macros Locais (metafont.c)@>
 @<Estrutura de Dados Locais (metafont.c)@>
-//@<Variáveis Locais (metafont.c)@>
+@<Variáveis Locais (metafont.c)@>
 @<Declaração de Função Local (metafont.c)@>
 @<Funções Auxiliares Locais (metafont.c)@>
-//@<Definição de Funções da API (metafont.c)@>
+@<Definição de Funções da API (metafont.c)@>
 @
 \fimcodigo
 
 Todo o código que definiremos e explicaremos a seguir será posicionado
 nestes dois arquivos. Além deles, nenhum outro arquivo será criado.
+
+\secao{2. Inicialização}
+
+Primeiro vamos definir a função de inicialização. O que ela fará será
+armazenar em uma série de variáveis estáticas várias das funções que
+iremos usar no programa, além de nos informar quantos píxels
+correspondem a 1 pt. As variáveis que armazenarão tais informações são:
+
+\iniciocodigo
+@<Variáveis Locais (metafont.c)@>=
+static void *(*temporary_alloc)(size_t);
+static void (*temporary_free)(void *);
+static void *(*permanent_alloc)(size_t);
+static void (*permanent_free)(void *);
+static uint64_t (*random_func)(void);
+static int pt;
+@
+\fimcodigo
+
+E a função de inicialização consiste em preencher tais variáveis:
+
+\iniciocodigo
+@<Definição de Funções da API (metafont.c)@>=
+void Winit_metafont(void *(*t_alloc)(size_t),
+                    void (*t_free)(void *),
+                    void *(*p_alloc)(size_t),
+                    void (*p_free)(void *),
+                    uint64_t (*random)(void), int pt_in_pixels){
+  temporary_alloc = t_alloc;
+  temporary_free = t_free;
+  permanent_alloc = p_alloc;
+  permanent_free = p_free;
+  random_func = random;
+  pt = pt_in_pixels;
+}
+@
+\fimcodigo
 
 \secao{2. Analisador Léxico}
 
@@ -937,14 +997,81 @@ struct context{
 \fimcodigo
 
 E como indicado acima, um dos conteúdos de \monoespaco{struct
-metafont} é o arquivo de onde saiu a fonte que ele representa:
+metafont} é o arquivo de onde saiu a fonte que ele representa. Também
+vamos armazenar o que é necessário para alocar e desalocar a estrutura
+e seus elementos:
 
 \iniciocodigo
 @<Estrutura de Dados (metafont.h)@>+=
 struct metafont{
   char *file;
+  void *(*alloc)(size_t);
+  void (*free)(void *);
   @<Atributos (struct metafont)@>
 };
+@
+\fimcodigo
+
+Ambas as estruturas de dados terão uma função que as inicializa e as
+finaliza:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+struct metafont *init_metafont(void *(*alloc)(size_t),
+                              void (*disalloc)(void *),
+                              char *filename);
+struct context *init_context(void);
+void destroy_metafont(struct metafont *mf);
+void destroy_context(struct context *cx);
+@
+\fimcodigo
+
+A estrutura \monoespaco{metafont} precisa armazenar mais informações,
+e também pode tanto ser alocada com a função permanente ou temporária
+de alocação. Já o contexto sempre será temporário, e por isso sempre
+será alocado e desalocado com as funções temporárias de memória.
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+struct metafont *init_metafont(void *(*alloc)(size_t),
+                              void (*disalloc)(void *),
+                              char *filename){
+  struct metafont *mf;
+  size_t filename_size = strlen(filename) + 1;
+  mf = (struct metafont *) alloc(sizeof(struct metafont));
+  mf -> file = (char *) alloc(filename_size);
+  memcpy(mf -> file, filename, filename_size);
+  mf -> alloc = alloc;
+  mf -> free = disalloc;
+  //@<Inicialização (struct metafont)@>
+  return mf;
+}
+struct context *init_context(void){
+  struct context *cx;
+  cx = (struct context *) temporary_alloc(sizeof(struct context));
+  //@<Inicialização (struct context)@>
+  return cx;
+}
+@
+\fimcodigo
+
+Já a definição das funções que finalizam e desalocam as estruturas:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+void destroy_metafont(struct metafont *mf){
+  if(mf -> free != NULL){
+    mf -> free(mf -> file);
+    //@<Finalização (struct metafont)@>
+    mf -> free(mf);
+  }
+}
+void destroy_context(struct context *cx){
+  if(temporary_free != NULL){
+    //@<Finalização (struct context)@>
+    temporary_free(cx);
+  }
+}
 @
 \fimcodigo
 
@@ -1310,17 +1437,34 @@ struct numeric_variable{
 @
 \fimcodigo
 
-Se for uma variável global, tal variável deve ser posicionada na
-estrutura da fonte:
+Se estivermos diante de uma variável global, podemos querer preservar
+e armazenar o nome da variável para o caso de querermos depois
+modificar o seu valor dado o seu nome. Então vamos usar a seguinte
+estrutura que armazena o nome e a variável:
 
 \iniciocodigo
-@<Atributos (struct metafont)@>=
-void *global_variables;
-void *(*alloc)(size_t); // Como alocá-las
+@<Estrutura de Dados Locais (metafont.c)@>+=
+struct named_variable{
+  char *name;
+  void *next;
+  struct variable *var;
+};
 @
 \fimcodigo
 
-Se não for uma variável global, 
+A estrutura da fonte tipográfica possui ponteiros para armazenar tanto
+variáveis globais com seus nomews preservados, bem como armazenar sem
+seus nomes. Além disso, ela possui ponteiros para as funções usadas
+para alocar e desalocar tais estruturas:
+
+\iniciocodigo
+@<Atributos (struct metafont)@>=
+void *private_variables;
+void *named_variables;
+@
+\fimcodigo
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

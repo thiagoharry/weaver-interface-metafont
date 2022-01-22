@@ -112,6 +112,27 @@ struct metafont *new_metafont(char *filename);
 @
 \fimcodigo
 
+Before acalling any of these function, it is necessary to call a
+initialization function that sets which functions will be called in
+some contexts and also sets how many pixels correspond to ``1pt'':
+
+\iniciocodigo
+@<Function Declaration (metafont.h)@>+=
+void Winit_metafont(void *(*temporary_alloc)(size_t),
+                    void (*temporary_free)(void *),
+                    void *(*permanent_alloc)(size_t),
+                    void (*permanent_free)(void *),
+                    uint64_t (*rand)(void), int pt);
+@
+\fimcodigo
+
+The functions passed as parameters are respectivelly the one that
+allocates memory temporarily , other to free what was allocated by it,
+a function to make more permanent allocation, the function that frees
+what was allocated by it, a function that returns 64 random bits and
+finally how many pixels are ``1pt''. The disallocation functions can
+be set to NULL.
+
 \subsecao{1.1. Literate Programming}
 
 Our API will be written using the literate programming technique,
@@ -178,15 +199,53 @@ with this header, its structure is:
 @<Local Headers (metafont.c)@>
 //@<Local Macros (metafont.c)@>
 @<Local Data Structures (metafont.c)@>
-//@<Local Variables (metafont.c)@>
+@<Local Variables (metafont.c)@>
 @<Local Function Declaration (metafont.c)@>
 @<Auxiliary Local Functions (metafont.c)@>
-//@<API Functions Definition (metafont.c)@>
+@<API Functions Definition (metafont.c)@>
 @
 \fimcodigo
 
 All the code presented in this document will be placed in one of these
 two files. Besides them, no other file will be created.
+
+\secao{2. Initialization}
+
+First we will define the initialization function. What it will do is
+set some static variables with some functions that we will use in the
+program. It also will set in a variable how many pixels correspond to
+1pt. The variables that will store these information are:
+
+\iniciocodigo
+@<Local Variables (metafont.c)@>=
+static void *(*temporary_alloc)(size_t);
+static void (*temporary_free)(void *);
+static void *(*permanent_alloc)(size_t);
+static void (*permanent_free)(void *);
+static uint64_t (*random_func)(void);
+static int pt;
+@
+\fimcodigo
+
+And the initialization function that sets these variables:
+
+\iniciocodigo
+@<API Functions Definition (metafont.c)@>=
+void Winit_metafont(void *(*t_alloc)(size_t),
+                    void (*t_free)(void *),
+                    void *(*p_alloc)(size_t),
+                    void (*p_free)(void *),
+                    uint64_t (*random)(void), int pt_in_pixels){
+  temporary_alloc = t_alloc;
+  temporary_free = t_free;
+  permanent_alloc = p_alloc;
+  permanent_free = p_free;
+  random_func = random;
+  pt = pt_in_pixels;
+}
+@
+\fimcodigo
+
 
 \secao{2. Lexer}
 
@@ -912,17 +971,86 @@ struct context{
 \fimcodigo
 
 
-And as seen above, one of the contents in \monoespaco{struct metafont} is
-the file name from where the font was read:
+And as seen above, one of the contents in \monoespaco{struct metafont}
+is the file name from where the font was read. We also will store the
+functions that will be use to allocate and disallocate the structure
+and its elements:
 
 \iniciocodigo
 @<Data Structures (metafont.h)@>+=
 struct metafont{
   char *file;
+  void *(*alloc)(size_t);
+  void (*free)(void *);
   //@<Attributes (struct metafont)@>
 };
 @
 \fimcodigo
+
+Both data structures will have a function that initializes them and
+also finalizes them:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+struct metafont *init_metafont(void *(*alloc)(size_t),
+                              void (*disalloc)(void *),
+                              char *filename);
+struct context *init_context(void);
+void destroy_metafont(struct metafont *mf);
+void destroy_context(struct context *cx);
+@
+\fimcodigo
+
+The structure \monoespaco{metafont} needs to store more informations,
+as it could be allocated both using permanent or temporary memory
+allocations. Meanwhile, the context always will be temporary and will
+be allocated with temporary functions.
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+struct metafont *init_metafont(void *(*alloc)(size_t),
+                              void (*disalloc)(void *),
+                              char *filename){
+  struct metafont *mf;
+  size_t filename_size = strlen(filename) + 1;
+  mf = (struct metafont *) alloc(sizeof(struct metafont));
+  mf -> file = (char *) alloc(filename_size);
+  memcpy(mf -> file, filename, filename_size);
+  mf -> alloc = alloc;
+  mf -> free = disalloc;
+  //@<Initialization (struct metafont)@>
+  return mf;
+}
+struct context *init_context(void){
+  struct context *cx;
+  cx = (struct context *) temporary_alloc(sizeof(struct context));
+  //@<Initialization (struct context)@>
+  return cx;
+}
+@
+\fimcodigo
+
+And this is the definition for the functions that frees the memory
+occupied by these structures:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+void destroy_metafont(struct metafont *mf){
+  if(mf -> free != NULL){
+    mf -> free(mf -> file);
+    //@<Finalização (struct metafont)@>
+    mf -> free(mf);
+  }
+}
+void destroy_context(struct context *cx){
+  if(temporary_free != NULL){
+    //@<Finalização (struct context)@>
+    temporary_free(cx);
+  }
+}
+@
+\fimcodigo
+
 
 \secao{4. List of Statements}
 
