@@ -264,7 +264,7 @@ void Winit_metafont(void *(*t_alloc)(size_t),
 @
 \fimcodigo
 
-\secao{2. Analisador Léxico}
+\secao{3. Analisador Léxico}
 
 A primeira coisa a criar para uma linguagem é seu analisador
 léxico. Ele irá ler o código-fonte da linguagem presente em um arquivo
@@ -887,7 +887,7 @@ if(buffer[0] != '\0'){
 \fimcodigo
 
 
-\secao{3. Programas METAFONT}
+\secao{4. Programas METAFONT}
 
 Quando avaliamos um programa METAFONT, vamos precisar de duas
 extruturas adicionais. A primeira delas, a qual chamaremos
@@ -1043,13 +1043,13 @@ struct metafont *init_metafont(void *(*alloc)(size_t),
   memcpy(mf -> file, filename, filename_size);
   mf -> alloc = alloc;
   mf -> free = disalloc;
-  //@<Inicialização (struct metafont)@>
+  @<Inicialização (struct metafont)@>
   return mf;
 }
 struct context *init_context(void){
   struct context *cx;
   cx = (struct context *) temporary_alloc(sizeof(struct context));
-  //@<Inicialização (struct context)@>
+  @<Inicialização (struct context)@>
   return cx;
 }
 @
@@ -1062,20 +1062,20 @@ Já a definição das funções que finalizam e desalocam as estruturas:
 void destroy_metafont(struct metafont *mf){
   if(mf -> free != NULL){
     mf -> free(mf -> file);
-    //@<Finalização (struct metafont)@>
+    @<Finalização (struct metafont)@>
     mf -> free(mf);
   }
 }
 void destroy_context(struct context *cx){
   if(temporary_free != NULL){
-    //@<Finalização (struct context)@>
+    @<Finalização (struct context)@>
     temporary_free(cx);
   }
 }
 @
 \fimcodigo
 
-\secao{4. Listas de Declarações}
+\secao{5. Listas de Declarações}
 
 Uma lista de declarações é uma série de declarações (potencialmente
 vazias) sempre separadas por ponto-e-vírgula:
@@ -1140,7 +1140,7 @@ iteração avançamos os ponteiros para os próximos tokens, mas cuidamos
 para nunca sair de dentro da região delimitada
 por \monoespaco{begin\_token\_list} e \monoespaco{end\_token\_list}.
 
-\secao{5. Declaração Composta}
+\secao{6. Declaração Composta}
 
 Uma declaração individual na linguagem pode na verdade ser composta
 por muitas outras declarações. A sintaxe para isso é:
@@ -1215,10 +1215,10 @@ bool eval_statement(struct metafont *mf, struct context *cx,
                      void *begin_token_list, void **end_token_list){
   @<Declaração: Vazia@>
   @<Declaração: Composta@>
+  @<Declaração: Declaração de Variável@>
   //@<Declaração: Título@>
   //@<Declaração: Equação@>
   //@<Declaração: Atribuição@>
-  //@<Declaração: Declaração de Variável@>
   //@<Declaração: Definição@> 
   //@<Declaração: Comando@>
   // Se estamos aqui, não identificamos o tipo de declaração:
@@ -1326,7 +1326,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
 @
 \fimcodigo
 
-\secao{6. Declaração de Variáveis e as Variáveis Numéricas}
+\secao{7. Declaração de Variáveis}
 
 A sintaxe para declarar variáveis é:
 
@@ -1338,7 +1338,7 @@ A sintaxe para declarar variáveis é:
 \alinhanormal
 
 Uma ``tag'' é basicamente um token simbólico sem um significado
-pré-definido na linguagem.Por exemplo, ``\monoespaco{tag}'' é uma tag,
+pré-definido na linguagem. Por exemplo, ``\monoespaco{tag}'' é uma tag,
 mas ``\monoespaco{begingroup}'' não é.
 
 Para interpretar a declaração de variáveis, vamos então introduzir no
@@ -1404,20 +1404,23 @@ else if(!strcmp(buffer, "boolean") || !strcmp(buffer, "path") ||
 @
 \fimcodigo
 
-Quando uma variável é declarada, devemos fazer três coisas:
+Quando uma variável é declarada, devemos fazer duas coisas:
 
-1) Se a variável não existir, devemos alocar uma estrutura da memória
-para armazenar seu conteúdo.
+1) Se a variável não existir no nível de aninhamento atual, devemos
+alocar uma estrutura da memória para armazenar seu conteúdo. Se ela já
+existir, um erro é gerado. A variável é inicialmente preenchida com um
+valor padrão que depende de seu tipo. Ela não poderá ser usada antes
+de ser inicializada.
 
-2) O conteúdo da variável deve ser esvaziado e um valor padrão
-representando ``valor desconhecido'' deve ser colocado.
+2) Devemos percorrer a lista de tokens e procurar por ocorrências
+desta variável mais adiante no mesmo nível de aninhamento, ou em
+aninhamento inferior. E devemos atualizar o ponteiro destes tokens
+para que apontem para a região de memória recém-alocada para esta
+variável.
 
-3) Se a variável é nova e não existia antes, devemos percorrer a lista
-de tokens e procurar por ocorrências desta variável mais adiante. E
-devemos atualizar o ponteiro destes tokens para que apontem para a
-região de memória recém-alocada para esta variável.
-
-Uma variável numérica será representada pela seguinte estrutura:
+Como cada variável possui diferentes informações e conteúdo,
+dependendo de seu tipo, o modo pelo qual cada uma delas é criada pode
+diferir. O que todas as variáveis tem em comum é a seguinte estrutura:
 
 \iniciocodigo
 @<Estrutura de Dados Locais (metafont.c)@>+=
@@ -1427,15 +1430,12 @@ struct variable{
   int nesting_level;
   void *next;  
 };
-// Variável numérica:
-struct numeric_variable{
-  int type;          // Deve ser: TYPE_T_NUMERIC
-  int nesting_level;
-  void *next;
-  float value;      // Inicializado como NaN = desconhecido
-};
 @
 \fimcodigo
+
+Todas armazenam primeiro o seu tipo, depois o nível de aninhamento em
+que estão e um ponteiro para a próxima. Mas dependendo do tipo da
+variável haverá mais informações após o ponteiro para a próxima.
 
 Se estivermos diante de uma variável global, podemos querer preservar
 e armazenar o nome da variável para o caso de querermos depois
@@ -1452,18 +1452,146 @@ struct named_variable{
 @
 \fimcodigo
 
-A estrutura da fonte tipográfica possui ponteiros para armazenar tanto
-variáveis globais com seus nomews preservados, bem como armazenar sem
-seus nomes. Além disso, ela possui ponteiros para as funções usadas
-para alocar e desalocar tais estruturas:
+E a estrutura de dados da fonte possui ponteiros para as variáveis
+globais com nome armazenado e as sem nome armazenado:
 
 \iniciocodigo
 @<Atributos (struct metafont)@>=
-void *private_variables;
-void *named_variables;
+  void *named_variables;
+  void *global_variables;
 @
 \fimcodigo
 
+Tais ponteiros para variáveis são inicializados como NULL:
+
+\iniciocodigo
+@<Inicialização (struct metafont)@>=
+mf -> named_variables = NULL;
+mf -> global_variables = NULL;
+@
+\fimcodigo
+
+Para desalocar a lista de variáveis globais, basta percorrer a lista
+encadeada que elas formam. Algumas variáveis mais complexas precisarão
+de operações adicionais para serem removidas, mas trataremos delas
+posteriormente.
+
+\iniciocodigo
+@<Finalização (struct metafont)@>=
+if(mf -> free != NULL){
+  struct variable *v = (struct variable *) (mf -> global_variables);
+  struct variable *next;
+  while(v != NULL){
+    next = (struct variable *) (v -> next);
+    mf -> free(v);
+    v = next;
+  }
+}
+@
+\fimcodigo
+
+Já desalocar a lista de variáveis globais com nomes preservados é
+feito de maneira semelhante:
+
+\iniciocodigo
+@<Finalização (struct metafont)@>+=
+if(mf -> free != NULL){
+  struct named_variable *v = (struct named_variable *)
+                                 (mf -> named_variables);
+  struct named_variable *next;
+  while(v != NULL){
+    next = (struct named_variable *) (v -> next);
+    mf -> free(v -> name);
+    mf -> free(v -> var);
+    mf -> free(v);
+    v = next;
+  }
+}
+@
+\fimcodigo
+
+No caso das variáveis que não são globais, elas serão armazenadas no
+contexto, não na estrutura da fonte. Afinal, a duração delas será
+sempre temporária:
+
+\iniciocodigo
+@<Atributos (struct context)@>=
+  void *variables;
+@
+\fimcodigo
+
+A lista de variáveis é inicializada como vazia:
+
+\iniciocodigo
+@<Inicialização (struct context)@>=
+cx -> variables = NULL;
+@
+\fimcodigo
+
+E finalizamos ela assim como finalizamos a lista de variáveis globais:
+
+\iniciocodigo
+@<Finalização (struct context)@>=
+if(temporary_free != NULL){
+  struct variable *v = (struct variable *) (cx -> variables);
+  struct variable *next;
+  while(v != NULL){
+    next = (struct variable *) (v -> next);
+    temporary_free(v);
+    v = next;
+  }
+}
+@
+\fimcodigo
+
+Agora vamos à interpretação da declaração de variável:
+
+\iniciocodigo
+@<Declaração: Declaração de Variável@>=
+else if(((struct generic_token *) begin_token_list) -> type >=
+        TYPE_T_BOOLEAN &&
+        ((struct generic_token *) begin_token_list) -> type <=
+        TYPE_T_NUMERIC){ // Todos os tipos de declaração
+  //int type = ((struct generic_token *) begin_token_list) -> type;
+  struct generic_token *variable_token = (struct generic_token *)
+           (((struct generic_token *) begin_token_list) -> next);
+  do{
+    if(variable_token -> type != TYPE_SYMBOLIC){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: A declared variable "
+                    "should be a single symbolic token.\n", mf -> file,
+                    variable_token -> line);
+#endif
+      return false;
+    }
+    //@<Insere Variável Declarada@>
+    if(variable_token != *end_token_list)
+      variable_token = (struct generic_token *) (variable_token -> next);
+    else{
+      variable_token = NULL;
+      continue;
+    }
+    if(variable_token -> type != TYPE_COMMA){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: Declared variables "
+                    "should be separed by commas.\n", mf -> file,
+                    variable_token -> line);
+#endif
+      return false;
+    }
+    if(variable_token == *end_token_list){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: Variable declaration "
+                    "shouldn't end with comma.\n", mf -> file,
+                    variable_token -> line);
+#endif
+      return false;
+    }
+    variable_token = (struct generic_token *) (variable_token -> next);
+  } while(variable_token != NULL);
+}
+@
+\fimcodigo
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

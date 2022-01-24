@@ -247,7 +247,7 @@ void Winit_metafont(void *(*t_alloc)(size_t),
 \fimcodigo
 
 
-\secao{2. Lexer}
+\secao{3. Lexer}
 
 The first thing to be created for a language is its lexer. It will
 read the source code in a file and will output a list of tokens, where
@@ -864,7 +864,7 @@ if(buffer[0] != '\0'){
 @
 \fimcodigo
 
-\secao{3. METAFONT Programs}
+\secao{4. METAFONT Programs}
 
 When we evaluate a METAFONT program, we need two additional
 structures. The first one, which we will call \monoespaco{struct
@@ -982,7 +982,7 @@ struct metafont{
   char *file;
   void *(*alloc)(size_t);
   void (*free)(void *);
-  //@<Attributes (struct metafont)@>
+  @<Attributes (struct metafont)@>
 };
 @
 \fimcodigo
@@ -1018,13 +1018,13 @@ struct metafont *init_metafont(void *(*alloc)(size_t),
   memcpy(mf -> file, filename, filename_size);
   mf -> alloc = alloc;
   mf -> free = disalloc;
-  //@<Initialization (struct metafont)@>
+  @<Initialization (struct metafont)@>
   return mf;
 }
 struct context *init_context(void){
   struct context *cx;
   cx = (struct context *) temporary_alloc(sizeof(struct context));
-  //@<Initialization (struct context)@>
+  @<Initialization (struct context)@>
   return cx;
 }
 @
@@ -1038,13 +1038,13 @@ occupied by these structures:
 void destroy_metafont(struct metafont *mf){
   if(mf -> free != NULL){
     mf -> free(mf -> file);
-    //@<Finalização (struct metafont)@>
+    @<Finalization (struct metafont)@>
     mf -> free(mf);
   }
 }
 void destroy_context(struct context *cx){
   if(temporary_free != NULL){
-    //@<Finalização (struct context)@>
+    @<Finalization (struct context)@>
     temporary_free(cx);
   }
 }
@@ -1052,7 +1052,7 @@ void destroy_context(struct context *cx){
 \fimcodigo
 
 
-\secao{4. List of Statements}
+\secao{5. List of Statements}
 
 A list of potentially empty statements delimited by a semicolon:
 
@@ -1114,7 +1114,7 @@ individual statement. During the iteration we always ensure that we do
 not go outside the region delimited by \monoespaco{begin\_token\_list}
 and \monoespaco{end\_token\_list}.
 
-\secao{5. Compound Statements}
+\secao{6. Compound Statements}
 
 An individual statement in the language can be composed by many other
 statements. The syntax for this is:
@@ -1189,10 +1189,10 @@ bool eval_statement(struct metafont *mf, struct context *cx,
                      void *begin_token_list, void **end_token_list){
   @<Statement: Empty@>
   @<Statement: Compound@>
+  @<Statement: Declaration@>
   //@<Statement: Title@>
   //@<Statement: Equation@>
   //@<Statement: Assignment@>
-  //@<Statement: Declaration@>
   //@<Statement: Definition@> 
   //@<Statement: Command@>
   // If we are here, we could not identify the statement:
@@ -1294,6 +1294,276 @@ else if(((struct generic_token *) begin_token_list) -> type ==
     cx -> nesting_level --;
     return ret;
   }
+}
+@
+\fimcodigo
+
+
+\secao{7. Variable Declarations}
+
+The syntax to declare variables is:
+
+\alinhaverbatim
+<Declaration> -> <Type> <List of Declarations>
+<Type> -> boolean | string | path | pen | picture | transform | pair |
+          numeric
+<List of Declarations> -> <Tag> | <Tag> , <List of Declarations>
+\alinhanormal
+
+A ``tag'' is basically a symbolic token without a predefined meaning
+in the language. For example, ``\monoespaco{tag}'' is a tag, but
+``\monoespaco{begingroup}'' is not.
+
+To interpret a declaration, we will introduce the following special
+tokens:
+
+\iniciocodigo
+@<METAFONT: Symbolic Token Definition@>+=
+#define TYPE_T_BOOLEAN               11 // Symbolic token 'boolean'
+#define TYPE_T_PATH                  12 // Symbolic token 'path'
+#define TYPE_T_PEN                   13 // Symbolic token 'pen'
+#define TYPE_T_PICTURE               14 // Symbolic token 'picture'
+#define TYPE_T_TRANSFORM             15 // Symbolic token 'transform'
+#define TYPE_T_PAIR                  16 // Symbolic token 'pair'
+#define TYPE_T_NUMERIC               17 // Symbolic token 'numeric'
+@
+\fimcodigo
+
+And this is the code for the lexer to indentify these tokens:
+
+\iniciocodigo
+@<Lexer: New Reserved Symbolic Token@>+=
+else if(!strcmp(buffer, "boolean") || !strcmp(buffer, "path") ||
+        !strcmp(buffer, "pen") || !strcmp(buffer, "picture") ||
+        !strcmp(buffer, "transform") || !strcmp(buffer, "pair") ||
+        !strcmp(buffer, "numeric")){
+  struct generic_token *new_token =
+     (struct generic_token *) alloc(sizeof(struct generic_token));
+  if(new_token == NULL){
+    free_token_list(dealloc, first_token);
+    return NULL;
+  }
+  switch(buffer[0]){
+  case 'b':
+    new_token -> type = TYPE_T_BOOLEAN; break;
+  case 'n':
+    new_token -> type = TYPE_T_NUMERIC; break;    
+  case 't':
+    new_token -> type = TYPE_T_TRANSFORM; break;
+  default: // paTh, peN, piCture, paIr
+    switch(buffer[2]){
+      case 't':
+        new_token -> type = TYPE_T_PATH; break;
+      case 'n':
+        new_token -> type = TYPE_T_PEN; break;
+      case 'c':
+        new_token -> type = TYPE_T_PICTURE; break;
+      default:
+        new_token -> type = TYPE_T_PAIR; break;
+    }
+  }
+  new_token -> next = NULL;
+#if defined(W_DEBUG_METAFONT)
+  new_token -> line = line;
+#endif
+  if(first_token == NULL)
+    first_token = last_token = new_token;
+  else{
+    ((struct generic_token *) last_token) -> next = new_token;
+    last_token = new_token;
+  }
+  continue;
+}
+@
+\fimcodigo
+
+When a variable is declared, we need to do two things:
+
+1) If the variable do not exist in the current nesting level, we
+should allocate a new structure to store its content. If it already
+exist in the current nesting level, an error is returned. A default
+value depending of its type if stored in the variable. But it should
+not be used before being initialized.
+
+2) We iterate over the following tokens in the list of tokens until
+the end of the list or until the current nesting level ends. When we
+find a symbolic token with the variable name, we update its pointer to
+the newly allocated variable.
+
+
+As each variable type has its own information and content, the
+specifics about how the variable is created can be different. What all
+variables have in common is the following structure:
+
+\iniciocodigo
+@<Local Data Structures (metafont.c)@>+=
+// Generic variable
+struct variable{
+  int type;
+  int nesting_level;
+  void *next;  
+};
+@
+\fimcodigo
+
+All variables first store their type, then their nesting level, and
+finally, a ponter for the next variable. Depending on the variable
+type, more information could be stored after the pointer for the next
+variable.
+
+If we are dealing with a global variable, we could want to preserve
+and store its name, just in case if later the user would want to
+change the variable content indentifying it by the name. In this case,
+we would want to use the following structure to store the name with
+the variable:
+
+\iniciocodigo
+@<Local Data Structures (metafont.c)@>+=
+struct named_variable{
+  char *name;
+  void *next;
+  struct variable *var;
+};
+@
+\fimcodigo
+
+And the metafont structure will have pointers for these global
+variables, with names and without:
+
+\iniciocodigo
+@<Attributes (struct metafont)@>=
+  void *named_variables;
+  void *global_variables;
+@
+\fimcodigo
+
+These pointers are initialized with NULL:
+
+\iniciocodigo
+@<Initialization (struct metafont)@>=
+mf -> named_variables = NULL;
+mf -> global_variables = NULL;
+@
+\fimcodigo
+
+To disallocate a list of global variables, we just iterate over the
+linked list that they create. Some variables, which are more complex,
+could need additional operations before removing them, but we will
+deal with them later:
+
+\iniciocodigo
+@<Finalization (struct metafont)@>=
+if(mf -> free != NULL){
+  struct variable *v = (struct variable *) (mf -> global_variables);
+  struct variable *next;
+  while(v != NULL){
+    next = (struct variable *) (v -> next);
+    mf -> free(v);
+    v = next;
+  }
+}
+@
+\fimcodigo
+
+And to disallocate a list with preserved names, we act in a similar
+way:
+
+\iniciocodigo
+@<Finalization (struct metafont)@>+=
+if(mf -> free != NULL){
+  struct named_variable *v = (struct named_variable *)
+                                 (mf -> named_variables);
+  struct named_variable *next;
+  while(v != NULL){
+    next = (struct named_variable *) (v -> next);
+    mf -> free(v -> name);
+    mf -> free(v -> var);
+    mf -> free(v);
+    v = next;
+  }
+}
+@
+\fimcodigo
+
+In the case of variables that are not global, they will be stored in
+contexts, not in the metafont struct. After all, their duration always
+will be temporary:
+
+\iniciocodigo
+@<Attributes (struct context)@>=
+  void *variables;
+@
+\fimcodigo
+
+The list of variables is initialized as empty:
+
+\iniciocodigo
+@<Initialization (struct context)@>=
+cx -> variables = NULL;
+@
+\fimcodigo
+
+And we finalize it exactly as the list of global variables:
+
+\iniciocodigo
+@<Finalization (struct context)@>=
+if(temporary_free != NULL){
+  struct variable *v = (struct variable *) (cx -> variables);
+  struct variable *next;
+  while(v != NULL){
+    next = (struct variable *) (v -> next);
+    temporary_free(v);
+    v = next;
+  }
+}
+@
+\fimcodigo
+
+And now let's interpret the variable declaration:
+
+\iniciocodigo
+@<Statement: Declaration@>=
+else if(((struct generic_token *) begin_token_list) -> type >=
+        TYPE_T_BOOLEAN &&
+        ((struct generic_token *) begin_token_list) -> type <=
+        TYPE_T_NUMERIC){ // Todos os tipos de declaração
+  //int type = ((struct generic_token *) begin_token_list) -> type;
+  struct generic_token *variable_token = (struct generic_token *)
+           (((struct generic_token *) begin_token_list) -> next);
+  do{
+    if(variable_token -> type != TYPE_SYMBOLIC){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: A declared variable "
+                    "should be a single symbolic token.\n", mf -> file,
+                    variable_token -> line);
+#endif
+      return false;
+    }
+    //@<Insere Variável Declarada@>
+    if(variable_token != *end_token_list)
+      variable_token = (struct generic_token *) (variable_token -> next);
+    else{
+      variable_token = NULL;
+      continue;
+    }
+    if(variable_token -> type != TYPE_COMMA){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: Declared variables "
+                    "should be separed by commas.\n", mf -> file,
+                    variable_token -> line);
+#endif
+      return false;
+    }
+    if(variable_token == *end_token_list){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: Variable declaration "
+                    "shouldn't end with comma.\n", mf -> file,
+                    variable_token -> line);
+#endif
+      return false;
+    }
+    variable_token = (struct generic_token *) (variable_token -> next);
+  } while(variable_token != NULL);
 }
 @
 \fimcodigo

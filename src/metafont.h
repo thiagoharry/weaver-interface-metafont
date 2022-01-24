@@ -26,7 +26,11 @@ struct context{
 #line 1230 "weaver-interface-metafont_en.tex"
 
 int nesting_level;
-/*:52*/
+/*:52*//*62:*/
+#line 1493 "weaver-interface-metafont_en.tex"
+
+void*variables;
+/*:62*/
 #line 968 "weaver-interface-metafont_en.tex"
 
 };
@@ -37,6 +41,13 @@ struct metafont{
 char*file;
 void*(*alloc)(size_t);
 void(*free)(void*);
+/*58:*/
+#line 1434 "weaver-interface-metafont_en.tex"
+
+void*named_variables;
+void*global_variables;
+/*:58*/
+#line 985 "weaver-interface-metafont_en.tex"
 
 };
 /*:41*/
