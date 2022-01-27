@@ -91,6 +91,23 @@ void test_compound_statements(void){
   assert("Detecting wrong compound statements", !ret);
 }
 
+void test_variables(void){
+  struct metafont *mf;
+  struct context *cx;
+  bool ret;
+  mf = init_metafont(malloc, free, "tests/variables.mf");
+  cx = init_context();
+  void *p = lexer(malloc, free, "tests/variables.mf");
+  ret = eval_program(mf, cx, p);
+  ret = ret && (mf -> named_variables != NULL) &&
+    (mf -> global_variables != NULL) &&
+    (cx -> variables != NULL);
+  assert("Testing variable declaration", ret);
+  free_token_list(free, p);
+  destroy_metafont(mf);
+  destroy_context(cx);
+}
+
 
 void test_lexer(void){
   void *p, *token_pointer = lexer(malloc, free, "tests/ridiculous.mf");
@@ -299,6 +316,7 @@ int main(int argc, char **argv){
   test_lexer();
   test_empty_programs();
   test_compound_statements();
+  test_variables();
   imprime_resultado();
   return 0;
 }

@@ -1198,7 +1198,8 @@ bool eval_statement(struct metafont *mf, struct context *cx,
   // If we are here, we could not identify the statement:
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr, "METAFONT: Error: %s:%d: Unknown statement.\n",
-            mf -> file, begin_token_list -> line);
+            mf -> file,
+            ((struct generic_token *) begin_token_list) -> line);
 #endif
   return false;
 }
@@ -1228,9 +1229,18 @@ the nesting level below:
 
 \iniciocodigo
 @<Attributes (struct context)@>=
-  int nesting_level; // Should begin as 0
+  int nesting_level;
 @
 \fimcodigo
+
+This should be initialized as zero:
+
+\iniciocodigo
+@<Initialization (struct context)@>=
+  cx -> nesting_level = 0;
+@
+\fimcodigo
+
 
 The second thing to recall is that if we are in a compound statement,
 this means that the end of the declaration pointer could be wrong.
@@ -1279,7 +1289,8 @@ else if(((struct generic_token *) begin_token_list) -> type ==
   if(*end_token_list == NULL){
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr, "METAFONT: Error: %s:%d: Unclosed 'begingroup'.\n",
-            mf -> file, begin_token_list -> line);
+            mf -> file,
+            ((struct generic_token *) begin_token_list) -> line);
 #endif
     return false;
   }
@@ -1498,7 +1509,7 @@ will be temporary:
 The list of variables is initialized as empty:
 
 \iniciocodigo
-@<Initialization (struct context)@>=
+@<Initialization (struct context)@>+=
 cx -> variables = NULL;
 @
 \fimcodigo
@@ -1527,44 +1538,239 @@ else if(((struct generic_token *) begin_token_list) -> type >=
         TYPE_T_BOOLEAN &&
         ((struct generic_token *) begin_token_list) -> type <=
         TYPE_T_NUMERIC){ // Todos os tipos de declaração
-  //int type = ((struct generic_token *) begin_token_list) -> type;
-  struct generic_token *variable_token = (struct generic_token *)
-           (((struct generic_token *) begin_token_list) -> next);
+  int type = ((struct generic_token *) begin_token_list) -> type;
+  struct symbolic_token *variable = (struct symbolic_token *)
+           (((struct symbolic_token *) begin_token_list) -> next);
   do{
-    if(variable_token -> type != TYPE_SYMBOLIC){
+    if(variable -> type != TYPE_SYMBOLIC){
 #if defined(W_DEBUG_METAFONT)
       fprintf(stderr, "METAFONT: Error: %s:%d: A declared variable "
                     "should be a single symbolic token.\n", mf -> file,
-                    variable_token -> line);
+                    variable -> line);
 #endif
       return false;
     }
-    //@<Insere Variável Declarada@>
-    if(variable_token != *end_token_list)
-      variable_token = (struct generic_token *) (variable_token -> next);
+    @<Insert Declared Variable@>
+    if(variable != *end_token_list)
+      variable = (struct symbolic_token *) (variable -> next);
     else{
-      variable_token = NULL;
+      variable = NULL;
       continue;
     }
-    if(variable_token -> type != TYPE_COMMA){
+    if(variable -> type != TYPE_COMMA){
 #if defined(W_DEBUG_METAFONT)
       fprintf(stderr, "METAFONT: Error: %s:%d: Declared variables "
                     "should be separed by commas.\n", mf -> file,
-                    variable_token -> line);
+                    variable -> line);
 #endif
       return false;
     }
-    if(variable_token == *end_token_list){
+    if(variable == *end_token_list){
 #if defined(W_DEBUG_METAFONT)
       fprintf(stderr, "METAFONT: Error: %s:%d: Variable declaration "
                     "shouldn't end with comma.\n", mf -> file,
-                    variable_token -> line);
+                    variable -> line);
 #endif
       return false;
     }
-    variable_token = (struct generic_token *) (variable_token -> next);
-  } while(variable_token != NULL);
+    variable = (struct symbolic_token *) (variable -> next);
+  } while(variable != NULL);
+  return true;
 }
+@
+\fimcodigo
+
+Inserting a new variable follows the logic below:
+
+\iniciocodigo
+@<Insert Declared Variable@>=
+{
+  void *variable_pointer;
+  if(cx -> nesting_level == 0){ // Variável global
+    if(variable -> value[0] == '_')
+      variable_pointer = insert_variable(0, mf -> alloc, type, variable,
+                                         &(mf -> global_variables));
+    else
+      variable_pointer = insert_named_global_variable(mf, type, variable);
+  }
+  else
+    variable_pointer = insert_variable(cx -> nesting_level,
+                                      temporary_alloc, type,
+                                      variable, &(cx -> variables));
+  if(variable_pointer == NULL){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: No memory to create "
+                    "variable.\n", mf -> file, variable -> line);
+#endif
+    return false;
+  }
+  update_token_pointer_for_variable(variable, variable_pointer);
+}
+@
+\fimcodigo
+
+The function that inserts a new global variable without its name is:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+struct variable *insert_variable(int nesting_level,
+                                 void *(*alloc)(size_t),
+                                 int type,
+                                 struct symbolic_token *variable,
+                                 void **target);
+@
+\fimcodigo
+
+It will allocate a new variable and store it in the local pointed
+by \monoespaco{target}:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+struct variable *insert_variable(int nesting_level,
+                                 void *(*alloc)(size_t),
+                                 int type,
+                                 struct symbolic_token *variable,
+                                 void **target){
+  struct variable *var;
+  size_t var_size;
+  switch(type){
+    case TYPE_T_NUMERIC:
+      var_size = sizeof(struct numeric_variable);
+      break;
+    default:
+      var_size = sizeof(struct variable);
+  }
+  var = (struct variable *) alloc(var_size);
+  if(var != NULL){
+    var -> type = type;
+    var -> next = NULL;
+    var -> nesting_level = nesting_level;
+  }
+  if(*target == NULL)
+    *target = var;
+  else{
+    struct variable *p = (struct variable *) (*target);
+    while(p -> next != NULL)
+      p = (struct variable *) p -> next;
+    p -> next = var;
+  }
+  return var;
+}
+@
+\fimcodigo
+
+Inserting a named variable is done with the following function:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+struct variable *insert_named_global_variable(struct metafont *mf,
+                                             int type,
+                                             struct symbolic_token *var);
+@
+\fimcodigo
+
+The function works in a similar way, first allocating the structure
+with the variable nam and then placing the variable there:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+struct variable *insert_named_global_variable(struct metafont *mf,
+                                             int type,
+                                             struct symbolic_token *var){
+  struct named_variable *named;
+  struct variable *new_var;
+  size_t name_size;
+  named = (struct named_variable *)
+              mf -> alloc(sizeof(struct named_variable));
+  if(named == NULL)
+    return NULL;
+  name_size = strlen(var -> value) + 1;
+  named -> name = (char *) mf -> alloc(name_size);
+  if(named -> name == NULL){
+    if(mf -> free != NULL)
+      mf -> free(named);
+    return NULL;
+  }
+  memcpy(named -> name, var -> value, name_size);
+  named -> next = NULL;
+  named -> var = NULL;
+  new_var = insert_variable(0, mf -> alloc, type, var,
+                           (void **) &(named -> var));
+
+  if(new_var == NULL){
+    if(mf -> free != NULL){
+      mf -> free(named -> name);
+      mf -> free(named);
+      return NULL;
+    }
+  }
+  if(mf -> named_variables == NULL)
+    mf -> named_variables = named;
+  else{
+    struct named_variable *p = (struct named_variable *)
+                                   mf -> named_variables;
+    while(p -> next != NULL)
+      p = (struct named_variable *) p -> next;
+    p -> next = named;
+  }
+  return new_var;
+}
+@
+\fimcodigo
+
+Anf finally, the function that search in a list of tokens for symbolic
+tokens with the same name that the allocated new variable and updating
+each one to make them point to the newly allocated variable position:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+void update_token_pointer_for_variable(struct symbolic_token *var_token,
+                                      struct variable *var_pointer);
+@
+\fimcodigo
+
+The function will walk in the linked list starting in the token next
+to the declared variable. And t will stop only when there is no more
+tokens or when the variable do not exist anymore because we are not
+more in its nesting level (it happens when we find
+the \monoespaco{endgroup} which ends the current nesting level):
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+void update_token_pointer_for_variable(struct symbolic_token *var_token,
+                                      struct variable *var_pointer){
+  struct symbolic_token *p = var_token -> next;
+  int nesting_level = 0;
+  while(p != NULL && nesting_level >= 0){
+    if(p -> type == TYPE_BEGINGROUP)
+      nesting_level ++;
+    else if(p -> type == TYPE_ENDGROUP)
+      nesting_level --;
+    else if(p -> type == TYPE_SYMBOLIC){
+      if(!strcmp(p -> value, var_token -> value)){
+        p -> var = var_pointer;
+      }
+    }
+    p = (struct symbolic_token *) (p -> next);
+  }
+}
+@
+\fimcodigo
+
+
+
+\subsecao{7.1. Numeric Variables}
+
+A numeric variable will be stored in the following structure:
+
+\iniciocodigo
+@<Local Data Structures (metafont.c)@>+=
+struct numeric_variable{
+  int type; // Deve set 'TYPE_T_NUMERIC'
+  int nesting_level;
+  void *next;
+  float value;
+};
 @
 \fimcodigo
 
