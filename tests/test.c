@@ -61,11 +61,11 @@ void test_empty_programs(void){
   bool ret;
   mf = init_metafont(malloc, free, "tests/empty.mf");
   cx = init_context();
-  void *p = lexer(malloc, free, "tests/empty.mf");
+  void *p = lexer(mf, malloc, free, "tests/empty.mf");
   ret = eval_program(mf, cx, p);
   assert("Testing empty program", ret);
   free_token_list(free, p);
-  p = lexer(malloc, free, "tests/empty_statements.mf");
+  p = lexer(mf, malloc, free, "tests/empty_statements.mf");
   ret = eval_program(mf, cx, p);
   free_token_list(free, p);
   destroy_metafont(mf);
@@ -79,11 +79,11 @@ void test_compound_statements(void){
   bool ret;
   mf = init_metafont(malloc, free, "tests/compound.mf");
   cx = init_context();
-  void *p = lexer(malloc, free, "tests/compound.mf");
+  void *p = lexer(mf, malloc, free, "tests/compound.mf");
   ret = eval_program(mf, cx, p);
   assert("Testing compound statements", ret);
   free_token_list(free, p);
-  p = lexer(malloc, free, "tests/compound_wrong.mf");
+  p = lexer(mf, malloc, free, "tests/compound_wrong.mf");
   ret = eval_program(mf, cx, p);
   free_token_list(free, p);
   destroy_metafont(mf);
@@ -97,7 +97,7 @@ void test_variables(void){
   bool ret;
   mf = init_metafont(malloc, free, "tests/variables.mf");
   cx = init_context();
-  void *p = lexer(malloc, free, "tests/variables.mf");
+  void *p = lexer(mf, malloc, free, "tests/variables.mf");
   ret = eval_program(mf, cx, p);
   ret = ret && (mf -> named_variables != NULL) &&
     (mf -> global_variables != NULL) &&
@@ -110,11 +110,13 @@ void test_variables(void){
 
 
 void test_lexer(void){
-  void *p, *token_pointer = lexer(malloc, free, "tests/ridiculous.mf");
+  void *p, *token_pointer;
   bool ok = true;
   struct metafont *mf;
   struct context *cx;
   mf = init_metafont(malloc, free, "tests/ridiculous.mf");
+  token_pointer = lexer(mf, malloc, free,
+				  "tests/ridiculous.mf");
   cx = init_context();
   p = token_pointer;
   if(((struct symbolic_token *) p) -> type != TYPE_SYMBOLIC){
