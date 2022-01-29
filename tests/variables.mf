@@ -1,0 +1,12 @@
+% To test the usage of variables.
+% This program should work and be accepted.
+
+numeric num1, num2, pi, _test;
+
+num1 = num2 := 8 + 3;
+
+begingroup
+  numeric num2, i, e, temp;
+endgroup;
+end
+  

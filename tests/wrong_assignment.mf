@@ -1,0 +1,9 @@
+% This program should fail
+
+numeric num1, num2;
+
+% WRONG:
+
+num1 = num2 = 3 := 8 + 3;
+
+end

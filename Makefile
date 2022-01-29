@@ -7,7 +7,7 @@ doc_en:
 test:
 	ctangle weaver-interface-metafont.tex
 	cp src/metafont.* tests/
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -Wall -O2 tests/test.c  -o test_metafont -lX11 -lEGL -lGLESv2 -lm
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS)  -Wall -O2 tests/test.c  -o test_metafont -lX11 -lEGL -lGLESv2 -lm
 	./test_metafont
 test_en:
 	ctangle weaver-interface-metafont_en.tex

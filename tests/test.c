@@ -108,6 +108,19 @@ void test_variables(void){
   destroy_context(cx);
 }
 
+void test_assignments(void){
+ struct metafont *mf;
+  struct context *cx;
+  bool ret;
+  mf = init_metafont(malloc, free, "tests/wrong_assignment.mf");
+  cx = init_context();
+  void *p = lexer(mf, malloc, free, "tests/wrong_assignment.mf");
+  ret = eval_program(mf, cx, p);
+  assert("Detecting wrong assignment", !ret);
+  free_token_list(free, p);
+  destroy_metafont(mf);
+  destroy_context(cx);
+}
 
 void test_lexer(void){
   void *p, *token_pointer;
@@ -319,6 +332,7 @@ int main(int argc, char **argv){
   test_empty_programs();
   test_compound_statements();
   test_variables();
+  test_assignments();
   imprime_resultado();
   return 0;
 }
