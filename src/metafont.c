@@ -1095,7 +1095,7 @@ var= (struct symbolic_token*)(var->next);
 else
 var= NULL;
 }while(var!=NULL&&
-((struct generic_token*)(var->next))->type!=
+((struct generic_token*)(var->next))->type==
 TYPE_ASSIGNMENT);
 if(var==NULL){
 #if defined(W_DEBUG_METAFONT)
