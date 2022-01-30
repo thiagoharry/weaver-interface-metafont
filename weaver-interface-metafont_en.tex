@@ -96,7 +96,7 @@ void _Wmetafont_loading(void *(*permanent_alloc)(size_t),
 
 And we will need the header for Weaver user interfaces:
 
-\iniciociodigo
+\iniciocodigo
 @<Include General Headers (metafont.h)@>=
 #include "interface.h"
 @
@@ -823,9 +823,55 @@ else if(c == '.'){
 After reading the characters for our new symbolic token, we check if
 we have a reserved symbolic token: a token representing a language
 keyword. We can check this using function \monoespaco{strcmp}
-comparing the buffer with some keywords. For now we still will not
-show this code because we did not define any reserved symbol, but
-anyway we will already include the header to manipulate strings.
+comparing the buffer with some keywords. We will store a list of
+keywords here:
+
+\iniciocodigo
+@<Local Variables (metafont.c)@>+=
+static char* list_of_keywords[] = {
+@<List of Keywords@>
+  NULL};
+@
+\fimcodigo
+
+Therefore, to know if we are dealing with a token that represents a
+reserved keyword, we check if it is in this NULL terminated list. If
+so, we create a token whose type is chosen according with the position
+in this list:
+
+\iniciocodigo
+@<Lexer: New Reserved Symbolic Token@>=
+{
+  int i, token_type = 0;
+  for(i = 0; list_of_keywords[i] != NULL; i ++)
+    if(!strcmp(buffer, list_of_keywords[i]))
+      token_type = i + 8; // Token types for keywords begin in 8
+  if(token_type != 0){
+    struct generic_token *new_token =
+       (struct generic_token *) alloc(sizeof(struct generic_token));
+    if(new_token == NULL){
+      free_token_list(dealloc, first_token);
+      return NULL;
+    }
+    @<Change Type in Token Creation for Special Cases@>
+    new_token -> type = token_type;
+    new_token -> next = NULL;
+#if defined(W_DEBUG_METAFONT)
+    new_token -> line = line;
+#endif
+    if(first_token == NULL)
+      first_token = last_token = new_token;
+    else{
+      ((struct generic_token *) last_token) -> next = new_token;
+      last_token = new_token;
+    }
+    continue;
+  }
+}
+@
+\fimcodigo
+
+To use function \monoespaco{strcmp} we need the following header:
 
 \iniciocodigo
 @<Local Headers (metafont.c)@>=
@@ -899,38 +945,30 @@ end-of-file marking:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>=
-#define TYPE_END             8 // The symbolic token 'end' or 'dump'
+#define TYPE_END             8 // The symbolic token 'end'
+#define TYPE_DUMP            9 // The symbolic token 'dump'
 @
 \fimcodigo
 
-And we generate this kind of token when our lexer finds one of these
-two keywords (technically METAFONT call them ``sparks'', not
-``keywords''):
+And let's add both the keywords \monoespaco{end} and \monoespaco{dump}
+in ourt list of keywords:
 
 \iniciocodigo
-@<Lexer: New Reserved Symbolic Token@>=
-if(!strcmp(buffer, "end") || !strcmp(buffer, "dump")){
-  struct generic_token *new_token =
-     (struct generic_token *) alloc(sizeof(struct generic_token));
-  if(new_token == NULL){
-    free_token_list(dealloc, first_token);
-    return NULL;
-  }
-  new_token -> type = TYPE_END;
-  new_token -> next = NULL;
-#if defined(W_DEBUG_METAFONT)
-  new_token -> line = line;
-#endif
-  if(first_token == NULL)
-    first_token = last_token = new_token;
-  else{
-    ((struct generic_token *) last_token) -> next = new_token;
-    last_token = new_token;
-  }
-  continue;
-}
+@<List of Keywords@>=
+"end", "dump",
 @
 \fimcodigo
+
+But to simplify, we will not use \monoespaco{TYPE\_DUMP},
+only \monoespaco{TYPE\_END} to make the code simpler in the parser:
+
+\iniciocodigo
+@<Change Type in Token Creation for Special Cases@>=
+if(token_type == TYPE_DUMP)
+  token_type = TYPE_END;
+@
+\fimcodigo
+
 
 The first parser function to be defined is the one that recognizes an
 entire program. It basically checks if the program is ended correctly
@@ -1141,39 +1179,16 @@ of special symbolic tokens:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_BEGINGROUP             9 // O token simbólico 'begingroup'
-#define TYPE_ENDGROUP              10 // O token simbólico 'endgroup'
+#define TYPE_BEGINGROUP            10 // O token simbólico 'begingroup'
+#define TYPE_ENDGROUP              11 // O token simbólico 'endgroup'
 @
 \fimcodigo
 
-
-And we add in the lexer the recipe about how to generate these tokens:
+And we add them to the list of reserved keywords:
 
 \iniciocodigo
-@<Lexer: New Reserved Symbolic Token@>+=
-else if(!strcmp(buffer, "begingroup") || !strcmp(buffer, "endgroup")){
-  struct generic_token *new_token =
-     (struct generic_token *) alloc(sizeof(struct generic_token));
-  if(new_token == NULL){
-    free_token_list(dealloc, first_token);
-    return NULL;
-  }
-  if(buffer[0] == 'b')
-    new_token -> type = TYPE_BEGINGROUP;
-  else
-    new_token -> type = TYPE_ENDGROUP;
-  new_token -> next = NULL;
-#if defined(W_DEBUG_METAFONT)
-  new_token -> line = line;
-#endif
-  if(first_token == NULL)
-    first_token = last_token = new_token;
-  else{
-    ((struct generic_token *) last_token) -> next = new_token;
-    last_token = new_token;
-  }
-  continue;
-}
+@<List of Keywords@>+=
+"begingroup", "endgroup",
 @
 \fimcodigo
 
@@ -1332,63 +1347,24 @@ tokens:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_T_BOOLEAN               11 // Symbolic token 'boolean'
-#define TYPE_T_PATH                  12 // Symbolic token 'path'
-#define TYPE_T_PEN                   13 // Symbolic token 'pen'
-#define TYPE_T_PICTURE               14 // Symbolic token 'picture'
-#define TYPE_T_TRANSFORM             15 // Symbolic token 'transform'
-#define TYPE_T_PAIR                  16 // Symbolic token 'pair'
-#define TYPE_T_NUMERIC               17 // Symbolic token 'numeric'
+#define TYPE_T_BOOLEAN               12 // Symbolic token 'boolean'
+#define TYPE_T_PATH                  13 // Symbolic token 'path'
+#define TYPE_T_PEN                   14 // Symbolic token 'pen'
+#define TYPE_T_PICTURE               15 // Symbolic token 'picture'
+#define TYPE_T_TRANSFORM             16 // Symbolic token 'transform'
+#define TYPE_T_PAIR                  17 // Symbolic token 'pair'
+#define TYPE_T_NUMERIC               18 // Symbolic token 'numeric'
 @
 \fimcodigo
 
-And this is the code for the lexer to indentify these tokens:
+And then we add them to the list of keywords:
 
 \iniciocodigo
-@<Lexer: New Reserved Symbolic Token@>+=
-else if(!strcmp(buffer, "boolean") || !strcmp(buffer, "path") ||
-        !strcmp(buffer, "pen") || !strcmp(buffer, "picture") ||
-        !strcmp(buffer, "transform") || !strcmp(buffer, "pair") ||
-        !strcmp(buffer, "numeric")){
-  struct generic_token *new_token =
-     (struct generic_token *) alloc(sizeof(struct generic_token));
-  if(new_token == NULL){
-    free_token_list(dealloc, first_token);
-    return NULL;
-  }
-  switch(buffer[0]){
-  case 'b':
-    new_token -> type = TYPE_T_BOOLEAN; break;
-  case 'n':
-    new_token -> type = TYPE_T_NUMERIC; break;    
-  case 't':
-    new_token -> type = TYPE_T_TRANSFORM; break;
-  default: // paTh, peN, piCture, paIr
-    switch(buffer[2]){
-      case 't':
-        new_token -> type = TYPE_T_PATH; break;
-      case 'n':
-        new_token -> type = TYPE_T_PEN; break;
-      case 'c':
-        new_token -> type = TYPE_T_PICTURE; break;
-      default:
-        new_token -> type = TYPE_T_PAIR; break;
-    }
-  }
-  new_token -> next = NULL;
-#if defined(W_DEBUG_METAFONT)
-  new_token -> line = line;
-#endif
-  if(first_token == NULL)
-    first_token = last_token = new_token;
-  else{
-    ((struct generic_token *) last_token) -> next = new_token;
-    last_token = new_token;
-  }
-  continue;
-}
+@<List of Keywords@>+=
+"boolean", "path", "pen", "picture", "transform", "pair", "numeric",
 @
 \fimcodigo
+
 
 When a variable is declared, we need to do two things:
 
@@ -1922,36 +1898,29 @@ have an special meaning:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_ASSIGNMENT            18 // O token simbólico '=' ou ':='
+#define TYPE_ASSIGNMENT            19 // Symbolic token '='
+#define TYPE_ASSIGNMENT2           20 // Symbolic token ':='
 @
 \fimcodigo
 
-And here is this new token generation:
+Both types are added to the list of keywords:
 
 \iniciocodigo
-@<Lexer: New Reserved Symbolic Token@>+=
-else if(!strcmp(buffer, "=") || !strcmp(buffer, ":=")){
-  struct generic_token *new_token =
-     (struct generic_token *) alloc(sizeof(struct generic_token));
-  if(new_token == NULL){
-    free_token_list(dealloc, first_token);
-    return NULL;
-  }
-  new_token -> type = TYPE_ASSIGNMENT;
-  new_token -> next = NULL;
-#if defined(W_DEBUG_METAFONT)
-  new_token -> line = line;
-#endif
-  if(first_token == NULL)
-    first_token = last_token = new_token;
-  else{
-    ((struct generic_token *) last_token) -> next = new_token;
-    last_token = new_token;
-  }
-  continue;
-}
+@<List of Keywords@>+=
+"=", ":=",
 @
 \fimcodigo
+
+But to simplify the code, we will transform the second type in the
+first and consider only the first kind of assignment:
+
+\iniciocodigo
+@<Change Type in Token Creation for Special Cases@>+=
+else if(token_type == TYPE_ASSIGNMENT2)
+  token_type = TYPE_ASSIGNMENT;
+@
+\fimcodigo
+
 
 Now that we have this new kind of token, the code to evaluate
 assignments is described below. What it does is walk over the tokens
@@ -1974,6 +1943,7 @@ variables. These details will be shown in the next subsections.
 else if(((struct generic_token *) begin_token_list) -> type ==
         TYPE_SYMBOLIC){
   struct symbolic_token *var = (struct symbolic_token *) begin_token_list;
+  struct generic_token *begin_expression;
   int type = 0; // Tipo das variáveis na atribuição
   int number_of_variables = 0;
   do{
@@ -2028,8 +1998,201 @@ else if(((struct generic_token *) begin_token_list) -> type ==
 #endif
       return false;
   }
-  // @<Atribuição de Variável Numérica@>
+  begin_expression = (struct generic_token *) var;
+  @<Assignment for Numeric Variables@>
   return true;
+}
+@
+\fimcodigo
+
+\subsecao{8.1. Numeric Assignments and Expressions}
+
+How do we assign numeric variables given the code above? We use the
+following code:
+
+\iniciocodigo
+@<Assignment for Numeric Variables@>=
+if(type == TYPE_T_NUMERIC){
+  int i;
+  struct numeric_variable result;
+  eval_numeric_expression(mf, cx, begin_expression,
+                          (struct generic_token *) end_token_list,
+                          &result);
+  var = (struct symbolic_token *) begin_token_list;
+  for(i = 0; i < number_of_variables; i ++){
+    assign_numeric_variable((struct numeric_variable *) var -> var,
+                            &result);
+    var = (struct symbolic_token *) (var -> next);
+    var = (struct symbolic_token *) (var -> next);
+  }
+}
+@
+\fimcodigo
+
+The function that makes the assignment is declared here:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+void assign_numeric_variable(struct numeric_variable *target,
+                            struct numeric_variable *source);
+@
+\fimcodigo
+
+And its simple implementation is given below:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+void assign_numeric_variable(struct numeric_variable *target,
+                            struct numeric_variable *source){
+  target -> value = source -> value;
+}
+@
+\fimcodigo
+
+Now we will write how to interpret numeric expressions.
+
+\subsubsecao{8.1.1. Sum and Subtraction: Normal and Pythagorean}
+
+The rules for numeric expressions begins as:
+
+\alinhaverbatim
+<Numeric Expression> -> <Numeric Tertiary>
+<Numeric Tertiary> -> <Numeric Secundary> |
+                      <Numeric Tertiary> <+++> <Numeric Secundary>
+<+++> -> + | - | ++ | +-+
+\alinhanormal
+
+The symbols \monoespaco{+} and \monoespaco{-} represent the usual
+addition and subtraction. The symbol \monoespaco{++} should not be
+confused with C language increment and means the pythagorean sum:
+
+$$
+a ++ b = \sqrt{a^2 + b^2}
+$$
+
+This can be easily computed in C using the
+function \monoespaco{hypot} from the standard math library.
+
+The symbol \monoespaco{+-+} is the ``pythagorean subtraction'' defined
+below:
+
+$$
+a +-+ b = \sqrt{a^2 - b^2} = \sqrt{(a+b)(a-b)} = \sqrt{a+b}\sqrt{a-b}
+$$
+
+We will compute the pythagorean subtraction using the last definition,
+as the multiplication of two square roots. This is the computation
+that minimizes errors involving overflows and underflows.
+
+The four operators above are the ones with smaller precedence. These
+operations will be done only after all other mathematical operations.
+
+Now we will improve our lexer making it identify and create the new
+tokens for these operators. We also will create new token types for
+``['' and ``]'', as we will need to identify these tokens in our
+parser:
+
+\iniciocodigo
+@<METAFONT: Symbolic Token Definition@>+=
+#define TYPE_SUM                   21 // Symbolic token '+'
+#define TYPE_SUBTRACT              22 // Symbolic token '-'
+#define TYPE_PYTHAGOREAN_SUM       23 // Symbolic token '++'
+#define TYPE_PYTHAGOREAN_SUBTRACT  24 // Symbolic token '+-+'
+#define TYPE_OPEN_BRACKET          25 // Symbolic token '['
+#define TYPE_CLOSE_BRACKET         26 // Symbolic token ']'
+@
+\fimcodigo
+
+And we add them to the list of keywords:
+
+\iniciocodigo
+@<List of Keywords@>+=
+"+", "-", "++", "+-+", "[", "]",
+@
+\fimcodigo
+
+Now let's evaluate numeric expressions, which means evaluating
+tertiary numeric expressions. The function is declared here:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+void eval_numeric_expression(struct metafont *mf, struct context *cx,
+                             struct generic_token *begin_expression,
+                             struct generic_token *end_token_list,
+                             struct numeric_variable *result);
+@
+\fimcodigo
+
+The tertiary numeric expressions is where we solve additions and
+subtractions. By the syntax rules, what we need to do is walk over the
+tokens in the expression until find the last tertiary operator that is
+not delimited by parenthesis or brackets. Everything in the left side
+should be recursively evaluated as another tertiary
+expression. Everything in the right side should be interpreted as a
+secundary numeric expression. Finally, if we did not find any tertiary
+operator, the entire expression is evaluated as a secundary numeric
+expression:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+void eval_numeric_expression(struct metafont *mf, struct context *cx,
+                             struct generic_token *begin_expression,
+                             struct generic_token *end_token_list,
+                             struct numeric_variable *result){
+  struct generic_token *end_tertiary = NULL, //*begin_secundary,
+                       *last_sum = NULL, *p, *prev = NULL;
+  int nesting_parenthesis = 0, nesting_brackets = 0;
+  struct numeric_variable a, b;
+  b.value = 0.0;
+  p = begin_expression;
+  do{
+    if(p -> type == TYPE_OPEN_PARENTHESIS)
+      nesting_parenthesis ++;
+    else if(p -> type == TYPE_CLOSE_PARENTHESIS)
+      nesting_parenthesis ++;
+    else if(p -> type == TYPE_OPEN_BRACKET)
+      nesting_brackets ++;
+    else if(p -> type == TYPE_CLOSE_BRACKET)
+      nesting_brackets --;
+    else if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
+            (p -> type == TYPE_SUM || p -> type == TYPE_SUBTRACT ||
+             p -> type == TYPE_PYTHAGOREAN_SUM ||
+             p -> type == TYPE_PYTHAGOREAN_SUBTRACT)){
+      last_sum = p;
+      end_tertiary = prev;
+    }
+    prev = p;
+    if(p != end_token_list)
+      p = (struct generic_token *) p -> next;
+    else
+      p = NULL;
+  }while(p != NULL);
+  if(end_tertiary != NULL){
+    //begin_secundary = (struct generic_token *) (last_sum -> next);
+    eval_numeric_expression(mf, cx, begin_expression, end_tertiary, &a);
+    //eval_numeric_secundary(mf, cx, begin_secundary, end_token_list, &b);
+    if(last_sum -> type == TYPE_SUM)
+      result -> value = a.value + b.value;
+    else if(last_sum -> type == TYPE_SUBTRACT)
+      result -> value = a.value - b.value;
+    else if(last_sum -> type == TYPE_PYTHAGOREAN_SUM)
+      result -> value = hypotf(a.value, b.value);
+    else if(last_sum -> type == TYPE_PYTHAGOREAN_SUBTRACT){
+      result -> value = sqrtf(a.value + b.value) *
+        sqrtf(a.value - b.value);
+      if(isnan(result -> value)){
+#if defined(W_DEBUG_METAFONT)
+        fprintf(stderr, "METAFONT: Error: %s:%d: Invalid pythagorean "
+                "subtraction had result replaced by 0.\n", mf -> file,
+                var -> line);
+#endif
+        result -> value = 0.0;
+      }
+    }
+  }
+  //else
+    //eval_numeric_secundary(mf, cx, begin_expression, end_token_list,
+    //                       result);
 }
 @
 \fimcodigo
