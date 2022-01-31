@@ -2014,10 +2014,13 @@ following code:
 @<Assignment for Numeric Variables@>=
 if(type == TYPE_T_NUMERIC){
   int i;
+  bool ret;
   struct numeric_variable result;
-  eval_numeric_expression(mf, cx, begin_expression,
-                          (struct generic_token *) end_token_list,
-                          &result);
+  ret = eval_numeric_expression(mf, cx, begin_expression,
+                               (struct generic_token *) *end_token_list,
+                               &result);
+  if(!ret)
+    return false;
   var = (struct symbolic_token *) begin_token_list;
   for(i = 0; i < number_of_variables; i ++){
     assign_numeric_variable((struct numeric_variable *) var -> var,
@@ -2058,8 +2061,8 @@ The rules for numeric expressions begins as:
 \alinhaverbatim
 <Numeric Expression> -> <Numeric Tertiary>
 <Numeric Tertiary> -> <Numeric Secundary> |
-                      <Numeric Tertiary> <+++> <Numeric Secundary>
-<+++> -> + | - | ++ | +-+
+                      <Numeric Tertiary> <T-Op> <Numeric Secundary>
+<T-Op> -> + | - | ++ | +-+
 \alinhanormal
 
 The symbols \monoespaco{+} and \monoespaco{-} represent the usual
@@ -2116,7 +2119,7 @@ tertiary numeric expressions. The function is declared here:
 
 \iniciocodigo
 @<Local Function Declaration (metafont.c)@>+=
-void eval_numeric_expression(struct metafont *mf, struct context *cx,
+bool eval_numeric_expression(struct metafont *mf, struct context *cx,
                              struct generic_token *begin_expression,
                              struct generic_token *end_token_list,
                              struct numeric_variable *result);
@@ -2131,16 +2134,144 @@ should be recursively evaluated as another tertiary
 expression. Everything in the right side should be interpreted as a
 secundary numeric expression. Finally, if we did not find any tertiary
 operator, the entire expression is evaluated as a secundary numeric
-expression:
+expression.
+
+However, there are some exceptions, cases in which the
+symbols \monoespaco{+} and \monoespaco{-} should not be treated as a
+sum or subtraction. This happens if they are in the beginning of the
+numeric expression, or if before them there is a comma, an opening
+bracket, a multiplication or division symbol, a
+token \monoespaco{length} or if before it there is another tertiary
+operator. The code below also need to consider these exceptions:
 
 \iniciocodigo
 @<Auxiliary Local Functions (metafont.c)@>+=
-void eval_numeric_expression(struct metafont *mf, struct context *cx,
+bool eval_numeric_expression(struct metafont *mf, struct context *cx,
                              struct generic_token *begin_expression,
                              struct generic_token *end_token_list,
                              struct numeric_variable *result){
-  struct generic_token *end_tertiary = NULL, //*begin_secundary,
+  struct generic_token *end_tertiary = NULL, *begin_secundary,
                        *last_sum = NULL, *p, *prev = NULL;
+  int nesting_parenthesis = 0, nesting_brackets = 0;
+  struct numeric_variable a, b;
+  p = begin_expression;
+  do{
+    if(p -> type == TYPE_OPEN_PARENTHESIS)
+      nesting_parenthesis ++;
+    else if(p -> type == TYPE_CLOSE_PARENTHESIS)
+      nesting_parenthesis ++;
+    else if(p -> type == TYPE_OPEN_BRACKET)
+      nesting_brackets ++;
+    else if(p -> type == TYPE_CLOSE_BRACKET)
+      nesting_brackets --;
+    else if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
+            (p -> type == TYPE_PYTHAGOREAN_SUM ||
+             p -> type == TYPE_PYTHAGOREAN_SUBTRACT ||
+             ((p -> type == TYPE_SUM || p -> type == TYPE_SUBTRACT) && 
+              (prev != NULL && prev -> type != TYPE_COMMA &&
+               prev -> type != TYPE_OPEN_BRACKET &&
+               prev -> type != TYPE_LENGTH &&
+               prev -> type != TYPE_MULTIPLICATION &&
+               prev -> type != TYPE_DIVISION &&
+               prev -> type != TYPE_SUM &&
+               prev -> type != TYPE_SUBTRACT &&
+               prev -> type != TYPE_PYTHAGOREAN_SUM &&
+               prev -> type != TYPE_PYTHAGOREAN_SUBTRACT)))){
+      last_sum = p;
+      end_tertiary = prev;
+    }
+    prev = p;
+    if(p != end_token_list)
+      p = (struct generic_token *) p -> next;
+    else
+      p = NULL;
+  }while(p != NULL);
+  if(end_tertiary != NULL){
+    begin_secundary = (struct generic_token *) (last_sum -> next);
+    eval_numeric_expression(mf, cx, begin_expression, end_tertiary, &a);
+    eval_numeric_secundary(mf, cx, begin_secundary, end_token_list, &b);
+    if(last_sum -> type == TYPE_SUM)
+      result -> value = a.value + b.value;
+    else if(last_sum -> type == TYPE_SUBTRACT)
+      result -> value = a.value - b.value;
+    else if(last_sum -> type == TYPE_PYTHAGOREAN_SUM)
+      result -> value = hypotf(a.value, b.value);
+    else if(last_sum -> type == TYPE_PYTHAGOREAN_SUBTRACT){
+      result -> value = sqrtf(a.value + b.value) *
+        sqrtf(a.value - b.value);
+      if(isnan(result -> value)){
+#if defined(W_DEBUG_METAFONT)
+        fprintf(stderr, "METAFONT: Error: %s:%d: Negative square root "
+                " in pythagorean subtraction.\n", mf -> file,
+                var -> line);
+#endif
+        return false;
+      }
+    }
+    return true;
+  }
+  else
+    return eval_numeric_secundary(mf, cx, begin_expression,
+                                  end_token_list, result);
+}
+@
+\fimcodigo
+
+\subsubsecao{8.1.2. Multiplication and Division}
+
+The rules to deal with secundary numeric expressions are:
+
+\alinhaverbatim
+<Numeric Secundary> -> <Numeric Primary> |
+                       <Numeric Secundary> <S-Op> <Numeric Primary>
+<S-Op> -> * | /
+\alinhanormal
+
+The operators \monoespaco{*} and \monoespaco{/} are respectively the
+multiplication and division.
+
+Let's add these operators as reserved tokens and define their types:
+
+\iniciocodigo
+@<METAFONT: Symbolic Token Definition@>+=
+#define TYPE_MULTIPLICATION        27 // Symbolic token '*'
+#define TYPE_DIVISION              28 // Symbolic token '/'
+@
+\fimcodigo
+
+\iniciocodigo
+@<List of Keywords@>+=
+"*", "/",
+@
+\fimcodigo
+
+The function that will evaluate numeric secundary expressions is:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+bool eval_numeric_secundary(struct metafont *mf, struct context *cx,
+                             struct generic_token *begin_expression,
+                             struct generic_token *end_token_list,
+                             struct numeric_variable *result);
+@
+\fimcodigo
+
+And its definition is very similar with the function that evaluates
+tertiary expressions, except that this function computes
+multiplication and division. However, there is an additional rule that
+we should be aware: the token ``/'' will be considered division only
+if it is not delimited by two numeric tokens. If so, then it
+represents a fraction and it should be computed with a higher
+precedence than what we deal here:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+bool eval_numeric_secundary(struct metafont *mf, struct context *cx,
+                             struct generic_token *begin_expression,
+                             struct generic_token *end_token_list,
+                             struct numeric_variable *result){
+  struct generic_token *end_secundary = NULL, *begin_primary,
+                       *last_mul = NULL, *p, *prev = NULL;
   int nesting_parenthesis = 0, nesting_brackets = 0;
   struct numeric_variable a, b;
   b.value = 0.0;
@@ -2155,11 +2286,13 @@ void eval_numeric_expression(struct metafont *mf, struct context *cx,
     else if(p -> type == TYPE_CLOSE_BRACKET)
       nesting_brackets --;
     else if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
-            (p -> type == TYPE_SUM || p -> type == TYPE_SUBTRACT ||
-             p -> type == TYPE_PYTHAGOREAN_SUM ||
-             p -> type == TYPE_PYTHAGOREAN_SUBTRACT)){
-      last_sum = p;
-      end_tertiary = prev;
+            (p -> type == TYPE_MULTIPLICATION ||
+             (p -> type == TYPE_DIVISION &&
+             (prev -> type != TYPE_NUMERIC || p == end_token_list ||
+              ((struct generic_token *) p -> next) -> type !=
+               TYPE_NUMERIC)))){
+      last_mul = p;
+      end_secundary = prev;
     }
     prev = p;
     if(p != end_token_list)
@@ -2167,32 +2300,173 @@ void eval_numeric_expression(struct metafont *mf, struct context *cx,
     else
       p = NULL;
   }while(p != NULL);
-  if(end_tertiary != NULL){
-    //begin_secundary = (struct generic_token *) (last_sum -> next);
-    eval_numeric_expression(mf, cx, begin_expression, end_tertiary, &a);
-    //eval_numeric_secundary(mf, cx, begin_secundary, end_token_list, &b);
-    if(last_sum -> type == TYPE_SUM)
-      result -> value = a.value + b.value;
-    else if(last_sum -> type == TYPE_SUBTRACT)
-      result -> value = a.value - b.value;
-    else if(last_sum -> type == TYPE_PYTHAGOREAN_SUM)
-      result -> value = hypotf(a.value, b.value);
-    else if(last_sum -> type == TYPE_PYTHAGOREAN_SUBTRACT){
-      result -> value = sqrtf(a.value + b.value) *
-        sqrtf(a.value - b.value);
-      if(isnan(result -> value)){
+  if(end_secundary != NULL){
+    begin_primary = (struct generic_token *) (last_mul -> next);
+    eval_numeric_secundary(mf, cx, begin_expression, end_secundary, &a);
+    eval_numeric_primary(mf, cx, begin_primary, end_token_list, &b);
+    if(last_mul -> type == TYPE_MULTIPLICATION)
+      result -> value = a.value * b.value;
+    else if(last_mul -> type == TYPE_DIVISION){
+      if(b.value == 0.0){
 #if defined(W_DEBUG_METAFONT)
-        fprintf(stderr, "METAFONT: Error: %s:%d: Invalid pythagorean "
-                "subtraction had result replaced by 0.\n", mf -> file,
-                var -> line);
+        fprintf(stderr, "METAFONT: Error: %s:%d: Division by zero.\n",
+                mf -> file, last_mul -> line);
 #endif
-        result -> value = 0.0;
+        return false;
       }
+      result -> value = a.value / b.value;
     }
+    return true;
   }
-  //else
-    //eval_numeric_secundary(mf, cx, begin_expression, end_token_list,
-    //                       result);
+  else
+    return eval_numeric_primary(mf, cx, begin_expression,
+                                end_token_list, result);
+}
+@
+\fimcodigo
+
+\subsubsecao{8.1.3. Modulus and Intermediary Values}
+
+The rules for primary numeric expressions are:
+
+\alinhaverbatim
+<Numeric Primary> -> <Numeric Atom> |
+                     <Numeric Atom> [ <Numeric Expression> ,
+                                      <Numeric Expression> ] |
+                     length <Numeric Primary> | (...) |
+                     <Numeric Operator> <Numeric Primary>
+<Numeric Operator> -> sqrt | sind | cosd | mlog | mexp | floor |
+                       uniformdeviate |
+                       <Scalar Multiplication Operator>
+<Scalar Multiplication Operator> -> + | - |
+                       <Primary Numeric Token Before Variable>
+<Primary Numeric Token> -> <Numeric Token> / <Numeric Token> |
+                           <Numeric Token>
+\alinhanormal
+
+The operator \monoespaco{length}, when appearing before a numeric
+primery means that we want its modulus. If it appears before another
+kind of primary expression, it could mean different things. The
+bracket operator means:
+
+$$
+a[b, c] = a(b+c)
+$$
+
+It allow us to write an an alternate way that the half between the
+numbers $a$ and $b$ (their mean) is $.5[a, b]$.
+
+The new modulus operator should be added to the list of reserved
+words. We will add also the other new operators from the list of
+numeric operators. The brackets are already in this list:
+
+\iniciocodigo
+@<METAFONT: Symbolic Token Definition@>+=
+#define TYPE_LENGTH         29 // Symbolic token 'length'
+#define TYPE_SQRT           30 // Symbolic token 'sqrt'
+#define TYPE_SIND           31 // Symbolic token 'sind'
+#define TYPE_COSD           32 // Symbolic token 'cosd'
+#define TYPE_LOG            33 // Symbolic token 'log'
+#define TYPE_EXP            34 // Symbolic token 'exp'
+#define TYPE_FLOOR          35 // Symbolic token 'floor'
+#define TYPE_UNIFORMDEVIATE 36 // Symbolic token 'uniformdeviate'
+@
+\fimcodigo
+
+\iniciocodigo
+@<List of Keywords@>+=
+"length", "sqrt", "sind", "cosd", "log", "exp", "floor", "uniformdeviate",
+@
+\fimcodigo
+
+The function that evaluates a primary numeric expression is this:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+bool eval_numeric_primary(struct metafont *mf, struct context *cx,
+                          struct generic_token *begin_expression,
+                          struct generic_token *end_expression,
+                          struct numeric_variable *result);
+@
+\fimcodigo
+
+
+We can decide which syntax rule should be applied while evaluating the
+primary numeric expression using seven different interpretation rules:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+bool eval_numeric_primary(struct metafont *mf, struct context *cx,
+                          struct generic_token *begin_expression,
+                          struct generic_token *end_expression,
+                          struct numeric_variable *result){
+  @<Numeric Primary: Rule 1@>
+  //@<Numeric Primary: Rule 2@>
+  //@<Numeric Primary: Rule 3@>
+  //@<Numeric Primary: Rule 4@>
+  //@<Numeric Primary: Rule 5@>
+  //@<Numeric Primary: Rule 6@>
+  //@<Numeric Primary: Rule 7@>
+  return true;
+}
+@
+
+The rules are:
+
+1) If the expression have a single token, it is a numeric
+atom. However, as this case is the most common, we can deal with it
+without calling further recursive functions. We just copy the content
+present in this token to the result of the expression and return:
+
+\iniciocodigo
+@<Numeric Primary: Rule 1@>=
+if(begin_expression == end_expression){
+  if(begin_expression -> type == TYPE_NUMERIC){
+    result -> value = ((struct numeric_token *)begin_expression) -> value;
+    return true;
+  }
+  else if(begin_expression -> type == TYPE_SYMBOLIC){
+    struct numeric_variable *var = (struct numeric_variable *)
+                                     ((struct symbolic_token *)
+                                      begin_expression) -> var;
+    if(var == NULL){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: Non-declared "
+              "variable '%s'.\n", mf -> file, begin_expression -> line,
+              ((struct symbolic_token *) begin_expression) -> value);
+#endif
+      return false;
+    }
+    if(var -> type != TYPE_T_NUMERIC){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: Non-numeric "
+              "variable '%s' in numeric expression.\n", mf -> file,
+              begin_expression -> line,
+              ((struct symbolic_token *) begin_expression) -> value);
+#endif
+      return false;
+    }
+    if(isnan(var -> value)){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: Non-initialized "
+              "variable '%s' in numeric expression.\n", mf -> file,
+              begin_expression -> line,
+              ((struct symbolic_token *) begin_expression) -> value);
+#endif
+      return false;
+    }
+    result -> value = var -> value;
+    return true;
+  }
+  else{
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Non-numeric "
+            "token in numeric expression.\n", mf -> file,
+            begin_expression -> line);
+#endif
+      return false;
+
+  }
 }
 @
 \fimcodigo

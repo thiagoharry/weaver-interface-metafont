@@ -94,6 +94,7 @@ void test_compound_statements(void){
 void test_variables(void){
   struct metafont *mf;
   struct context *cx;
+  struct numeric_variable *n;
   bool ret;
   mf = init_metafont(malloc, free, "tests/variables.mf");
   cx = init_context();
@@ -103,6 +104,9 @@ void test_variables(void){
     (mf -> global_variables != NULL) &&
     (cx -> variables != NULL);
   assert("Testing variable declaration", ret);
+  n = (struct numeric_variable *) ((struct named_variable *)
+				   mf -> named_variables) -> var;
+  assert("Sums and multiplications working", n -> value == 116.0);
   free_token_list(free, p);
   destroy_metafont(mf);
   destroy_context(cx);

@@ -2036,10 +2036,13 @@ acima? Usamos o código abaixo:
 @<Atribuição de Variável Numérica@>=
 if(type == TYPE_T_NUMERIC){
   int i;
+  bool ret;
   struct numeric_variable result;
-  eval_numeric_expression(mf, cx, begin_expression,
-                          (struct generic_token *) end_token_list,
-                          &result);
+  ret = eval_numeric_expression(mf, cx, begin_expression,
+                               (struct generic_token *) *end_token_list,
+                                &result);
+  if(!ret)
+    return false;
   var = (struct symbolic_token *) begin_token_list;
   for(i = 0; i < number_of_variables; i ++){
     assign_numeric_variable((struct numeric_variable *) var -> var,
@@ -2081,8 +2084,8 @@ As regras iniciais de expressões numéricas seguem abaixo:
 \alinhaverbatim
 <Expressão Numérica> -> <Terciário Numérico>
 <Terciário Numérico> -> <Secundário Numérico> |
-                        <Terciário Numérico> <+++> <Secundário Numérico>
-<+++> -> + | - | ++ | +-+
+                        <Terciário Numérico> <T-Op> <Secundário Numérico>
+<T-Op> -> + | - | ++ | +-+
 \alinhanormal
 
 Os símbolos de \monoespaco{+} e \monoespaco{-} corespondem à adição e
@@ -2141,7 +2144,7 @@ expressões numéricas é:
 
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
-void eval_numeric_expression(struct metafont *mf, struct context *cx,
+bool eval_numeric_expression(struct metafont *mf, struct context *cx,
                              struct generic_token *begin_expression,
                              struct generic_token *end_token_list,
                              struct numeric_variable *result);
@@ -2158,16 +2161,148 @@ recursivamente como outra expressão terciária numérica. Já o que
 estiver à direita será interpretado como uma expressão secundária
 numérica. Por fim, se nenhum símbolo de soma e subtração for
 encontrada, a expressão inteira será avaliada como uma expressão
-secundária numérica:
+secundária numérica.
+
+Contudo, existem exceções, casos nos quais não devemos considerar os
+tokens \monoespaco{+} e \monoespaco{-} como soma e subtração. Isso
+ocorre quando tais símbolos estiverem no começo da expressão numérica,
+ou então caso sejam precedidos por vírgula, abrir de colchetes,
+símbolo de multiplicação, divisão, um token \monoespaco{length} ou
+então quando antes dele há outro operador terciário. O código abaixo
+também deve tratar tais exceções.
 
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
-void eval_numeric_expression(struct metafont *mf, struct context *cx,
+bool eval_numeric_expression(struct metafont *mf, struct context *cx,
                              struct generic_token *begin_expression,
                              struct generic_token *end_token_list,
                              struct numeric_variable *result){
-  struct generic_token *end_tertiary = NULL, //*begin_secundary,
+  struct generic_token *end_tertiary = NULL, *begin_secundary,
                        *last_sum = NULL, *p, *prev = NULL;
+  int nesting_parenthesis = 0, nesting_brackets = 0;
+  struct numeric_variable a, b;
+  p = begin_expression;
+  do{
+    if(p -> type == TYPE_OPEN_PARENTHESIS)
+      nesting_parenthesis ++;
+    else if(p -> type == TYPE_CLOSE_PARENTHESIS)
+      nesting_parenthesis ++;
+    else if(p -> type == TYPE_OPEN_BRACKET)
+      nesting_brackets ++;
+    else if(p -> type == TYPE_CLOSE_BRACKET)
+      nesting_brackets --;
+    else if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
+            (p -> type == TYPE_PYTHAGOREAN_SUM ||
+             p -> type == TYPE_PYTHAGOREAN_SUBTRACT ||
+             ((p -> type == TYPE_SUM || p -> type == TYPE_SUBTRACT) && 
+              (prev != NULL && prev -> type != TYPE_COMMA &&
+               prev -> type != TYPE_OPEN_BRACKET &&
+               prev -> type != TYPE_LENGTH &&
+               prev -> type != TYPE_MULTIPLICATION &&
+               prev -> type != TYPE_DIVISION &&
+               prev -> type != TYPE_SUM &&
+               prev -> type != TYPE_SUBTRACT &&
+               prev -> type != TYPE_PYTHAGOREAN_SUM &&
+               prev -> type != TYPE_PYTHAGOREAN_SUBTRACT)))){
+      last_sum = p;
+      end_tertiary = prev;
+    }
+    prev = p;
+    if(p != end_token_list)
+      p = (struct generic_token *) p -> next;
+    else
+      p = NULL;
+  }while(p != NULL);
+  if(end_tertiary != NULL){
+    begin_secundary = (struct generic_token *) (last_sum -> next);
+    eval_numeric_expression(mf, cx, begin_expression, end_tertiary, &a);
+    eval_numeric_secundary(mf, cx, begin_secundary, end_token_list, &b);
+    if(last_sum -> type == TYPE_SUM)
+      result -> value = a.value + b.value;
+    else if(last_sum -> type == TYPE_SUBTRACT)
+      result -> value = a.value - b.value;
+    else if(last_sum -> type == TYPE_PYTHAGOREAN_SUM)
+      result -> value = hypotf(a.value, b.value);
+    else if(last_sum -> type == TYPE_PYTHAGOREAN_SUBTRACT){
+      result -> value = sqrtf(a.value + b.value) *
+        sqrtf(a.value - b.value);
+      if(isnan(result -> value)){
+#if defined(W_DEBUG_METAFONT)
+        fprintf(stderr, "METAFONT: Error: %s:%d: Negative square root "
+                " in pythagorean subtraction.\n", mf -> file,
+                last_sum -> line);
+#endif
+        return false;
+      }
+    }
+    return true;
+  }
+  else
+    return eval_numeric_secundary(mf, cx, begin_expression,
+                                   end_token_list, result);
+}
+@
+\fimcodigo
+
+\subsubsecao{8.1.2. Multiplicação e Divisão}
+
+As regras para lidar com expressões secundárias são:
+
+\alinhaverbatim
+<Secundário Numérico> -> <Primário Numérico> |
+                         <Secundário Numérico> <S-Op> <Primário Numérico>
+<S-Op> -> * | /
+\alinhanormal
+
+Os operadores \monoespaco{*} e \monoespaco{/} são respectivamente a
+multiplicação e divisão.
+
+Vamos adicionar estes operadores à lista de palavras-chave reservadas
+e definir seus tipos:
+
+\iniciocodigo
+@<METAFONT: Definição de Token Simbólico@>+=
+#define TYPE_MULTIPLICATION        27 // O token simbólico '*'
+#define TYPE_DIVISION              28 // O token simbólico '/'
+@
+\fimcodigo
+
+\iniciocodigo
+@<Lista de Palavras Reservadas@>+=
+"*", "/",
+@
+\fimcodigo
+
+A função que irá avaliar expressões secundárias é:
+
+Vamos agora à avaliação das expressões. A função que as avalia para
+expressões numéricas é:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+bool eval_numeric_secundary(struct metafont *mf, struct context *cx,
+                            struct generic_token *begin_expression,
+                            struct generic_token *end_token_list,
+                            struct numeric_variable *result);
+@
+\fimcodigo
+
+E a sua definição é muito semelhante à da função que avalia expressões
+terciárias, exceto que ela lida com o cálculo de multiplicação e
+divisão. Entretanto, deve-se levar em conta que o token de divisão só
+deve ser tratado neste estágio se aquilo que estiver antes e depois
+dele não forem dois tokens numéricos. Pois se forem, estamso diante de
+uma fração e elas são tratadas com um nível de precedência ainda
+maior:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+bool eval_numeric_secundary(struct metafont *mf, struct context *cx,
+                             struct generic_token *begin_expression,
+                             struct generic_token *end_token_list,
+                             struct numeric_variable *result){
+  struct generic_token *end_secundary = NULL, *begin_primary,
+                       *last_mul = NULL, *p, *prev = NULL;
   int nesting_parenthesis = 0, nesting_brackets = 0;
   struct numeric_variable a, b;
   b.value = 0.0;
@@ -2182,11 +2317,13 @@ void eval_numeric_expression(struct metafont *mf, struct context *cx,
     else if(p -> type == TYPE_CLOSE_BRACKET)
       nesting_brackets --;
     else if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
-            (p -> type == TYPE_SUM || p -> type == TYPE_SUBTRACT ||
-             p -> type == TYPE_PYTHAGOREAN_SUM ||
-             p -> type == TYPE_PYTHAGOREAN_SUBTRACT)){
-      last_sum = p;
-      end_tertiary = prev;
+            (p -> type == TYPE_MULTIPLICATION ||
+             (p -> type == TYPE_DIVISION &&
+             (prev -> type != TYPE_NUMERIC || p == end_token_list ||
+              ((struct generic_token *) p -> next) -> type !=
+               TYPE_NUMERIC)))){
+      last_mul = p;
+      end_secundary = prev;
     }
     prev = p;
     if(p != end_token_list)
@@ -2194,39 +2331,200 @@ void eval_numeric_expression(struct metafont *mf, struct context *cx,
     else
       p = NULL;
   }while(p != NULL);
-  if(end_tertiary != NULL){
-    //begin_secundary = (struct generic_token *) (last_sum -> next);
-    eval_numeric_expression(mf, cx, begin_expression, end_tertiary, &a);
-    //eval_numeric_secundary(mf, cx, begin_secundary, end_token_list, &b);
-    if(last_sum -> type == TYPE_SUM)
-      result -> value = a.value + b.value;
-    else if(last_sum -> type == TYPE_SUBTRACT)
-      result -> value = a.value - b.value;
-    else if(last_sum -> type == TYPE_PYTHAGOREAN_SUM)
-      result -> value = hypotf(a.value, b.value);
-    else if(last_sum -> type == TYPE_PYTHAGOREAN_SUBTRACT){
-      result -> value = sqrtf(a.value + b.value) *
-        sqrtf(a.value - b.value);
-      if(isnan(result -> value)){
+  if(end_secundary != NULL){
+    begin_primary = (struct generic_token *) (last_mul -> next);
+    eval_numeric_secundary(mf, cx, begin_expression, end_secundary, &a);
+    eval_numeric_primary(mf, cx, begin_primary, end_token_list, &b);
+    
+    if(last_mul -> type == TYPE_MULTIPLICATION)
+      result -> value = a.value * b.value;
+    else if(last_mul -> type == TYPE_DIVISION){
+      if(b.value == 0.0){
 #if defined(W_DEBUG_METAFONT)
-        fprintf(stderr, "METAFONT: Error: %s:%d: Invalid pythagorean "
-                "subtraction had result replaced by 0.\n", mf -> file,
-                var -> line);
+        fprintf(stderr, "METAFONT: Error: %s:%d: Division by zero.\n",
+                mf -> file, last_mul -> line);
 #endif
-        result -> value = 0.0;
+        return false;
       }
+      result -> value = a.value / b.value;
     }
+    return true;
   }
-  //else
-    //eval_numeric_secundary(mf, cx, begin_expression, end_token_list,
-    //                       result);
+  else
+    return eval_numeric_primary(mf, cx, begin_expression,
+                                end_token_list, result);
 }
 @
 \fimcodigo
 
+\subsubsecao{8.1.3. Módulo e Valores Intermediários}
 
-%<Secundário Numérico> -> <Primário Numérico> |
-%                         <Secundário Numérico> *// <Primário Numérico
+As regras de expressões numéricas primárias é:
+
+\alinhaverbatim
+<Primário Numérico> -> <Átomo Numérico> |
+                       <Átomo Numérico> [ <Expressão Numérica> ,
+                                          <Expressão Numérica> ] |
+                       length <Primário Numérico> | (...) |
+                       <Operador Numérico> <Primário Numérico>
+<Operador Numérico> -> sqrt | sind | cosd | log | exp | floor |
+                       uniformdeviate |
+                       <Operador de Multiplicador Escalar>
+<Operador de Multiplicador  Escalar> -> + | - |
+                       <Token Numérico Primário antes de var>
+<Token Numérico Primário> -> <Token Numérico> / <Token Numérico> |
+                             <Token Numérico não sucedido por ``/ num''>
+\alinhanormal
+
+O operador \monoespaco{length}, quando sucedido por um primário
+numérico significa que queremos o módulo do valor. Ele pode ter outros
+significados se sucedido por outro tipo de expressão primária. Já o
+operador usando colchetes significa:
+
+$$
+a[b, c] = a(b+c)
+$$
+
+Ele permite que escrevamos de maneira mais rápida que o meio do
+caminho entre $a$ e $b$, ou seja, sua média, é $.5[a,b]$.
+
+O novo operador de módulo precisa ser adicionado à lista de palavras
+reservadas. Vamos adicionar também os outros operadores da lista de
+operadores numéricos. Os colchetes Já pertencem à esta lista:
+
+\iniciocodigo
+@<METAFONT: Definição de Token Simbólico@>+=
+#define TYPE_LENGTH         29 // O token simbólico 'length'
+#define TYPE_SQRT           30 // O token simbólico 'sqrt'
+#define TYPE_SIND           31 // O token simbólico 'sind'
+#define TYPE_COSD           32 // O token simbólico 'cosd'
+#define TYPE_LOG            33 // O token simbólico 'log'
+#define TYPE_EXP            34 // O token simbólico 'exp'
+#define TYPE_FLOOR          35 // O token simbólico 'floor'
+#define TYPE_UNIFORMDEVIATE 36 // O token simbólico 'uniformdeviate'
+@
+\fimcodigo
+
+\iniciocodigo
+@<Lista de Palavras Reservadas@>+=
+"length", "sqrt", "sind", "cosd", "log", "exp", "floor", "uniformdeviate",
+@
+\fimcodigo
+
+A função que interpreta uma expressão numéria primária será esta:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+bool eval_numeric_primary(struct metafont *mf, struct context *cx,
+                          struct generic_token *begin_expression,
+                          struct generic_token *end_expression,
+                          struct numeric_variable *result);
+@
+\fimcodigo
+
+Podemos decidir qual regra deve ser aplicada na avaliação da expressão
+numérica primária por meio de sete regras de interpretação:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+bool eval_numeric_primary(struct metafont *mf, struct context *cx,
+                          struct generic_token *begin_expression,
+                          struct generic_token *end_expression,
+                          struct numeric_variable *result){
+  @<Primário Numérico: Regra 1@>
+  //@<Primário Numérico: Regra 2@>
+  //@<Primário Numérico: Regra 3@>
+  //@<Primário Numérico: Regra 4@>
+  //@<Primário Numérico: Regra 5@>
+  //@<Primário Numérico: Regra 6@>
+  //@<Primário Numérico: Regra 7@>
+  return true;
+}
+@
+
+As regras são:
+
+1) Se a expressão tem um único token, ela é um único Átomo
+Numérico. Esse é o caso mais comum, então vamos tratá-lo primeiro e
+mais rapidamente, sem a necessidade de chamar mais funções
+recursivamente. Apenas copiamos o conteúdo presente referenciado pelo
+token para o lugar reservado para colocar o resultado da expressão:
+
+\iniciocodigo
+@<Primário Numérico: Regra 1@>=
+if(begin_expression == end_expression){
+  if(begin_expression -> type == TYPE_NUMERIC){
+    result -> value = ((struct numeric_token *)begin_expression) -> value;
+    return true;
+  }
+  else if(begin_expression -> type == TYPE_SYMBOLIC){
+    struct numeric_variable *var = (struct numeric_variable *)
+                                     ((struct symbolic_token *)
+                                      begin_expression) -> var;
+    if(var == NULL){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: Non-declared "
+              "variable '%s'.\n", mf -> file, begin_expression -> line,
+              ((struct symbolic_token *) begin_expression) -> value);
+#endif
+      return false;
+    }
+    if(var -> type != TYPE_T_NUMERIC){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: Non-numeric "
+              "variable '%s' in numeric expression.\n", mf -> file,
+              begin_expression -> line,
+              ((struct symbolic_token *) begin_expression) -> value);
+#endif
+      return false;
+    }
+    if(isnan(var -> value)){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: Non-initialized "
+              "variable '%s' in numeric expression.\n", mf -> file,
+              begin_expression -> line,
+              ((struct symbolic_token *) begin_expression) -> value);
+#endif
+      return false;
+    }
+    result -> value = var -> value;
+    return true;
+  }
+  else{
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Non-numeric "
+            "token in numeric expression.\n", mf -> file,
+            begin_expression -> line);
+#endif
+      return false;
+
+  }
+}
+@
+\fimcodigo
+
+2) Se encontramos o operador \monoespaco{length}, apenas checamos se a
+expressão depois dele é numérica, e se for, calculamos o seu módulo.
+
+3) Se encontrarmos algum dos operadores numéricos, temos um operador
+numérico seguido de um primário numérico.
+
+4) Se tudo for apenas um token numérico e uma variável, também é um
+operador numérico seguido por primário numérico (multiplicação escalar).
+
+5) Se houver token numérico, ``/'', outro token numérico e uma
+variável, também estamos diante de um operador numérico (multiplicação
+escalar).
+
+6) Se o último token for um ``]'', estamos diante do operador de valor
+intermediário.
+
+7) Em todos os outros casos, tudo é apenas um Átomo Numérico.
+
+Implementando estas sete regras, temos:
+
+
+
 %<Primário Numérico> -> <Átomo Numérico> |
 %                       <Átomo Numérico> [ <Expressão Numérica> , <Expressão Numérica> ] |
 %                       length <Primário Numérico> |
@@ -2240,7 +2538,7 @@ void eval_numeric_expression(struct metafont *mf, struct context *cx,
 %                       uniformdeviate |
 %                       <Operador de Multiplicador Escalar>
 %<Operador de Multiplicador  Escalar> -> + | - |
-%                                        <Token Numérico Primário> <Var>
+%                                 <Token Numérico Primário antes de var> 
 %<Átomo Numérico> -> <Variável Numérica> |
 %                    <Token Numérico Primário> |
 %                    ( <Expressão Numérica> ) |

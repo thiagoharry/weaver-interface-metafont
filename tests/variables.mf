@@ -3,7 +3,7 @@
 
 numeric num1, num2, pi, _test;
 
-num1 = num2 := 8 + 3;
+num1 = num2 := 8 + 3 * pt;
 
 begingroup
   numeric num2, i, e, temp;
