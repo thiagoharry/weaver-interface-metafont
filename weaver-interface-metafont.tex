@@ -2432,8 +2432,8 @@ bool eval_numeric_primary(struct metafont *mf, struct context *cx,
                           struct generic_token *end_expression,
                           struct numeric_variable *result){
   @<Primário Numérico: Regra 1@>
-  //@<Primário Numérico: Regra 2@>
-  //@<Primário Numérico: Regra 3@>
+  @<Primário Numérico: Regra 2@>
+  @<Primário Numérico: Regra 3@>
   //@<Primário Numérico: Regra 4@>
   //@<Primário Numérico: Regra 5@>
   //@<Primário Numérico: Regra 6@>
@@ -2504,10 +2504,288 @@ if(begin_expression == end_expression){
 \fimcodigo
 
 2) Se encontramos o operador \monoespaco{length}, apenas checamos se a
-expressão depois dele é numérica, e se for, calculamos o seu módulo.
+expressão depois dele é numérica, e se for, calculamos o seu
+módulo. Se for de outro tipo, será definido depois como iremos
+calcular. Isso assume que temos uma função que identifica o tipo de
+uma expressão.
+
+\iniciocodigo
+@<Primário Numérico: Regra 2@>=
+else if(begin_expression -> type == TYPE_LENGTH){
+  int expr_type = get_primary_expression_type(mf, cx,
+                                             (struct generic_token *)
+                                             begin_expression -> next,
+                                             end_expression);
+  if(expr_type == TYPE_T_NUMERIC){
+    bool ret;
+    struct numeric_variable num;
+    ret = eval_numeric_primary(mf, cx, (struct generic_token *)
+                               begin_expression -> next,
+                               end_expression, &num);
+    if(!ret)
+      return false;
+    result -> value = ((num.value > 0)?(num.value):(-num.value));
+    return true;
+  }
+  //@<Avalia 'length'@>
+  else{
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
+            "primary expression after 'length'.\n", mf -> file,
+            begin_expression -> line);
+#endif
+      return false;
+  }
+}
+@
+\fimcodigo
+
+Mas como vamos reconhecer se estamos diante de uma expressão primária
+que é numérica ou se estamos diante de uma que é de outro tipo?
+Basicamente lendo seus tokens. Ainda não podemos definir uma função
+que faz isso completamente, pois ainda temos que ver como são as
+expressões primárias de outros tipos. Mas por hora vamos apresentar a
+definição mais simplória de que se a expressão é composta por um único
+token, se for numérico, a expressão é numérica, e se for uma variável,
+é do tipo que foi declarada a variável. Isso captura o caso mais
+simples de uso desta função:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+int get_primary_expression_type(struct metafont *mf, struct context *cx,
+                               struct generic_token *begin_expr,
+                               struct generic_token *end_expr);
+@
+\fimcodigo
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+int get_primary_expression_type(struct metafont *mf, struct context *cx,
+                               struct generic_token *begin_expr,
+                               struct generic_token *end_expr){
+  if(begin_expr == end_expr){
+    if(begin_expr -> type == TYPE_NUMERIC)
+      return TYPE_T_NUMERIC;
+    else if(begin_expr -> type == TYPE_SYMBOLIC){
+      struct symbolic_token *p = (struct symbolic_token *) begin_expr;
+      if(p -> var == NULL)
+        return 0; // Desconhecido
+      else{
+        struct variable *v = (struct variable *) (p -> var);
+        return v -> type;
+      }
+    }
+  }
+  else{
+    //@<Descobre Tipo de Expressão Primária@>
+  }
+  return TYPE_T_NUMERIC;
+  //return 0; // Desconhecido
+}
+@
+\fimcodigo
 
 3) Se encontrarmos algum dos operadores numéricos, temos um operador
 numérico seguido de um primário numérico.
+
+O primeiro dos operadores numéricos é o de raíz quadrada:
+
+\iniciocodigo
+@<Primário Numérico: Regra 3@>=
+else if(begin_expression -> type == TYPE_SQRT){
+  bool ret;
+  struct numeric_variable num;
+  ret = eval_numeric_primary(mf, cx, (struct generic_token *)
+                             begin_expression -> next,
+                             end_expression, &num);
+  if(!ret)
+    return false;
+  if(num.value < 0.0){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Square root "
+            "of negative number.\n", mf -> file,
+            begin_expression -> line);
+#endif
+    return false;
+  }
+  result -> value = sqrtf(num.value);
+  return true;  
+}
+@
+\fimcodigo
+
+Em seguida, temos o \monoespaco{sind}, que interpreta o próximo número
+em graus (``degrees'', por isso a letra ``d'' no fim) e calcula seu
+seno:
+
+\iniciocodigo
+@<Primário Numérico: Regra 3@>+=
+else if(begin_expression -> type == TYPE_SIND){
+  bool ret;
+  struct numeric_variable num;
+  ret = eval_numeric_primary(mf, cx, (struct generic_token *)
+                             begin_expression -> next,
+                             end_expression, &num);
+  if(!ret)
+    return false;
+  // 1 grau = 0,0174533 radianos
+  result -> value = sinf(num.value * 0.0174533);
+  return true;  
+}
+@
+\fimcodigo
+
+O cálculo do cosseno:
+
+\iniciocodigo
+@<Primário Numérico: Regra 3@>+=
+else if(begin_expression -> type == TYPE_COSD){
+  bool ret;
+  struct numeric_variable num;
+  ret = eval_numeric_primary(mf, cx, (struct generic_token *)
+                             begin_expression -> next,
+                             end_expression, &num);
+  if(!ret)
+    return false;
+  // 1 grau = 0,0174533 radianos
+  result -> value = cosf(num.value * 0.0174533);
+  return true;  
+}
+@
+\fimcodigo
+
+Em seguida calculamos o logaritmo na base $e$:
+
+\iniciocodigo
+@<Primário Numérico: Regra 3@>+=
+else if(begin_expression -> type == TYPE_LOG){
+  bool ret;
+  struct numeric_variable num;
+  ret = eval_numeric_primary(mf, cx, (struct generic_token *)
+                             begin_expression -> next,
+                             end_expression, &num);
+  if(!ret)
+    return false;
+  if(num.value <= 0.0){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Computing logarithm of "
+            "non-positive number.\n", mf -> file,
+            begin_expression -> line);
+#endif
+    return false;
+  }    
+  result -> value = logf(num.value);
+  return true;  
+}
+@
+\fimcodigo
+
+E a exponencial correspondente à $exp x = e^x$:
+
+\iniciocodigo
+@<Primário Numérico: Regra 3@>+=
+else if(begin_expression -> type == TYPE_EXP){
+  bool ret;
+  struct numeric_variable num;
+  ret = eval_numeric_primary(mf, cx, (struct generic_token *)
+                             begin_expression -> next,
+                             end_expression, &num);
+  if(!ret)
+    return false;
+  result -> value = expf(num.value);
+  return true;  
+}
+@
+\fimcodigo
+
+O piso de um valor:
+
+\iniciocodigo
+@<Primário Numérico: Regra 3@>+=
+else if(begin_expression -> type == TYPE_FLOOR){
+  bool ret;
+  struct numeric_variable num;
+  ret = eval_numeric_primary(mf, cx, (struct generic_token *)
+                             begin_expression -> next,
+                             end_expression, &num);
+  if(!ret)
+    return false;
+  result -> value = floorf(num.value);
+  return true;  
+}
+@
+\fimcodigo
+
+Com relação ao operador \monoespaco{uniformdeviate}, o que ele faz é
+gerar um número uniforme e aleatório entre 0 e o valor passado para o
+operador. O modo que usaremos para fazer isso é gerar um número
+aleatório em ponto flutuante entre 0 e 1, para em seguida
+multiplicá-lo pelo operando.
+
+Gerar um número em ponto flutuante entre 0 e 1 seguindo uma
+distribuição próxima à uniforme, basicamente podemos gerar um inteiro
+aleatório de 64 bits e multiplicá-lo por 2^{-64}. Nem todos os valores
+em ponto flutuante podem ser gerados desta forma, estaremos ignorando
+valores menores que $2^{-64}$ e o arredondamento fará com que alguns
+números mais próximos de 1 sejam mais comuns, embora a densidade
+destes números mais comuns também seja menor. Entretanto, o resultado
+será suficientemente próximo para nossos propósitos:
+
+\iniciocodigo
+@<Primário Numérico: Regra 3@>+=
+else if(begin_expression -> type == TYPE_UNIFORMDEVIATE){
+  bool ret;
+  struct numeric_variable num;
+  ret = eval_numeric_primary(mf, cx, (struct generic_token *)
+                             begin_expression -> next,
+                             end_expression, &num);
+  if(!ret)
+    return false;
+  { // Generating the random number
+    uint64_t random_bits = random_func();
+    float multiplicand = ldexpf((float) random_bits, -64);
+    result -> value = multiplicand * num.value;  
+  }
+  return true;  
+}
+@
+\fimcodigo
+
+O próximo operador numérico é o símbolo de \monoespaco{+}. Este
+símbolo significa uma multiplicação por 1, e pode ser ignorado:
+
+\iniciocodigo
+@<Primário Numérico: Regra 3@>+=
+else if(begin_expression -> type == TYPE_SUM){
+  bool ret;
+  ret = eval_numeric_primary(mf, cx, (struct generic_token *)
+                             begin_expression -> next,
+                             end_expression, result);
+  if(!ret)
+    return false;
+  return true;  
+}
+@
+\fimcodigo
+
+Já se tivermos um símbolo de \monoespaco{-}, então isso significa uma
+multiplicação por -1:
+
+\iniciocodigo
+@<Primário Numérico: Regra 3@>+=
+else if(begin_expression -> type == TYPE_SUBTRACT){
+  bool ret;
+  ret = eval_numeric_primary(mf, cx, (struct generic_token *)
+                             begin_expression -> next,
+                             end_expression, result);
+  if(!ret)
+    return false;
+  result -> value *= -1; 
+  return true;  
+}
+@
+\fimcodigo
+
 
 4) Se tudo for apenas um token numérico e uma variável, também é um
 operador numérico seguido por primário numérico (multiplicação escalar).
