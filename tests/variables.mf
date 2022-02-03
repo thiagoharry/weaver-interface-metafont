@@ -3,7 +3,7 @@
 
 numeric num1, num2, pi, _test;
 
-num1 = num2 := sqrt 64 + length -3 * pt;
+num1 = num2 := sqrt 64 + length -3pt;
 
 begingroup
   numeric num2, i, e, temp;
