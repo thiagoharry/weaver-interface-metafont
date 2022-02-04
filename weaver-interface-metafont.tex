@@ -2394,7 +2394,9 @@ bool eval_numeric_secundary(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
-\subsubsecao{8.1.3. Módulo e Valores Intermediários}
+\subsubsecao{8.1.3. Módulo, Valores Intermediários,
+    Funções Trigonométricas, Exponenciais, Piso e
+    Valores Aleatórios Uniformes}
 
 As regras de expressões numéricas primárias é:
 
@@ -2411,10 +2413,6 @@ As regras de expressões numéricas primárias é:
                        <Token Numérico Primário antes de var>
 <Token Numérico Primário> -> <Token Numérico> / <Token Numérico> |
                              <Token Numérico não sucedido por ``/ num''>
-<Átomo Numérico> -> <Variável Numérica> |
-                    <Token Numérico Primário> |
-                    ( <Expressão Numérica> ) |
-                    normaldeviate
 \alinhanormal
 
 O operador \monoespaco{length}, quando sucedido por um primário
@@ -2443,14 +2441,12 @@ operadores numéricos. Os colchetes Já pertencem à esta lista:
 #define TYPE_EXP            34 // O token simbólico 'exp'
 #define TYPE_FLOOR          35 // O token simbólico 'floor'
 #define TYPE_UNIFORMDEVIATE 36 // O token simbólico 'uniformdeviate'
-#define TYPE_NORMALDEVIATE  37 // O token simbólico 'normaldeviate'
 @
 \fimcodigo
 
 \iniciocodigo
 @<Lista de Palavras Reservadas@>+=
-"length", "sqrt", "sind", "cosd", "log", "exp", "floor", "uniformdeviate",
-"normaldeviate",
+"length", "sqrt", "sind", "cosd", "log", "exp", "floor", "uniformdeviate"
 @
 \fimcodigo
 
@@ -2478,83 +2474,142 @@ bool eval_numeric_primary(struct metafont *mf, struct context *cx,
   @<Primário Numérico: Regra 2@>
   @<Primário Numérico: Regra 3@>
   @<Primário Numérico: Regra 4@>
-  //@<Primário Numérico: Regra 5@>
-  //@<Primário Numérico: Regra 6@>
-  //@<Primário Numérico: Regra 7@>
+  @<Primário Numérico: Regra 5@>
   return true;
 }
 @
 
 As regras são:
 
-1) Se a expressão tem um único token diferente
-de \monoespaco{normaldeviate}, ela é um único Átomo Numérico. Esse é o
-caso mais comum, então vamos tratá-lo primeiro e mais rapidamente, sem
-a necessidade de chamar mais funções recursivamente. Apenas copiamos o
-conteúdo presente referenciado pelo token para o lugar reservado para
-colocar o resultado da expressão:
+1) Se a expressão for composta por um único token, se começar com
+``('' e terminar com ``)'' ou se for composta por três tokens, um
+numérico, um \monoespaco{/} e outro numérico, então toda a expressão é
+um átomo numérico:
 
 \iniciocodigo
 @<Primário Numérico: Regra 1@>=
-if(begin_expression == end_expression){
-  if(begin_expression -> type == TYPE_NUMERIC){
-    result -> value = ((struct numeric_token *)begin_expression) -> value;
-    return true;
-  }
-  else if(begin_expression -> type == TYPE_SYMBOLIC){
-    struct numeric_variable *var = (struct numeric_variable *)
-                                     ((struct symbolic_token *)
-                                      begin_expression) -> var;
-    if(var == NULL){
-#if defined(W_DEBUG_METAFONT)
-      fprintf(stderr, "METAFONT: Error: %s:%d: Non-declared "
-              "variable '%s'.\n", mf -> file, begin_expression -> line,
-              ((struct symbolic_token *) begin_expression) -> value);
-#endif
-      return false;
-    }
-    if(var -> type != TYPE_T_NUMERIC){
-#if defined(W_DEBUG_METAFONT)
-      fprintf(stderr, "METAFONT: Error: %s:%d: Non-numeric "
-              "variable '%s' in numeric expression.\n", mf -> file,
-              begin_expression -> line,
-              ((struct symbolic_token *) begin_expression) -> value);
-#endif
-      return false;
-    }
-    if(isnan(var -> value)){
-#if defined(W_DEBUG_METAFONT)
-      fprintf(stderr, "METAFONT: Error: %s:%d: Non-initialized "
-              "variable '%s' in numeric expression.\n", mf -> file,
-              begin_expression -> line,
-              ((struct symbolic_token *) begin_expression) -> value);
-#endif
-      return false;
-    }
-    result -> value = var -> value;
-    return true;
-  }
-  else{
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s:%d: Non-numeric "
-            "token in numeric expression.\n", mf -> file,
-            begin_expression -> line);
-#endif
-      return false;
-
-  }
+if(begin_expression == end_expression ||
+   (begin_expression -> type == TYPE_OPEN_PARENTHESIS &&
+    end_expression -> type == TYPE_CLOSE_PARENTHESIS) ||
+    (begin_expression -> type == TYPE_NUMERIC &&
+     begin_expression -> next != end_expression &&
+     ((struct generic_token *) begin_expression -> next) -> type ==
+       TYPE_DIVISION &&
+     ((struct generic_token *) begin_expression -> next) -> next ==
+       end_expression &&
+     end_expression -> type == TYPE_NUMERIC)){
+  return eval_numeric_atom(mf, cx, begin_expression, end_expression,
+                          result);
 }
 @
 \fimcodigo
 
-2) Se encontramos o operador \monoespaco{length}, apenas checamos se a
+2) Se o último token for um ``]'', então temos uma construção do tipo
+$a[b,c]$, onde $a$ é átomo numérico enquanto $b$ e $c$ são expressões
+numéricas. Devemos então separar os tokens entre estas três partes,
+descobrir o valor de cada um e calcular $a(b+c)$.
+
+\iniciocodigo
+@<Primário Numérico: Regra 2@>=
+if(end_expression -> type == TYPE_CLOSE_BRACKET){
+  bool ret;
+  int nesting_parenthesis = 0, nesting_brackets = 0;
+  struct numeric_variable a, b, c;
+  struct generic_token *begin_a, *end_a, *begin_b, *end_b, *begin_c,
+                       *end_c;
+  begin_a = begin_expression;
+  end_a = begin_a;
+  while(((struct generic_token *) end_a -> next) -> type !=
+        TYPE_OPEN_BRACKET || nesting_parenthesis != 0 ||
+        nesting_brackets != 0){
+    if(end_a -> type == TYPE_OPEN_PARENTHESIS)
+      nesting_parenthesis ++;
+    else if(end_a -> type == TYPE_CLOSE_PARENTHESIS)
+      nesting_parenthesis --;
+    if(end_a -> type == TYPE_OPEN_BRACKET)
+      nesting_brackets ++;
+    else if(end_a -> type == TYPE_CLOSE_BRACKET)
+      nesting_brackets --;
+    end_a = (struct generic_token *) end_a -> next;
+    if(end_a == end_expression || nesting_parenthesis < 0 ||
+       nesting_brackets < 0){
+#if defined(W_DEBUG_METAFONT)
+        fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
+        "expression.",  mf -> file, begin_expression -> line);
+#endif
+      return false;
+    }
+  }
+  begin_b = (struct generic_token *) end_a -> next;
+  begin_b = (struct generic_token *) begin_b -> next;
+  end_b = begin_b;
+  while(((struct generic_token *) end_b -> next) -> type != TYPE_COMMA ||
+        nesting_parenthesis != 0 || nesting_brackets != 0){
+    if(end_b -> type == TYPE_OPEN_PARENTHESIS)
+      nesting_parenthesis ++;
+    else if(end_b -> type == TYPE_CLOSE_PARENTHESIS)
+      nesting_parenthesis --;
+    if(end_b -> type == TYPE_OPEN_BRACKET)
+      nesting_brackets ++;
+    else if(end_b -> type == TYPE_CLOSE_BRACKET)
+      nesting_brackets --;
+    end_b = (struct generic_token *) end_b -> next;
+    if(end_b == end_expression || nesting_parenthesis < 0 ||
+       nesting_brackets < 0){
+#if defined(W_DEBUG_METAFONT)
+        fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
+        "expression.",  mf -> file, begin_expression -> line);
+#endif
+      return false;
+    }
+  }
+  begin_c = (struct generic_token *) end_b -> next;
+  begin_c = (struct generic_token *) begin_c -> next;
+  end_c = begin_c;
+  while(((struct generic_token *) end_b -> next) -> type !=
+         TYPE_CLOSE_BRACKET || nesting_parenthesis != 0 ||
+         nesting_brackets != 0){
+    if(end_c -> type == TYPE_OPEN_PARENTHESIS)
+      nesting_parenthesis ++;
+    else if(end_c -> type == TYPE_CLOSE_PARENTHESIS)
+      nesting_parenthesis --;
+    if(end_c -> type == TYPE_OPEN_BRACKET)
+      nesting_brackets ++;
+    else if(end_c -> type == TYPE_CLOSE_BRACKET)
+      nesting_brackets --;
+    end_c = (struct generic_token *) end_c -> next;
+    if(end_c == end_expression || nesting_parenthesis < 0 ||
+       nesting_brackets < 0){
+#if defined(W_DEBUG_METAFONT)
+        fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
+        "expression.",  mf -> file, begin_expression -> line);
+#endif
+      return false;
+    }
+  }
+  ret = eval_numeric_atom(mf, cx, begin_a, end_a, &a);
+  if(!ret)
+    return false;
+  ret = eval_numeric_expression(mf, cx, begin_b, end_b, &b);
+  if(!ret)
+    return false;
+  ret = eval_numeric_expression(mf, cx, begin_b, end_b, &c);
+  if(!ret)
+    return false;
+  result -> value = a.value * (b.value + c.value);
+  return true;
+}
+@
+\fimcodigo
+
+3) Se encontramos o operador \monoespaco{length}, apenas checamos se a
 expressão depois dele é numérica, e se for, calculamos o seu
 módulo. Se for de outro tipo, será definido depois como iremos
 calcular. Isso assume que temos uma função que identifica o tipo de
 uma expressão.
 
 \iniciocodigo
-@<Primário Numérico: Regra 2@>=
+@<Primário Numérico: Regra 3@>=
 else if(begin_expression -> type == TYPE_LENGTH){
   int expr_type = get_primary_expression_type(mf, cx,
                                              (struct generic_token *)
@@ -2629,13 +2684,13 @@ int get_primary_expression_type(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
-3) Se encontrarmos algum dos operadores numéricos, temos um operador
+4) Se encontrarmos algum dos operadores numéricos, temos um operador
 numérico seguido de um primário numérico.
 
 O primeiro dos operadores numéricos é o de raíz quadrada:
 
 \iniciocodigo
-@<Primário Numérico: Regra 3@>=
+@<Primário Numérico: Regra 4@>=
 else if(begin_expression -> type == TYPE_SQRT){
   bool ret;
   struct numeric_variable num;
@@ -2663,7 +2718,7 @@ em graus (``degrees'', por isso a letra ``d'' no fim) e calcula seu
 seno:
 
 \iniciocodigo
-@<Primário Numérico: Regra 3@>+=
+@<Primário Numérico: Regra 4@>+=
 else if(begin_expression -> type == TYPE_SIND){
   bool ret;
   struct numeric_variable num;
@@ -2682,7 +2737,7 @@ else if(begin_expression -> type == TYPE_SIND){
 O cálculo do cosseno:
 
 \iniciocodigo
-@<Primário Numérico: Regra 3@>+=
+@<Primário Numérico: Regra 4@>+=
 else if(begin_expression -> type == TYPE_COSD){
   bool ret;
   struct numeric_variable num;
@@ -2701,7 +2756,7 @@ else if(begin_expression -> type == TYPE_COSD){
 Em seguida calculamos o logaritmo na base $e$:
 
 \iniciocodigo
-@<Primário Numérico: Regra 3@>+=
+@<Primário Numérico: Regra 4@>+=
 else if(begin_expression -> type == TYPE_LOG){
   bool ret;
   struct numeric_variable num;
@@ -2727,7 +2782,7 @@ else if(begin_expression -> type == TYPE_LOG){
 E a exponencial correspondente à $exp x = e^x$:
 
 \iniciocodigo
-@<Primário Numérico: Regra 3@>+=
+@<Primário Numérico: Regra 4@>+=
 else if(begin_expression -> type == TYPE_EXP){
   bool ret;
   struct numeric_variable num;
@@ -2745,7 +2800,7 @@ else if(begin_expression -> type == TYPE_EXP){
 O piso de um valor:
 
 \iniciocodigo
-@<Primário Numérico: Regra 3@>+=
+@<Primário Numérico: Regra 4@>+=
 else if(begin_expression -> type == TYPE_FLOOR){
   bool ret;
   struct numeric_variable num;
@@ -2768,7 +2823,7 @@ multiplicá-lo pelo operando.
 
 Gerar um número em ponto flutuante entre 0 e 1 seguindo uma
 distribuição próxima à uniforme, basicamente podemos gerar um inteiro
-aleatório de 64 bits e multiplicá-lo por 2^{-64}. Nem todos os valores
+aleatório de 64 bits e multiplicá-lo por $2^{-64}$. Nem todos os valores
 em ponto flutuante podem ser gerados desta forma, estaremos ignorando
 valores menores que $2^{-64}$ e o arredondamento fará com que alguns
 números mais próximos de 1 sejam mais comuns, embora a densidade
@@ -2776,7 +2831,7 @@ destes números mais comuns também seja menor. Entretanto, o resultado
 será suficientemente próximo para nossos propósitos:
 
 \iniciocodigo
-@<Primário Numérico: Regra 3@>+=
+@<Primário Numérico: Regra 4@>+=
 else if(begin_expression -> type == TYPE_UNIFORMDEVIATE){
   bool ret;
   struct numeric_variable num;
@@ -2799,7 +2854,7 @@ O próximo operador numérico é o símbolo de \monoespaco{+}. Este
 símbolo significa uma multiplicação por 1, e pode ser ignorado:
 
 \iniciocodigo
-@<Primário Numérico: Regra 3@>+=
+@<Primário Numérico: Regra 4@>+=
 else if(begin_expression -> type == TYPE_SUM){
   bool ret;
   ret = eval_numeric_primary(mf, cx, (struct generic_token *)
@@ -2816,7 +2871,7 @@ Já se tivermos um símbolo de \monoespaco{-}, então isso significa uma
 multiplicação por -1:
 
 \iniciocodigo
-@<Primário Numérico: Regra 3@>+=
+@<Primário Numérico: Regra 4@>+=
 else if(begin_expression -> type == TYPE_SUBTRACT){
   bool ret;
   ret = eval_numeric_primary(mf, cx, (struct generic_token *)
@@ -2831,45 +2886,165 @@ else if(begin_expression -> type == TYPE_SUBTRACT){
 \fimcodigo
 
 
-4) Se tudo for apenas um token numérico e uma variável, também é um
-operador numérico seguido por primário numérico (multiplicação
-escalar). Neste caso, obtemos o resultado da operação fazendo a
-multiplicação da variável pelo escalar:
+5) Nos demais casos, temos uma multiplicação escalar em que o escalar
+é um token numérico primário, que não é sucedido
+por \monoespaco{+}, \monoespaco{-} ou por outro token numérico. Para
+lidar com isso, teremos que identificar o começo e o fim do token
+numérico primário. Pelas regras ele é um único token numérico, ou
+então três tokens (dois tokens numéricos separados pelo
+token \monoespaco{/} representando uma fração). Depois de realizar a
+separação, a primeira parte é multiplicada pela segunda (que é
+interpretada como primário numérico):
 
 \iniciocodigo
-@<Primário Numérico: Regra 4@>+=
-else if(begin_expression -> type == TYPE_NUMERIC &&
-        begin_expression -> next == end_expression &&
-        end_expression -> type == TYPE_SYMBOLIC){
-  struct numeric_variable *var =
-          ((struct symbolic_token *) end_expression) -> var;
-  if(var -> type != TYPE_T_NUMERIC){
+@<Primário Numérico: Regra 5@>=
+else{
+  bool ret;
+  float token_value;
+  struct generic_token *after_token;
+  if(begin_expression -> type != TYPE_NUMERIC){
 #if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s:%d: Non-numeric variable "
-            "in scalar multiplication in numeric expression.\n",
-            mf -> file, begin_expression -> line);
+    fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
+            "expression.\n", mf -> file, begin_expression -> line);
 #endif
     return false;
   }
-  result -> value = ((struct numeric_token *) begin_expression) -> value *
-                    var -> value;
+  token_value = ((struct numeric_token *) begin_expression) -> value;
+  after_token = (struct generic_token *) (begin_expression -> next);
+  if(after_token -> type == TYPE_DIVISION){
+    if(after_token == end_expression){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
+              "expression.\n", mf -> file, begin_expression -> line);
+#endif
+      return false;
+    }
+    after_token = (struct generic_token *) (after_token -> next);
+    token_value /= ((struct numeric_token *) after_token) -> value;
+    after_token = (struct generic_token *) (after_token -> next);
+  }
+  ret = eval_numeric_primary(mf, cx, after_token, end_expression, result);
+  if(!ret)
+    return false;
+  result -> value *= token_value;
   return true;
 }
 @
 \fimcodigo
 
+\subsubsecao{8.1.4. Números Isolados e Valores ALeatórios Normais}
 
-5) Se houver token numérico, ``/'', outro token numérico e uma
-variável, também estamos diante de um operador numérico (multiplicação
-escalar).
+As regras finais para as expressões numéricas que iremos tratar são:
 
-6) Se o último token for um ``]'', estamos diante do operador de valor
-intermediário.
+\alinhaverbatim
+<Átomo Numérico> -> <Variável Numérica> |
+                    <Token Numérico Primário> |
+                    normaldeviate |
+                    ( <Expressão Numérica> )
+\alinhanormal
 
-7) Em todos os outros casos, tudo é apenas um Átomo Numérico.
+O único token novo a ser tratado é \monoespaco{normaldeviate}:
 
-Implementando estas sete regras, temos:
+\iniciocodigo
+@<METAFONT: Definição de Token Simbólico@>+=
+#define TYPE_NORMALDEVIATE  37 // O token simbólico 'normaldeviate'
+@
+\fimcodigo
 
+\iniciocodigo
+@<Lista de Palavras Reservadas@>+=
+"normaldeviate",
+@
+\fimcodigo
+
+Este operador serve para gerar um novo número aleatório com uma
+distribuição normal com média 0 e desvio padrão 1.
+
+A função que interpreta átomos numéricos é:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+bool eval_numeric_atom(struct metafont *mf, struct context *cx,
+                       struct generic_token *begin_expression,
+                       struct generic_token *end_expression,
+                       struct numeric_variable *result);
+@
+\fimcodigo
+
+Vamos decidir qual regra aplicar para interpretar o átomo primeiro com
+base nele ser um único token ou não. E depois, aplicamos diferentes
+regras em cada caso:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+bool eval_numeric_atom(struct metafont *mf, struct context *cx,
+                       struct generic_token *begin_expression,
+                       struct generic_token *end_expression,
+                       struct numeric_variable *result){
+  if(begin_expression == end_expression){
+    @<Átomo Numérico: Regra 1@>
+    @<Átomo Numérico: Regra 2@>
+    //@<Átomo Numérico: Regra 3@>
+  }
+  else{
+    //@<Átomo Numérico: Regra 4@>
+    //@<Átomo Numérico: Regra 5@>
+  }
+  return false;
+}
+@
+
+1) Se temos um único token e ele é um token numérico, basta retornar o
+seu valor:
+
+\iniciocodigo
+@<Átomo Numérico: Regra 1@>=
+if(begin_expression -> type == TYPE_NUMERIC){
+  result -> value = ((struct numeric_token *) begin_expression) -> value;
+  return true;
+}
+@
+\fimcodigo
+
+2) Se temos um único token e ele é uma variável, retornamos o conteúdo
+da variável. Mas temos que checar se ela foi declarada, se é numérica
+e se foi inicializada:
+
+\iniciocodigo
+@<Átomo Numérico: Regra 2@>=
+if(begin_expression -> type == TYPE_SYMBOLIC){
+  struct numeric_variable *var;
+  var = ((struct symbolic_token *) begin_expression) -> var;
+  if(var == NULL){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Undeclared variable "
+            "'%s'.\n", mf -> file, begin_expression -> line,
+            ((struct symbolic_token *) begin_expression) -> value);
+#endif
+    return false;
+  }
+  if(var -> type != TYPE_T_NUMERIC){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Non-numeric variable "
+            "'%s' in numeric expression.\n", mf -> file,
+            begin_expression -> line,
+            ((struct symbolic_token *) begin_expression) -> value);
+#endif
+    return false;
+  }
+  if(isnan(var -> value)){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Unitialized variable "
+            "'%s'.\n", mf -> file, begin_expression -> line,
+            ((struct symbolic_token *) begin_expression) -> value);
+#endif
+    return false;
+  }
+  result -> value = var -> value;
+  return true;
+}
+@
+\fimcodigo
 
 
 %<Primário Numérico> -> <Átomo Numérico> |
