@@ -106,7 +106,7 @@ void test_variables(void){
   assert("Testing variable declaration", ret);
   n = (struct numeric_variable *) ((struct named_variable *)
 				   mf -> named_variables) -> var;
-  assert("Sums and multiplications working", n -> value == 116.0);
+  assert("Testing numeric expression", n -> value == 116.0);
   if(n -> value != 116.0){
     printf("ERROR: Exprected value: '%f', Found value: '%f'\n",
 	   116.0, n -> value);

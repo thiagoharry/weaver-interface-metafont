@@ -2194,7 +2194,7 @@ bool eval_numeric_expression(struct metafont *mf, struct context *cx,
     if(p -> type == TYPE_OPEN_PARENTHESIS)
       nesting_parenthesis ++;
     else if(p -> type == TYPE_CLOSE_PARENTHESIS)
-      nesting_parenthesis ++;
+      nesting_parenthesis --;
     else if(p -> type == TYPE_OPEN_BRACKET)
       nesting_brackets ++;
     else if(p -> type == TYPE_CLOSE_BRACKET)
@@ -2312,7 +2312,7 @@ bool eval_numeric_secundary(struct metafont *mf, struct context *cx,
     if(p -> type == TYPE_OPEN_PARENTHESIS)
       nesting_parenthesis ++;
     else if(p -> type == TYPE_CLOSE_PARENTHESIS)
-      nesting_parenthesis ++;
+      nesting_parenthesis --;
     else if(p -> type == TYPE_OPEN_BRACKET)
       nesting_brackets ++;
     else if(p -> type == TYPE_CLOSE_BRACKET)
@@ -2949,10 +2949,10 @@ bool eval_numeric_atom(struct metafont *mf, struct context *cx,
   if(begin_expression == end_expression){
     @<Numeric Atom: Rule 1@>
     @<Numeric Atom: Rule 2@>
-    //@<Numeric Atom: Rule 3@>
+    @<Numeric Atom: Rule 3@>
   }
   else{
-    //@<Numeric Atom: Rule 4@>
+    @<Numeric Atom: Rule 4@>
     //@<Numeric Atom: Rule 5@>
   }
   return true;
@@ -3010,6 +3010,132 @@ if(begin_expression -> type == TYPE_SYMBOLIC){
 }
 @
 \fimcodigo
+
+3) Finally, if we have a single token and it is
+a \monoespaco{normaldeviate}, then we need to generate a random number
+taken from a normal distribution. Given that we already have a
+function to generate random bits, we can simulate a normal
+distribution following these steps:
+
+a) First we generate two random numbers between -1 and 1. We will call
+them $u$ and $v$. e can generate them getting 64 random bits,
+multiplying the first 63 by $2^{-63}$ and using the remaining bit to
+choose the signal. The result is sufficiently close to uniform.
+
+b) If $u^2+v^2\geq 1$, the numbers form a point outside a circle with
+radius 1. In this case, the result should be discarded and we try to
+generate numbers again. We also discard the result if both numbers are
+zero, as in this case our method do not work.
+
+c) After this, we can produce two numbers following a normal
+distribution computing:
+
+$$
+x_0 = u\sqrt{-2\ln(u^2+v^2)/(u^2+v^2)}
+$$
+
+$$
+x_1 = v\sqrt{-2\ln(u^2+v^2)/(u^2+v^2)}
+$$
+
+One of the values will be returned. The other can be stored to be
+returned next time we need a random normal value. We store it in the
+Metafont struct:
+
+\iniciocodigo
+@<Attributes (struct metafont)@>+=
+  bool have_stored_normaldeviate;
+  float normaldeviate;
+@
+\fimcodigo
+
+Initially the structure will have no value stored. We will store
+values there only after using the procedure descrbed above:
+
+\iniciocodigo
+@<Inicialização (struct metafont)@>+=
+mf -> have_stored_normaldeviate = false;
+@
+\fimcodigo
+
+So, when we need to generate a normal rando value, we always check
+first if we already have a pre-generated value, and if not, we
+generate two values:
+
+\iniciocodigo
+@<Numeric Atom: Rule 3@>=
+if(begin_expression -> type == TYPE_NORMALDEVIATE){
+  if(mf -> have_stored_normaldeviate){
+    mf -> have_stored_normaldeviate = false;
+    result -> value = mf -> normaldeviate;
+    return true;
+  }
+  else{
+    uint64_t random_bits;
+    float u, v, s;
+    random_bits = random_func();
+    do{
+      u = (float) ldexp((double) (random_bits >> 1), -63) *
+            ((random_bits %2)?(-1.0):(+1.0));
+      v = (float) ldexp((double) (random_bits >> 1), -63) *
+            ((random_bits %2)?(-1.0):(+1.0));
+      s = u*u + v*v;
+    } while(s >= 1.0 || s == 0.0);    
+    u *= (float) sqrt((-2.0 * log((double) s))/s);
+    v *= (float) sqrt((-2.0 * log((double) s))/s);
+    mf -> have_stored_normaldeviate = true;
+    mf -> normaldeviate = u;
+    result -> value = v;
+    return true;
+  }
+}
+@
+\fimcodigo
+
+4) Now the cases where we have more than one token. If the first token
+in ``('' and the last one is ``)'', we compute the inner expression as
+a numeric expression, and then return the result discarding the
+parenthesis:
+
+\iniciocodigo
+@<Numeric Atom: Rule 4@>=
+if(begin_expression -> type == TYPE_OPEN_PARENTHESIS &&
+   end_expression -> type == TYPE_CLOSE_PARENTHESIS){
+   bool ret;
+   struct generic_token *p = begin_expression;
+   while(p -> next != end_expression)
+     p = (struct generic_token *) p -> next;
+   if(p == begin_expression){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Empty parenthesis.",
+            mf -> file, begin_expression -> line);
+#endif
+     return false;
+   }
+   ret = eval_numeric_expression(mf, cx, (struct generic_token *)
+                                         begin_expression -> next, p,
+                                         result);
+   if(!ret)
+     return false;
+   return true;
+}
+@
+\fimcodigo
+
+5) Finally, the case when the numeric atom is a fraction composed by a
+numeric token, \monoespaco{/} and another numeric token. The result is
+obtained dividing both tokens:
+
+\iniciocodigo
+@<Átomo Numérico: Regra 5@>=
+if(begin_expression -> type == TYPE_NUMERIC &&
+   end_expression -> type == TYPE_NUMERIC &&
+   ((struct generic_token * ) begin_expression -> next) -> type ==
+   TYPE_DIVISION){
+  result = ((struct numeric_token *) begin_expression) -> value /
+           ((struct numeric_token *) end_expression) -> value;
+  return true;
+}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
