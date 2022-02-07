@@ -51,7 +51,7 @@ void*global_variables;
 
 void*internal_numeric_variables;
 /*:80*//*128:*/
-#line 3073 "weaver-interface-metafont_en.tex"
+#line 2989 "weaver-interface-metafont_en.tex"
 
 bool have_stored_normaldeviate;
 float normaldeviate;

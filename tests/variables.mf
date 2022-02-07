@@ -1,9 +1,12 @@
 % To test the usage of variables.
 % This program should work and be accepted.
 
-numeric num1, num2, pi, _test;
+numeric num1, num2;
+
+pair _test;
 
 num1 = num2 := sqrt (2 * (30 + 2)) + length -3pt;
+_test = ((2, -4)+.5[(0,2),(-2, 6)])*3 rotated 90;
 
 begingroup
   numeric num2, i, e, temp;

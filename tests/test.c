@@ -95,23 +95,35 @@ void test_variables(void){
   struct metafont *mf;
   struct context *cx;
   struct numeric_variable *n;
+  struct pair_variable *p;
+  struct named_variable *named;
   bool ret;
   mf = init_metafont(malloc, free, "tests/variables.mf");
   cx = init_context();
-  void *p = lexer(mf, malloc, free, "tests/variables.mf");
-  ret = eval_program(mf, cx, p);
+  void *tok = lexer(mf, malloc, free, "tests/variables.mf");
+  ret = eval_program(mf, cx, tok);
   ret = ret && (mf -> named_variables != NULL) &&
     (mf -> global_variables != NULL) &&
     (cx -> variables != NULL);
   assert("Testing variable declaration", ret);
-  n = (struct numeric_variable *) ((struct named_variable *)
-				   mf -> named_variables) -> var;
+  named = (struct named_variable *) mf -> named_variables;
+  n = (struct numeric_variable *) named -> var;
   assert("Testing numeric expression", n -> value == 116.0);
   if(n -> value != 116.0){
     printf("ERROR: Exprected value: '%f', Found value: '%f'\n",
 	   116.0, n -> value);
   }
-  free_token_list(free, p);
+  named = (struct named_variable *) named -> next;
+  n = (struct numeric_variable *) named -> var;
+  assert("Chained assignments are working", n -> value == 116.0);
+  p = (struct pair_variable *) mf -> global_variables;
+  assert("Testing pair expression", p -> type == TYPE_T_PAIR &&
+	 abs(p -> x) < 0.00002 && abs(p -> y - 3.0) < 0.00002);
+  if(abs(p -> x) >= 0.00002 && abs(p -> y - 3.0) >= 0.00002){
+    printf("ERROR: Exprected value: '(%f, %f)', Found value: '(%f,%f)'\n",
+	   0.0, 3.0, p -> x, p -> y);
+  }
+  free_token_list(free, tok);
   destroy_metafont(mf);
   destroy_context(cx);
 }

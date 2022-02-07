@@ -2171,8 +2171,9 @@ bracket, a multiplication or division symbol, another tertiary
 operator, or one of the following tokens that we will define later:
 \monoespaco{length}, \monoespaco{sqrt}, \monoespaco{sind},
 \monoespaco{cosd}, \monoespaco{log}, \monoespaco{exp},
-\monoespaco{floor},  \monoespaco{uniformdeviate}.
-
+\monoespaco{floor},  \monoespaco{uniformdeviate}, \monoespaco{rotated},
+\monoespaco{shifted}, \monoespaco{slanted}, \monoespaco{xscaled},
+\monoespaco{yscaled}, \monoespaco{zscaled}.
 
 If we have a previous token (\monoespaco{prev}) and the current one
 (\monoespaco{cur}), we can check if it represents a valid sum or
@@ -2198,7 +2199,31 @@ subtraction with the macro below:
           prev -> type != TYPE_LOG &&                   \
           prev -> type != TYPE_EXP &&                   \
           prev -> type != TYPE_FLOOR &&                 \
+          prev -> type != TYPE_ROTATED &&               \
+          prev -> type != TYPE_SCALED &&                \
+          prev -> type != TYPE_SHIFTED &&               \
+          prev -> type != TYPE_SLANTED &&               \
+          prev -> type != TYPE_XSCALED &&               \
+          prev -> type != TYPE_YSCALED &&               \
+          prev -> type != TYPE_ZSCALED &&               \
           prev -> type != TYPE_UNIFORMDEVIATE))
+@
+\fimcodigo
+\iniciocodigo
+@<Operador Secundário de Pares: Escala-X@>=
+else if(last_mul -> type == TYPE_XSCALED){
+  struct pair_variable a;
+  struct numeric_variable b;
+  ret = eval_pair_secundary(mf, cx, begin_expression, end_secundary, &a);
+  if(!ret)
+    return false;
+  ret = eval_numeric_primary(mf, cx, begin_primary, end_expression, &b);
+  if(!ret)
+    return false;
+  result -> x = a.x * b.value;
+  result -> y = a.y;
+  return true;
+}
 @
 \fimcodigo
 
@@ -2389,7 +2414,7 @@ bool eval_numeric_secundary(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
-\subsubsecao{8.1.3. Modulus, Intermediary Values,
+\subsubsecao{8.1.3. Modulus,
   Trigonometric Functions,  Exponentials, Floor and
   Random Uniform Values}
 
@@ -2397,8 +2422,6 @@ The rules for primary numeric expressions are:
 
 \alinhaverbatim
 <Numeric Primary> -> <Numeric Atom> |
-                     <Numeric Atom> [ <Numeric Expression> ,
-                                      <Numeric Expression> ] |
                      length <Numeric Primary> | (...) |
                      <Numeric Operator> <Numeric Primary>
 <Numeric Operator> -> sqrt | sind | cosd | mlog | mexp | floor |
@@ -2412,15 +2435,7 @@ The rules for primary numeric expressions are:
 
 The operator \monoespaco{length}, when appearing before a numeric
 primery means that we want its modulus. If it appears before another
-kind of primary expression, it could mean different things. The
-bracket operator means:
-
-$$
-a[b, c] = a(b+c)
-$$
-
-It allow us to write an an alternate way that the half between the
-numbers $a$ and $b$ (their mean) is $.5[a, b]$.
+kind of primary expression, it could mean different things.
 
 The new modulus operator should be added to the list of reserved
 words. We will add also the other new operators from the list of
@@ -2441,7 +2456,7 @@ numeric operators. The brackets are already in this list:
 
 \iniciocodigo
 @<List of Keywords@>+=
-"length", "sqrt", "sind", "cosd", "log", "exp", "floor", "uniformdeviate"
+"length", "sqrt", "sind", "cosd", "log", "exp", "floor", "uniformdeviate",
 @
 \fimcodigo
 
@@ -2470,7 +2485,6 @@ bool eval_numeric_primary(struct metafont *mf, struct context *cx,
   @<Numeric Primary: Rule 2@>
   @<Numeric Primary: Rule 3@>
   @<Numeric Primary: Rule 4@>
-  @<Numeric Primary: Rule 5@>
   return true;
 }
 @
@@ -2500,112 +2514,14 @@ if(begin_expression == end_expression ||
 @
 \fimcodigo
 
-2) If the last token is a ``]'', then we have a construction like
-$a[b,c]$, where $a$ is a numeric atom while $b$ and $c$ are numeric
-expressions. We should separate the tokens in these three parts,
-discover the value of each one and compute $a(b+c)$.
-
-\iniciocodigo
-@<Numeric Primary: Rule 2@>=
-if(end_expression -> type == TYPE_CLOSE_BRACKET){
-  bool ret;
-  int nesting_parenthesis = 0, nesting_brackets = 0;
-  struct numeric_variable a, b, c;
-  struct generic_token *begin_a, *end_a, *begin_b, *end_b, *begin_c,
-                       *end_c;
-  begin_a = begin_expression;
-  end_a = begin_a;
-  while(((struct generic_token *) end_a -> next) -> type !=
-        TYPE_OPEN_BRACKET || nesting_parenthesis != 0 ||
-        nesting_brackets != 0){
-    if(end_a -> type == TYPE_OPEN_PARENTHESIS)
-      nesting_parenthesis ++;
-    else if(end_a -> type == TYPE_CLOSE_PARENTHESIS)
-      nesting_parenthesis --;
-    if(end_a -> type == TYPE_OPEN_BRACKET)
-      nesting_brackets ++;
-    else if(end_a -> type == TYPE_CLOSE_BRACKET)
-      nesting_brackets --;
-    end_a = (struct generic_token *) end_a -> next;
-    if(end_a == end_expression || nesting_parenthesis < 0 ||
-       nesting_brackets < 0){
-#if defined(W_DEBUG_METAFONT)
-        fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
-        "expression.",  mf -> file, begin_expression -> line);
-#endif
-      return false;
-    }
-  }
-  begin_b = (struct generic_token *) end_a -> next;
-  begin_b = (struct generic_token *) begin_b -> next;
-  end_b = begin_b;
-  while(((struct generic_token *) end_b -> next) -> type != TYPE_COMMA ||
-        nesting_parenthesis != 0 || nesting_brackets != 0){
-    if(end_b -> type == TYPE_OPEN_PARENTHESIS)
-      nesting_parenthesis ++;
-    else if(end_b -> type == TYPE_CLOSE_PARENTHESIS)
-      nesting_parenthesis --;
-    if(end_b -> type == TYPE_OPEN_BRACKET)
-      nesting_brackets ++;
-    else if(end_b -> type == TYPE_CLOSE_BRACKET)
-      nesting_brackets --;
-    end_b = (struct generic_token *) end_b -> next;
-    if(end_b == end_expression || nesting_parenthesis < 0 ||
-       nesting_brackets < 0){
-#if defined(W_DEBUG_METAFONT)
-        fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
-        "expression.",  mf -> file, begin_expression -> line);
-#endif
-      return false;
-    }
-  }
-  begin_c = (struct generic_token *) end_b -> next;
-  begin_c = (struct generic_token *) begin_c -> next;
-  end_c = begin_c;
-  while(((struct generic_token *) end_b -> next) -> type !=
-         TYPE_CLOSE_BRACKET || nesting_parenthesis != 0 ||
-         nesting_brackets != 0){
-    if(end_c -> type == TYPE_OPEN_PARENTHESIS)
-      nesting_parenthesis ++;
-    else if(end_c -> type == TYPE_CLOSE_PARENTHESIS)
-      nesting_parenthesis --;
-    if(end_c -> type == TYPE_OPEN_BRACKET)
-      nesting_brackets ++;
-    else if(end_c -> type == TYPE_CLOSE_BRACKET)
-      nesting_brackets --;
-    end_c = (struct generic_token *) end_c -> next;
-    if(end_c == end_expression || nesting_parenthesis < 0 ||
-       nesting_brackets < 0){
-#if defined(W_DEBUG_METAFONT)
-        fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
-        "expression.",  mf -> file, begin_expression -> line);
-#endif
-      return false;
-    }
-  }
-  ret = eval_numeric_atom(mf, cx, begin_a, end_a, &a);
-  if(!ret)
-    return false;
-  ret = eval_numeric_expression(mf, cx, begin_b, end_b, &b);
-  if(!ret)
-    return false;
-  ret = eval_numeric_expression(mf, cx, begin_b, end_b, &c);
-  if(!ret)
-    return false;
-  result -> value = a.value * (b.value + c.value);
-  return true;
-}
-@
-\fimcodigo
-
-3) If we find operator \monoespaco{length}, then we check if the
+2) If we find operator \monoespaco{length}, then we check if the
 expression after it is numeric. If so, we compute its modulus. If the
 expression have another type, we will define later how the operator
 will proceed. We assume that we have a function that discovers the
 type of a primary expression.
 
 \iniciocodigo
-@<Numeric Primary: Rule 3@>=
+@<Numeric Primary: Rule 2@>=
 else if(begin_expression -> type == TYPE_LENGTH){
   int expr_type = get_primary_expression_type(mf, cx,
                                              (struct generic_token *)
@@ -2679,13 +2595,13 @@ int get_primary_expression_type(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
-4) If we find some of the numeric operators, we have a numeric
+3) If we find some of the numeric operators, we have a numeric
 operator followed by a numeric primary expression.
 
 The first numeric operator is the square root:
 
 \iniciocodigo
-@<Numeric Primary: Rule 4@>=
+@<Numeric Primary: Rule 3@>=
 else if(begin_expression -> type == TYPE_SQRT){
   bool ret;
   struct numeric_variable num;
@@ -2713,7 +2629,7 @@ number in degrees (because of this it has the letter ``d'' in the end)
 and computes the sine:
 
 \iniciocodigo
-@<Numeric Primary: Rule 4@>+=
+@<Numeric Primary: Rule 3@>+=
 else if(begin_expression -> type == TYPE_SIND){
   bool ret;
   struct numeric_variable num;
@@ -2732,7 +2648,7 @@ else if(begin_expression -> type == TYPE_SIND){
 Computing the cosine:
 
 \iniciocodigo
-@<Numeric Primary: Rule 4@>+=
+@<Numeric Primary: Rule 3@>+=
 else if(begin_expression -> type == TYPE_COSD){
   bool ret;
   struct numeric_variable num;
@@ -2751,7 +2667,7 @@ else if(begin_expression -> type == TYPE_COSD){
 Computing the logarithm in $e$ basis:
 
 \iniciocodigo
-@<Numeric Primary: Rule 4@>+=
+@<Numeric Primary: Rule 3@>+=
 else if(begin_expression -> type == TYPE_LOG){
   bool ret;
   struct numeric_variable num;
@@ -2777,7 +2693,7 @@ else if(begin_expression -> type == TYPE_LOG){
 And the exponential which means $exp x = e^x$:
 
 \iniciocodigo
-@<Numeric Primary: Rule 4@>+=
+@<Numeric Primary: Rule 3@>+=
 else if(begin_expression -> type == TYPE_EXP){
   bool ret;
   struct numeric_variable num;
@@ -2795,7 +2711,7 @@ else if(begin_expression -> type == TYPE_EXP){
 The floor of a given value:
 
 \iniciocodigo
-@<Numeric Primary: Rule 4@>+=
+@<Numeric Primary: Rule 3@>+=
 else if(begin_expression -> type == TYPE_FLOOR){
   bool ret;
   struct numeric_variable num;
@@ -2825,7 +2741,7 @@ less density in the range near 1. However, despithe these drawbacks,
 the result would be sufficiently precise for our purposes:
 
 \iniciocodigo
-@<Numeric Primary: Rule 4@>+=
+@<Numeric Primary: Rule 3@>+=
 else if(begin_expression -> type == TYPE_UNIFORMDEVIATE){
   bool ret;
   struct numeric_variable num;
@@ -2848,7 +2764,7 @@ If the next operator is the symbol \monoespaco{+}, this means a
 multiplication by 1. This operation can be ignored:
 
 \iniciocodigo
-@<Numeric Primary: Rule 4@>+=
+@<Numeric Primary: Rule 3@>+=
 else if(begin_expression -> type == TYPE_SUM){
   bool ret;
   ret = eval_numeric_primary(mf, cx, (struct generic_token *)
@@ -2865,7 +2781,7 @@ But if the operator is a symbol \monoespaco{-}, hen this means a
 multiplication by -1:
 
 \iniciocodigo
-@<Numeric Primary: Rule 4@>+=
+@<Numeric Primary: Rule 3@>+=
 else if(begin_expression -> type == TYPE_SUBTRACT){
   bool ret;
   ret = eval_numeric_primary(mf, cx, (struct generic_token *)
@@ -2879,7 +2795,7 @@ else if(begin_expression -> type == TYPE_SUBTRACT){
 @
 \fimcodigo
 
-5) In the remaining cases, we have a scalar multiplicationwhere the
+4) In the remaining cases, we have a scalar multiplicationwhere the
 scalar is a primary numeric token that is not followed
 by \monoespaco{+}, \monoespaco{-} or another numeric token. To deal
 with this, we needto identify the beginning and end of the primary
@@ -2889,7 +2805,7 @@ separating the parts, the first part is multiplied by the second (a
 numeric primary expression):
 
 \iniciocodigo
-@<Numeric Primary: Rule 5@>=
+@<Numeric Primary: Rule 4@>=
 else{
   bool ret;
   float token_value;
@@ -3174,13 +3090,11 @@ To make the assignment to pair variables, we use the code below:
 @<Assignment for Pair Variables@>=
 else if(type == TYPE_T_PAIR){
   int i;
-  //bool ret;
   struct pair_variable result;
-  //ret = eval_pair_expression(mf, cx, begin_expression,
-  //                           (struct generic_token *) *end_token_list,
-  //                           &result);
-  //if(!ret)
-  //  return false;
+  if(!eval_pair_expression(mf, cx, begin_expression,
+                           (struct generic_token *) *end_token_list,
+                           &result))
+    return false;
   var = (struct symbolic_token *) begin_token_list;
   for(i = 0; i < number_of_variables; i ++){
     assign_pair_variable((struct pair_variable *) var -> var, &result);
@@ -3278,7 +3192,7 @@ bool eval_pair_expression(struct metafont *mf, struct context *cx,
   if(end_tertiary != NULL){
     begin_secundary = (struct generic_token *) (last_sum -> next);
     eval_pair_expression(mf, cx, begin_expression, end_tertiary, &a);
-    //eval_pair_secundary(mf, cx, begin_secundary, end_token_list, &b);
+    eval_pair_secundary(mf, cx, begin_secundary, end_token_list, &b);
     if(last_sum -> type == TYPE_SUM){
       result -> x = a.x + b.x;
       result -> y = a.y + b.y;
@@ -3290,13 +3204,685 @@ bool eval_pair_expression(struct metafont *mf, struct context *cx,
     return true;
   }
   else
-  //  return eval_pair_secundary(mf, cx, begin_expression,
-  //                                 end_token_list, result);
-    return true;
+    return eval_pair_secundary(mf, cx, begin_expression,
+                                   end_token_list, result);
 }
 @
 \fimcodigo
 
+\subsubsecao{8.2.2. Transformers and Scalar Multiplication and Division}
+
+The grammar for secundary pair expressions is:
+
+\alinhaverbatim
+<Pair Secundary> -> <Pair Primary> |
+                    <Pair Secundary><Mul or Div><Numeric Primary> |
+                    <Numeric Secundary> * <Pair Primary> |
+                    <Pair Secundary><Transformer>
+<Mul or Div> -> * | /
+<Transformer> -> rotated <Numeric Primary> |
+                 scaled <Numeric Primary> |
+                 shifted <Pair Primary> |
+                 slanted <Numeric Primary> |
+                 xscaled <Numeric Primary> |
+                 yscaled <Numeric Primary> |
+                 zscaled <Pair Primary>
+\alinhanormal
+
+Let's add the seven new keywords representing transformers:
+
+\iniciocodigo
+@<METAFONT: Symbolic Token Definition@>+=
+#define TYPE_ROTATED  38 // Symbolic token 'rotated'
+#define TYPE_SCALED   39 // Symbolic token 'scaled'
+#define TYPE_SHIFTED  40 // Symbolic token 'shifted'
+#define TYPE_SLANTED  41 // Symbolic token 'slanted'
+#define TYPE_XSCALED  42 // Symbolic token 'xscaled'
+#define TYPE_YSCALED  43 // Symbolic token 'yscaled'
+#define TYPE_ZSCALED  44 // Symbolic token 'zscaled'
+@
+\fimcodigo
+
+\iniciocodigo
+@<List of Keywords@>+=
+"rotated", "scaled", "shifted", "slanted", "xscaled", "yscaled",
+"zscaled",
+@
+\fimcodigo
+
+
+The function that evaluates secundary pair expressions is declared
+below:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+bool eval_pair_secundary(struct metafont *mf, struct context *cx,
+                         struct generic_token *begin_expression,
+                         struct generic_token *end_expression,
+                         struct pair_variable *result);
+@
+\fimcodigo
+
+Evaluating a secundary expression here is very similar to what we did
+for numeric expressions. We also walk over the token list searching
+for the rightmost secundary operator, ignoring anything nested inside
+parenthesis and brackets. We follow the same rules to check when we
+have a division and when the symbol \monoespaco{/} is just a fraction
+separator. The difference is that here we have a total of nine
+secundary operators including the transformers. Because of the big
+quantity, we will show each of them separately instead of all them in
+the code block below:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+bool eval_pair_secundary(struct metafont *mf, struct context *cx,
+                             struct generic_token *begin_expression,
+                             struct generic_token *end_expression,
+                             struct pair_variable *result){
+  struct generic_token *end_secundary = NULL, *begin_primary,
+                       *last_mul = NULL, *p, *prev = NULL,
+                       *prev_prev = NULL, *last_fraction = NULL;
+  int nesting_parenthesis = 0, nesting_brackets = 0;
+  p = begin_expression;
+  do{
+    if(p -> type == TYPE_OPEN_PARENTHESIS)
+      nesting_parenthesis ++;
+    else if(p -> type == TYPE_CLOSE_PARENTHESIS)
+      nesting_parenthesis --;
+    else if(p -> type == TYPE_OPEN_BRACKET)
+      nesting_brackets ++;
+    else if(p -> type == TYPE_CLOSE_BRACKET)
+      nesting_brackets --;
+    else if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
+            (p -> type == TYPE_MULTIPLICATION ||
+             p -> type == TYPE_DIVISION || p -> type == TYPE_ROTATED ||
+             p -> type == TYPE_SCALED || p -> type == TYPE_SHIFTED ||
+             p -> type == TYPE_SLANTED || p -> type == TYPE_XSCALED ||
+             p -> type == TYPE_YSCALED || p -> type == TYPE_ZSCALED)){
+      if(p -> type == TYPE_DIVISION && prev -> type == TYPE_NUMERIC &&
+         p != end_expression &&
+         ((struct generic_token *) p -> next) -> type != TYPE_NUMERIC &&
+         last_fraction != prev_prev) // Separador de fração
+         last_fraction = p;
+       else{ // Multiplicação ou divisão válida
+         last_mul = p;
+         end_secundary = prev;
+       }
+    }
+    prev_prev = prev;
+    prev = p;
+    if(p != end_expression)
+      p = (struct generic_token *) p -> next;
+    else
+      p = NULL;
+  }while(p != NULL);
+  if(end_secundary != NULL){
+    bool ret;
+    begin_primary = (struct generic_token *) (last_mul -> next);
+    @<Secundary Pair Operator: Multiplication@>
+    @<Secundary Pair Operator: Division@>
+    @<Secundary Pair Operator: Rotation@>
+    @<Secundary Pair Operator: Scaling@>
+    @<Secundary Pair Operator: Shifting@>
+    @<Secundary Pair Operator: Slanting@>
+    @<Secundary Pair Operator: X-Scaling@>
+    @<Secundary Pair Operator: Y-Scaling@>
+    @<Secundary Pair Operator: Z-Scaling@>
+  }
+  else
+    return eval_pair_primary(mf, cx, begin_expression,
+                             end_expression, result);
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
+          "expression.",  mf -> file, begin_expression -> line);
+#endif
+  return false;
+}
+@
+\fimcodigo
+
+The first operator is the multiplication. Notice that we can have two
+different multiplications: a pair multiplicated by a numeric or a
+numeric multiplicated by a pair. To identify which of the two should
+be applied, we must check the primary expression to the right of the
+operator. It is a primary expression and we have a function that
+identifies the type of a primary expression:
+
+\iniciocodigo
+@<Secundary Pair Operator: Multiplication@>=
+if(last_mul -> type == TYPE_MULTIPLICATION){
+  if(get_primary_expression_type(mf, cx, begin_primary, end_expression) ==
+     TYPE_T_PAIR){
+    struct numeric_variable a;
+    struct pair_variable b;
+    if(!eval_numeric_secundary(mf, cx, begin_expression, end_secundary,
+                               &a))
+      return false;
+    if(!eval_pair_primary(mf, cx, begin_primary, end_expression, &b))
+      return false;
+    result -> x = b.x * a.value;
+    result -> y = b.y * a.value;
+    return true;
+  }
+  else{
+    struct pair_variable a;
+    struct numeric_variable b;
+    ret = eval_pair_secundary(mf, cx, begin_expression, end_secundary,
+                              &a);
+    if(!ret)
+      return false;
+    ret = eval_numeric_primary(mf, cx, begin_primary, end_expression, &b);
+    if(!ret)
+      return false;
+    result -> x = a.x * b.value;
+    result -> y = a.y * b.value;
+    return true;
+  }    
+}
+@
+\fimcodigo
+
+If we have a division, then this always will be a pair divided by a
+numeric. We should generate an error in case of division by zero:
+
+\iniciocodigo
+@<Secundary Pair Operator: Division@>=
+else if(last_mul -> type == TYPE_DIVISION){
+  struct pair_variable a;
+  struct numeric_variable b;
+  ret = eval_pair_secundary(mf, cx, begin_expression, end_secundary, &a);
+  if(!ret)
+    return false;
+  ret = eval_numeric_primary(mf, cx, begin_primary, end_expression, &b);
+  if(!ret)
+    return false;
+  if(b.value == 0.0){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Division by zero.",
+            mf -> file, last_mul -> line);
+#endif
+    return false;
+  }
+  result -> x = a.x / b.value;
+  result -> y = a.y / b.value;
+  return true;
+}
+@
+\fimcodigo
+
+If we have a rotation, we rotate our pair counter-clockwise using the
+origin as the axis. We interpret angles in degrees, not in radians:
+
+\iniciocodigo
+@<Secundary Pair Operator: Rotation@>=
+else if(last_mul -> type == TYPE_ROTATED){
+  struct pair_variable a;
+  struct numeric_variable b;
+  double sin_theta, cos_theta, theta;
+  ret = eval_pair_secundary(mf, cx, begin_expression, end_secundary, &a);
+  if(!ret)
+    return false;
+  ret = eval_numeric_primary(mf, cx, begin_primary, end_expression, &b);
+  if(!ret)
+    return false;
+  theta = 0.0174533 * b.value;
+  sin_theta = sin(theta);
+  cos_theta = cos(theta);
+  result -> x = a.x * cos_theta - a.y * sin_theta;
+  result -> y = a.x * sin_theta + a.y * cos_theta;
+  return true;
+}
+@
+\fimcodigo
+
+A scaling is the same thing than a multiplication:
+
+\iniciocodigo
+@<Secundary Pair Operator: Scaling@>=
+else if(last_mul -> type == TYPE_SCALED){
+  struct pair_variable a;
+  struct numeric_variable b;
+  ret = eval_pair_secundary(mf, cx, begin_expression, end_secundary, &a);
+  if(!ret)
+    return false;
+  ret = eval_numeric_primary(mf, cx, begin_primary, end_expression, &b);
+  if(!ret)
+    return false;
+  result -> x = a.x * b.value;
+  result -> y = a.y * b.value;
+  return true;
+}
+@
+\fimcodigo
+
+A shifting is equal a sum, but this operator have a higher precedence:
+
+\iniciocodigo
+@<Secundary Pair Operator: Shifting@>=
+else if(last_mul -> type == TYPE_SHIFTED){
+  struct pair_variable a, b;
+  ret = eval_pair_secundary(mf, cx, begin_expression, end_secundary, &a);
+  if(!ret)
+    return false;
+  ret = eval_pair_primary(mf, cx, begin_primary, end_expression, &b);
+  if(!ret)
+    return false;
+  result -> x = a.x + b.x;
+  result -> y = a.y + b.y;
+  return true;
+}
+@
+\fimcodigo
+
+The slanting operator shifts a point more to the right depending on
+how above the axis $x$ it is and more to the left depending on how
+below the axis $x$ it is:
+
+\iniciocodigo
+@<Secundary Pair Operator: Slanting@>=
+else if(last_mul -> type == TYPE_SLANTED){
+  struct pair_variable a;
+  struct numeric_variable b;
+  ret = eval_pair_secundary(mf, cx, begin_expression, end_secundary, &a);
+  if(!ret)
+    return false;
+  ret = eval_numeric_primary(mf, cx, begin_primary, end_expression, &b);
+  if(!ret)
+    return false;
+  result -> x = a.x + b.value * a.y;
+  result -> y = a.y;
+  return true;
+}
+@
+\fimcodigo
+
+A x-scaling multiplies a numeric scalar to the first value in the
+pair:
+
+\iniciocodigo
+@<Secundary Pair Operator: X-Scaling@>=
+else if(last_mul -> type == TYPE_XSCALED){
+  struct pair_variable a;
+  struct numeric_variable b;
+  ret = eval_pair_secundary(mf, cx, begin_expression, end_secundary, &a);
+  if(!ret)
+    return false;
+  ret = eval_numeric_primary(mf, cx, begin_primary, end_expression, &b);
+  if(!ret)
+    return false;
+  result -> x = a.x * b.value;
+  result -> y = a.y;
+  return true;
+}
+@
+\fimcodigo
+
+Likewise a y-scaling multiplies a numeric scalar to the second value
+in the pair:
+
+\iniciocodigo
+@<Secundary Pair Operator: Y-Scaling@>=
+else if(last_mul -> type == TYPE_YSCALED){
+  struct pair_variable a;
+  struct numeric_variable b;
+  ret = eval_pair_secundary(mf, cx, begin_expression, end_secundary, &a);
+  if(!ret)
+    return false;
+  ret = eval_numeric_primary(mf, cx, begin_primary, end_expression, &b);
+  if(!ret)
+    return false;
+  result -> x = a.x;
+  result -> y = a.y * b.value;
+  return true;
+}
+@
+\fimcodigo
+
+Finally, a z-scaling interprets two pairs as complex numbers and
+multiply them:
+
+$$
+(a+bi)(c+di) = ac + (ad)i + (cb)i + (bd)i^2 = (ac - bd) + (cb+ad)i
+$$
+
+\iniciocodigo
+@<Secundary Pair Operator: Z-Scaling@>=
+else if(last_mul -> type == TYPE_ZSCALED){
+  struct pair_variable a, b;
+  ret = eval_pair_secundary(mf, cx, begin_expression, end_secundary, &a);
+  if(!ret)
+    return false;
+  ret = eval_pair_primary(mf, cx, begin_primary, end_expression, &b);
+  if(!ret)
+    return false;
+  result -> x = a.x * b.x - a.y * b.y;
+  result -> y = a.x * b.y + b.x * a.y;
+  return true;
+}
+@
+\fimcodigo
+
+\subsubsecao{8.2.3. Pair Intermediary Values, Literals and Variables}
+
+The final grammar rules for pair expressions are:
+
+\alinhaverbatim
+<Pair Primary> -> <Pair Variable> |
+                  ( <Numeric Expression> , <Numeric Expression> ) |
+                  ( <Pair Expression> ) |
+                  <Numeric Atom> [ <Pair Expression, <Pair Expression>] |
+                  (...) |
+                  <Scalar Multiplication Operator><Pair Primary>
+\alinhanormal
+
+The novel operator is the constructionn $a[b, c]$, where $b$ and $c$
+are pairs. It represents intermediary values between $b$ end $c$. It
+is evaluated as $a(b+c)$. This means that $.5[a,b]$ is half the path
+between $b$ and $c$.
+
+The other rules are analogous to what we already described in the
+grammar for numeric expressions.
+
+The function that will evaluate pair primary expressions is:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+bool eval_pair_primary(struct metafont *mf, struct context *cx,
+                       struct generic_token *begin_expression,
+                       struct generic_token *end_expression,
+                       struct pair_variable *result);
+@
+\fimcodigo
+
+Each one of the five grammar rules will be tested separately to
+discover which one we should apply when we find a primary expression:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+bool eval_pair_primary(struct metafont *mf, struct context *cx,
+                       struct generic_token *begin_expression,
+                       struct generic_token *end_expression,
+                       struct pair_variable *result){
+  if(begin_expression == end_expression){
+    @<Pair Primary: Rule 1@>
+  }
+  else if(begin_expression -> type == TYPE_OPEN_PARENTHESIS &&
+          end_expression -> type == TYPE_CLOSE_PARENTHESIS){
+    @<Pair Primary: Rule 2@>
+    @<Pair Primary: Rule 3@>
+  }
+  @<Pair Primary: Rule 4@>
+  @<Pair Primary: Rule 5@>
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
+          "expression.",  mf -> file, begin_expression -> line);
+#endif
+  return false;
+}
+@
+
+The first rule will be applied when we have a single token in the
+expression. The only case when it happens is when we are evaluating a
+pair variable:
+
+\iniciocodigo
+@<Pair Primary: Rule 1@>=
+if(begin_expression == end_expression){
+  struct symbolic_token *tok = (struct symbolic_token *) begin_expression;
+  struct pair_variable *var;
+  if(tok -> type != TYPE_SYMBOLIC){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable token "
+            "in pair expression.",  mf -> file, begin_expression -> line);
+#endif
+    return false;
+  }
+  var = (struct pair_variable *) tok -> var;
+  if(var == NULL){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Undeclared variable "
+            "'%s'.\n", mf -> file, begin_expression -> line,
+            tok -> value);
+#endif
+    return false;
+  }
+  if(var -> type != TYPE_T_PAIR){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Non-pair variable "
+            "'%s' in pair expression.\n", mf -> file,
+            begin_expression -> line, tok -> value);
+#endif
+    return false;
+  }
+  result -> x = var -> x;
+  result -> y = var -> y;
+  return true;
+}
+@
+\fimcodigo
+
+If the expression is delimited by parenthesis, we could be facing a
+literal representation of a pair in the form $(a, b)$, or we could be
+dealing with a pair expression inside parenthesis. We can
+differentiate the two cases checking the presence of a comma inside
+the parenthesis, but not inside any other internal parenthesis or
+bracket.
+
+\iniciocodigo
+@<Pair Primary: Rule 2@>=
+  struct generic_token *begin_a, *end_a, *begin_b, *end_b, *comma;
+  begin_a = (struct generic_token *) begin_expression -> next;
+  end_a = begin_a;
+  int nesting_parenthesis = 0, nesting_brackets = 0;
+  bool literal = true;
+  while(end_a != NULL){
+    if(end_a -> type == TYPE_OPEN_PARENTHESIS)
+      nesting_parenthesis ++;
+    else if(end_a -> type == TYPE_CLOSE_PARENTHESIS)
+      nesting_parenthesis --;
+    if(end_a -> type == TYPE_OPEN_BRACKET)
+      nesting_brackets ++;
+    else if(end_a -> type == TYPE_CLOSE_BRACKET)
+      nesting_brackets --;
+    if(nesting_parenthesis < 0 || nesting_brackets < 0){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
+              "expression.\n ", mf -> file, begin_expression -> line);
+#endif
+      return false;
+    }
+    if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
+       ((struct generic_token *) end_a -> next) -> type == TYPE_COMMA)
+      break;
+    if(end_a -> next != end_expression)
+      end_a = (struct generic_token *) end_a -> next;
+    else{
+      literal = false;
+      break;
+    }
+  }
+  if(literal){
+    struct numeric_variable a, b;
+    bool ret;
+    comma = (struct generic_token *) end_a -> next;
+    begin_b = (struct generic_token *) comma -> next;
+    if(begin_b == end_expression){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
+              "expression.\n ", mf -> file, begin_expression -> line);
+#endif
+      return false;
+    }
+    end_b = begin_b;
+    while(end_b -> next != end_expression)
+      end_b = (struct generic_token *) end_b -> next;
+    ret = eval_numeric_expression(mf, cx, begin_a, end_a, &a);
+    if(!ret)
+      return false;
+    ret = eval_numeric_expression(mf, cx, begin_b, end_b, &b);
+    if(!ret)
+      return false;
+    result -> x = a.value;
+    result -> y = b.value;
+    return true;
+  }
+@
+\fimcodigo
+
+In the code above we identify if we are dealing with a literal
+checking for a comma and we set in the boolean
+variable \monoespaco{literal} if we found it. If this variable is not
+true, immediately after the last \monoespaco{if} above, we run the
+following \monoespaco{else} as the next rule:
+
+\iniciocodigo
+@<Pair Primary: Rule 3@>=
+else{
+  return eval_pair_expression(mf, cx, begin_a, end_a, result);
+}
+@
+\fimcodigo
+
+If the last token is a \monoespaco{]}, then we have a construction of
+type $a[b,c]$. Our task is separate the three parts $a$, $b$ and $c$, evaluate them and return $a(b+c)$:
+
+\iniciocodigo
+@<Pair Primary: Rule 4@>=
+if(end_expression -> type == TYPE_CLOSE_BRACKET){
+  struct generic_token *begin_a, *end_a, *begin_b, *end_b, *begin_c,
+                       *end_c;
+  struct numeric_variable a;
+  struct pair_variable b, c;
+  int nesting_parenthesis = 0, nesting_brackets = 0;
+  begin_a = begin_expression;
+  end_a = begin_a;
+  while(end_a != NULL){
+    if(end_a -> type == TYPE_OPEN_PARENTHESIS)
+      nesting_parenthesis ++;
+    else if(end_a -> type == TYPE_CLOSE_PARENTHESIS)
+      nesting_parenthesis --;
+    if(nesting_parenthesis == 0 &&
+       ((struct generic_token *) end_a -> next) -> type ==
+        TYPE_OPEN_BRACKET)
+      break;
+    if(end_a -> next != end_expression)
+      end_a = (struct generic_token *) end_a -> next;
+    else{
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
+              "expression.\n ", mf -> file, begin_expression -> line);
+#endif
+      return false;
+    }
+  }
+  begin_b = (struct generic_token *) end_a -> next;
+  begin_b = (struct generic_token *) begin_b -> next;
+  if(begin_b == end_expression){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
+            "expression.\n ", mf -> file, begin_expression -> line);
+#endif
+    return false;
+  }
+  end_b = begin_b;
+  while(end_b != end_expression){
+    if(end_b -> type == TYPE_OPEN_PARENTHESIS)
+      nesting_parenthesis ++;
+    else if(end_b -> type == TYPE_CLOSE_PARENTHESIS)
+      nesting_parenthesis --;
+    else if(end_b -> type == TYPE_OPEN_BRACKET)
+      nesting_brackets ++;
+    else if(end_b -> type == TYPE_CLOSE_BRACKET)
+      nesting_brackets --;
+    if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
+       ((struct generic_token *) end_b -> next) -> type == TYPE_COMMA)
+      break;
+    if(end_b -> next != end_expression)
+      end_b = (struct generic_token *) end_b -> next;
+    else{
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
+              "expression.\n ", mf -> file, begin_expression -> line);
+#endif
+      return false;
+    }        
+  }
+  begin_c = (struct generic_token *) end_b -> next;
+  begin_c = (struct generic_token *) begin_c -> next;
+  if(begin_c == end_expression){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
+            "expression.\n ", mf -> file, begin_expression -> line);
+#endif
+    return false;
+  }
+  end_c = begin_c;
+  while(end_c -> next != end_expression)
+    end_c = (struct generic_token *) end_c -> next;
+  if(!eval_numeric_atom(mf, cx, begin_a, end_a, &a))
+    return false;
+  if(!eval_pair_expression(mf, cx, begin_b, end_b, &b))
+    return false;
+  if(!eval_pair_expression(mf, cx, begin_c, end_c, &c))
+    return false;
+  result -> x = (b.x + c.x) * a.value;
+  result -> y = (b.y + c.y) * a.value;
+  return true;
+}
+@
+\fimcodigo
+
+The last rule is when we have a scalar multiplication operator. The
+operator can be \monoespaco{+}, \monoespaco{-}, a single numeric token
+or a fraction:
+
+\iniciocodigo
+@<Pair Primary: Rule 5@>=
+else{
+  bool ret;
+  if(begin_expression -> type == TYPE_SUM)
+    return eval_pair_primary(mf, cx, (struct generic_token *)
+                                     begin_expression -> next,
+                             end_expression, result);
+  else if(begin_expression -> type == TYPE_SUBTRACT){
+    ret = eval_pair_primary(mf, cx, (struct generic_token *)
+                                     begin_expression -> next,
+                             end_expression, result);
+    if(!ret)
+      return false;
+    result -> x = - (result -> x);
+    result -> y = - (result -> y);
+    return true;
+  }
+  else if(begin_expression -> type == TYPE_NUMERIC){
+    struct generic_token *tok;
+    float value = ((struct numeric_token *) begin_expression) -> value;
+    tok = (struct generic_token *) begin_expression -> next;
+    if(tok -> type == TYPE_DIVISION){
+      tok = (struct generic_token *) begin_expression -> next;
+      if(tok == end_expression || tok -> next == end_expression ||
+         tok -> type != TYPE_NUMERIC){
+#if defined(W_DEBUG_METAFONT)
+        fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
+                "expression.\n ", mf -> file, begin_expression -> line);
+#endif
+        return false;
+      }
+      value /= ((struct numeric_token *) tok) -> value;
+      tok = (struct generic_token *) tok -> next;
+    }
+    ret = eval_pair_primary(mf, cx, (struct generic_token *)
+                                     begin_expression -> next,
+                             end_expression, result);
+    if(!ret)
+      return false;
+    result -> x *= value;
+    result -> y *= value;
+    return true;
+  }
+}
+@
+\fimcodigo
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
