@@ -2500,6 +2500,7 @@ bool eval_numeric_primary(struct metafont *mf, struct context *cx,
   @<Primário Numérico: Regra 1@>
   @<Primário Numérico: Regra 2@>
   @<Primário Numérico: Regra 3@>
+  @<Primário Numérico: Operadores Adicionais@>
   @<Primário Numérico: Regra 4@>
 #if defined(W_DEBUG_METAFONT)
   fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
@@ -2558,7 +2559,7 @@ else if(begin_expression -> type == TYPE_LENGTH){
     result -> value = ((num.value > 0)?(num.value):(-num.value));
     return true;
   }
-  //@<Avalia 'length'@>
+  @<Avalia 'length'@>
   else{
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
@@ -3914,6 +3915,121 @@ else{
 }
 @
 \fimcodigo
+
+\subsubsecao{8.2.4. Pares em Expressões Numéricas}
+
+Subexpressões numéricas podem aparecer dentro de expressões de
+pares. Por exemplo, em $a[b,c]$ onde $a$ é um átomo numérico. Da mesma
+forma, subexpressões de pares podem aparecer em expressões
+numéricas. Mas não definimos os casos quando definimos as expressões
+numéricas porque então não tínhamos ainda definido como avaliar
+expressões de pares. Existem quatro operadores numéricos primários que
+envolvem avaliar pares:
+
+\alinhaverbatim
+<Primário Numérico> -> length <Par Primário> | xpart <Par Primário> |
+                       ypart <Par Primário> | angle <Par Primário>
+\alinhanormal
+
+Isso requer definir os seguintes novos tipos de tokens:
+
+\iniciocodigo
+@<METAFONT: Definição de Token Simbólico@>+=
+#define TYPE_XPART  45 // O token simbólico 'xpart'
+#define TYPE_YPART  46 // O token simbólico 'ypart'
+#define TYPE_ANGLE  47 // O token simbólico 'angle'
+@
+\fimcodigo
+
+Correspondentes às seguintes palavras reservadas:
+
+\iniciocodigo
+@<Lista de Palavras Reservadas@>+=
+"xpart", "ypart", "angle",
+@
+\fimcodigo
+
+O primeiro caso, que não precisou de um token
+novo, \monoespaco{length} já era usado para obter o módulo de números
+e havíamos avisado que ele poderia ser usado para outros tipos. No
+caso de pares, ele mede a norma euclideana deles:
+
+\iniciocodigo
+@<Avalia 'length'@>=
+else if(expr_type == TYPE_T_PAIR){
+  struct pair_variable p;
+  if(!eval_pair_primary(mf, cx, (struct generic_token *)
+                                begin_expression -> next, end_expression,
+                                &p))
+    return false;
+  result -> value = (float) hypot(p.x * p.x, p.y * p.y);
+  return true;
+}
+@
+\fimcodigo
+
+O operador \monoespaco{xpart} simplesmente retorna o primeiro valor de
+um par:
+
+\iniciocodigo
+@<Primário Numérico: Operadores Adicionais@>=
+else if(begin_expression -> type == TYPE_XPART){
+  struct pair_variable p;
+  if(!eval_pair_primary(mf, cx, (struct generic_token *)
+                                begin_expression -> next, end_expression,
+                                &p))
+    return false;
+  result -> value = p.x;
+  return true;
+}
+@
+\fimcodigo
+
+Enquanto o operador \monoespaco{ypart} retorna o segundo valor de um
+par:
+
+\iniciocodigo
+@<Primário Numérico: Operadores Adicionais@>+=
+else if(begin_expression -> type == TYPE_YPART){
+  struct pair_variable p;
+  if(!eval_pair_primary(mf, cx, (struct generic_token *)
+                                begin_expression -> next, end_expression,
+                                &p))
+    return false;
+  result -> value = p.y;
+  return true;
+}
+@
+\fimcodigo
+
+Por fim, o último operador, \monoespaco{angle} retorna o ângulo de um
+par. É o ângulo do segmento que conecta a origem ao par em relação ao
+segmento que conecta a origem à $(1,0)$. Um erro deve ser gerado se
+tentar medir o ângulo de $(0,0)$:
+
+\iniciocodigo
+@<Primário Numérico: Operadores Adicionais@>=
+else if(begin_expression -> type == TYPE_ANGLE){
+  struct pair_variable p;
+  if(!eval_pair_primary(mf, cx, (struct generic_token *)
+                                begin_expression -> next, end_expression,
+                                &p))
+    return false;
+  if(p.x == 0.0 && p.y == 0.0){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Measuring the angle "
+            "of (0,0).\n ", mf -> file,
+            begin_expression -> line);
+#endif
+    return false;
+  }
+  result -> value = (float) asin(p.y / (hypot(p.x * p.x, p.y * p.y)));
+  result -> value *= 57.2958; // Radianos para graus
+  return true;
+}
+@
+\fimcodigo
+
 
 \secao{Referências}
 

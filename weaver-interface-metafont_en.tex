@@ -2484,6 +2484,7 @@ bool eval_numeric_primary(struct metafont *mf, struct context *cx,
   @<Numeric Primary: Rule 1@>
   @<Numeric Primary: Rule 2@>
   @<Numeric Primary: Rule 3@>
+  @<Numeric Primary: Additional Operators@>
   @<Numeric Primary: Rule 4@>
   return true;
 }
@@ -2538,7 +2539,7 @@ else if(begin_expression -> type == TYPE_LENGTH){
     result -> value = ((num.value > 0)?(num.value):(-num.value));
     return true;
   }
-  //@<Avalia 'length'@>
+  @<Evaluate 'length'@>
   else{
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
@@ -3880,6 +3881,120 @@ else{
     result -> y *= value;
     return true;
   }
+}
+@
+\fimcodigo
+
+\subsubsecao{8.2.4. Pairs in Numeric Expressions}
+
+Numeric subexpressions can appear inside pair expressions. For
+example, in $a[b,c]$, $a$ is a numeric atom. Likewise, pair
+subexpressions can appear inside numeric expressions. We did not
+define this in the section about numeric expressions because we still
+had not defined how to evaluate pair expressions. There are four
+numeric primary operators involving pairs:
+
+\alinhaverbatim
+<Numeric Primary> -> length <Pair Primary> | xpart <Pair Primary> |
+                       ypart <Pair Primary> | angle <Pair Primary>
+\alinhanormal
+
+This require defining the following three new token types:
+
+\iniciocodigo
+@<METAFONT: Symbolic Token Definition@>+=
+#define TYPE_XPART  45 // Symbolic token 'xpart'
+#define TYPE_YPART  46 // Symbolic token 'ypart'
+#define TYPE_ANGLE  47 // Symbolic token 'angle'
+@
+\fimcodigo
+
+They correspond to the following keywords:
+
+\iniciocodigo
+@<List of Keywords@>+=
+"xpart", "ypart", "angle",
+@
+\fimcodigo
+
+The first case, which did not need a new token, othe
+operator \monoespaco{length} was already being used to get the modulus
+of a given number and we had written that it could be used on other
+types, not only in numerics. In the case of pairs, this operators
+returns the euclidean norm:
+
+\iniciocodigo
+@<Evaluate 'length'@>=
+else if(expr_type == TYPE_T_PAIR){
+  struct pair_variable p;
+  if(!eval_pair_primary(mf, cx, (struct generic_token *)
+                                begin_expression -> next, end_expression,
+                                &p))
+    return false;
+  result -> value = (float) hypot(p.x * p.x, p.y * p.y);
+  return true;
+}
+@
+\fimcodigo
+
+The operator \monoespaco{xpart} returns the first value in a pair:
+
+\iniciocodigo
+@<Numeric Primary: Additional Operators@>=
+else if(begin_expression -> type == TYPE_XPART){
+  struct pair_variable p;
+  if(!eval_pair_primary(mf, cx, (struct generic_token *)
+                                begin_expression -> next, end_expression,
+                                &p))
+    return false;
+  result -> value = p.x;
+  return true;
+}
+@
+\fimcodigo
+
+While the operator \monoespaco{ypart} returns the second value in a
+pair:
+
+\iniciocodigo
+@<Numeric Primary: Additional Operators@>+=
+else if(begin_expression -> type == TYPE_YPART){
+  struct pair_variable p;
+  if(!eval_pair_primary(mf, cx, (struct generic_token *)
+                                begin_expression -> next, end_expression,
+                                &p))
+    return false;
+  result -> value = p.y;
+  return true;
+}
+@
+\fimcodigo
+
+Finally, the last operator, \monoespaco{angle}, measure the angle of a
+pair. Which means the angle between the segment that connects the
+origin to the pair coordintate and the segment that connects the
+origin to $(1,0)$. An error will be generated if you try to measure
+the angle of $(0,0)$:
+
+\iniciocodigo
+@<Numeric Primary: Additional Operators@>+=
+else if(begin_expression -> type == TYPE_ANGLE){
+  struct pair_variable p;
+  if(!eval_pair_primary(mf, cx, (struct generic_token *)
+                                begin_expression -> next, end_expression,
+                                &p))
+    return false;
+  if(p.x == 0.0 && p.y == 0.0){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Measuring the angle "
+            "of (0,0).\n ", mf -> file,
+            begin_expression -> line);
+#endif
+    return false;
+  }
+  result -> value = (float) asin(p.y / (hypot(p.x * p.x, p.y * p.y)));
+  result -> value *= 57.2958; // Radianos para graus
+  return true;
 }
 @
 \fimcodigo
