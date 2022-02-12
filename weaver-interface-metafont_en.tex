@@ -1447,6 +1447,7 @@ if(mf -> free != NULL){
   struct variable *next;
   while(v != NULL){
     next = (struct variable *) (v -> next);
+    @<Finalize Global Variable 'v'@>
     mf -> free(v);
     v = next;
   }
@@ -1460,15 +1461,17 @@ way:
 \iniciocodigo
 @<Finalization (struct metafont)@>+=
 if(mf -> free != NULL){
-  struct named_variable *v = (struct named_variable *)
-                                 (mf -> named_variables);
+  struct named_variable *named = (struct named_variable *)
+                                   (mf -> named_variables);
   struct named_variable *next;
-  while(v != NULL){
-    next = (struct named_variable *) (v -> next);
-    mf -> free(v -> name);
-    mf -> free(v -> var);
+  while(named != NULL){
+    struct variable *v = (struct variable *) named -> var;
+    next = (struct named_variable *) (named -> next);
+    mf -> free(named -> name);
+    @<Finalize Global Variable 'v'@>
     mf -> free(v);
-    v = next;
+    mf -> free(named);
+    named = next;
   }
 }
 @
@@ -1501,6 +1504,7 @@ if(temporary_free != NULL){
   struct variable *next;
   while(v != NULL){
     next = (struct variable *) (v -> next);
+    @<Finalize Local Variable 'v'@>
     temporary_free(v);
     v = next;
   }
@@ -1888,12 +1892,117 @@ instead of one. Initially we will represent the first of them with NaN
 to represent a non-initialized pair:
 
 \iniciocodigo
-@<Initializing New Variable@>=
+@<Initializing New Variable@>+=
 if(type == TYPE_T_PAIR){
   ((struct pair_variable *) var) -> x = NAN;
 }
 @
 \fimcodigo
+
+\subsecao{7.3. Path Variables}
+
+A path variable store a sequence of points and control
+points. Together they compose a sequence of Cubic Beziér Curves.
+
+A Cubic Beziér Curve is defined by two extremity points ($z_1$ and
+$z_4$) and two control points ($z_2'$ and $z_3'$). The two extremity
+curves are always part of the curve. To obtain the other curve points
+given the four points $(z_1, z_2', z_3', z_4)$, we use the following
+procedure:
+
+1) Get three intermediate points: $z_{12}'$ is the point halfway the
+points $z_1$ and $z_2'$, $z_{23}'$ is the point halfway between $z_2'$
+and $z_3'$ and $z_{34}$ is the point halfway between $z_3'$ and $z_4$.
+
+2) Get two intermediate points: $z_{123}'$ is the point halfway
+between $z_{12}'$ and $z_{23}'$ while $z_{234}'$ is the point halfway
+between $z_{23}'$ and $z_{34}'$.
+
+3) Get the new curve point $z_{1234}$ located halfway between
+$z_{123}'$ and $z_{234}'$.
+
+4) Generate the remaining curve points repeating this procedure
+recursively over the points $(z_1, z_{12}', z_{123}', z_{1234})$ and
+over $(z_{1234}, z_{234}', z_{34}', z_4)$.
+
+It is also possible to define such curves using a formula. Given the
+extremity points and the control points, a Cubic Beziér Curve is
+defined by the following formula if we vary $t$ between 0 and 1:
+
+$$
+z(t) = (1-t)^3z_1 + 3(1-t)^2tz_2' + 3(1-t)t^2z_3'+t^3z_4
+$$
+
+The data structure that will represent a sequence of Cubic Beziér
+Curves is:
+
+\iniciocodigo
+@<Local Data Structures (metafont.c)@>+=
+struct path_variable{
+  int type; // Deve ser 'TYPE_T_PATH'
+  int nesting_level;
+  void *next;
+  bool cyclic;
+  int length;
+  struct{
+    float x, y; // Extremity point
+    float u_x, u_y, v_x, v_y;   // Control Points
+    void *subpath;
+  } *points;
+};
+@
+\fimcodigo
+
+Basically its points will be stored in the
+pointer \monoespaco{points}, an array of structs whose number of
+elements is equal \monoespaco{length}. Each structure will represent a
+point $(x, y)$ or a subpath (if \monoespaco{subpath} is not null, and
+in this case we ignore $x$ and $y$). The control points defined
+by \monoespaco{u\_x}, \monoespaco{u\_y}, \monoespaco{v\_x}
+and \monoespaco{v\_y} are the control points between the current point
+or subpath and the next one if it exists. If we have a cyclic path,
+the control points in the last point or subpath show how it is
+connected to the first point in the path. If we are not in a cyclic
+path, then the control points of the last point is ignored.
+
+We will represent a non-initialized oath variable setting its length
+as -1:
+
+\iniciocodigo
+@<Initializing New Variable@>+=
+if(type == TYPE_T_PATH){
+  ((struct path_variable *) var) -> length = -1;
+}
+@
+\fimcodigo
+
+When we remove a global variable, if it is a path variable and if it
+is initialized, then we also need to remove the allocated list of
+points:
+
+\iniciocodigo
+@<Finalize Global Variable 'v'@>=
+if(v -> type == TYPE_T_PATH){
+  struct path_variable *path = (struct path_variable *) v;
+  if(path -> length != -1 && mf -> free != NULL)
+    mf -> free(path -> points);
+}
+@
+\fimcodigo
+
+If the variable is not global we do the same, but using a different
+disallocation function:
+
+\iniciocodigo
+@<Finalize Local Variable 'v'@>=
+if(v -> type == TYPE_T_PATH){
+  struct path_variable *path = (struct path_variable *) v;
+  if(path -> length != -1 && temporary_free != NULL)
+    temporary_free(path -> points);
+}
+@
+\fimcodigo
+
 
 \secao{8. Assignments}
 
@@ -2897,7 +3006,7 @@ bool eval_numeric_atom(struct metafont *mf, struct context *cx,
   }
   else{
     @<Numeric Atom: Rule 4@>
-    //@<Numeric Atom: Rule 5@>
+    @<Numeric Atom: Rule 5@>
   }
   return true;
 }
@@ -3071,12 +3180,12 @@ numeric token, \monoespaco{/} and another numeric token. The result is
 obtained dividing both tokens:
 
 \iniciocodigo
-@<Átomo Numérico: Regra 5@>=
+@<Numeric Atom: Rule 5@>=
 if(begin_expression -> type == TYPE_NUMERIC &&
    end_expression -> type == TYPE_NUMERIC &&
    ((struct generic_token * ) begin_expression -> next) -> type ==
    TYPE_DIVISION){
-  result = ((struct numeric_token *) begin_expression) -> value /
+  result -> value = ((struct numeric_token *) begin_expression) -> value /
            ((struct numeric_token *) end_expression) -> value;
   return true;
 }

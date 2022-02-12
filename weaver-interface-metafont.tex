@@ -1470,6 +1470,7 @@ if(mf -> free != NULL){
   struct variable *next;
   while(v != NULL){
     next = (struct variable *) (v -> next);
+    @<Finaliza Variável Global 'v'@>
     mf -> free(v);
     v = next;
   }
@@ -1483,15 +1484,17 @@ feito de maneira semelhante:
 \iniciocodigo
 @<Finalização (struct metafont)@>+=
 if(mf -> free != NULL){
-  struct named_variable *v = (struct named_variable *)
-                                 (mf -> named_variables);
+  struct named_variable *named = (struct named_variable *)
+                                   (mf -> named_variables);
   struct named_variable *next;
-  while(v != NULL){
-    next = (struct named_variable *) (v -> next);
-    mf -> free(v -> name);
-    mf -> free(v -> var);
+  while(named != NULL){
+    struct variable *v = (struct variable *) (named -> var);
+    next = (struct named_variable *) (named -> next);
+    mf -> free(named -> name);
+    @<Finaliza Variável Global 'v'@>
     mf -> free(v);
-    v = next;
+    mf -> free(named);
+    named = next;
   }
 }
 @
@@ -1524,6 +1527,7 @@ if(temporary_free != NULL){
   struct variable *next;
   while(v != NULL){
     next = (struct variable *) (v -> next);
+    @<Finaliza Variável Local 'v'@>
     temporary_free(v);
     v = next;
   }
@@ -1913,6 +1917,113 @@ deles como NaN, para representar uma variável não-inicializada:
 @<Initializing New Variable@>=
 if(type == TYPE_T_PAIR){
   ((struct pair_variable *) var) -> x = NAN;
+}
+@
+\fimcodigo
+
+\subsecao{7.3. Variáveis de Caminhos}
+
+Uma variável de caminho armazena uma sequência de pontos e uma
+sequência de pontos de controle formando uma sequência de Curvas de
+Beziér cúbicas.
+
+Uma Curva de Beziér cúbica é definida por dois pontos de extremidade
+($z_1$ e $z_4$) e dois pontos de controle ($z_2'$ e $z_3'$). Os dois
+pontos de extremidade fazem parte da curva. Para obter todos os outros
+pontos que fazem parte da curva à partir de quatro pontos $(z_1, z_2',
+z_3', z_4)$, usa-se o seguinte procedimento:
+
+1) Obtenha o ponto intermediário $z_{12}'$, que fica na metade do
+caminho entre $z_1$ e $z_2'$, o ponto intermediário $z_{23}'$, que
+fica no meio do caminho entre $z_2'$ e $z_3'$ e o ponto intermediário
+$z_{34}'$, que fica no meio do caminho entre $z_3'$ e $z_4$.
+
+2) Obtenha agora os dois pontos intermediários novos: $z_{123}'$, que
+fica no meio do caminho entre $z_{12}'$ e $z_{23}'$ e o ponto
+$z_{234}'$ que fica entre os pontos $z_{23}'$ e $z_{34}'$.
+
+3) O novo ponto que faz parte da curva gerado é o ponto $z_{1234}$,
+que fica no meio do caminho entre $z_{123}'$ e $z_{234}'$.
+
+4) Gere os outros pontos da curva aplicando este procedimento
+recursivamente sobre $(z_1, z_{12}', z_{123}', z_{1234})$ e sobre
+$(z_{1234}, z_{234}', z_{34}', z_4)$.
+
+É possível também obter uma fórmula para tais curvas. Dado dois pontos
+de extremidade e dois de controle, todos os pontos intermediários
+podem ser obtidos usando a fórmula abaixo, variando $t$ entre 0 e 1:
+
+$$
+z(t) = (1-t)^3z_1 + 3(1-t)^2tz_2' + 3(1-t)t^2z_3'+t^3z_4
+$$
+
+A estrutura de dados que armazena a sequência de Curvas de Beziér
+Cúbicas é:
+
+\iniciocodigo
+@<Estrutura de Dados Locais (metafont.c)@>+=
+struct path_variable{
+  int type; // Deve ser 'TYPE_T_PATH'
+  int nesting_level;
+  void *next;
+  bool cyclic;
+  int length;
+  struct{
+    float x, y; // Ponto de extremidade
+    float u_x, u_y, v_x, v_y;   // Pontos de controle
+    void *subpath;
+  } *points;
+};
+@
+\fimcodigo
+
+Basicamente seus pontos estarão apontados pelo
+ponteiro \monoespaco{points}, um vetor de estrutura que terá um número
+de elementos igual a \monoespaco{length}. Cada estrutura representará
+um ponto $(x, y)$ ou então terá um ponteiro para outra variável de
+caminho que contém um subcaminho (sempre que \monoespaco{subpath} não
+for nulo, e nesta caso ignoraremos $x$ e $y$). Os pontos de controle
+definidos por \monoespaco{u\_x}, \monoespaco{u\_y}, \monoespaco{v\_x}
+e \monoespaco{v\_y} são os pontos de controle entre o ponto ou
+subcaminho atual e o próximo, se houver. Caso seja um caminho cíclico,
+os pontos de controle do último ponto ou subcaminho determinam como
+ele será ligado ao primeiro ponto. Se não for cíclico, os pontos de
+controle do último ponto são ignorados.
+
+O modo como representaremos uma variável de caminho não-inicializada é
+mantendo seu tamanho (\monoespaco{length}) como sendo igual a -1:
+
+\iniciocodigo
+@<Inicialização de Nova Variável@>=
+if(type == TYPE_T_PATH){
+  ((struct path_variable *) var) -> length = -1;
+}
+@
+\fimcodigo
+
+Quando vamos remover uma variável global, se ela for do tipo caminho e
+estiver inicializada, precisamos remover a lista de pontos alocada:
+
+\iniciocodigo
+@<Finaliza Variável Global 'v'@>=
+if(v -> type == TYPE_T_PATH){
+  struct path_variable *path = (struct path_variable *) v;
+  if(path -> length != -1 && mf -> free != NULL)
+    mf -> free(path -> points);
+}
+@
+\fimcodigo
+
+Se a variável não for global fazemos o mesmo, mas usando uma função de
+desalocação para variáveis temporárias:
+
+
+\iniciocodigo
+@<Finaliza Variável Local 'v'@>=
+if(v -> type == TYPE_T_PATH){
+  struct path_variable *path = (struct path_variable *) v;
+  if(path -> length != -1 && temporary_free != NULL)
+    temporary_free(path -> points);
 }
 @
 \fimcodigo
@@ -2921,7 +3032,7 @@ bool eval_numeric_atom(struct metafont *mf, struct context *cx,
   }
   else{
     @<Átomo Numérico: Regra 4@>
-    //@<Átomo Numérico: Regra 5@>
+    @<Átomo Numérico: Regra 5@>
   }
   return false;
 }
@@ -3099,7 +3210,7 @@ if(begin_expression -> type == TYPE_NUMERIC &&
    end_expression -> type == TYPE_NUMERIC &&
    ((struct generic_token * ) begin_expression -> next) -> type ==
    TYPE_DIVISION){
-  result = ((struct numeric_token *) begin_expression) -> value /
+  result -> value = ((struct numeric_token *) begin_expression) -> value /
            ((struct numeric_token *) end_expression) -> value;
   return true;
 }
