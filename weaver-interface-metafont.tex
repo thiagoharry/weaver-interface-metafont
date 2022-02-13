@@ -2008,8 +2008,14 @@ estiver inicializada, precisamos remover a lista de pontos alocada:
 @<Finaliza Variável Global 'v'@>=
 if(v -> type == TYPE_T_PATH){
   struct path_variable *path = (struct path_variable *) v;
-  if(path -> length != -1 && mf -> free != NULL)
+  if(path -> length != -1 && mf -> free != NULL){
+    int i;
+    for(i = 0; i < path -> length; i ++)
+      if(path -> points[i].subpath != NULL)
+        path_recursive_free(mf -> free, (struct path_variable *)
+                                        path -> points[i].subpath);
     mf -> free(path -> points);
+  }
 }
 @
 \fimcodigo
@@ -2022,11 +2028,51 @@ desalocação para variáveis temporárias:
 @<Finaliza Variável Local 'v'@>=
 if(v -> type == TYPE_T_PATH){
   struct path_variable *path = (struct path_variable *) v;
-  if(path -> length != -1 && temporary_free != NULL)
+  if(path -> length != -1 && temporary_free != NULL){
+    int i;
+    for(i = 0; i < path -> length; i ++)
+      if(path -> points[i].subpath != NULL)
+        path_recursive_free(temporary_free, (struct path_variable *)
+                                            path -> points[i].subpath);
     temporary_free(path -> points);
+  }
 }
 @
 \fimcodigo
+
+Como um caminho pode conter subcaminhos e cada um deles também pode
+ter seus próprios subcaminhos, em tais casos usamos uma função
+recursiva para desalocar memória. Dada a função de desalocação e um
+ponteiro para uma variável de caminho, nós desalocamos todos os seus
+subcaminhos e depois a desalocamos. A declaração da função é:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+void path_recursive_free(void (*free_func)(void *),
+                         struct path_variable *path);
+@
+\fimcodigo
+
+E sua implementação é:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+void path_recursive_free(void (*free_func)(void *),
+                         struct path_variable *path){
+  if(free_func != NULL){
+    int i;
+    for(i = 0; i < path -> length; i ++){
+      if(path -> points[i].subpath != NULL)
+        path_recursive_free(free_func, (struct path_variable *)
+                                       path -> points[i].subpath);
+    }
+    free_func(path -> points);
+    free_func(path);
+  }
+}
+@
+\fimcodigo
+
 
 \secao{8. Atribuições}
 
@@ -2162,6 +2208,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
   begin_expression = (struct generic_token *) var;
   @<Atribuição de Variável Numérica@>
   @<Atribuição de Variável de Par@>
+  @<Atribuição de Variável de Caminho@>
   return true;
 }
 @
@@ -2256,8 +2303,9 @@ outras operações forem feitas.
 
 Vamos agora aperfeiçoar o nosso analisador léxico para identificar e
 gerar os tokens destes quatro operadores. Temos que criar tipos novos,
-um para cada operador. Vamos aproveitar e criar tipos novos para ``[``
-e ``]'', pois vamos também precisar no nosso analisador sintático:
+um para cada operador. Vamos aproveitar e criar tipos novos para
+``['', ``]'', ``{'' e ``}'', pois vamos também precisar no nosso
+analisador sintático:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
@@ -2265,8 +2313,10 @@ e ``]'', pois vamos também precisar no nosso analisador sintático:
 #define TYPE_SUBTRACT              22 // O token simbólico '-'
 #define TYPE_PYTHAGOREAN_SUM       23 // O token simbólico '++'
 #define TYPE_PYTHAGOREAN_SUBTRACT  24 // O token simbólico '+-+'
-#define TYPE_OPEN_BRACKET          25 // O token simbólico '['
-#define TYPE_CLOSE_BRACKET         26 // O token simbólico ']'
+#define TYPE_OPEN_BRACKETS         25 // O token simbólico '['
+#define TYPE_CLOSE_BRACKETS        26 // O token simbólico ']'
+#define TYPE_OPEN_BRACES           27 // O token simbólico '{'
+#define TYPE_CLOSE_BRACES          28 // O token simbólico '}'
 @
 \fimcodigo
 
@@ -2274,7 +2324,7 @@ E os adicionamos na lista de palavras reservadas:
 
 \iniciocodigo
 @<Lista de Palavras Reservadas@>+=
-"+", "-", "++", "+-+", "[", "]",
+"+", "-", "++", "+-+", "[", "]", "{", "}",
 @
 \fimcodigo
 
@@ -2325,7 +2375,7 @@ subtração válida com a macro abaixo:
         ((cur -> type == TYPE_SUM ||                    \
          cur -> type == TYPE_SUBTRACT) &&               \
          (prev != NULL && prev -> type != TYPE_COMMA && \
-          prev -> type != TYPE_OPEN_BRACKET &&          \
+          prev -> type != TYPE_OPEN_BRACKETS &&          \
           prev -> type != TYPE_MULTIPLICATION &&        \
           prev -> type != TYPE_DIVISION &&              \
           prev -> type != TYPE_SUM &&                   \
@@ -2362,7 +2412,7 @@ bool eval_numeric_expression(struct metafont *mf, struct context *cx,
                              struct numeric_variable *result){
   struct generic_token *end_tertiary = NULL, *begin_secundary,
                        *last_sum = NULL, *p, *prev = NULL;
-  int nesting_parenthesis = 0, nesting_brackets = 0;
+  int nesting_parenthesis = 0, nesting_brackets = 0, nesting_braces = 0;
   struct numeric_variable a, b;
   p = begin_expression;
   do{
@@ -2370,11 +2420,16 @@ bool eval_numeric_expression(struct metafont *mf, struct context *cx,
       nesting_parenthesis ++;
     else if(p -> type == TYPE_CLOSE_PARENTHESIS)
       nesting_parenthesis --;
-    else if(p -> type == TYPE_OPEN_BRACKET)
+    else if(p -> type == TYPE_OPEN_BRACKETS)
       nesting_brackets ++;
-    else if(p -> type == TYPE_CLOSE_BRACKET)
+    else if(p -> type == TYPE_CLOSE_BRACKETS)
       nesting_brackets --;
+    else if(p -> type == TYPE_OPEN_BRACES)
+      nesting_braces ++;
+    else if(p -> type == TYPE_CLOSE_BRACES)
+      nesting_braces --;
     else if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
+            nesting_braces == 0 &&
             (p -> type == TYPE_PYTHAGOREAN_SUM ||
              p -> type == TYPE_PYTHAGOREAN_SUBTRACT ||
              IS_VALID_SUM_OR_SUB(prev, p))){
@@ -2436,8 +2491,8 @@ e definir seus tipos:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_MULTIPLICATION        27 // O token simbólico '*'
-#define TYPE_DIVISION              28 // O token simbólico '/'
+#define TYPE_MULTIPLICATION        29 // O token simbólico '*'
+#define TYPE_DIVISION              30 // O token simbólico '/'
 @
 \fimcodigo
 
@@ -2484,7 +2539,7 @@ bool eval_numeric_secundary(struct metafont *mf, struct context *cx,
   struct generic_token *end_secundary = NULL, *begin_primary,
                        *last_mul = NULL, *p, *prev = NULL,
                        *prev_prev = NULL, *last_fraction = NULL;
-  int nesting_parenthesis = 0, nesting_brackets = 0;
+  int nesting_parenthesis = 0, nesting_brackets = 0, nesting_braces = 0;
   struct numeric_variable a, b;
   b.value = 0.0;
   p = begin_expression;
@@ -2493,11 +2548,16 @@ bool eval_numeric_secundary(struct metafont *mf, struct context *cx,
       nesting_parenthesis ++;
     else if(p -> type == TYPE_CLOSE_PARENTHESIS)
       nesting_parenthesis --;
-    else if(p -> type == TYPE_OPEN_BRACKET)
+    else if(p -> type == TYPE_OPEN_BRACKETS)
       nesting_brackets ++;
-    else if(p -> type == TYPE_CLOSE_BRACKET)
+    else if(p -> type == TYPE_CLOSE_BRACKETS)
       nesting_brackets --;
+    else if(p -> type == TYPE_OPEN_BRACES)
+      nesting_braces ++;
+    else if(p -> type == TYPE_CLOSE_BRACES)
+      nesting_braces --;
     else if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
+            nesting_braces == 0 &&
             (p -> type == TYPE_MULTIPLICATION ||
              p -> type == TYPE_DIVISION)){
       if(p -> type == TYPE_DIVISION && prev -> type == TYPE_NUMERIC &&
@@ -2571,14 +2631,14 @@ operadores numéricos. Os colchetes Já pertencem à esta lista:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_LENGTH         29 // O token simbólico 'length'
-#define TYPE_SQRT           30 // O token simbólico 'sqrt'
-#define TYPE_SIND           31 // O token simbólico 'sind'
-#define TYPE_COSD           32 // O token simbólico 'cosd'
-#define TYPE_LOG            33 // O token simbólico 'log'
-#define TYPE_EXP            34 // O token simbólico 'exp'
-#define TYPE_FLOOR          35 // O token simbólico 'floor'
-#define TYPE_UNIFORMDEVIATE 36 // O token simbólico 'uniformdeviate'
+#define TYPE_LENGTH         31 // O token simbólico 'length'
+#define TYPE_SQRT           32 // O token simbólico 'sqrt'
+#define TYPE_SIND           33 // O token simbólico 'sind'
+#define TYPE_COSD           34 // O token simbólico 'cosd'
+#define TYPE_LOG            35 // O token simbólico 'log'
+#define TYPE_EXP            36 // O token simbólico 'exp'
+#define TYPE_FLOOR          37 // O token simbólico 'floor'
+#define TYPE_UNIFORMDEVIATE 38 // O token simbólico 'uniformdeviate'
 @
 \fimcodigo
 
@@ -2991,7 +3051,7 @@ O único token novo a ser tratado é \monoespaco{normaldeviate}:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_NORMALDEVIATE  37 // O token simbólico 'normaldeviate'
+#define TYPE_NORMALDEVIATE  39 // O token simbólico 'normaldeviate'
 @
 \fimcodigo
 
@@ -3302,7 +3362,7 @@ bool eval_pair_expression(struct metafont *mf, struct context *cx,
                           struct pair_variable *result){
   struct generic_token *end_tertiary = NULL, *begin_secundary,
                        *last_sum = NULL, *p, *prev = NULL;
-  int nesting_parenthesis = 0, nesting_brackets = 0;
+  int nesting_parenthesis = 0, nesting_brackets = 0, nesting_braces = 0;
   struct pair_variable a, b;
   p = begin_expression;
   do{
@@ -3310,12 +3370,16 @@ bool eval_pair_expression(struct metafont *mf, struct context *cx,
       nesting_parenthesis ++;
     else if(p -> type == TYPE_CLOSE_PARENTHESIS)
       nesting_parenthesis --;
-    else if(p -> type == TYPE_OPEN_BRACKET)
+    else if(p -> type == TYPE_OPEN_BRACKETS)
       nesting_brackets ++;
-    else if(p -> type == TYPE_CLOSE_BRACKET)
+    else if(p -> type == TYPE_CLOSE_BRACKETS)
       nesting_brackets --;
+    else if(p -> type == TYPE_OPEN_BRACES)
+      nesting_braces ++;
+    else if(p -> type == TYPE_CLOSE_BRACES)
+      nesting_braces --;
     else if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
-             IS_VALID_SUM_OR_SUB(prev, p)){
+            nesting_braces == 0 && IS_VALID_SUM_OR_SUB(prev, p)){
       last_sum = p;
       end_tertiary = prev;
     }
@@ -3371,13 +3435,13 @@ transformadores:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_ROTATED  38 // O token simbólico 'rotated'
-#define TYPE_SCALED   39 // O token simbólico 'scaled'
-#define TYPE_SHIFTED  40 // O token simbólico 'shifted'
-#define TYPE_SLANTED  41 // O token simbólico 'slanted'
-#define TYPE_XSCALED  42 // O token simbólico 'xscaled'
-#define TYPE_YSCALED  43 // O token simbólico 'yscaled'
-#define TYPE_ZSCALED  44 // O token simbólico 'zscaled'
+#define TYPE_ROTATED  40 // O token simbólico 'rotated'
+#define TYPE_SCALED   41 // O token simbólico 'scaled'
+#define TYPE_SHIFTED  42 // O token simbólico 'shifted'
+#define TYPE_SLANTED  43 // O token simbólico 'slanted'
+#define TYPE_XSCALED  44 // O token simbólico 'xscaled'
+#define TYPE_YSCALED  45 // O token simbólico 'yscaled'
+#define TYPE_ZSCALED  46 // O token simbólico 'zscaled'
 @
 \fimcodigo
 
@@ -3419,18 +3483,23 @@ bool eval_pair_secundary(struct metafont *mf, struct context *cx,
   struct generic_token *end_secundary = NULL, *begin_primary,
                        *last_mul = NULL, *p, *prev = NULL,
                        *prev_prev = NULL, *last_fraction = NULL;
-  int nesting_parenthesis = 0, nesting_brackets = 0;
+  int nesting_parenthesis = 0, nesting_brackets = 0, nesting_braces = 0;
   p = begin_expression;
   do{
     if(p -> type == TYPE_OPEN_PARENTHESIS)
       nesting_parenthesis ++;
     else if(p -> type == TYPE_CLOSE_PARENTHESIS)
       nesting_parenthesis --;
-    else if(p -> type == TYPE_OPEN_BRACKET)
+    else if(p -> type == TYPE_OPEN_BRACKETS)
       nesting_brackets ++;
-    else if(p -> type == TYPE_CLOSE_BRACKET)
+    else if(p -> type == TYPE_CLOSE_BRACKETS)
       nesting_brackets --;
+    else if(p -> type == TYPE_OPEN_BRACES)
+      nesting_braces ++;
+    else if(p -> type == TYPE_CLOSE_BRACES)
+      nesting_braces --;
     else if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
+            nesting_braces == 0 &&
             (p -> type == TYPE_MULTIPLICATION ||
              p -> type == TYPE_DIVISION || p -> type == TYPE_ROTATED ||
              p -> type == TYPE_SCALED || p -> type == TYPE_SHIFTED ||
@@ -3812,18 +3881,23 @@ $b$, não deve estar dentro de outros parênteses e colchetes.
   struct generic_token *begin_a, *end_a, *begin_b, *end_b, *comma;
   begin_a = (struct generic_token *) begin_expression -> next;
   end_a = begin_a;
-  int nesting_parenthesis = 0, nesting_brackets = 0;
+  int nesting_parenthesis = 0, nesting_brackets = 0, nesting_braces = 0;
   bool literal = true;
   while(end_a != NULL){
     if(end_a -> type == TYPE_OPEN_PARENTHESIS)
       nesting_parenthesis ++;
     else if(end_a -> type == TYPE_CLOSE_PARENTHESIS)
       nesting_parenthesis --;
-    if(end_a -> type == TYPE_OPEN_BRACKET)
+    if(end_a -> type == TYPE_OPEN_BRACKETS)
       nesting_brackets ++;
-    else if(end_a -> type == TYPE_CLOSE_BRACKET)
+    else if(end_a -> type == TYPE_CLOSE_BRACKETS)
       nesting_brackets --;
-    if(nesting_parenthesis < 0 || nesting_brackets < 0){
+    if(end_a -> type == TYPE_OPEN_BRACES)
+      nesting_braces ++;
+    else if(end_a -> type == TYPE_CLOSE_BRACES)
+      nesting_braces --;
+    if(nesting_parenthesis < 0 || nesting_brackets < 0 ||
+       nesting_braces < 0){
 #if defined(W_DEBUG_METAFONT)
       fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
               "expression.\n ", mf -> file, begin_expression -> line);
@@ -3831,6 +3905,7 @@ $b$, não deve estar dentro de outros parênteses e colchetes.
       return false;
     }
     if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
+       nesting_braces == 0 &&
        ((struct generic_token *) end_a -> next) -> type == TYPE_COMMA)
       break;
     if(end_a -> next != end_expression)
@@ -3888,12 +3963,12 @@ $c$, interpretá-las e retornar $a(b+c)$:
 
 \iniciocodigo
 @<Primário de Par: Regra 4@>=
-if(end_expression -> type == TYPE_CLOSE_BRACKET){
+if(end_expression -> type == TYPE_CLOSE_BRACKETS){
   struct generic_token *begin_a, *end_a, *begin_b, *end_b, *begin_c,
                        *end_c;
   struct numeric_variable a;
   struct pair_variable b, c;
-  int nesting_parenthesis = 0, nesting_brackets = 0;
+  int nesting_parenthesis = 0, nesting_brackets = 0, nesting_braces = 0;
   begin_a = begin_expression;
   end_a = begin_a;
   while(end_a != NULL){
@@ -3901,9 +3976,13 @@ if(end_expression -> type == TYPE_CLOSE_BRACKET){
       nesting_parenthesis ++;
     else if(end_a -> type == TYPE_CLOSE_PARENTHESIS)
       nesting_parenthesis --;
-    if(nesting_parenthesis == 0 &&
+    else if(end_a -> type == TYPE_OPEN_BRACES)
+      nesting_braces ++;
+    else if(end_a -> type == TYPE_CLOSE_BRACES)
+      nesting_braces --;
+    if(nesting_parenthesis == 0 && nesting_braces == 0 &&
        ((struct generic_token *) end_a -> next) -> type ==
-        TYPE_OPEN_BRACKET)
+        TYPE_OPEN_BRACKETS)
       break;
     if(end_a -> next != end_expression)
       end_a = (struct generic_token *) end_a -> next;
@@ -3930,11 +4009,16 @@ if(end_expression -> type == TYPE_CLOSE_BRACKET){
       nesting_parenthesis ++;
     else if(end_b -> type == TYPE_CLOSE_PARENTHESIS)
       nesting_parenthesis --;
-    else if(end_b -> type == TYPE_OPEN_BRACKET)
+    else if(end_b -> type == TYPE_OPEN_BRACKETS)
       nesting_brackets ++;
-    else if(end_b -> type == TYPE_CLOSE_BRACKET)
+    else if(end_b -> type == TYPE_CLOSE_BRACKETS)
       nesting_brackets --;
+    else if(end_b -> type == TYPE_OPEN_BRACES)
+      nesting_braces ++;
+    else if(end_b -> type == TYPE_CLOSE_BRACES)
+      nesting_braces --;
     if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
+       nesting_braces == 0 &&
        ((struct generic_token *) end_b -> next) -> type == TYPE_COMMA)
       break;
     if(end_b -> next != end_expression)
@@ -4046,9 +4130,9 @@ Isso requer definir os seguintes novos tipos de tokens:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_XPART  45 // O token simbólico 'xpart'
-#define TYPE_YPART  46 // O token simbólico 'ypart'
-#define TYPE_ANGLE  47 // O token simbólico 'angle'
+#define TYPE_XPART  47 // O token simbólico 'xpart'
+#define TYPE_YPART  48 // O token simbólico 'ypart'
+#define TYPE_ANGLE  49 // O token simbólico 'angle'
 @
 \fimcodigo
 
@@ -4140,6 +4224,61 @@ else if(begin_expression -> type == TYPE_ANGLE){
 }
 @
 \fimcodigo
+
+\subsecao{8.3. Atribuições e Expressões de Caminhos}
+
+Para realizar a atribuição de caminhos a variáveis do tipo certo,
+usamos o código abaixo:
+
+\iniciocodigo
+@<Atribuição de Variável de Caminho@>=
+else if(type == TYPE_T_PATH){
+  int i;
+  struct path_variable result;
+  //if(!eval_path_expression(mf, cx, begin_expression,
+  //                         (struct generic_token *) *end_token_list,
+  //                         &result))
+  //  return false;
+  var = (struct symbolic_token *) begin_token_list;
+  for(i = 0; i < number_of_variables; i ++){
+    assign_path_variable(mf, (struct path_variable *) var -> var,
+                         &result);
+    var = (struct symbolic_token *) (var -> next);
+    var = (struct symbolic_token *) (var -> next);
+  }
+  if(temporary_free != NULL)
+    temporary_free(result.points);
+}
+@
+\fimcodigo
+
+A declaração da função faz a atribuição:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+void assign_path_variable(struct metafont *mf,
+                          struct path_variable *target,
+                          struct path_variable *source);
+@
+\fimcodigo
+
+E a sua implementação:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+void assign_path_variable(struct metafont *mf,
+                          struct path_variable *target,
+                          struct path_variable *source){
+  if(target -> length != -1)
+    path_recursive_free(mf -> free, target);
+  target -> cyclic = source -> cyclic;
+  target -> length = source -> length;
+  //recursive_copy_points(mf, target, source);
+}
+@
+\fimcodigo
+
+
 
 
 \secao{Referências}

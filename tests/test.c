@@ -241,12 +241,12 @@ void test_lexer(void){
     goto test_lexer_end;
   }
   p = ((struct generic_token *) p) -> next;
-  if(((struct symbolic_token *) p) -> type != TYPE_CLOSE_BRACKET){
+  if(((struct symbolic_token *) p) -> type != TYPE_CLOSE_BRACKETS){
     ok = false;
     goto test_lexer_end;
   }
   p = ((struct generic_token *) p) -> next;
-  if(((struct symbolic_token *) p) -> type != TYPE_CLOSE_BRACKET){
+  if(((struct symbolic_token *) p) -> type != TYPE_CLOSE_BRACKETS){
     ok = false;
     goto test_lexer_end;
   }
