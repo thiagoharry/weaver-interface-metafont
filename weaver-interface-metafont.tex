@@ -1962,17 +1962,18 @@ Cúbicas é:
 
 \iniciocodigo
 @<Estrutura de Dados Locais (metafont.c)@>+=
+struct path_points{
+  float x, y; // Ponto de extremidade
+  float u_x, u_y, v_x, v_y;   // Pontos de controle
+  void *subpath;  
+};
 struct path_variable{
   int type; // Deve ser 'TYPE_T_PATH'
   int nesting_level;
   void *next;
   bool cyclic;
   int length;
-  struct{
-    float x, y; // Ponto de extremidade
-    float u_x, u_y, v_x, v_y;   // Pontos de controle
-    void *subpath;
-  } *points;
+  struct path_points *points;
 };
 @
 \fimcodigo
@@ -4269,17 +4270,76 @@ E a sua implementação:
 void assign_path_variable(struct metafont *mf,
                           struct path_variable *target,
                           struct path_variable *source){
-  if(target -> length != -1)
-    path_recursive_free(mf -> free, target);
+  int i;
+  void *(*alloc)(size_t);
+  void (*disalloc)(void *);
+  if(target -> nesting_level == 0){
+    disalloc = mf -> free;
+    alloc = mf -> alloc;
+  }
+  else{
+    disalloc = temporary_free;
+    alloc = temporary_alloc;
+  }
+  if(target -> length != -1 && disalloc != NULL){
+    for(i = 0; i < target -> length; i ++)
+      if(target -> points[i].subpath != NULL)
+        path_recursive_free(disalloc, (struct path_variable *)
+                                      target -> points[i].subpath);
+  }
   target -> cyclic = source -> cyclic;
   target -> length = source -> length;
-  //recursive_copy_points(mf, target, source);
+  target -> points = (struct path_points *)
+                       alloc(sizeof(struct path_points) *
+                       target -> length);
+  for(i = 0; i < target -> length; i ++){ // Copiar pontos
+    memcpy(&(target -> points[i]), &(source -> points[i]),
+           sizeof(struct path_points));
+    if(source -> points[i].subpath != NULL)
+      recursive_copy_points(alloc, (struct path_variable **)
+                                   &(target -> points[i].subpath),
+                            source -> points[i].subpath);
+  }
 }
 @
 \fimcodigo
 
+Copiar um caminho recursivamente significa alocar espaço para o novo
+caminho a ser copiado e copiar seus dados. Ao copiar seus pontos,
+devemos também checar se há outros subcaminhos que devem ser copiados
+recursivamente. Para fazer isso, usamos a seguinte função auxiliar:
 
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+void recursive_copy_points(void *(*alloc)(size_t),
+                          struct path_variable **target,
+                          struct path_variable *source);
+@
+\fimcodigo
 
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+void recursive_copy_points(void *(*alloc)(size_t),
+                          struct path_variable **target,
+                          struct path_variable *source){
+  int i;
+  *target = (struct path_variable *) alloc(sizeof(struct path_variable));
+  (*target) -> cyclic = source -> cyclic;
+  (*target) -> length = source -> length;
+  (*target) -> points = (struct path_points *)
+                          alloc(sizeof(struct path_points) *
+                                (*target) -> length);
+  for(i = 0; i < (*target) -> length; i ++){
+    memcpy(&((*target) -> points[i]), &(source -> points[i]),
+           sizeof(struct path_points));
+    if(source -> points[i].subpath != NULL)
+      recursive_copy_points(alloc, (struct path_variable **)
+                                   &((*target) -> points[i].subpath),
+                            source -> points[i].subpath);
+  }
+}
+@
+\fimcodigo
 
 \secao{Referências}
 
