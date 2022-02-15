@@ -174,7 +174,18 @@ char*value;
 #define TYPE_XPART  47 
 #define TYPE_YPART  48 
 #define TYPE_ANGLE  49 
-/*:163*/
+/*:163*//*174:*/
+#line 4373 "weaver-interface-metafont.tex"
+
+#define TYPE_CYCLE          50 
+#define TYPE_AMPERSAND      51 
+#define TYPE_JOIN           52 
+#define TYPE_TENSION        53 
+#define TYPE_AND            54 
+#define TYPE_ATLEAST        55 
+#define TYPE_CONTROLS       56 
+#define TYPE_CURL           57 
+/*:174*/
 #line 358 "weaver-interface-metafont.tex"
 
 
@@ -293,7 +304,11 @@ static char*list_of_keywords[]= {
 #line 4143 "weaver-interface-metafont.tex"
 
 "xpart","ypart","angle",
-/*:164*/
+/*:164*//*175:*/
+#line 4389 "weaver-interface-metafont.tex"
+
+"cycle","&","..","tension","and","atleast","controls","curl",
+/*:175*/
 #line 854 "weaver-interface-metafont.tex"
 
 NULL};
@@ -420,7 +435,18 @@ struct path_variable*source);
 void recursive_copy_points(void*(*alloc)(size_t),
 struct path_variable**target,
 struct path_variable*source);
-/*:172*/
+/*:172*//*176:*/
+#line 4404 "weaver-interface-metafont.tex"
+
+int count_path_joins(struct generic_token*begin,struct generic_token*end);
+/*:176*//*178:*/
+#line 4457 "weaver-interface-metafont.tex"
+
+bool eval_path_expression(struct metafont*mf,struct context*cx,
+struct generic_token*begin_expression,
+struct generic_token*end_expression,
+struct path_variable*result);
+/*:178*/
 #line 221 "weaver-interface-metafont.tex"
 
 /*13:*/
@@ -2797,7 +2823,45 @@ recursive_copy_points(alloc,(struct path_variable**)
 source->points[i].subpath);
 }
 }
-/*:173*/
+/*:173*//*177:*/
+#line 4415 "weaver-interface-metafont.tex"
+
+int count_path_joins(struct generic_token*begin,struct generic_token*end){
+int count= 0;
+int nesting_parenthesis= 0,nesting_brackets= 0,nesting_braces= 0;
+struct generic_token*p= begin;
+while(p!=NULL){
+if(p->type==TYPE_OPEN_PARENTHESIS)
+nesting_parenthesis++;
+else if(p->type==TYPE_CLOSE_PARENTHESIS)
+nesting_parenthesis--;
+else if(p->type==TYPE_OPEN_BRACKETS)
+nesting_brackets++;
+else if(p->type==TYPE_CLOSE_BRACKETS)
+nesting_brackets--;
+else if(p->type==TYPE_OPEN_BRACES)
+nesting_braces++;
+else if(p->type==TYPE_CLOSE_BRACES)
+nesting_braces--;
+else if(nesting_parenthesis==0&&nesting_brackets==0&&
+nesting_braces==0){
+if(p->type==TYPE_AMPERSAND)
+count++;
+else if(p->type==TYPE_JOIN){
+struct generic_token*next= (struct generic_token*)p->next;
+if(p==end||(next->type!=TYPE_TENSION&&
+next->type!=TYPE_CONTROLS))
+count++;
+}
+}
+if(p!=end)
+p= (struct generic_token*)p->next;
+else
+p= NULL;
+}
+return count;
+}
+/*:177*/
 #line 222 "weaver-interface-metafont.tex"
 
 /*8:*/

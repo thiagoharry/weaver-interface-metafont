@@ -163,7 +163,7 @@ extern "C" {
 #include <stdbool.h> // Define  'bool' type
 #if !defined(_WIN32)
 #include <sys/param.h> // Needed on BSD, but does not exist on Windows
-#endif  
+#endif
 @<Include General Headers (metafont.h)@>
 //@<General Macros (metafont.h)@>
 @<Data Structures (metafont.h)@>
@@ -1210,7 +1210,7 @@ bool eval_statement(struct metafont *mf, struct context *cx,
   @<Statement: Compound@>
   @<Statement: Declaration@>
   @<Statement: Assignment@>
-  //@<Statement: Definition@> 
+  //@<Statement: Definition@>
   //@<Statement: Command@>
   // If we are here, we could not identify the statement:
 #if defined(W_DEBUG_METAFONT)
@@ -1390,7 +1390,7 @@ variables have in common is the following structure:
 struct variable{
   int type;
   int nesting_level;
-  void *next;  
+  void *next;
 };
 @
 \fimcodigo
@@ -1819,7 +1819,7 @@ mf -> internal_numeric_variables =
     ((struct numeric_variable *)
       mf -> internal_numeric_variables)[i].nesting_level = 0;
     ((struct numeric_variable *)
-      mf -> internal_numeric_variables)[i].next = NULL;    
+      mf -> internal_numeric_variables)[i].next = NULL;
 
   }
 }
@@ -1941,7 +1941,7 @@ Curves is:
 struct path_points{
   float x, y; // Extremity point
   float u_x, u_y, v_x, v_y;   // Control Points
-  void *subpath;  
+  void *subpath;
 };
 struct path_variable{
   int type; // Must be 'TYPE_T_PATH'
@@ -2151,7 +2151,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
               "with different types: '%s'.\n", mf -> file,
               var -> line, var -> value);
 #endif
-      return false;    
+      return false;
     }
     if((void *) var != end_token_list)
       var = (struct symbolic_token *) (var -> next);
@@ -2162,7 +2162,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
       fprintf(stderr, "METAFONT: Error: %s:%d: Variable in left-side "
               "without assignment.\n", mf -> file, var -> line);
 #endif
-      return false;    
+      return false;
     }
     if((void *) var != end_token_list)
       var = (struct symbolic_token *) (var -> next);
@@ -2787,7 +2787,7 @@ else if(begin_expression -> type == TYPE_SQRT){
     return false;
   }
   result -> value = sqrtf(num.value);
-  return true;  
+  return true;
 }
 @
 \fimcodigo
@@ -2808,7 +2808,7 @@ else if(begin_expression -> type == TYPE_SIND){
     return false;
   // 1 degree = 0,0174533 radians
   result -> value = sinf(num.value * 0.0174533);
-  return true;  
+  return true;
 }
 @
 \fimcodigo
@@ -2851,9 +2851,9 @@ else if(begin_expression -> type == TYPE_LOG){
             begin_expression -> line);
 #endif
     return false;
-  }    
+  }
   result -> value = logf(num.value);
-  return true;  
+  return true;
 }
 @
 \fimcodigo
@@ -2871,7 +2871,7 @@ else if(begin_expression -> type == TYPE_EXP){
   if(!ret)
     return false;
   result -> value = expf(num.value);
-  return true;  
+  return true;
 }
 @
 \fimcodigo
@@ -2889,7 +2889,7 @@ else if(begin_expression -> type == TYPE_FLOOR){
   if(!ret)
     return false;
   result -> value = floorf(num.value);
-  return true;  
+  return true;
 }
 @
 \fimcodigo
@@ -2921,9 +2921,9 @@ else if(begin_expression -> type == TYPE_UNIFORMDEVIATE){
   { // Generating the random number
     uint64_t random_bits = random_func();
     float multiplicand = (float) ldexp((double) random_bits, -64);
-    result -> value = multiplicand * num.value;  
+    result -> value = multiplicand * num.value;
   }
-  return true;  
+  return true;
 }
 @
 \fimcodigo
@@ -2940,7 +2940,7 @@ else if(begin_expression -> type == TYPE_SUM){
                              end_expression, result);
   if(!ret)
     return false;
-  return true;  
+  return true;
 }
 @
 \fimcodigo
@@ -2957,8 +2957,8 @@ else if(begin_expression -> type == TYPE_SUBTRACT){
                              end_expression, result);
   if(!ret)
     return false;
-  result -> value *= -1; 
-  return true;  
+  result -> value *= -1;
+  return true;
 }
 @
 \fimcodigo
@@ -3191,7 +3191,7 @@ if(begin_expression -> type == TYPE_NORMALDEVIATE){
       v = (float) ldexp((double) (random_bits >> 1), -63) *
             ((random_bits %2)?(-1.0):(+1.0));
       s = u*u + v*v;
-    } while(s >= 1.0 || s == 0.0);    
+    } while(s >= 1.0 || s == 0.0);
     u *= (float) sqrt((-2.0 * log((double) s))/s);
     v *= (float) sqrt((-2.0 * log((double) s))/s);
     mf -> have_stored_normaldeviate = true;
@@ -3554,7 +3554,7 @@ if(last_mul -> type == TYPE_MULTIPLICATION){
     result -> x = a.x * b.value;
     result -> y = a.y * b.value;
     return true;
-  }    
+  }
 }
 @
 \fimcodigo
@@ -3997,7 +3997,7 @@ if(end_expression -> type == TYPE_CLOSE_BRACKETS){
               "expression.\n ", mf -> file, begin_expression -> line);
 #endif
       return false;
-    }        
+    }
   }
   begin_c = (struct generic_token *) end_b -> next;
   begin_c = (struct generic_token *) begin_c -> next;
@@ -4304,6 +4304,125 @@ void recursive_copy_points(void *(*alloc)(size_t),
 }
 @
 \fimcodigo
+
+Now we can examine the path expressions.
+
+\subsubsecao{8.3.1. Joining Paths}
+
+The grammar for path expressions begin with:
+
+\alinhaverbatim
+<Path Expression> -> <Pair Expression> | <Path Tertiary> |
+                     <Path Subexpression><Direction Specifier> |
+                     <Path Subexpression><Path Join> cycle
+<Path Join> -> <Direction Specifier><Basic Join><Direction Specifier>
+<Basic Join> -> & | .. | .. <Tension> .. | .. <Controls> ..
+<Tension> -> tension <Tension Amount> |
+             tension <Tension Amount> and <Tension Amount>
+<Tension Amount> -> <Numeric Primary> | atleast <Numeric Primary>
+<Controls> -> controls <Pair Primary> |
+              controls <Pair Primary> and <Pair Primary>
+<Direction Specifier> -> Empty | { curl <Numeric Expression> } |
+                         { <Pair Expression } |
+                         { <Numeric Expression> , <Numeric Expression> }
+<Path Subexpression> -> <Path Expression> |
+                        <Path Subexpression><Path Join><Path Tertiary>
+\alinhanormal
+
+This requires the register of these new types of tokens:
+
+\iniciocodigo
+@<METAFONT: Symbolic Token Definition@>+=
+#define TYPE_CYCLE          50 // Symbolic token 'cycle'
+#define TYPE_AMPERSAND      51 // Symbolic token '&'
+#define TYPE_JOIN           52 // Symbolic token '..'
+#define TYPE_TENSION        53 // Symbolic token 'tension'
+#define TYPE_AND            54 // Symbolic token 'and'
+#define TYPE_ATLEAST        55 // Symbolic token 'atleast'
+#define TYPE_CONTROLS       56 // Symbolic token 'controls'
+#define TYPE_CURL           57 // Symbolic token 'curl'
+@
+\fimcodigo
+
+And for each one we register a new correspondent keyword:
+
+\iniciocodigo
+@<List of Keywords@>+=
+"cycle", "&", "..", "tension", "and", "atleast", "controls", "curl",
+@
+\fimcodigo
+
+The first thing that we will define is how to count the number of
+joins in a path expression. For this we will use the following
+function:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+int count_path_joins(struct generic_token *begin, struct generic_token *end);
+@
+\fimcodigo
+
+The function works counting the number of ``\&'' and also counting the
+``..'' that appear alone or that appear for the second time in a join
+that specifies tension or control points:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+int count_path_joins(struct generic_token *begin, struct generic_token *end){
+int count = 0;
+  int nesting_parenthesis = 0, nesting_brackets = 0, nesting_braces = 0;
+  struct generic_token *p = begin;
+  while(p != NULL){
+    if(p -> type == TYPE_OPEN_PARENTHESIS)
+      nesting_parenthesis ++;
+    else if(p -> type == TYPE_CLOSE_PARENTHESIS)
+      nesting_parenthesis --;
+    else if(p -> type == TYPE_OPEN_BRACKETS)
+      nesting_brackets ++;
+    else if(p -> type == TYPE_CLOSE_BRACKETS)
+      nesting_brackets --;
+    else if(p -> type == TYPE_OPEN_BRACES)
+      nesting_braces ++;
+    else if(p -> type == TYPE_CLOSE_BRACES)
+      nesting_braces --;
+    else if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
+            nesting_braces == 0){
+      if(p -> type == TYPE_AMPERSAND)
+        count ++;
+      else if(p -> type == TYPE_JOIN){
+        struct generic_token *next = (struct generic_token *) p -> next;
+        if(p == end || (next -> type !=  TYPE_TENSION &&
+                        next -> type != TYPE_CONTROLS))
+          count ++;
+      }
+    }
+    if(p != end)
+      p = (struct generic_token *) p -> next;
+    else
+      p = NULL;
+  }
+  return count;
+}
+@
+\fimcodigo
+
+Now we can begin the expression evaluation.
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+bool eval_path_expression(struct metafont *mf, struct context *cx,
+                          struct generic_token *begin_expression,
+                          struct generic_token *end_expression,
+                          struct path_variable *result);
+@
+\fimcodigo
+
+Knowing the number of joins is the first step to discover the size of
+our new variable and how should we allocate space for it. If we have a
+cyclic path (expression ending with \monoespaco{cycle} token), then
+the number of points to be allocated is equal the number of
+joins. Otherwise, the number of points is equal the number of joins
+plus 1:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

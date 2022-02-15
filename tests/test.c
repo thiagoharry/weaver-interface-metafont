@@ -17,7 +17,7 @@
 int numero_de_testes = 0, acertos = 0, falhas = 0;
 void imprime_resultado(void){
   printf("\n%d tests: %d sucess, %d fails\n\n",
-	 numero_de_testes, acertos, falhas);
+         numero_de_testes, acertos, falhas);
 }
 
 void assert(char *descricao, bool valor){
@@ -111,17 +111,17 @@ void test_variables(void){
   assert("Testing numeric expression", n -> value == 116.0);
   if(n -> value != 116.0){
     printf("ERROR: Exprected value: '%f', Found value: '%f'\n",
-	   116.0, n -> value);
+           116.0, n -> value);
   }
   named = (struct named_variable *) named -> next;
   n = (struct numeric_variable *) named -> var;
   assert("Chained assignments are working", n -> value == 116.0);
   p = (struct pair_variable *) mf -> global_variables;
   assert("Testing pair expression", p -> type == TYPE_T_PAIR &&
-	 abs(p -> x) < 0.00002 && abs(p -> y - 3.0) < 0.00002);
+         abs(p -> x) < 0.00002 && abs(p -> y - 3.0) < 0.00002);
   if(abs(p -> x) >= 0.00002 && abs(p -> y - 3.0) >= 0.00002){
     printf("ERROR: Exprected value: '(%f, %f)', Found value: '(%f,%f)'\n",
-	   0.0, 3.0, p -> x, p -> y);
+           0.0, 3.0, p -> x, p -> y);
   }
   free_token_list(free, tok);
   destroy_metafont(mf);
@@ -149,7 +149,7 @@ void test_lexer(void){
   struct context *cx;
   mf = init_metafont(malloc, free, "tests/ridiculous.mf");
   token_pointer = lexer(mf, malloc, free,
-				  "tests/ridiculous.mf");
+                        "tests/ridiculous.mf");
   cx = init_context();
   p = token_pointer;
   if(((struct symbolic_token *) p) -> type != TYPE_SYMBOLIC){
@@ -158,7 +158,7 @@ void test_lexer(void){
   }
   if(strcmp(((struct symbolic_token *) p) -> value, "xx3")){
     printf("ERROR: Expected 'xx', found '%s'\n",
-	   ((struct symbolic_token *) p) -> value);
+           ((struct symbolic_token *) p) -> value);
     ok = false;
     goto test_lexer_end;
   }
@@ -169,7 +169,7 @@ void test_lexer(void){
   }
   if(((struct numeric_token *) p) -> value - 0.1 > 0.00002){
     printf("ERROR: Expected '%.f', found '%.f'\n", 3.1,
-	   ((struct numeric_token *) p) -> value);
+           ((struct numeric_token *) p) -> value);
     ok = false;
     goto test_lexer_end;
   }
@@ -183,13 +183,7 @@ void test_lexer(void){
     goto test_lexer_end;
   }
   p = ((struct generic_token *) p) -> next;
-  if(((struct symbolic_token *) p) -> type != TYPE_SYMBOLIC){
-    printf("ERROR: Expected '%d', found '%d'\n", TYPE_SYMBOLIC,
-	   ((struct symbolic_token *) p) -> type);
-    ok = false;
-    goto test_lexer_end;
-  }
-  if(strcmp(((struct symbolic_token *) p) -> value, "..")){
+  if(((struct symbolic_token *) p) -> type != TYPE_JOIN){
     ok = false;
     goto test_lexer_end;
   }
@@ -209,7 +203,7 @@ void test_lexer(void){
   }
   if(strcmp(((struct symbolic_token *) p) -> value, "a")){
     printf("ERROR: Expected 'a', found '%s'\n",
-	   ((struct symbolic_token *) p) -> value);
+           ((struct symbolic_token *) p) -> value);
     ok = false;
     goto test_lexer_end;
   }
@@ -259,7 +253,7 @@ void test_lexer(void){
     ok = false;
     goto test_lexer_end;
   }
-  p = ((struct generic_token *) p) -> next; 
+  p = ((struct generic_token *) p) -> next;
   if(((struct symbolic_token *) p) -> type != TYPE_SYMBOLIC){
     ok = false;
     goto test_lexer_end;
@@ -314,7 +308,7 @@ void test_lexer(void){
     ok = false;
     goto test_lexer_end;
   }
-  p = ((struct generic_token *) p) -> next; 
+  p = ((struct generic_token *) p) -> next;
   if(((struct string_token *) p) -> type != TYPE_STRING){
     ok = false;
     goto test_lexer_end;
@@ -323,11 +317,11 @@ void test_lexer(void){
     ok = false;
     goto test_lexer_end;
   }
-  p = ((struct generic_token *) p) -> next; 
+  p = ((struct generic_token *) p) -> next;
   if(p != NULL){
     ok = false;
     goto test_lexer_end;
-  } 
+  }
  test_lexer_end:
   assert("Testing METAFONT Lexer", ok);
   ok = eval_program(mf, cx, token_pointer);
