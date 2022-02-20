@@ -4247,8 +4247,12 @@ else if(type == TYPE_T_PATH){
     var = (struct symbolic_token *) (var -> next);
     var = (struct symbolic_token *) (var -> next);
   }
-  if(temporary_free != NULL)
+  if(temporary_free != NULL){
+    for(i = 0; i < result.length; i ++)
+      if(result.points[i].subpath != NULL)
+        path_recursive_free(temporary_free, result.points[i].subpath);
     temporary_free(result.points);
+  }
 }
 @
 \fimcodigo
@@ -4470,6 +4474,370 @@ para ela. Se temos uma expressão de caminho cíclico (o último token
 ao número de junções. Se não for cíclico, iremos alocar igual ao
 número de junções mais um:
 
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+bool eval_path_expression(struct metafont *mf, struct context *cx,
+                          struct generic_token *begin_expression,
+                          struct generic_token *end_expression,
+                          struct path_variable *result){
+  int expected_length;
+  int number_of_joins = count_path_joins(begin_expression, end_expression);
+  if(end_expression -> type == TYPE_CYCLE)
+    expected_length = number_of_joins;
+  else
+    expected_length = number_of_joins + 1;
+  @<Expressão de Caminho: Quando Não Há Junção@>
+  @<Expressão de Caminho: Alocar Variável de Caminho@>
+  @<Expressão de Caminho: Itera sobre Junções@>
+  return false;
+}
+@
+\fimcodigo
+
+E se o número de junções for zero? Neste caso, podemos estar diante de
+uma expressão de par, ou de uma expressão terciária de caminho. De
+qualquer forma, pode haver um ou mais especificador de direção depois
+da expressão, o qual precisa ser ignorado. Podemos checar se temos
+especificadores de direção checando se o último token é um
+``$\}$''. Se for o caso, mudamos a posição do fim da expressão para
+imediatamente antes do primeiro especificador de direção:
+
+\iniciocodigo
+@<Expressão de Caminho: Quando Não Há Junção@>=
+if(number_of_joins == 0){
+  if(end_expression -> type == TYPE_CLOSE_BRACES){
+    struct generic_token *p = begin_expression;
+    int nesting_parenthesis = 0, nesting_brackets = 0;
+    while(p != end_expression){
+      if(p -> type == TYPE_OPEN_PARENTHESIS)
+        nesting_parenthesis ++;
+      else if(p -> type == TYPE_CLOSE_PARENTHESIS)
+        nesting_parenthesis --;
+      else if(p -> type == TYPE_OPEN_BRACKETS)
+        nesting_brackets ++;
+      else if(p -> type == TYPE_CLOSE_BRACKETS)
+        nesting_brackets --;
+      if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
+         ((struct generic_token *) p -> next) -> type == TYPE_OPEN_BRACES)
+        break;
+      p = (struct generic_token *) p -> next;
+    }
+    end_expression = p;
+  }
+  //return eval_path_tertiary(mf, cx, begin_expression, end_expression, result);
+  return false;
+}
+@
+\fimcodigo
+
+Se existir uma ou mais junções, então caberá a nós criar uma nova
+variável de caminho alocando as estruturas necessárias para ela. O que
+temos a fazer é alocar nela um número de pontos igual à
+variável \monoespaco{expected\_length}:
+
+\iniciocodigo
+@<Expressão de Caminho: Alocar Variável de Caminho@>=
+result -> points = (struct path_points *)
+                     temporary_alloc(sizeof(struct path_points) *
+                     expected_length);
+if(result -> points == NULL){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: No enough memory!\n" , mf -> file,
+          begin_expression -> line);
+#endif
+    return false;
+}
+result -> length = 0; // Inicialização
+result -> points[0].x = NAN;
+@
+\fimcodigo
+
+Agora temos que interpretar todas as junções. Temos que iterar sobre
+cada junção presente na expressão, as quais possuem o formato:
+
+$$
+z_1{d} j {e}z_2
+$$
+
+Então vamos usar variáveis para indicar o começo e o fim de cada parte
+à medida que iteramos:
+
+\iniciocodigo
+@<Expressão de Caminho: Itera sobre Junções@>=
+{
+  struct generic_token *begin_z1, *end_z1 = NULL, *begin_z2, *end_z2;
+  struct generic_token *begin_d, *end_d, *begin_e, *end_e;
+  struct generic_token * begin_j, *end_j;
+  begin_z1 = begin_expression;
+  while(begin_z1 != end_expression || result -> length < expected_length){
+    @<Expressão de Caminho: Separa Tokens da Junção@>
+    @<Expressão de Caminho: Interpreta Extremidades da Junção@>
+    begin_z1 = begin_z2;
+    end_z1 = end_z2;
+  }
+}
+@
+\fimcodigo
+
+Para delimitar o primeiro elemento $z_1$, na primeira vez quando ainda
+estamos no começo da expressão, basta avançarmos os tokens até
+acharmos o primeiro ``{'', ``..'' ou ``\&'' fora de qualquer
+parênteses ou colchetes. Nas demais vezes, o primeiro elemento $z_1$
+já começa uma nova iteração delimitado como indicado no código acima.
+
+\iniciocodigo
+@<Expressão de Caminho: Separa Tokens da Junção@>=
+if(begin_z1 == begin_expression){
+  int nesting_parenthesis = 0, nesting_brackets = 0;
+  int next_type;
+  while(end_z1 != end_expression){
+    if(end_z1 -> type == TYPE_OPEN_PARENTHESIS)
+      nesting_parenthesis ++;
+    else if(end_z1 -> type == TYPE_CLOSE_PARENTHESIS)
+      nesting_parenthesis --;
+    else if(end_z1 -> type == TYPE_OPEN_BRACKETS)
+      nesting_brackets ++;
+    else if(end_z1 -> type == TYPE_CLOSE_BRACKETS)
+      nesting_brackets --;
+    next_type = ((struct generic_token *) end_z1 -> next) -> type;
+    if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
+       (next_type == TYPE_OPEN_BRACES || next_type == TYPE_JOIN ||
+        next_type == TYPE_AMPERSAND))
+      break;
+    end_z1 = (struct generic_token *) end_z1 -> next;
+  }
+}
+@
+\fimcodigo
+
+Agora vamos delimitar o primeiro especificador de direção. Primeiro
+checamos se estamos no fim da expressão. Se estivermos, interrompemos
+o laço e saímos, pois já terminamos de obter o resultado da expressão
+e não haverá mais delimitador nenhum. Caso contrário, lemos o próximo
+token para ver se é um ``$\{$''. Se não for, não há o primeiro
+especificador de direção. Se for, então delimitamos ele até acharmos o
+próximo ``$\}$'':
+
+\iniciocodigo
+@<Expressão de Caminho: Separa Tokens da Junção@>+=
+if(end_z1 == end_expression)
+  return true;
+begin_d = (struct generic_token *) end_z1 -> next;
+if(begin_d -> type != TYPE_OPEN_BRACES){
+  begin_d = NULL;
+  end_d = NULL;
+}
+else{
+  end_d = begin_d;
+  while(end_d  != end_expression){
+    int nesting_parenthesis = 0, nesting_brackets = 0;
+    if(end_d -> type == TYPE_OPEN_PARENTHESIS)
+      nesting_parenthesis ++;
+    else if(end_d -> type == TYPE_CLOSE_PARENTHESIS)
+      nesting_parenthesis --;
+    else if(end_d -> type == TYPE_OPEN_BRACKETS)
+      nesting_brackets ++;
+    else if(end_d -> type == TYPE_CLOSE_BRACKETS)
+      nesting_brackets --;
+    if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
+       end_d -> type == TYPE_CLOSE_BRACES)
+      break;
+    end_d = (struct generic_token *) end_d -> next;
+  }
+  if(begin_d == end_d){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Unclosed brace '{'.\n",
+            mf -> file, begin_d -> line);
+#endif
+    return false;
+  }
+}
+@
+\fimcodigo
+
+Agora vamos delimitar a junção. Se ela for um ``\&'', ela corresponde
+a um único token. Se for um ``..'', devemos checar o próximo token
+para identificar se temos um ``\monoespaco{controls}'' ou
+``\monoespaco{tension}''. Em caso afirmativo, teremos que delimitar a
+junção englobando do primeiro ``..'' até o segundo ``..''. Em caso
+negativo, a junção é somente um token ``..''.
+
+\iniciocodigo
+@<Expressão de Caminho: Separa Tokens da Junção@>+=
+if(end_d == NULL)
+  begin_j = (struct generic_token *) end_z1 -> next;
+else{
+  if(end_d == end_expression)
+    return true;
+  begin_j = (struct generic_token *) end_d -> next;
+}
+end_j = begin_j;
+if(begin_j -> type == TYPE_JOIN){
+  struct generic_token *next_token;
+  next_token = (struct generic_token *) begin_j -> next;
+  if(next_token -> type == TYPE_CONTROLS || next_token -> type == TYPE_TENSION){
+    end_j = next_token;
+    while(end_j != end_expression){
+      int nesting_parenthesis = 0, nesting_brackets = 0;
+      if(end_j -> type == TYPE_OPEN_PARENTHESIS)
+        nesting_parenthesis ++;
+      else if(end_j -> type == TYPE_CLOSE_PARENTHESIS)
+        nesting_parenthesis --;
+      else if(end_j -> type == TYPE_OPEN_BRACKETS)
+        nesting_brackets ++;
+      else if(end_j -> type == TYPE_CLOSE_BRACKETS)
+        nesting_brackets --;
+      if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
+         end_j -> type != TYPE_JOIN)
+        break;
+      end_j = (struct generic_token *) end_j -> next;
+    }
+  }
+}
+else if(begin_j -> type != TYPE_AMPERSAND){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognized path expression.\n",
+          mf -> file, begin_f -> line);
+#endif
+  return false;
+}
+@
+\fimcodigo
+
+O próximo delimitador de direção pode existir ou não dependendo de
+termos um token ``$\{$'' após a junção:
+
+\iniciocodigo
+@<Expressão de Caminho: Separa Tokens da Junção@>+=
+if(end_j == end_expression){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognized path expression.\n",
+          mf -> file, end_f -> line);
+#endif
+  return false;
+}
+begin_e = (struct generic_token *) end_j -> next;
+if(begin_e -> type != TYPE_OPEN_BRACES){
+  begin_e = NULL;
+  end_e = NULL;
+}
+else{
+  end_e = begin_e;
+  while(end_e  != end_expression){
+    int nesting_parenthesis = 0, nesting_brackets = 0;
+    if(end_e -> type == TYPE_OPEN_PARENTHESIS)
+      nesting_parenthesis ++;
+    else if(end_e -> type == TYPE_CLOSE_PARENTHESIS)
+      nesting_parenthesis --;
+    else if(end_e -> type == TYPE_OPEN_BRACKETS)
+      nesting_brackets ++;
+    else if(end_e -> type == TYPE_CLOSE_BRACKETS)
+      nesting_brackets --;
+    if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
+       end_e -> type == TYPE_CLOSE_BRACES)
+      break;
+    end_e = (struct generic_token *) end_e -> next;
+  }
+  if(begin_e == end_e){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Unclosed brace '{'.\n",
+            mf -> file, begin_e -> line);
+#endif
+    return false;
+  }
+}
+@
+\fimcodigo
+
+E por fim, o último elemento da junção é o próximo ponto da junção,
+que seria uma expressão de caminho terciária. Este próximo elemento
+tem seu fim delimitado pelo fim da expressão, por um token de abrir
+chaves, ou pelo começo da próxima junção:
+
+\iniciocodigo
+@<Expressão de Caminho: Separa Tokens da Junção@>+=
+{
+  int nesting_parenthesis = 0, nesting_brackets = 0;
+  int next_type;
+  if(end_e == NULL)
+    begin_z2 = (struct generic_token *) end_j -> next;
+  else{
+    if(end_e == end_expression)
+      return true;
+    begin_z2 = (struct generic_token *) end_e -> next;
+  }
+  end_z2 = begin_z2;
+  while(end_z2 != end_expression){
+    if(end_z2 -> type == TYPE_OPEN_PARENTHESIS)
+      nesting_parenthesis ++;
+    else if(end_z2 -> type == TYPE_CLOSE_PARENTHESIS)
+      nesting_parenthesis --;
+    else if(end_z2 -> type == TYPE_OPEN_BRACKETS)
+      nesting_brackets ++;
+    else if(end_z2 -> type == TYPE_CLOSE_BRACKETS)
+      nesting_brackets --;
+    next_type = ((struct generic_token *) end_z2 -> next) -> type;
+    if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
+       (next_type == TYPE_OPEN_BRACES || next_type == TYPE_JOIN ||
+        next_type == TYPE_AMPERSAND))
+      break;
+    end_z2 = (struct generic_token *) end_z2 -> next;
+  }
+}
+@
+\fimcodigo
+
+Uma vez que tenhamos identificado cada parte da junção, temos que
+interpretar cada uma delas. Primeiro devemos identificar os pontos das
+extremidades da junção e copiá-las para o resultado da expressão. Para
+isso primeiro interpretaremos $z_1$, a primeira extremidade de
+junção. Ela precisa ser interpretada só no começo da expressão, nos
+demais casos ela já foi obtida na iteração anterior:
+
+\iniciocodigo
+@<Expressão de Caminho: Interpreta Extremidades da Junção@>=
+if(begin_z1 == begin_expression){
+  //bool ret;
+  struct path_variable z1;
+  //ret = eval_path_tertiary(mf, cx, begin_z1, end_z1, &z1);
+  //if(!ret)
+  //  return false;
+  if(z1.length == 1 && z1.points[0].subpath == 0){
+    result -> points[0].subpath = NULL;
+    result -> points[0].x = z1.points[0].x;
+    result -> points[0].y = z1.points[0].y;
+  }
+  else
+    recursive_copy_points(temporary_alloc, (struct path_variable **)
+                                           &(result -> points[0].subpath), &z1);
+  result -> length ++;
+}
+@
+\fimcodigo
+
+E devemos fazer o mesmo com a outra extremidade da junção: $z_2$:
+
+\iniciocodigo
+@<Expressão de Caminho: Interpreta Extremidades da Junção@>+=
+{
+  //bool ret;
+  struct path_variable z2;
+  //ret = eval_path_tertiary(mf, cx, begin_z2, end_z2, &z2);
+  //if(!ret)
+  //  return false;
+  if(z2.length == 1 && z2.points[0].subpath == 0){
+    result -> points[result -> length].subpath = NULL;
+    result -> points[result -> length].x = z2.points[0].x;
+    result -> points[result -> length].y = z2.points[0].y;
+  }
+  else
+    recursive_copy_points(temporary_alloc,
+                         (struct path_variable **)
+                         &(result -> points[result -> length].subpath), &z2);
+  result -> length ++;
+}
+@
+\fimcodigo
 
 
 \secao{Referências}

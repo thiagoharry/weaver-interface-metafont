@@ -4211,8 +4211,12 @@ else if(type == TYPE_T_PATH){
     var = (struct symbolic_token *) (var -> next);
     var = (struct symbolic_token *) (var -> next);
   }
-  if(temporary_free != NULL)
+  if(temporary_free != NULL){
+    for(i = 0; i < result.length; i ++)
+      if(result.points[i].subpath != NULL)
+        path_recursive_free(temporary_free, result.points[i].subpath);
     temporary_free(result.points);
+  }
 }
 @
 \fimcodigo
@@ -4423,6 +4427,370 @@ cyclic path (expression ending with \monoespaco{cycle} token), then
 the number of points to be allocated is equal the number of
 joins. Otherwise, the number of points is equal the number of joins
 plus 1:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+bool eval_path_expression(struct metafont *mf, struct context *cx,
+                          struct generic_token *begin_expression,
+                          struct generic_token *end_expression,
+                          struct path_variable *result){
+  int expected_length;
+  int number_of_joins = count_path_joins(begin_expression, end_expression);
+  if(end_expression -> type == TYPE_CYCLE)
+    expected_length = number_of_joins;
+  else
+    expected_length = number_of_joins + 1;
+  @<Path Expression: When There is No Joins@>
+  @<Path Expression: Allocating Path Variable@>
+  @<Path Expression: Iterating over Joins@>
+  return false;
+}
+@
+\fimcodigo
+
+And what if the number of joins is zero? In this case we could have a
+pair expression or a path tertiary expression. Anyway, we could have
+in the end a direction specifier, which should be ignored in the case
+of a single point or element without a join. We check if we have a
+direction specifier checking if the last token is ``$\}$''. In this case,
+we change the position of the end of expression for the last token
+before the direction specifier:
+
+\iniciocodigo
+@<Path Expression: When There is No Joins@>=
+if(number_of_joins == 0){
+  if(end_expression -> type == TYPE_CLOSE_BRACES){
+    struct generic_token *p = begin_expression;
+    int nesting_parenthesis = 0, nesting_brackets = 0;
+    while(p != end_expression){
+      if(p -> type == TYPE_OPEN_PARENTHESIS)
+        nesting_parenthesis ++;
+      else if(p -> type == TYPE_CLOSE_PARENTHESIS)
+        nesting_parenthesis --;
+      else if(p -> type == TYPE_OPEN_BRACKETS)
+        nesting_brackets ++;
+      else if(p -> type == TYPE_CLOSE_BRACKETS)
+        nesting_brackets --;
+      if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
+         ((struct generic_token *) p -> next) -> type == TYPE_OPEN_BRACES)
+        break;
+      p = (struct generic_token *) p -> next;
+    }
+    end_expression = p;
+  }
+  //return eval_path_tertiary(mf, cx, begin_expression, end_expression, result);
+}
+@
+\fimcodigo
+
+If there are one or more joins, then we need to allocate the new
+points in our path variable. The number of allocated points is given
+by variable \monoespaco{expected\_length}:
+
+\iniciocodigo
+@<Path Expression: Allocating Path Variable@>=
+result -> points = (struct path_points *)
+                     temporary_alloc(sizeof(struct path_points) *
+                     expected_length);
+if(result -> points == NULL){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: No enough memory!\n" , mf -> file,
+          begin_expression -> line);
+#endif
+    return false;
+}
+result -> length = 0; // Initialization
+result -> points[0].x = NAN;
+@
+\fimcodigo
+
+Now we will evaluate the joins. We need to iterate over all the tokens
+finding the joins in the format:
+
+$$
+z_1{d} j {e}\_2
+$$
+
+Therefore, we need variables to store the begin and end of each part
+while we perform the iteration:
+
+\iniciocodigo
+@<Path Expression: Iterating over Joins@>=
+{
+  struct generic_token *begin_z1, *end_z1 = NULL, *begin_z2, *end_z2;
+  struct generic_token *begin_d, *end_d, *begin_e, *end_e;
+  struct generic_token * begin_j, *end_j;
+  begin_z1 = begin_expression;
+  while(begin_z1 != end_expression || result -> length < expected_length){
+    @<Path Expression: Delimit Join Tokens@>
+    @<Path Expression: Interpret Join Extremities@>
+    begin_z1 = begin_z2;
+    end_z1 = end_z2;
+  }
+}
+@
+\fimcodigo
+
+We need to delimit the first element $z_1$ only in the first
+iteration, when we are still in the beginning of the expression. In
+the other iterations the element is already delimited in the beginning
+as seen in the code above. To correctly delimit the token, we just
+walk over the token list until we find the last token before ``$\{$'',
+``\&'' or ``..'' assuming that we are not inside parenthesis or
+brackets.
+
+\iniciocodigo
+@<Path Expression: Delimit Join Tokens@>=
+if(begin_z1 == begin_expression){
+  int nesting_parenthesis = 0, nesting_brackets = 0;
+  int next_type;
+  end_z1 = begin_z1;
+  while(end_z1 != end_expression){
+    if(end_z1 -> type == TYPE_OPEN_PARENTHESIS)
+      nesting_parenthesis ++;
+    else if(end_z1 -> type == TYPE_CLOSE_PARENTHESIS)
+      nesting_parenthesis --;
+    else if(end_z1 -> type == TYPE_OPEN_BRACKETS)
+      nesting_brackets ++;
+    else if(end_z1 -> type == TYPE_CLOSE_BRACKETS)
+      nesting_brackets --;
+    next_type = ((struct generic_token *) end_z1 -> next) -> type;
+    if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
+       (next_type == TYPE_OPEN_BRACES || next_type == TYPE_JOIN ||
+        next_type == TYPE_AMPERSAND))
+      break;
+    end_z1 = (struct generic_token *) end_z1 -> next;
+  }
+}
+@
+\fimcodigo
+
+Now we will delimit the first direction specifier. First we check if
+we are in the end of an expression. If so, we interrupt the loop and
+exit, as there are no more specifiers and we finished to read and
+obtain the path. Otherwise, we read the next token to check if we have
+a ``$\{$''. If not, there is no first direction specifier.  If so, then
+we delimit it until finding the closing ``$\}$'':
+
+\iniciocodigo
+@<Path Expression: Delimit Join Tokens@>+=
+if(end_z1 == end_expression)
+  return true;
+begin_d = (struct generic_token *) end_z1 -> next;
+if(begin_d -> type != TYPE_OPEN_BRACES){
+  begin_d = NULL;
+  end_d = NULL;
+}
+else{
+  end_d = begin_d;
+  while(end_d != end_expression){
+    int nesting_parenthesis = 0, nesting_brackets = 0;
+    if(end_d -> type == TYPE_OPEN_PARENTHESIS)
+      nesting_parenthesis ++;
+    else if(end_d -> type == TYPE_CLOSE_PARENTHESIS)
+      nesting_parenthesis --;
+    else if(end_d -> type == TYPE_OPEN_BRACKETS)
+      nesting_brackets ++;
+    else if(end_d -> type == TYPE_CLOSE_BRACKETS)
+      nesting_brackets --;
+    if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
+       end_d -> type == TYPE_CLOSE_BRACES)
+      break;
+    end_d = (struct generic_token *) end_d -> next;
+  }
+  if(begin_d == end_d){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Unclosed brace '{'.\n",
+            mf -> file, begin_d -> line);
+#endif
+    return false;
+  }
+}
+@
+\fimcodigo
+
+Now we will delimit the join. If the join is ``\&'', then it is a
+single token. If the join begins with ``..'', then it could be a
+single token if the next token is not ``\monoespaco{controls}'' or
+``\monoespaco{tension}''. But if the next token is these specifiers,
+then the join is delimited by the first ``..'' and the second ``..'':
+
+\iniciocodigo
+@<Path Expression: Delimit Join Tokens@>+=
+if(end_d == NULL)
+  begin_j = (struct generic_token *) end_z1 -> next;
+else{
+  if(end_d == end_expression)
+    return true;
+  begin_j = (struct generic_token *) end_d -> next;
+}
+end_j = begin_j;
+if(begin_j -> type == TYPE_JOIN){
+  struct generic_token *next_token;
+  next_token = (struct generic_token *) begin_j -> next;
+  if(next_token -> type == TYPE_CONTROLS || next_token -> type == TYPE_TENSION){
+    end_j = next_token;
+    while(end_j != end_expression){
+      int nesting_parenthesis = 0, nesting_brackets = 0;
+      if(end_j -> type == TYPE_OPEN_PARENTHESIS)
+        nesting_parenthesis ++;
+      else if(end_j -> type == TYPE_CLOSE_PARENTHESIS)
+        nesting_parenthesis --;
+      else if(end_j -> type == TYPE_OPEN_BRACKETS)
+        nesting_brackets ++;
+      else if(end_j -> type == TYPE_CLOSE_BRACKETS)
+        nesting_brackets --;
+      if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
+         end_j -> type != TYPE_JOIN)
+        break;
+      end_j = (struct generic_token *) end_j -> next;
+    }
+  }
+}
+else if(begin_j -> type != TYPE_AMPERSAND){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognized path expression.\n",
+          mf -> file, begin_f -> line);
+#endif
+  return false;
+}
+@
+\fimcodigo
+
+The next direction delimiter may exist or not, depending if the next
+token is ``$\{$'':
+
+\iniciocodigo
+@<Path Expression: Delimit Join Tokens@>+=
+if(end_j == end_expression){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognized path expression.\n",
+          mf -> file, end_f -> line);
+#endif
+  return false;
+}
+begin_e = (struct generic_token *) end_j -> next;
+if(begin_e -> type != TYPE_OPEN_BRACES){
+  begin_e = NULL;
+  end_e = NULL;
+}
+else{
+  end_e = begin_e;
+  while(end_e  != end_expression){
+    int nesting_parenthesis = 0, nesting_brackets = 0;
+    if(end_e -> type == TYPE_OPEN_PARENTHESIS)
+      nesting_parenthesis ++;
+    else if(end_e -> type == TYPE_CLOSE_PARENTHESIS)
+      nesting_parenthesis --;
+    else if(end_e -> type == TYPE_OPEN_BRACKETS)
+      nesting_brackets ++;
+    else if(end_e -> type == TYPE_CLOSE_BRACKETS)
+      nesting_brackets --;
+    if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
+       end_e -> type == TYPE_CLOSE_BRACES)
+      break;
+    end_e = (struct generic_token *) end_e -> next;
+  }
+  if(begin_e == end_e){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Unclosed brace '{'.\n",
+            mf -> file, begin_e -> line);
+#endif
+    return false;
+  }
+}
+@
+\fimcodigo
+
+Finally, the last join element is the next point or subpath joining
+the previous one. This is always a tertiary path expression. This last
+element will have its end delimited by an ampersand, opening braces or
+by a join token:
+
+\iniciocodigo
+@<Path Expression: Delimit Join Tokens@>+=
+{
+  int nesting_parenthesis = 0, nesting_brackets = 0;
+  int next_type;
+  if(end_e == NULL)
+    begin_z2 = (struct generic_token *) end_j -> next;
+  else{
+    if(end_e == end_expression)
+      return true;
+    begin_z2 = (struct generic_token *) end_e -> next;
+  }
+  end_z2 = begin_z2;
+  while(end_z2 != end_expression){
+    if(end_z2 -> type == TYPE_OPEN_PARENTHESIS)
+      nesting_parenthesis ++;
+    else if(end_z2 -> type == TYPE_CLOSE_PARENTHESIS)
+      nesting_parenthesis --;
+    else if(end_z2 -> type == TYPE_OPEN_BRACKETS)
+      nesting_brackets ++;
+    else if(end_z2 -> type == TYPE_CLOSE_BRACKETS)
+      nesting_brackets --;
+    next_type = ((struct generic_token *) end_z2 -> next) -> type;
+    if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
+       (next_type == TYPE_OPEN_BRACES || next_type == TYPE_JOIN ||
+        next_type == TYPE_AMPERSAND))
+      break;
+    end_z2 = (struct generic_token *) end_z2 -> next;
+  }
+}
+@
+\fimcodigo
+
+Once we delimited each part of the join, now we need to interpret the
+parts. First we will care about the extremity curve points. For this,
+first we get the result of $z_1$, a path tertiary expression, and copy
+it to our result. We need to do this only when we are in the beginning
+of an expression, in the other cases we already interpreted this point
+or subpath in the previous iteration:
+
+\iniciocodigo
+@<Path Expression: Interpret Join Extremities@>=
+if(begin_z1 == begin_expression){
+  //bool ret;
+  struct path_variable z1;
+  //ret = eval_path_tertiary(mf, cx, begin_z1, end_z1, &z1);
+  //if(!ret)
+  //  return false;
+  if(z1.length == 1 && z1.points[0].subpath == 0){
+    result -> points[0].subpath = NULL;
+    result -> points[0].x = z1.points[0].x;
+    result -> points[0].y = z1.points[0].y;
+  }
+  else
+    recursive_copy_points(temporary_alloc, (struct path_variable **)
+                                           &(result -> points[0].subpath), &z1);
+  result -> length ++;
+}
+@
+\fimcodigo
+
+And we need to do the same with $z_2$, the other extremity:
+
+\iniciocodigo
+@<Path Expression: Interpret Join Extremities@>+=
+{
+  //bool ret;
+  struct path_variable z2;
+  //ret = eval_path_tertiary(mf, cx, begin_z2, end_z2, &z2);
+  //if(!ret)
+  //  return false;
+  if(z2.length == 1 && z2.points[0].subpath == 0){
+    result -> points[result -> length].subpath = NULL;
+    result -> points[result -> length].x = z2.points[0].x;
+    result -> points[result -> length].y = z2.points[0].y;
+  }
+  else
+    recursive_copy_points(temporary_alloc,
+                         (struct path_variable **)
+                         &(result -> points[result -> length].subpath), &z2);
+  result -> length ++;
+}
+@
+\fimcodigo
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
