@@ -4512,7 +4512,8 @@ z_1{d} j {e}\_2
 $$
 
 Therefore, we need variables to store the begin and end of each part
-while we perform the iteration:
+while we perform the iteration. And then we create a loop where we
+will iterate over each join in the format above:
 
 \iniciocodigo
 @<Path Expression: Iterating over Joins@>=
@@ -4522,8 +4523,11 @@ while we perform the iteration:
   struct generic_token * begin_j, *end_j;
   begin_z1 = begin_expression;
   while(begin_z1 != end_expression || result -> length < expected_length){
+    struct path_points *z1_point, *z2_point;
     @<Path Expression: Delimit Join Tokens@>
     @<Path Expression: Interpret Join Extremities@>
+    @<Path Expression: Interpret Direction Specifiers@>
+    @<Path Expression: Interpret the Join@>
     begin_z1 = begin_z2;
     end_z1 = end_z2;
   }
@@ -4791,6 +4795,230 @@ And we need to do the same with $z_2$, the other extremity:
 }
 @
 \fimcodigo
+
+After running the code above, our result variable that stores the
+expression result already has the extremity points from this join. But
+we still do not have the control points. But before compute them, we
+will set the pointers \monoespaco{z1\_point}
+and \monoespaco{z2\_point} to point to the current extremity points of
+the current join. We read this information from the
+variable \monoespaco{result} that we are filling:
+
+\iniciocodigo
+@<Path Expression: Interpret Join Extremities@>+=
+z1_point = &(result -> points[result -> length - 2]);
+while(z1_point -> subpath != NULL){
+  struct path_variable *p = (struct path_variable *) z1_point -> subpath;
+  z1_point = &(p -> points[p -> length - 1]);
+}
+z2_point = &(result -> points[result -> length - 1]);
+while(z2_point -> subpath != NULL){
+  struct path_variable *p = (struct path_variable *) z2_point -> subpath;
+  z2_point = &(p -> points[p -> length - 1]);
+}
+@
+\fimcodigo
+
+Now we need to interpret both direction specifiers. They can be empty
+(which is equivalent to have direction $(0, 0)$), they can be a pair
+specifying a direction vector or they can be an integer specifying the
+curl.
+
+If we have a pair, we will store in the variables \monoespaco{(w0\_x,
+w0\_y)} and \monoespaco{(w1\_x, w1\_y)}. If we have a curl, we will
+store in variables \monoespaco{curl0} and \monoespaco{curl1}:
+
+\iniciocodigo
+@<Path Expression: Interpret Direction Specifiers@>=
+float w0_x = NAN, w0_y = NAN, w1_x = NAN, w1_y = NAN, curl0 = NAN, curl1 = NAN;
+if(!eval_direction_specifier(mf, cx, begin_d, end_d, &w0_x, &w0_y, &curl0))
+  return false;
+if(!eval_direction_specifier(mf, cx, begin_e, end_e, &w1_x, &w1_y, &curl1))
+  return false;
+@
+\fimcodigo
+
+The function that evaluates direction specifiers is declared here:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+bool eval_direction_specifier(struct metafont *mf, struct context *cx,
+                              struct generic_token *begin,
+                              struct generic_token *end, float *w_x,
+                              float *w_y, float *curl);
+@
+\fimcodigo
+
+And the function works checking for 4 different cases: when there is
+no direction specifier, when it is a curl specification, when it is a
+direction specified by two numbers and when it is a direction
+specified by a pair:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+bool eval_direction_specifier(struct metafont *mf, struct context *cx,
+                              struct generic_token *begin,
+                              struct generic_token *end, float *w_x,
+                              float *w_y, float *curl){
+  @<Direction Specifier: Case 1@>
+  @<Direction Specifier: Case 2@>
+  @<Direction Specifier: Case 3@>
+  @<Direction Specifier: Case 4@>
+  return false;
+}
+@
+\fimcodigo
+
+When a specifier does not exist, we store them as an empty direction:
+
+\iniciocodigo
+@<Direction Specifier: Case 1@>=
+if(begin == NULL || end == NULL){
+  *w_x = 0.0;
+  *w_y = 0.0;
+  return true;
+}
+@
+\fimcodigo
+
+Now we check if we have a curl specification:
+
+\iniciocodigo
+@<Direction Specifier: Case 2@>=
+if(begin != NULL &&
+   ((struct generic_token *) (begin -> next)) -> type == TYPE_CURL){
+  struct numeric_variable result;
+  struct generic_token *begin_numeric_expr, *end_numeric_expr;
+  begin_numeric_expr = (struct generic_token *) begin -> next;
+  begin_numeric_expr = (struct generic_token *) begin_numeric_expr -> next;
+  end_numeric_expr = begin_numeric_expr;
+  while(end_numeric_expr != NULL && end_numeric_expr -> next != end)
+    end_numeric_expr = (struct generic_token *) end_numeric_expr -> next;
+  if(end_numeric_expr == NULL){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr,
+            "METAFONT: Error: %s:%d: Unrecognized direction delimiter.\n",
+            mf -> file, begin -> line);
+#endif
+    return false;
+  }
+  if(!eval_numeric_expression(mf, cx, begin_numeric_expr, end_numeric_expr,
+                              &result))
+    return false;
+  *curl = result.value;
+  return true;
+}
+@
+\fimcodigo
+
+Now we will check if we have the case ``$\{ a , b\}$'' where $a$ and
+$b$ are numbers. To check for this case, we will try to delimit $a$
+and $b$ searching for the comma. We will interpret this case only if
+the comma is found:
+
+\iniciocodigo
+@<Direction Specifier: Case 3@>=
+struct generic_token *begin_a, *end_a, *begin_b = NULL, *end_b;
+int nesting_parenthesis = 0, nesting_brackets = 0, nesting_braces = 0;
+begin_a = (struct generic_token *) begin -> next;
+end_a = begin_a;
+while(end_a -> next != end){
+  if(end_a -> type == TYPE_OPEN_PARENTHESIS)
+    nesting_parenthesis ++;
+  else if(end_a -> type == TYPE_CLOSE_PARENTHESIS)
+    nesting_parenthesis --;
+  else if(end_a -> type == TYPE_OPEN_BRACKETS)
+    nesting_brackets ++;
+  else if(end_a -> type == TYPE_CLOSE_BRACKETS)
+    nesting_brackets --;
+  else if(end_a -> type == TYPE_OPEN_BRACES)
+    nesting_braces ++;
+  else if(end_a -> type == TYPE_CLOSE_BRACES)
+    nesting_braces --;
+  else if(end_a -> type == TYPE_COMMA){
+    begin_b = (struct generic_token *) end_a -> next;
+    break;
+  }
+  end_a = (struct generic_token *) end_a -> next;
+}
+if(begin_b != NULL){
+  struct numeric_variable a, b;
+  end_b = begin_b;
+  while(end_b -> next != end)
+    end_b = (struct generic_token *) end_b -> next;
+  if(!eval_numeric_expression(mf, cx, begin_a, end_a, &a))
+    return false;
+  if(!eval_numeric_expression(mf, cx, begin_b, end_b, &b))
+    return false;
+  *w_x = a.value;
+  *w_y = b.value;
+  return true;
+}
+@
+\fimcodigo
+
+And finally, the last case, where we have an element $\{a\}$, where
+$a$ is a pair expression. To deal with this case, recall that in the
+previous case we already delimited $a$. If a comma was not found, we
+did not delimited $b$, but still delimited $a$. Therefore, we can
+interpret the tokens as a pair expression:
+
+\iniciocodigo
+@<Direction Specifier: Case 4@>=
+else{ // if in the previous case there was no comma
+  struct pair_variable a;
+  if(!eval_pair_expression(mf, cx, begin_a, end_a, &a))
+    return false;
+  *w_x = a.x;
+  *w_y = a.y;
+  return true;
+}
+@
+\fimcodigo
+
+Now finally we will interpret the join itself. As the direction
+specifier can be represented in two ways, as a direction vector or as
+a curl, the join can be represented by two numbers representing the
+tension or two pairs $u$ and $v$ representing directly the control
+points. We will declare then variables that will hold these values:
+
+\iniciocodigo
+@<Path Expression: Interpret the Join@>=
+float tension0 = NAN, tension1 = NAN, u_x = NAN, u_y = NAN, v_x = NAN,
+      v_y = NAN;
+bool atleast0, atleast1; // If our tension is just an inferior limit
+@
+\fimcodigo
+
+First we will deal with the simplest cases. If our join is a
+concatenation, characterized by the ``\&'' token, we are concatenating
+tow points or (more probably) two sub-paths. In this case we should
+check is the two joining points occupy the same place (which means
+having a distance lesser than 0.00002). If not, we should raise an
+error. If so, we create control points halfway between the two joining
+points.
+
+\iniciocodigo
+@<Path Expression: Interpret the Join@>+=
+if(begin_j == end_j && begin_j -> type == TYPE_AMPERSAND){
+  double dif_x = z1_point -> x - z2_point -> x;
+  double dif_y = z1_point -> y - z2_point -> y;
+  if(hypot(dif_x * dif_x, dif_y * dif_y) > 0.00002){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr,
+            "METAFONT: Error: %s:%d: Concatenating discontinuous paths.\n",
+            mf -> file, begin_f -> line);
+#endif
+    return false;
+  }
+  v_x = u_x = (z1_point -> x + z2_point -> x) / 2.0;
+  v_y = u_y = (z1_point -> y + z2_point -> y) / 2.0;
+}
+@
+\fimcodigo
+
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

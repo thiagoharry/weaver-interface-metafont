@@ -4560,7 +4560,8 @@ z_1{d} j {e}z_2
 $$
 
 Então vamos usar variáveis para indicar o começo e o fim de cada parte
-à medida que iteramos:
+à medida que iteramos. Vamos criar um laço onde iremos iterar sobre
+cada uma das junções no formato acima para interpretá-las:
 
 \iniciocodigo
 @<Expressão de Caminho: Itera sobre Junções@>=
@@ -4570,8 +4571,11 @@ Então vamos usar variáveis para indicar o começo e o fim de cada parte
   struct generic_token * begin_j, *end_j;
   begin_z1 = begin_expression;
   while(begin_z1 != end_expression || result -> length < expected_length){
+    struct path_points *z1_point, *z2_point;
     @<Expressão de Caminho: Separa Tokens da Junção@>
     @<Expressão de Caminho: Interpreta Extremidades da Junção@>
+    @<Expressão de Caminho: Interpreta Direção se Existir@>
+    @<Expressão de Caminho: Interpreta Junção@>
     begin_z1 = begin_z2;
     end_z1 = end_z2;
   }
@@ -4839,6 +4843,230 @@ E devemos fazer o mesmo com a outra extremidade da junção: $z_2$:
 @
 \fimcodigo
 
+Após rodarmos o código acima, nossa variável de resultado da expressão
+que estamos montando já possui todos os pontos de extremidade desta
+junção ajustados. Mas nós ainda não temos os pontos de controle. Mas
+antes de poder calculá-los, vamos ajustar os
+ponteiros \monoespaco{z1\_point} e \monoespaco{z2\_point} para apontar
+para os pontos de extremidade da junção atual, obtendo tal informação
+da variável \monoespaco{result} que estamos preenchendo:
+
+\iniciocodigo
+@<Expressão de Caminho: Interpreta Extremidades da Junção@>+=
+z1_point = &(result -> points[result -> length - 2]);
+while(z1_point -> subpath != NULL){
+  struct path_variable *p = (struct path_variable *) z1_point -> subpath;
+  z1_point = &(p -> points[p -> length - 1]);
+}
+z2_point = &(result -> points[result -> length - 1]);
+while(z2_point -> subpath != NULL){
+  struct path_variable *p = (struct path_variable *) z2_point -> subpath;
+  z2_point = &(p -> points[p -> length - 1]);
+}
+@
+\fimcodigo
+
+Agora temos que interpretar os dois especificadores de direção. Eles
+podem ser vazios (equivalente a ter uma direção $(0, 0)$), podem ser
+um par especificando um vetor de direção ou podem ser um inteiro
+especificando um grau de curvatura.
+
+Vamos armazenar os especificadores, caso sejam um par, em
+variáveis \monoespaco{(w0\_x, w0\_y)} e \monoespaco{(w1\_x, w1\_y)}. E
+caso sejam uma curvatura de \monoespaco{curl0} e \monoespaco{curl1}:
+
+\iniciocodigo
+@<Expressão de Caminho: Interpreta Direção se Existir@>=
+float w0_x = NAN, w0_y = NAN, w1_x = NAN, w1_y = NAN, curl0 = NAN, curl1 = NAN;
+if(!eval_direction_specifier(mf, cx, begin_d, end_d, &w0_x, &w0_y, &curl0))
+  return false;
+if(!eval_direction_specifier(mf, cx, begin_e, end_e, &w1_x, &w1_y, &curl1))
+  return false;
+@
+\fimcodigo
+
+A função que avalia os especificadores de direção é declarada aqui:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+bool eval_direction_specifier(struct metafont *mf, struct context *cx,
+                              struct generic_token *begin,
+                              struct generic_token *end, float *w_x,
+                              float *w_y, float *curl);
+@
+\fimcodigo
+
+E ela funciona checando quatro casos diferentes: quando não há
+especificador nenhum, quando ele é especificador de curvatura, quando
+é um de direção no formato de dois números e quando é um de direção no
+formato de um par:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+bool eval_direction_specifier(struct metafont *mf, struct context *cx,
+                              struct generic_token *begin,
+                              struct generic_token *end, float *w_x,
+                              float *w_y, float *curl){
+  @<Especificador de Direção: Caso 1@>
+  @<Especificador de Direção: Caso 2@>
+  @<Especificador de Direção: Caso 3@>
+  @<Especificador de Direção: Caso 4@>
+  return false;
+}
+@
+\fimcodigo
+
+Quando um especificador não existe, marcamos como sendo um par $(0,0)$:
+
+\iniciocodigo
+@<Especificador de Direção: Caso 1@>=
+if(begin == NULL || end == NULL){
+  *w_x = 0.0;
+  *w_y = 0.0;
+  return true;
+}
+@
+\fimcodigo
+
+Agora checamos se temos uma especificação de direção na forma de
+curvatura com um token \monoespaco{curl}:
+
+\iniciocodigo
+@<Especificador de Direção: Caso 2@>=
+if(begin != NULL &&
+   ((struct generic_token *) (begin -> next)) -> type == TYPE_CURL){
+  struct numeric_variable result;
+  struct generic_token *begin_numeric_expr, *end_numeric_expr;
+  begin_numeric_expr = (struct generic_token *) begin -> next;
+  begin_numeric_expr = (struct generic_token *) begin_numeric_expr -> next;
+  end_numeric_expr = begin_numeric_expr;
+  while(end_numeric_expr != NULL && end_numeric_expr -> next != end)
+    end_numeric_expr = (struct generic_token *) end_numeric_expr -> next;
+  if(end_numeric_expr == NULL){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr,
+            "METAFONT: Error: %s:%d: Unrecognized direction delimiter.\n",
+            mf -> file, begin -> line);
+#endif
+    return false;
+  }
+  if(!eval_numeric_expression(mf, cx, begin_numeric_expr, end_numeric_expr,
+                              &result))
+    return false;
+  *curl = result.value;
+  return true;
+}
+@
+\fimcodigo
+
+Agora devemos checar se temos um caso do tipo ``$\{ a , b\}$'' onde
+$a$ e $b$ são números. Para isso, tentaremos delimitar os tokens de
+$a$ e $b$ procurando pela vírgula. Mas somente se a vírgula for
+encontrada, iremos tratar a especificação desta forma:
+
+\iniciocodigo
+@<Especificador de Direção: Caso 3@>=
+struct generic_token *begin_a, *end_a, *begin_b = NULL, *end_b;
+int nesting_parenthesis = 0, nesting_brackets = 0, nesting_braces = 0;
+begin_a = (struct generic_token *) begin -> next;
+end_a = begin_a;
+while(end_a -> next != end){
+  if(end_a -> type == TYPE_OPEN_PARENTHESIS)
+    nesting_parenthesis ++;
+  else if(end_a -> type == TYPE_CLOSE_PARENTHESIS)
+    nesting_parenthesis --;
+  else if(end_a -> type == TYPE_OPEN_BRACKETS)
+    nesting_brackets ++;
+  else if(end_a -> type == TYPE_CLOSE_BRACKETS)
+    nesting_brackets --;
+  else if(end_a -> type == TYPE_OPEN_BRACES)
+    nesting_braces ++;
+  else if(end_a -> type == TYPE_CLOSE_BRACES)
+    nesting_braces --;
+  else if(end_a -> type == TYPE_COMMA){
+    begin_b = (struct generic_token *) end_a -> next;
+    break;
+  }
+  end_a = (struct generic_token *) end_a -> next;
+}
+if(begin_b != NULL){
+  struct numeric_variable a, b;
+  end_b = begin_b;
+  while(end_b -> next != end)
+    end_b = (struct generic_token *) end_b -> next;
+  if(!eval_numeric_expression(mf, cx, begin_a, end_a, &a))
+    return false;
+  if(!eval_numeric_expression(mf, cx, begin_b, end_b, &b))
+    return false;
+  *w_x = a.value;
+  *w_y = b.value;
+  return true;
+}
+@
+\fimcodigo
+
+E finalmente, o último caso, onde teremos um elemento $\{a\}$, onde
+$a$ é uma expressão de par. Para tratar este caso, observe que no caso
+anterior nós já delimitamos $a$. Se a vírgula não foi encontrada, de
+qualquer forma temos seus tokens delimitados. Então podemos
+interpretá-los como uma expressão de par:
+
+\iniciocodigo
+@<Especificador de Direção: Caso 4@>=
+else{ // Se no caso anterior não achamos a vírgula
+  struct pair_variable a;
+  if(!eval_pair_expression(mf, cx, begin_a, end_a, &a))
+    return false;
+  *w_x = a.x;
+  *w_y = a.y;
+  return true;
+}
+@
+\fimcodigo
+
+Agora finalmente devemos interpretar a junção em si. Assim como o
+especificador de direção pode estar expresso como um par representando
+um vetor de direção ou como um inteiro representando a curvatura, a
+junção pode ser representada como dois números representando a tensão
+(ou o limite inferior para a tensão) ou como dois pares $u$ e $v$
+representando os dois pontos de controle diretamente. Vamos colocar
+agora as variáveis que irão armazenar os valores:
+
+\iniciocodigo
+@<Expressão de Caminho: Interpreta Junção@>=
+float tension0 = NAN, tension1 = NAN, u_x = NAN, u_y = NAN, v_x = NAN,
+      v_y = NAN;
+bool atleast0, atleast1; // Se a tensão é só um limite inferior
+@
+\fimcodigo
+
+Primeiro vamos tratar os casos mais simples. Se nossa junção for um
+token ``\&'', então estamos lidando com a concatenação de dois pontos
+ou (mais provavelmente) sub-caminhos. Neste caso, devemos checar se os
+dois pontos que estão sendo unidos ocupam a mesma posição
+(consideramos a mesma posição como sendo uma distância menor que
+0,00002). Se não estiverem, um erro deve ser gerado. Se estiverem, os
+pontos de controle devem ficar no meio do caminho que os pontos que
+estão sendo unidos.
+
+\iniciocodigo
+@<Expressão de Caminho: Interpreta Junção@>+=
+if(begin_j == end_j && begin_j -> type == TYPE_AMPERSAND){
+  double dif_x = z1_point -> x - z2_point -> x;
+  double dif_y = z1_point -> y - z2_point -> y;
+  if(hypot(dif_x * dif_x, dif_y * dif_y) > 0.00002){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr,
+            "METAFONT: Error: %s:%d: Concatenating discontinuous paths.\n",
+            mf -> file, begin_f -> line);
+#endif
+    return false;
+  }
+  v_x = u_x = (z1_point -> x + z2_point -> x) / 2.0;
+  v_y = u_y = (z1_point -> y + z2_point -> y) / 2.0;
+}
+@
+\fimcodigo
 
 \secao{Referências}
 
