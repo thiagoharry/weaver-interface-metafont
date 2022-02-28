@@ -2313,12 +2313,39 @@ bool eval_numeric_expression(struct metafont *mf, struct context *cx,
 The tertiary numeric expressions is where we solve additions and
 subtractions. By the syntax rules, what we need to do is walk over the
 tokens in the expression until find the last tertiary operator that is
-not delimited by parenthesis or brackets. Everything in the left side
-should be recursively evaluated as another tertiary
-expression. Everything in the right side should be interpreted as a
-secundary numeric expression. Finally, if we did not find any tertiary
-operator, the entire expression is evaluated as a secundary numeric
-expression.
+not delimited by parenthesis, brackets or braces.
+
+To help with this, the following macros will store, check and count
+the nesting level for parenthesis, braces and brackets:
+
+\iniciocodigo
+@<Local Macros (metafont.c)@>+=
+#define DECLARE_NESTING_CONTROL() int nesting_parenthesis = 0, \
+                                      nesting_brackets = 0, \
+                                      nesting_braces = 0;
+#define COUNT_NESTING(p) if(p -> type == TYPE_OPEN_PARENTHESIS)           \
+                               nesting_parenthesis ++;                    \
+                             else if(p -> type == TYPE_CLOSE_PARENTHESIS) \
+                               nesting_parenthesis --;                    \
+                             else if(p -> type == TYPE_OPEN_BRACKETS)     \
+                               nesting_brackets ++;                       \
+                             else if(p -> type == TYPE_CLOSE_BRACKETS)    \
+                               nesting_brackets --;                       \
+                             else if(p -> type == TYPE_OPEN_BRACES)       \
+                               nesting_braces ++;                         \
+                             else if(p -> type == TYPE_CLOSE_BRACES)      \
+                               nesting_braces --;
+#define IS_NOT_NESTED() (nesting_parenthesis == 0 && nesting_brackets == 0 && \
+                         nesting_braces == 0)
+@
+\fimcodigo
+
+
+Everything in the left side should be recursively evaluated as another
+tertiary expression. Everything in the right side should be
+interpreted as a secundary numeric expression. Finally, if we did not
+find any tertiary operator, the entire expression is evaluated as a
+secundary numeric expression.
 
 However, there are some exceptions, cases in which the
 symbols \monoespaco{+} and \monoespaco{-} should not be treated as a
@@ -2396,27 +2423,14 @@ bool eval_numeric_expression(struct metafont *mf, struct context *cx,
                              struct numeric_variable *result){
   struct generic_token *end_tertiary = NULL, *begin_secundary,
                        *last_sum = NULL, *p, *prev = NULL;
-  int nesting_parenthesis = 0, nesting_brackets = 0, nesting_braces = 0;
+  DECLARE_NESTING_CONTROL();
   struct numeric_variable a, b;
   p = begin_expression;
   do{
-    if(p -> type == TYPE_OPEN_PARENTHESIS)
-      nesting_parenthesis ++;
-    else if(p -> type == TYPE_CLOSE_PARENTHESIS)
-      nesting_parenthesis --;
-    else if(p -> type == TYPE_OPEN_BRACKETS)
-      nesting_brackets ++;
-    else if(p -> type == TYPE_CLOSE_BRACKETS)
-      nesting_brackets --;
-    else if(p -> type == TYPE_OPEN_BRACES)
-      nesting_braces ++;
-    else if(p -> type == TYPE_CLOSE_BRACES)
-      nesting_braces --;
-    else if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
-            nesting_braces == 0 &&
-            (p -> type == TYPE_PYTHAGOREAN_SUM ||
-             p -> type == TYPE_PYTHAGOREAN_SUBTRACT ||
-             IS_VALID_SUM_OR_SUB(prev, p))){
+    COUNT_NESTING(p);
+    if(IS_NOT_NESTED() && (p -> type == TYPE_PYTHAGOREAN_SUM ||
+                          p -> type == TYPE_PYTHAGOREAN_SUBTRACT ||
+                          IS_VALID_SUM_OR_SUB(prev, p))){
       last_sum = p;
       end_tertiary = prev;
     }
@@ -2518,27 +2532,14 @@ bool eval_numeric_secundary(struct metafont *mf, struct context *cx,
   struct generic_token *end_secundary = NULL, *begin_primary,
                        *last_mul = NULL, *p, *prev = NULL,
                        *prev_prev = NULL, *last_fraction = NULL;
-  int nesting_parenthesis = 0, nesting_brackets = 0, nesting_braces = 0;
+  DECLARE_NESTING_CONTROL();
   struct numeric_variable a, b;
   b.value = 0.0;
   p = begin_expression;
   do{
-    if(p -> type == TYPE_OPEN_PARENTHESIS)
-      nesting_parenthesis ++;
-    else if(p -> type == TYPE_CLOSE_PARENTHESIS)
-      nesting_parenthesis --;
-    else if(p -> type == TYPE_OPEN_BRACKETS)
-      nesting_brackets ++;
-    else if(p -> type == TYPE_CLOSE_BRACKETS)
-      nesting_brackets --;
-    else if(p -> type == TYPE_OPEN_BRACES)
-      nesting_braces ++;
-    else if(p -> type == TYPE_CLOSE_BRACES)
-      nesting_braces --;
-    else if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
-            nesting_braces == 0 &&
-            (p -> type == TYPE_MULTIPLICATION ||
-             p -> type == TYPE_DIVISION)){
+    COUNT_NESTING(p);
+    if(IS_NOT_NESTED() && (p -> type == TYPE_MULTIPLICATION ||
+                          p -> type == TYPE_DIVISION)){
       if(p -> type == TYPE_DIVISION && prev -> type == TYPE_NUMERIC &&
          p != end_token_list &&
          ((struct generic_token *) p -> next) -> type != TYPE_NUMERIC &&
@@ -3334,24 +3335,12 @@ bool eval_pair_expression(struct metafont *mf, struct context *cx,
                           struct pair_variable *result){
   struct generic_token *end_tertiary = NULL, *begin_secundary,
                        *last_sum = NULL, *p, *prev = NULL;
-  int nesting_parenthesis = 0, nesting_brackets = 0, nesting_braces = 0;
+  DECLARE_NESTING_CONTROL();
   struct pair_variable a, b;
   p = begin_expression;
   do{
-    if(p -> type == TYPE_OPEN_PARENTHESIS)
-      nesting_parenthesis ++;
-    else if(p -> type == TYPE_CLOSE_PARENTHESIS)
-      nesting_parenthesis --;
-    else if(p -> type == TYPE_OPEN_BRACKETS)
-      nesting_brackets ++;
-    else if(p -> type == TYPE_CLOSE_BRACKETS)
-      nesting_brackets --;
-    else if(p -> type == TYPE_OPEN_BRACES)
-      nesting_braces ++;
-    else if(p -> type == TYPE_CLOSE_BRACES)
-      nesting_braces --;
-    else if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
-            nesting_braces == 0 && IS_VALID_SUM_OR_SUB(prev, p)){
+    COUNT_NESTING(p);
+    if(IS_NOT_NESTED() && IS_VALID_SUM_OR_SUB(prev, p)){
       last_sum = p;
       end_tertiary = prev;
     }
@@ -3454,24 +3443,11 @@ bool eval_pair_secundary(struct metafont *mf, struct context *cx,
   struct generic_token *end_secundary = NULL, *begin_primary,
                        *last_mul = NULL, *p, *prev = NULL,
                        *prev_prev = NULL, *last_fraction = NULL;
-  int nesting_parenthesis = 0, nesting_brackets = 0, nesting_braces = 0;
+  DECLARE_NESTING_CONTROL();
   p = begin_expression;
   do{
-    if(p -> type == TYPE_OPEN_PARENTHESIS)
-      nesting_parenthesis ++;
-    else if(p -> type == TYPE_CLOSE_PARENTHESIS)
-      nesting_parenthesis --;
-    else if(p -> type == TYPE_OPEN_BRACKETS)
-      nesting_brackets ++;
-    else if(p -> type == TYPE_CLOSE_BRACKETS)
-      nesting_brackets --;
-    else if(p -> type == TYPE_OPEN_BRACES)
-      nesting_braces ++;
-    else if(p -> type == TYPE_CLOSE_BRACES)
-      nesting_braces --;
-    else if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
-            nesting_braces == 0 &&
-            (p -> type == TYPE_MULTIPLICATION ||
+    COUNT_NESTING(p);
+    if(IS_NOT_NESTED() && (p -> type == TYPE_MULTIPLICATION ||
              p -> type == TYPE_DIVISION || p -> type == TYPE_ROTATED ||
              p -> type == TYPE_SCALED || p -> type == TYPE_SHIFTED ||
              p -> type == TYPE_SLANTED || p -> type == TYPE_XSCALED ||
@@ -3850,31 +3826,11 @@ bracket.
   struct generic_token *begin_a, *end_a, *begin_b, *end_b, *comma;
   begin_a = (struct generic_token *) begin_expression -> next;
   end_a = begin_a;
-  int nesting_parenthesis = 0, nesting_brackets = 0, nesting_braces = 0;
+  DECLARE_NESTING_CONTROL();
   bool literal = true;
   while(end_a != NULL){
-    if(end_a -> type == TYPE_OPEN_PARENTHESIS)
-      nesting_parenthesis ++;
-    else if(end_a -> type == TYPE_CLOSE_PARENTHESIS)
-      nesting_parenthesis --;
-    if(end_a -> type == TYPE_OPEN_BRACKETS)
-      nesting_brackets ++;
-    else if(end_a -> type == TYPE_CLOSE_BRACKETS)
-      nesting_brackets --;
-    if(end_a -> type == TYPE_OPEN_BRACES)
-      nesting_braces ++;
-    else if(end_a -> type == TYPE_CLOSE_BRACES)
-      nesting_braces --;
-    if(nesting_parenthesis < 0 || nesting_brackets < 0 ||
-       nesting_braces < 0){
-#if defined(W_DEBUG_METAFONT)
-      fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
-              "expression.\n ", mf -> file, begin_expression -> line);
-#endif
-      return false;
-    }
-    if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
-       nesting_braces == 0 &&
+    COUNT_NESTING(end_a);
+    if(IS_NOT_NESTED() &&
        ((struct generic_token *) end_a -> next) -> type == TYPE_COMMA)
       break;
     if(end_a -> next != end_expression)
@@ -3936,19 +3892,12 @@ if(end_expression -> type == TYPE_CLOSE_BRACKETS){
                        *end_c;
   struct numeric_variable a;
   struct pair_variable b, c;
-  int nesting_parenthesis = 0, nesting_brackets = 0, nesting_braces = 0;
+  DECLARE_NESTING_CONTROL();
   begin_a = begin_expression;
   end_a = begin_a;
   while(end_a != NULL){
-    if(end_a -> type == TYPE_OPEN_PARENTHESIS)
-      nesting_parenthesis ++;
-    else if(end_a -> type == TYPE_CLOSE_PARENTHESIS)
-      nesting_parenthesis --;
-    else if(end_a -> type == TYPE_OPEN_BRACES)
-      nesting_braces ++;
-    else if(end_a -> type == TYPE_CLOSE_BRACES)
-      nesting_braces --;
-    if(nesting_parenthesis == 0 && nesting_braces == 0 &&
+    COUNT_NESTING(end_a);
+    if(IS_NOT_NESTED() &&
        ((struct generic_token *) end_a -> next) -> type ==
         TYPE_OPEN_BRACKETS)
       break;
@@ -3973,20 +3922,8 @@ if(end_expression -> type == TYPE_CLOSE_BRACKETS){
   }
   end_b = begin_b;
   while(end_b != end_expression){
-    if(end_b -> type == TYPE_OPEN_PARENTHESIS)
-      nesting_parenthesis ++;
-    else if(end_b -> type == TYPE_CLOSE_PARENTHESIS)
-      nesting_parenthesis --;
-    else if(end_b -> type == TYPE_OPEN_BRACKETS)
-      nesting_brackets ++;
-    else if(end_b -> type == TYPE_CLOSE_BRACKETS)
-      nesting_brackets --;
-    else if(end_b -> type == TYPE_OPEN_BRACES)
-      nesting_braces ++;
-    else if(end_b -> type == TYPE_CLOSE_BRACES)
-      nesting_braces --;
-    if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
-       nesting_braces == 0 &&
+    COUNT_NESTING(end_b);
+    if(IS_NOT_NESTED() &&
        ((struct generic_token *) end_b -> next) -> type == TYPE_COMMA)
       break;
     if(end_b -> next != end_expression)
@@ -4374,23 +4311,11 @@ that specifies tension or control points:
 @<Auxiliary Local Functions (metafont.c)@>+=
 int count_path_joins(struct generic_token *begin, struct generic_token *end){
 int count = 0;
-  int nesting_parenthesis = 0, nesting_brackets = 0, nesting_braces = 0;
+  DECLARE_NESTING_CONTROL();
   struct generic_token *p = begin;
   while(p != NULL){
-    if(p -> type == TYPE_OPEN_PARENTHESIS)
-      nesting_parenthesis ++;
-    else if(p -> type == TYPE_CLOSE_PARENTHESIS)
-      nesting_parenthesis --;
-    else if(p -> type == TYPE_OPEN_BRACKETS)
-      nesting_brackets ++;
-    else if(p -> type == TYPE_CLOSE_BRACKETS)
-      nesting_brackets --;
-    else if(p -> type == TYPE_OPEN_BRACES)
-      nesting_braces ++;
-    else if(p -> type == TYPE_CLOSE_BRACES)
-      nesting_braces --;
-    else if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
-            nesting_braces == 0){
+    COUNT_NESTING(p);
+    if(IS_NOT_NESTED()){
       if(p -> type == TYPE_AMPERSAND)
         count ++;
       else if(p -> type == TYPE_JOIN){
@@ -4461,17 +4386,10 @@ before the direction specifier:
 if(number_of_joins == 0){
   if(end_expression -> type == TYPE_CLOSE_BRACES){
     struct generic_token *p = begin_expression;
-    int nesting_parenthesis = 0, nesting_brackets = 0;
+    DECLARE_NESTING_CONTROL();
     while(p != end_expression){
-      if(p -> type == TYPE_OPEN_PARENTHESIS)
-        nesting_parenthesis ++;
-      else if(p -> type == TYPE_CLOSE_PARENTHESIS)
-        nesting_parenthesis --;
-      else if(p -> type == TYPE_OPEN_BRACKETS)
-        nesting_brackets ++;
-      else if(p -> type == TYPE_CLOSE_BRACKETS)
-        nesting_brackets --;
-      if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
+      COUNT_NESTING(p);
+      if(IS_NOT_NESTED() &&
          ((struct generic_token *) p -> next) -> type == TYPE_OPEN_BRACES)
         break;
       p = (struct generic_token *) p -> next;
@@ -4530,8 +4448,12 @@ will iterate over each join in the format above:
     @<Path Expression: Interpret Direction Specifiers@>
     @<Path Expression: Interpret the Join@>
     @<Path Expression: Determine Curve Shape@>
+    @<Path Expression: End of Each Iteration@>
     begin_z1 = begin_z2;
     end_z1 = end_z2;
+  }
+  if(end_expression -> type == TYPE_CYCLE){
+    @<Path Expression: Choose Shape in Cyclical Join@>
   }
 }
 @
@@ -4548,20 +4470,13 @@ brackets.
 \iniciocodigo
 @<Path Expression: Delimit Join Tokens@>=
 if(begin_z1 == begin_expression){
-  int nesting_parenthesis = 0, nesting_brackets = 0;
+  DECLARE_NESTING_CONTROL();
   int next_type;
   end_z1 = begin_z1;
   while(end_z1 != end_expression){
-    if(end_z1 -> type == TYPE_OPEN_PARENTHESIS)
-      nesting_parenthesis ++;
-    else if(end_z1 -> type == TYPE_CLOSE_PARENTHESIS)
-      nesting_parenthesis --;
-    else if(end_z1 -> type == TYPE_OPEN_BRACKETS)
-      nesting_brackets ++;
-    else if(end_z1 -> type == TYPE_CLOSE_BRACKETS)
-      nesting_brackets --;
+    COUNT_NESTING(end_z1);
     next_type = ((struct generic_token *) end_z1 -> next) -> type;
-    if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
+    if(IS_NOT_NESTED() &&
        (next_type == TYPE_OPEN_BRACES || next_type == TYPE_JOIN ||
         next_type == TYPE_AMPERSAND))
       break;
@@ -4588,22 +4503,17 @@ if(begin_d -> type != TYPE_OPEN_BRACES){
   end_d = NULL;
 }
 else{
+  DECLARE_NESTING_CONTROL();
   end_d = begin_d;
   while(end_d != end_expression){
-    int nesting_parenthesis = 0, nesting_brackets = 0;
-    if(end_d -> type == TYPE_OPEN_PARENTHESIS)
-      nesting_parenthesis ++;
-    else if(end_d -> type == TYPE_CLOSE_PARENTHESIS)
-      nesting_parenthesis --;
-    else if(end_d -> type == TYPE_OPEN_BRACKETS)
-      nesting_brackets ++;
-    else if(end_d -> type == TYPE_CLOSE_BRACKETS)
-      nesting_brackets --;
-    if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
-       end_d -> type == TYPE_CLOSE_BRACES)
+    COUNT_NESTING(end_d);
+    if(IS_NOT_NESTED() &&
+       ((struct generic_token *) (end_d -> next)) -> type == TYPE_CLOSE_BRACES)
       break;
     end_d = (struct generic_token *) end_d -> next;
   }
+  if(end_d != end_expression)
+    end_d = (struct generic_token *) end_d -> next;
   if(begin_d == end_d){
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr, "METAFONT: Error: %s:%d: Unclosed brace '{'.\n",
@@ -4635,19 +4545,11 @@ if(begin_j -> type == TYPE_JOIN){
   struct generic_token *next_token;
   next_token = (struct generic_token *) begin_j -> next;
   if(next_token -> type == TYPE_CONTROLS || next_token -> type == TYPE_TENSION){
+    DECLARE_NESTING_CONTROL();
     end_j = next_token;
     while(end_j != end_expression){
-      int nesting_parenthesis = 0, nesting_brackets = 0;
-      if(end_j -> type == TYPE_OPEN_PARENTHESIS)
-        nesting_parenthesis ++;
-      else if(end_j -> type == TYPE_CLOSE_PARENTHESIS)
-        nesting_parenthesis --;
-      else if(end_j -> type == TYPE_OPEN_BRACKETS)
-        nesting_brackets ++;
-      else if(end_j -> type == TYPE_CLOSE_BRACKETS)
-        nesting_brackets --;
-      if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
-         end_j -> type != TYPE_JOIN)
+      COUNT_NESTING(end_j);
+      if(IS_NOT_NESTED() && end_j -> type != TYPE_JOIN)
         break;
       end_j = (struct generic_token *) end_j -> next;
     }
@@ -4681,22 +4583,17 @@ if(begin_e -> type != TYPE_OPEN_BRACES){
   end_e = NULL;
 }
 else{
+  DECLARE_NESTING_CONTROL();
   end_e = begin_e;
   while(end_e  != end_expression){
-    int nesting_parenthesis = 0, nesting_brackets = 0;
-    if(end_e -> type == TYPE_OPEN_PARENTHESIS)
-      nesting_parenthesis ++;
-    else if(end_e -> type == TYPE_CLOSE_PARENTHESIS)
-      nesting_parenthesis --;
-    else if(end_e -> type == TYPE_OPEN_BRACKETS)
-      nesting_brackets ++;
-    else if(end_e -> type == TYPE_CLOSE_BRACKETS)
-      nesting_brackets --;
-    if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
-       end_e -> type == TYPE_CLOSE_BRACES)
+    COUNT_NESTING(end_e);
+    if(IS_NOT_NESTED() &&
+       ((struct generic_token *) (end_e -> next)) ->  type == TYPE_CLOSE_BRACES)
       break;
     end_e = (struct generic_token *) end_e -> next;
   }
+  if(end_e != end_expression)
+    end_e = (struct generic_token *) end_e -> next;
   if(begin_e == end_e){
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr, "METAFONT: Error: %s:%d: Unclosed brace '{'.\n",
@@ -4716,7 +4613,7 @@ by a join token:
 \iniciocodigo
 @<Path Expression: Delimit Join Tokens@>+=
 {
-  int nesting_parenthesis = 0, nesting_brackets = 0;
+  DECLARE_NESTING_CONTROL();
   int next_type;
   if(end_e == NULL)
     begin_z2 = (struct generic_token *) end_j -> next;
@@ -4727,16 +4624,9 @@ by a join token:
   }
   end_z2 = begin_z2;
   while(end_z2 != end_expression){
-    if(end_z2 -> type == TYPE_OPEN_PARENTHESIS)
-      nesting_parenthesis ++;
-    else if(end_z2 -> type == TYPE_CLOSE_PARENTHESIS)
-      nesting_parenthesis --;
-    else if(end_z2 -> type == TYPE_OPEN_BRACKETS)
-      nesting_brackets ++;
-    else if(end_z2 -> type == TYPE_CLOSE_BRACKETS)
-      nesting_brackets --;
+    COUNT_NESTING(end_z2);
     next_type = ((struct generic_token *) end_z2 -> next) -> type;
-    if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
+    if(IS_NOT_NESTED() &&
        (next_type == TYPE_OPEN_BRACES || next_type == TYPE_JOIN ||
         next_type == TYPE_AMPERSAND))
       break;
@@ -4844,16 +4734,14 @@ float next_w_x = NAN, next_w_y = NAN, next_curl = NAN;
 
 During this iteration where we are delimiting and interpreting the
 join operator and its points, we need to reinitialize such values. The
-previous direction specifier now will store what in the previous
-iteration was the second current specifier. The current specifiers are
-set as null, except that if the previous iteration stored a next
-specifier, this specifier is our first one and we do not need to read
-it again. After this, the next value is erased. And finally, after
-this, we readq the second direction specifier from the tokens:
+current specifiers are set as null, except that if the previous
+iteration stored a next specifier, this specifier is our first one and
+we do not need to read it again. After this, the next value is
+erased. And finally, after this, we read the second direction
+specifier from the tokens:
 
 \iniciocodigo
 @<Path Expression: Interpret Direction Specifiers@>=
-prev_w_x = w1_x; prev_w_y = w1_y; prev_curl = curl1;
 w0_x = w0_y = w1_x = w1_y = curl0 = curl1 = NAN;
 if(!isnan(next_w_x)){
   w0_x = next_w_x;
@@ -4949,24 +4837,13 @@ the comma is found:
 
 \iniciocodigo
 @<Direction Specifier: Case 3@>=
+DECLARE_NESTING_CONTROL();
 struct generic_token *begin_a, *end_a, *begin_b = NULL, *end_b;
-int nesting_parenthesis = 0, nesting_brackets = 0, nesting_braces = 0;
 begin_a = (struct generic_token *) begin -> next;
 end_a = begin_a;
 while(end_a -> next != end){
-  if(end_a -> type == TYPE_OPEN_PARENTHESIS)
-    nesting_parenthesis ++;
-  else if(end_a -> type == TYPE_CLOSE_PARENTHESIS)
-    nesting_parenthesis --;
-  else if(end_a -> type == TYPE_OPEN_BRACKETS)
-    nesting_brackets ++;
-  else if(end_a -> type == TYPE_CLOSE_BRACKETS)
-    nesting_brackets --;
-  else if(end_a -> type == TYPE_OPEN_BRACES)
-    nesting_braces ++;
-  else if(end_a -> type == TYPE_CLOSE_BRACES)
-    nesting_braces --;
-  else if(end_a -> type == TYPE_COMMA){
+  COUNT_NESTING(end_a);
+  if(IS_NOT_NESTED() && end_a -> type == TYPE_COMMA){
     begin_b = (struct generic_token *) end_a -> next;
     break;
   }
@@ -5077,7 +4954,7 @@ control point a point equal $c_0$:
 @<Path Expression: Interpret the Join@>+=
 else if(begin_j -> type == TYPE_JOIN &&
         ((struct generic_token *) (begin_j -> next)) -> type == TYPE_CONTROLS){
-  int nesting_parenthesis = 0, nesting_braces = 0, nesting_brackets = 0;
+  DECLARE_NESTING_CONTROL();
   struct generic_token *begin_c0, *end_c0, *begin_c1 = NULL, *end_c1 = NULL;
   struct pair_variable c0, c1;
   begin_c0 = (struct generic_token *) begin_j -> next;
@@ -5092,20 +4969,8 @@ else if(begin_j -> type == TYPE_JOIN &&
   }
   end_c0 = begin_c0;
   while(end_c0 -> next != end_j){
-    if(end_c0 -> type == TYPE_OPEN_PARENTHESIS)
-      nesting_parenthesis ++;
-    else if(end_c0 -> type == TYPE_CLOSE_PARENTHESIS)
-      nesting_parenthesis --;
-    else if(end_c0 -> type == TYPE_OPEN_BRACKETS)
-      nesting_brackets ++;
-    else if(end_c0 -> type == TYPE_CLOSE_BRACKETS)
-      nesting_brackets --;
-    else if(end_c0 -> type == TYPE_OPEN_BRACES)
-      nesting_braces ++;
-    else if(end_c0 -> type == TYPE_CLOSE_BRACES)
-      nesting_braces --;
-    if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
-       nesting_braces == 0 &&
+    COUNT_NESTING(end_c0);
+    if(IS_NOT_NESTED() &&
        ((struct generic_token *) end_c0 -> next) -> type == TYPE_AND)
       break;
     end_c0 = (struct generic_token *) end_c0 -> next;
@@ -5155,7 +5020,7 @@ interpret this join with the code below:
 @<Path Expression: Interpret the Join@>+=
 else if(begin_j -> type == TYPE_JOIN &&
         ((struct generic_token *) (begin_j -> next)) -> type == TYPE_TENSION){
-  int nesting_parenthesis = 0, nesting_braces = 0, nesting_brackets = 0;
+  DECLARE_NESTING_CONTROL();
   struct generic_token *begin_t0, *end_t0, *begin_t1 = NULL, *end_t1 = NULL;
   struct numeric_variable t0, t1;
   begin_t0 = (struct generic_token *) begin_j -> next;
@@ -5189,20 +5054,8 @@ else if(begin_j -> type == TYPE_JOIN &&
     atleast0 = false;
   end_t0 = begin_t0;
   while(end_t0 -> next != end_j){
-    if(end_t0 -> type == TYPE_OPEN_PARENTHESIS)
-      nesting_parenthesis ++;
-    else if(end_t0 -> type == TYPE_CLOSE_PARENTHESIS)
-      nesting_parenthesis --;
-    else if(end_t0 -> type == TYPE_OPEN_BRACKETS)
-      nesting_brackets ++;
-    else if(end_t0 -> type == TYPE_CLOSE_BRACKETS)
-      nesting_brackets --;
-    else if(end_t0 -> type == TYPE_OPEN_BRACES)
-      nesting_braces ++;
-    else if(end_t0 -> type == TYPE_CLOSE_BRACES)
-      nesting_braces --;
-    if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
-       nesting_braces == 0 &&
+    COUNT_NESTING(end_t0);
+    if(IS_NOT_NESTED() &&
        ((struct generic_token *) end_t0 -> next) -> type == TYPE_AND)
       break;
     end_t0 = (struct generic_token *) end_t0 -> next;
@@ -5325,17 +5178,10 @@ else if(end_expression -> type != TYPE_CYCLE &&
         TYPE_OPEN_BRACES){
   bool last_join = true;
   struct generic_token *p = (struct generic_token *) end_z1 -> next;
-  int nesting_parenthesis = 0, nesting_brackets = 0, nesting_braces = 0;
+  DECLARE_NESTING_CONTROL();
   while(p != end_expression){
-    if(p -> type == TYPE_OPEN_PARENTHESIS)
-      nesting_parenthesis ++;
-    else if(p -> type == TYPE_CLOSE_PARENTHESIS)
-      nesting_parenthesis --;
-    else if(p -> type == TYPE_OPEN_BRACKETS)
-      nesting_brackets ++;
-    else if(p -> type == TYPE_CLOSE_BRACKETS)
-      nesting_brackets --;
-    if(nesting_parenthesis == 0 && nesting_brackets == 0 &&
+    COUNT_NESTING(p);
+    if(IS_NOT_NESTED() &&
        (p -> type == TYPE_AMPERSAND || p -> type == TYPE_JOIN)){
       last_join = false;
       break;
@@ -5370,7 +5216,179 @@ $$
 
 The cyclic nature of a path must be taken into consideration.
 
+For the case where we want to copy the direction specifier in the left
+side to the right side of a point, we need to preserve this value
+between iterations. By our rules, it is important to preserve the
+value only when we read it explicitly between braces, when we are in a
+concatenation or when we are in the beginning of an iteration. In the
+last two cases because we need to copy the \monoespaco{curl 1}
+specifier. Then, when we are in the end of each iteration, we preserve
+the specifier in these cases, otherwise we erase it:
 
+\iniciocodigo
+@<Path Expression: End of Each Iteration@>=
+if((begin_z1 == begin_expression && end_expression -> type != TYPE_CYCLE) ||
+   (begin_j == end_j && begin_j -> type == TYPE_AMPERSAND) ||
+   (begin_e != NULL && end_e != NULL)){
+  prev_w_x = w1_x;
+  prev_w_y = w1_y;
+  prev_curl = curl1;
+}
+else{
+  prev_w_x = NAN;
+  prev_w_y = NAN;
+  prev_curl = NAN;
+}
+@
+\fimcodigo
+
+Now to apply the rule where we copy the specifier from the left of a
+point to its right, we use the code:
+
+\iniciocodigo
+@<Path Expression: Determine Curve Shape@>+=
+if(isnan(w0_x) && isnan(w0_y) && isnan(curl0)){
+  w0_x = prev_w_x;
+  w0_y = prev_w_y;
+  curl0 = prev_curl;
+}
+@
+\fimcodigo
+
+Now we copy the direction specifier from the right to the left. We do
+this only if we already do not have a defined specifier and if the
+specifier to the right is given explicitly between braces:
+
+\iniciocodigo
+@<Path Expression: Determine Curve Shape@>+=
+if(isnan(w1_x) && isnan(w1_y) && isnan(curl1)){
+  if(!isnan(next_curl))
+    curl1 = next_curl;
+  else if(end_z2 -> next != NULL && end_z2 != end_expression &&
+          ((struct generic_token *) (end_z2 -> next)) -> type ==
+          TYPE_OPEN_BRACES){
+    struct generic_token *next0, *next1;
+    DECLARE_NESTING_CONTROL();
+    next0 = (struct generic_token *) end_z2 -> next;
+    next1 = next0;
+    while(next1 != end_expression){
+      COUNT_NESTING(next1);
+      if(IS_NOT_NESTED() && next1 -> type == TYPE_CLOSE_BRACES)
+        break;
+      next1 = (struct generic_token *) next1 -> next;
+    }
+    if(next0 -> type == TYPE_OPEN_BRACES && next1 -> type == TYPE_CLOSE_BRACES){
+      if(!eval_direction_specifier(mf, cx, begin_e, end_e, &next_w_x, &next_w_y,
+                                   &next_curl))
+        return false;
+      w1_x = next_w_x;
+      w1_y = next_w_y;
+      curl1 = next_curl;
+    }
+    else{
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr,
+              "METAFONT: Error: %s:%d: Unrecognized join expression.\n",
+              mf -> file, begin_j -> line);
+#endif
+      return false;
+    }
+  }
+}
+@
+\fimcodigo
+
+But we also need to deal with the cyclic case. By the grammar rules,
+there will be no direction specifier before the first point. But a
+direction specifier can be placed before the token \monoespaco{cycle}
+if it exists. And in this case, this specifier could be copied to the
+right side of the first point. Likewise, the direction specifier can
+be copied from the right side of the first point to the place before
+the \monoespaco{cycle} token if we do not have an explicit specifier
+there.
+
+First the simplest case: there is an explicit direction specifier
+after the first point in the beginning of a cyclic path. In this case,
+we need to store it to use when choosing the last control points in
+the curve. To store it, we will need the following new variables:
+
+\iniciocodigo
+@<Path Expression: Additional Variables Declaration@>+=
+float first_w_x = NAN, first_w_y = NAN, first_curl = NAN;
+@
+\fimcodigo
+
+And then, in the first iteration over the joins, if we are in a cyclic
+path and if exists an explicit specifier, we store it:
+
+\iniciocodigo
+@<Path Expression: Determine Curve Shape@>+=
+if(begin_z1 == begin_expression && end_expression -> type == TYPE_CYCLE &&
+   begin_d != NULL && end_d != NULL){
+  first_w_x = w0_x;
+  first_w_y = w0_y;
+  first_curl = curl0;
+}
+@
+\fimcodigo
+
+After,when we need to choose the shape when joining the cyclic
+extremities, we will take into account the stored value:
+
+\iniciocodigo
+@<Path Expression: Choose Shape in Cyclical Join@>=
+if(begin_d == NULL && end_d == NULL){
+  if(!isnan(first_w_x) || !isnan(first_curl)){
+    w1_x = first_w_x;
+    w1_y = first_w_y;
+    curl1 = first_curl;
+  }
+}
+@
+\fimcodigo
+
+To make copies in the opposite direction, when we are in the first
+iteration, we need to look at the last join. First we walk over the
+expression until the end (until finding \monoespaco{cycle}) always
+storing the last direction specifier and the last join. If the
+token \monoespaco{cycle} appear after the last specifier, then we need
+to check its value and copy it. Otherwise, we also check if we have a
+concatenation as the last join and in this case we need to apply the
+rule of copying the implicit \monoespaco{curl 1}:
+
+\iniciocodigo
+@<Path Expression: Determine Curve Shape@>+=
+if(begin_z1 == begin_expression && end_expression -> type == TYPE_CYCLE &&
+   begin_d == NULL && isnan(curl0) && isnan(w0_x)){
+  struct generic_token *begin_last_spec = NULL, *end_last_spec = NULL,
+                       *last_join = NULL, *p;
+  DECLARE_NESTING_CONTROL();
+  p = end_z2;
+  while(p -> type != end_expression){
+    if(IS_NOT_NESTED() && p -> type == TYPE_OPEN_BRACES)
+      begin_last_spec = p;
+    COUNT_NESTING(p);
+    if(IS_NOT_NESTED()){
+      if(p -> type == TYPE_CLOSE_BRACES)
+        end_last_spec = p;
+      else if(p -> type == TYPE_JOIN || p -> type == TYPE_AMPERSAND)
+        last_join = p;
+      else if(p -> type == TYPE_CYCLE)
+        break;
+    }
+    p = (struct generic_token *) p -> next;
+  }
+  if(end_last_spec != NULL && end_last_spec -> next == p &&
+     p -> type == TYPE_CYCLE){
+    if(!eval_direction_specifier(mf, cx, begin_last_spec, end_last_spec,
+                                 &w0_x, &w0_y, &curl0))
+      return false;
+  }
+  else if(last_join != NULL && last_join -> type == TYPE_AMPERSAND)
+    curl0 = 1.0;
+}
+@
+\fimcodigo
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
