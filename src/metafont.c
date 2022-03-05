@@ -2860,7 +2860,11 @@ float next_w_x= NAN,next_w_y= NAN,next_curl= NAN;
 #line 5375 "weaver-interface-metafont.tex"
 
 float first_w_x= NAN,first_w_y= NAN,first_curl= NAN;
-/*:212*/
+/*:212*//*216:*/
+#line 5477 "weaver-interface-metafont.tex"
+
+float previous_point_x= NAN,previous_point_y= NAN;
+/*:216*/
 #line 4492 "weaver-interface-metafont.tex"
 
 begin_z1= begin_expression;
@@ -3361,7 +3365,7 @@ struct generic_token*begin_last_spec= NULL,*end_last_spec= NULL,
 *last_join= NULL,*p;
 DECLARE_NESTING_CONTROL();
 p= end_z2;
-while(p->type!=end_expression){
+while(p!=end_expression){
 if(IS_NOT_NESTED()&&p->type==TYPE_OPEN_BRACES)
 begin_last_spec= p;
 COUNT_NESTING(p);
@@ -3384,7 +3388,75 @@ return false;
 else if(last_join!=NULL&&last_join->type==TYPE_AMPERSAND)
 curl0= 1.0;
 }
-/*:215*/
+/*:215*//*217:*/
+#line 5488 "weaver-interface-metafont.tex"
+
+if(begin_d==NULL&&end_d==NULL&&!isnan(previous_point_x)&&
+!isnan(previous_point_y)&&isnan(w0_x)&&isnan(curl0)){
+w0_x= z1_point->x-previous_point_x;
+w0_y= z1_point->y-previous_point_y;
+if(w0_x==0.0&&w0_y==0.0){
+w0_x= NAN;
+w0_y= NAN;
+curl0= 1.0;
+}
+}
+/*:217*//*218:*/
+#line 5506 "weaver-interface-metafont.tex"
+
+if(begin_j!=end_j&&
+((struct generic_token*)(begin_j->next))->type==TYPE_CONTROLS){
+previous_point_x= v_x;
+previous_point_y= v_y;
+}
+else{
+previous_point_x= NAN;
+previous_point_y= NAN;
+}
+/*:218*//*219:*/
+#line 5525 "weaver-interface-metafont.tex"
+
+if(begin_e==NULL&&end_e==NULL&&isnan(w1_x)&&isnan(curl1)&&
+end_z1!=end_expression){
+DECLARE_NESTING_CONTROL();
+struct generic_token*begin_point,*end_point;
+begin_point= (struct generic_token*)end_z1->next;
+while(begin_point!=end_expression){
+COUNT_NESTING(begin_point);
+if(IS_NOT_NESTED()&&(begin_point->type==TYPE_JOIN||
+begin_point->type==TYPE_AMPERSAND))
+break;
+begin_point= (struct generic_token*)begin_point->next;
+}
+if(begin_point!=end_expression&&begin_point->type!=TYPE_AMPERSAND){
+begin_point= (struct generic_token*)begin_point->next;
+if(begin_point!=end_expression&&begin_point->type==TYPE_CONTROLS){
+begin_point= (struct generic_token*)begin_point->next;
+end_point= begin_point;
+while(end_point!=end_expression){
+struct generic_token*next= (struct generic_token*)end_point->next;
+COUNT_NESTING(end_point);
+if(IS_NOT_NESTED()&&next!=NULL&&
+(next->type==TYPE_AND||next->type==TYPE_JOIN))
+break;
+end_point= (struct generic_token*)end_point->next;
+}
+if(end_point!=end_expression){
+struct pair_variable var;
+if(!eval_pair_primary(mf,cx,begin_point,end_point,&var))
+return false;
+w1_x= var.x-z2_point->x;
+w1_y= var.y-z2_point->y;
+if(w1_x==0.0&&w1_y==0.0){
+w1_x= NAN;
+w1_y= NAN;
+curl1= 1.0;
+}
+}
+}
+}
+}
+/*:219*/
 #line 4500 "weaver-interface-metafont.tex"
 
 /*209:*/

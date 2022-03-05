@@ -5425,7 +5425,7 @@ if(begin_z1 == begin_expression && end_expression -> type == TYPE_CYCLE &&
                        *last_join = NULL, *p;
   DECLARE_NESTING_CONTROL();
   p = end_z2;
-  while(p -> type != end_expression){
+  while(p != end_expression){
     if(IS_NOT_NESTED() && p -> type == TYPE_OPEN_BRACES)
       begin_last_spec = p;
     COUNT_NESTING(p);
@@ -5451,6 +5451,120 @@ if(begin_z1 == begin_expression && end_expression -> type == TYPE_CYCLE &&
 @
 \fimcodigo
 
+A próxima regra se aplica quando temos uma construção como:
+
+$$
+.. z .. \texttt{controls } u \texttt{ and } v ..  = .. z\{u-z\} .. \texttt{controls } u \texttt{ and } v ..
+$$
+
+E também:
+
+$$
+.. \texttt{controls } u \texttt{ and } v .. z =  .. \texttt{controls } u \texttt{ and } v z\{z-v\}..
+$$
+
+Isso se aplica somente quando o resultado da subtração de pares $u-z$
+e $z-v$ é diferente de zero. Se for igual a zero, assumimos
+simplesmente o valor \monoespaco{curl 1}. Naturalmente, o caráter
+cíclico do caminho deve ser levado em conta.
+
+Primeiro o caso mais fácil: os pontos de controle explícitos vem antes
+do caminho atual. Foram os pontos de controle explícitos que lemos na
+iteração anterior. Então, precisamos de uma variável para armazenar
+este ponto de controle:
+
+\iniciocodigo
+@<Expressão de Caminho: Declaração de Variáveis Adicionais@>+=
+float previous_point_x = NAN, previous_point_y = NAN;
+@
+\fimcodigo
+
+
+Se nós temos algum valor armazenado nestas variáveis e se nós não
+temos especificador de direção explícito, então geramos o
+especificador com as regras que descrevemos:
+
+\iniciocodigo
+@<Expressão de Caminho: Decide Forma da Curva@>+=
+if(begin_d == NULL && end_d == NULL && !isnan(previous_point_x) &&
+   !isnan(previous_point_y) && isnan(w0_x) && isnan(curl0)){
+  w0_x = z1_point -> x - previous_point_x;
+  w0_y = z1_point -> y - previous_point_y;
+  if(w0_x == 0.0 && w0_y == 0.0){
+    w0_x = NAN;
+    w0_y = NAN;
+    curl0 = 1.0;
+  }
+}
+@
+\fimcodigo
+
+Neste momento, depois de possivelmente termos usado o especificador
+anterior, não precisaremos mais dele e o atualizamos para o valor atual:
+
+\iniciocodigo
+@<Expressão de Caminho: Decide Forma da Curva@>+=
+if(begin_j != end_j &&
+   ((struct generic_token *) (begin_j -> next)) -> type == TYPE_CONTROLS){
+  previous_point_x = v_x;
+  previous_point_y = v_y;
+}
+else{
+  previous_point_x = NAN;
+  previous_point_y = NAN;
+}
+@
+\fimcodigo
+
+Já se não temos um valor explícito até agora no segundo especificador
+de direção, devemos checar a próxima junção para saber se ela contém
+pontos de controle explícitos. Se tiver, lemos o primeiro destes
+pontos, o interpretamos e usamos seu valor pelas regras acima:
+
+\iniciocodigo
+@<Expressão de Caminho: Decide Forma da Curva@>+=
+if(begin_e == NULL && end_e == NULL &&  isnan(w1_x) && isnan(curl1) &&
+   end_z1 != end_expression){
+  DECLARE_NESTING_CONTROL();
+  struct generic_token *begin_point, *end_point;
+  begin_point = (struct generic_token *) end_z1 -> next;
+  while(begin_point != end_expression){
+    COUNT_NESTING(begin_point);
+    if(IS_NOT_NESTED() && (begin_point -> type == TYPE_JOIN ||
+                          begin_point -> type == TYPE_AMPERSAND))
+      break;
+    begin_point = (struct generic_token *) begin_point -> next;
+  }
+  if(begin_point != end_expression && begin_point -> type != TYPE_AMPERSAND){
+    begin_point = (struct generic_token *) begin_point -> next;
+    if(begin_point != end_expression && begin_point -> type == TYPE_CONTROLS){
+      begin_point = (struct generic_token *) begin_point -> next;
+      end_point = begin_point;
+      while(end_point != end_expression){
+        struct generic_token *next = (struct generic_token *) end_point -> next;
+        COUNT_NESTING(end_point);
+        if(IS_NOT_NESTED() && next != NULL &&
+           (next -> type == TYPE_AND || next -> type == TYPE_JOIN))
+          break;
+        end_point = (struct generic_token *) end_point -> next;
+      }
+      if(end_point != end_expression){
+        struct pair_variable var;
+        if(!eval_pair_primary(mf, cx, begin_point, end_point, &var))
+          return false;
+        w1_x = var.x - z2_point -> x;
+        w1_y = var.y - z2_point -> y;
+        if(w1_x == 0.0 && w1_y == 0.0){
+          w1_x = NAN;
+          w1_y = NAN;
+          curl1 = 1.0;
+        }
+      }
+    }
+  }
+}
+@
+\fimcodigo
 
 \secao{Referências}
 

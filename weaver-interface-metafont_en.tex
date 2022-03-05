@@ -5390,6 +5390,121 @@ if(begin_z1 == begin_expression && end_expression -> type == TYPE_CYCLE &&
 @
 \fimcodigo
 
+The next rule applies when we have a join like:
+
+$$
+.. z .. \texttt{controls } u \texttt{ and } v ..  = .. z\{u-z\} .. \texttt{controls } u \texttt{ and } v ..
+$$
+
+And also:
+
+$$
+.. \texttt{controls } u \texttt{ and } v .. z =  .. \texttt{controls } u \texttt{ and } v z\{z-v\}..
+$$
+
+But only if the result of subtracting the pairs $u-z$ and $z-v$ is
+different than zero. If it is equal zero, we use instead the
+value \monoespaco{curl 1}. If a path is cyclic, the cyclic nature is
+taken into account.
+
+First the easiest case: the explicit control points appear before the
+current join. In this case we already read these control points in the
+previous iteration. We just need variables to store this control point:
+
+
+\iniciocodigo
+@<Path Expression: Additional Variables Declaration@>+=
+float previous_point_x = NAN, previous_point_y = NAN;
+@
+\fimcodigo
+
+If we have some value stored in these variables and if we do not have
+an explicit direction specifier, then we generate our specifier with
+the described rules:
+
+\iniciocodigo
+@<Path Expression: Determine Curve Shape@>+=
+if(begin_d == NULL && end_d == NULL && !isnan(previous_point_x) &&
+   !isnan(previous_point_y) && isnan(w0_x) && isnan(curl0)){
+  w0_x = z1_point -> x - previous_point_x;
+  w0_y = z1_point -> y - previous_point_y;
+  if(w0_x == 0.0 && w0_y == 0.0){
+    w0_x = NAN;
+    w0_y = NAN;
+    curl0 = 1.0;
+  }
+}
+@
+\fimcodigo
+
+After possibly using the previous direction specifier, we do not need
+it anymore and we can update the variables with current values for the
+case that we need them in the next iteration:
+
+\iniciocodigo
+@<Path Expression: Determine Curve Shape@>+=
+if(begin_j != end_j &&
+   ((struct generic_token *) (begin_j -> next)) -> type == TYPE_CONTROLS){
+  previous_point_x = v_x;
+  previous_point_y = v_y;
+}
+else{
+  previous_point_x = NAN;
+  previous_point_y = NAN;
+}
+@
+\fimcodigo
+
+About the second direction specifier, if we still do not have a value,
+we should check the next join and see if we find explicit control
+points. If we find it, we read the first of these points, interpret it
+and use its value like described in the rules above:
+
+\iniciocodigo
+@<Path Expression: Determine Curve Shape@>+=
+if(begin_e == NULL && end_e == NULL &&  isnan(w1_x) && isnan(curl1) &&
+   end_z1 != end_expression){
+  DECLARE_NESTING_CONTROL();
+  struct generic_token *begin_point, *end_point;
+  begin_point = (struct generic_token *) end_z1 -> next;
+  while(begin_point != end_expression){
+    COUNT_NESTING(begin_point);
+    if(IS_NOT_NESTED() && (begin_point -> type == TYPE_JOIN ||
+                          begin_point -> type == TYPE_AMPERSAND))
+      break;
+    begin_point = (struct generic_token *) begin_point -> next;
+  }
+  if(begin_point != end_expression && begin_point -> type != TYPE_AMPERSAND){
+    begin_point = (struct generic_token *) begin_point -> next;
+    if(begin_point != end_expression && begin_point -> type == TYPE_CONTROLS){
+      begin_point = (struct generic_token *) begin_point -> next;
+      end_point = begin_point;
+      while(end_point != end_expression){
+        struct generic_token *next = (struct generic_token *) end_point -> next;
+        COUNT_NESTING(end_point);
+        if(IS_NOT_NESTED() && next != NULL &&
+           (next -> type == TYPE_AND || next -> type == TYPE_JOIN))
+          break;
+        end_point = (struct generic_token *) end_point -> next;
+      }
+      if(end_point != end_expression){
+        struct pair_variable var;
+        if(!eval_pair_primary(mf, cx, begin_point, end_point, &var))
+          return false;
+        w1_x = var.x - z2_point -> x;
+        w1_y = var.y - z2_point -> y;
+        if(w1_x == 0.0 && w1_y == 0.0){
+          w1_x = NAN;
+          w1_y = NAN;
+          curl1 = 1.0;
+        }
+      }
+    }
+  }
+}
+@
+\fimcodigo
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
