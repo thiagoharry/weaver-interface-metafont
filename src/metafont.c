@@ -2850,6 +2850,7 @@ result->points[0].x= NAN;
 struct generic_token*begin_z1,*end_z1= NULL,*begin_z2,*end_z2;
 struct generic_token*begin_d,*end_d,*begin_e,*end_e;
 struct generic_token*begin_j,*end_j;
+struct path_points*z1_point= NULL,*z2_point= NULL;
 /*192:*/
 #line 4777 "weaver-interface-metafont.tex"
 
@@ -2861,15 +2862,18 @@ float next_w_x= NAN,next_w_y= NAN,next_curl= NAN;
 
 float first_w_x= NAN,first_w_y= NAN,first_curl= NAN;
 /*:212*//*216:*/
-#line 5477 "weaver-interface-metafont.tex"
+#line 5478 "weaver-interface-metafont.tex"
 
 float previous_point_x= NAN,previous_point_y= NAN;
-/*:216*/
-#line 4492 "weaver-interface-metafont.tex"
+/*:216*//*220:*/
+#line 5578 "weaver-interface-metafont.tex"
+
+float first_point_x= NAN,first_point_y= NAN;
+/*:220*/
+#line 4493 "weaver-interface-metafont.tex"
 
 begin_z1= begin_expression;
 while(begin_z1!=end_expression||result->length<expected_length){
-struct path_points*z1_point,*z2_point;
 /*184:*/
 #line 4519 "weaver-interface-metafont.tex"
 
@@ -3387,22 +3391,56 @@ return false;
 }
 else if(last_join!=NULL&&last_join->type==TYPE_AMPERSAND)
 curl0= 1.0;
+/*223:*/
+#line 5623 "weaver-interface-metafont.tex"
+
+if(last_join!=NULL&&last_join->type==TYPE_JOIN){
+struct generic_token*p= (struct generic_token*)last_join->next;
+if(p->type==TYPE_CONTROLS){
+struct generic_token*p_end;
+p= (struct generic_token*)p->next;
+p_end= p;
+while(p_end!=end_expression){
+struct generic_token*next= (struct generic_token*)p_end->next;
+COUNT_NESTING(p_end);
+if(IS_NOT_NESTED()&&(next->type==TYPE_JOIN||
+next->type==TYPE_AND))
+break;
+p_end= next;
+}
+if(p_end!=end_expression){
+struct pair_variable var;
+if(!eval_pair_primary(mf,cx,p,p_end,&var))
+return false;
+w0_x= z1_point->x-var.x;
+w0_y= z1_point->y-var.y;
+if(hypot(w0_x*w0_x,w0_y*w0_y)<=0.00002){
+w0_x= NAN;
+w0_y= NAN;
+curl0= 1.0;
+}
+}
+}
+}
+/*:223*/
+#line 5450 "weaver-interface-metafont.tex"
+
 }
 /*:215*//*217:*/
-#line 5488 "weaver-interface-metafont.tex"
+#line 5491 "weaver-interface-metafont.tex"
 
 if(begin_d==NULL&&end_d==NULL&&!isnan(previous_point_x)&&
 !isnan(previous_point_y)&&isnan(w0_x)&&isnan(curl0)){
 w0_x= z1_point->x-previous_point_x;
 w0_y= z1_point->y-previous_point_y;
-if(w0_x==0.0&&w0_y==0.0){
+if(hypot(w0_x*w0_x,w0_y*w0_y)<=0.00002){
 w0_x= NAN;
 w0_y= NAN;
 curl0= 1.0;
 }
 }
 /*:217*//*218:*/
-#line 5506 "weaver-interface-metafont.tex"
+#line 5509 "weaver-interface-metafont.tex"
 
 if(begin_j!=end_j&&
 ((struct generic_token*)(begin_j->next))->type==TYPE_CONTROLS){
@@ -3414,7 +3452,7 @@ previous_point_x= NAN;
 previous_point_y= NAN;
 }
 /*:218*//*219:*/
-#line 5525 "weaver-interface-metafont.tex"
+#line 5528 "weaver-interface-metafont.tex"
 
 if(begin_e==NULL&&end_e==NULL&&isnan(w1_x)&&isnan(curl1)&&
 end_z1!=end_expression){
@@ -3447,7 +3485,7 @@ if(!eval_pair_primary(mf,cx,begin_point,end_point,&var))
 return false;
 w1_x= var.x-z2_point->x;
 w1_y= var.y-z2_point->y;
-if(w1_x==0.0&&w1_y==0.0){
+if(hypot(w1_x*w1_x,w1_y*w1_y)<=0.00002){
 w1_x= NAN;
 w1_y= NAN;
 curl1= 1.0;
@@ -3456,7 +3494,16 @@ curl1= 1.0;
 }
 }
 }
-/*:219*/
+/*:219*//*221:*/
+#line 5586 "weaver-interface-metafont.tex"
+
+if(begin_z1==begin_expression&&end_expression->type==TYPE_CYCLE&&
+begin_j!=end_j&&
+((struct generic_token*)(begin_j->next))->type==TYPE_CONTROLS){
+first_point_x= u_x;
+first_point_y= u_y;
+}
+/*:221*/
 #line 4500 "weaver-interface-metafont.tex"
 
 /*209:*/
@@ -3491,7 +3538,21 @@ w1_y= first_w_y;
 curl1= first_curl;
 }
 }
-/*:214*/
+/*:214*//*222:*/
+#line 5600 "weaver-interface-metafont.tex"
+
+if(begin_d==NULL&&end_d==NULL){
+if(!isnan(first_point_x)&&isnan(curl1)&&isnan(w1_x)){
+w1_x= first_point_x-z2_point->x;
+w1_y= first_point_y-z2_point->y;
+if(hypot(w1_x*w1_x,w1_y*w1_y)<=0.00002){
+w1_x= NAN;
+w1_y= NAN;
+curl1= 1.0;
+}
+}
+}
+/*:222*/
 #line 4506 "weaver-interface-metafont.tex"
 
 }

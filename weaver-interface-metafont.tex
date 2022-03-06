@@ -4489,10 +4489,10 @@ cada uma das junções no formato acima para interpretá-las:
   struct generic_token *begin_z1, *end_z1 = NULL, *begin_z2, *end_z2;
   struct generic_token *begin_d, *end_d, *begin_e, *end_e;
   struct generic_token * begin_j, *end_j;
+  struct path_points *z1_point = NULL, *z2_point = NULL;
   @<Expressão de Caminho: Declaração de Variáveis Adicionais@>
   begin_z1 = begin_expression;
   while(begin_z1 != end_expression || result -> length < expected_length){
-    struct path_points *z1_point, *z2_point;
     @<Expressão de Caminho: Separa Tokens da Junção@>
     @<Expressão de Caminho: Interpreta Extremidades da Junção@>
     @<Expressão de Caminho: Interpreta Direção se Existir@>
@@ -5447,6 +5447,7 @@ if(begin_z1 == begin_expression && end_expression -> type == TYPE_CYCLE &&
   }
   else if(last_join != NULL && last_join -> type == TYPE_AMPERSAND)
     curl0 = 1.0;
+  @<Código Após Espiarmos Última Junção de Caminho Cíclico@>
 }
 @
 \fimcodigo
@@ -5482,7 +5483,9 @@ float previous_point_x = NAN, previous_point_y = NAN;
 
 Se nós temos algum valor armazenado nestas variáveis e se nós não
 temos especificador de direção explícito, então geramos o
-especificador com as regras que descrevemos:
+especificador com as regras que descrevemos. Só observando que
+consideramos como iguais quaisquer pontos cuja distância for menor que
+0,00002.
 
 \iniciocodigo
 @<Expressão de Caminho: Decide Forma da Curva@>+=
@@ -5490,7 +5493,7 @@ if(begin_d == NULL && end_d == NULL && !isnan(previous_point_x) &&
    !isnan(previous_point_y) && isnan(w0_x) && isnan(curl0)){
   w0_x = z1_point -> x - previous_point_x;
   w0_y = z1_point -> y - previous_point_y;
-  if(w0_x == 0.0 && w0_y == 0.0){
+  if(hypot(w0_x * w0_x, w0_y * w0_y) <= 0.00002){
     w0_x = NAN;
     w0_y = NAN;
     curl0 = 1.0;
@@ -5554,11 +5557,94 @@ if(begin_e == NULL && end_e == NULL &&  isnan(w1_x) && isnan(curl1) &&
           return false;
         w1_x = var.x - z2_point -> x;
         w1_y = var.y - z2_point -> y;
-        if(w1_x == 0.0 && w1_y == 0.0){
+        if(hypot(w1_x * w1_x, w1_y * w1_y) <= 0.00002){
           w1_x = NAN;
           w1_y = NAN;
           curl1 = 1.0;
         }
+      }
+    }
+  }
+}
+@
+\fimcodigo
+
+Agora vamos ao caso cíclico. Se estamos na primeira iteração, nosso
+caminho é cíclico e temos pontos de controle explícitos, então devemos
+ter uma variável adicional para armazenar tal ponto de controle
+explícito:
+
+\iniciocodigo
+@<Expressão de Caminho: Declaração de Variáveis Adicionais@>+=
+float first_point_x = NAN, first_point_y = NAN;
+@
+\fimcodigo
+
+E inicializamos a variável se for o caso na primeira iteração:
+
+\iniciocodigo
+@<Expressão de Caminho: Decide Forma da Curva@>+=
+if(begin_z1 == begin_expression && end_expression -> type == TYPE_CYCLE &&
+   begin_j != end_j &&
+   ((struct generic_token *) (begin_j -> next)) -> type == TYPE_CONTROLS){
+  first_point_x = u_x;
+  first_point_y = u_y;
+}
+@
+\fimcodigo
+
+Depois, quando chegar a hora de escolher o formato da junção das
+extremidades cíclicas, levaremos a existência desta variável em conta:
+
+\iniciocodigo
+@<Expressão de Caminho: Escolhe Forma da Junção Cíclica@>+=
+if(begin_d == NULL && end_d == NULL){
+  if(!isnan(first_point_x) && isnan(curl1) && isnan(w1_x)){
+    w1_x = first_point_x - z2_point -> x;
+    w1_y = first_point_y - z2_point -> y;
+    if(hypot(w1_x * w1_x, w1_y * w1_y) <= 0.00002){
+      w1_x = NAN;
+      w1_y = NAN;
+      curl1 = 1.0;
+    }
+  }
+}
+@
+\fimcodigo
+
+E agora a direção oposta. Se estamos na primeira iteração de um
+caminho cíclico, devemos espiar a última junção e checar se temos
+pontos de controle explícitos para aplicar esta regra. Mas na regra
+anterior nós já escrevemos o código para obter dentre outras coisas, a
+última junção. Então podemos continuar à partir do código anterior:
+
+
+\iniciocodigo
+@<Código Após Espiarmos Última Junção de Caminho Cíclico@>=
+if(last_join != NULL && last_join -> type == TYPE_JOIN){
+  struct generic_token *p = (struct generic_token *) last_join -> next;
+  if(p -> type == TYPE_CONTROLS){
+    struct generic_token *p_end;
+    p = (struct generic_token *) p -> next;
+    p_end = p;
+    while(p_end != end_expression){
+      struct generic_token *next = (struct generic_token *) p_end -> next;
+      COUNT_NESTING(p_end);
+      if(IS_NOT_NESTED() && (next -> type == TYPE_JOIN ||
+                             next -> type == TYPE_AND))
+        break;
+      p_end = next;
+    }
+    if(p_end != end_expression){
+      struct pair_variable var;
+      if(!eval_pair_primary(mf, cx, p, p_end, &var))
+        return false;
+      w0_x = z1_point -> x - var.x;
+      w0_y = z1_point -> y - var.y;
+      if(hypot(w0_x * w0_x, w0_y * w0_y) <= 0.00002){
+        w0_x = NAN;
+        w0_y = NAN;
+        curl0 = 1.0;
       }
     }
   }
