@@ -4263,7 +4263,7 @@ The grammar for path expressions begin with:
 <Tension Amount> -> <Numeric Primary> | atleast <Numeric Primary>
 <Controls> -> controls <Pair Primary> |
               controls <Pair Primary> and <Pair Primary>
-<Direction Specifier> -> Empty | { curl <Numeric Expression> } |
+<Direction Specifier> -> Empty |
                          { <Pair Expression } |
                          { <Numeric Expression> , <Numeric Expression> }
 <Path Subexpression> -> <Path Expression> |
@@ -4281,7 +4281,7 @@ This requires the register of these new types of tokens:
 #define TYPE_AND            54 // Symbolic token 'and'
 #define TYPE_ATLEAST        55 // Symbolic token 'atleast'
 #define TYPE_CONTROLS       56 // Symbolic token 'controls'
-#define TYPE_CURL           57 // Symbolic token 'curl'
+#define TYPE_CURL           57 // Symbolic token 'curl' (still not supported)
 @
 \fimcodigo
 
@@ -4437,7 +4437,7 @@ will iterate over each join in the format above:
 @<Path Expression: Iterating over Joins@>=
 {
   struct generic_token *begin_z1, *end_z1 = NULL, *begin_z2, *end_z2;
-  struct generic_token *begin_d, *end_d, *begin_e, *end_e;
+  struct generic_token *begin_d = NULL, *end_d = NULL, *begin_e, *end_e;
   struct generic_token * begin_j, *end_j;
   struct path_points *z1_point = NULL, *z2_point = NULL;
   @<Path Expression: Additional Variables Declaration@>
@@ -4712,13 +4712,11 @@ while(z2_point -> subpath != NULL){
 \fimcodigo
 
 Now we need to interpret both direction specifiers. They can be empty
-(which is equivalent to have direction $(0, 0)$), they can be a pair
-specifying a direction vector or they can be an integer specifying the
-curl.
+(which is equivalent to have direction $(0, 0)$) or they can be a pair
+specifying a direction vector.
 
-If we have a pair, we will store in the variables \monoespaco{(w0\_x,
-w0\_y)} and \monoespaco{(w1\_x, w1\_y)}. If we have a curl, we will
-store in variables \monoespaco{curl0} and \monoespaco{curl1}. We also
+We will store them in the variables \monoespaco{(w0\_x,
+w0\_y)} and \monoespaco{(w1\_x, w1\_y)}.  We also
 will store the previous direction specifier from last iteration and
 also we will reserve space to store the next direction specifier if we
 need to peek it ahead of time. This could be necessary to take in
@@ -4726,9 +4724,9 @@ consideration a broader picture when deciding the curve shape:
 
 \iniciocodigo
 @<Path Expression: Additional Variables Declaration@>=
-float w0_x = NAN, w0_y = NAN, w1_x = NAN, w1_y = NAN, curl0 = NAN, curl1 = NAN;
-float prev_w_x = NAN, prev_w_y = NAN, prev_curl = NAN;
-float next_w_x = NAN, next_w_y = NAN, next_curl = NAN;
+float w0_x = NAN, w0_y = NAN, w1_x = NAN, w1_y = NAN;
+float prev_w_x = NAN, prev_w_y = NAN;
+float next_w_x = NAN, next_w_y = NAN;
 @
 \fimcodigo
 
@@ -4742,18 +4740,15 @@ specifier from the tokens:
 
 \iniciocodigo
 @<Path Expression: Interpret Direction Specifiers@>=
-w0_x = w0_y = w1_x = w1_y = curl0 = curl1 = NAN;
+w0_x = w0_y = w1_x = w1_y = NAN;
 if(!isnan(next_w_x)){
   w0_x = next_w_x;
   w0_y = next_w_y;
 }
-else if (!isnan(next_curl)){
-  curl0 = next_curl;
-}
-else if(!eval_direction_specifier(mf, cx, begin_d, end_d, &w0_x, &w0_y, &curl0))
+else if(!eval_direction_specifier(mf, cx, begin_d, end_d, &w0_x, &w0_y))
   return false;
-next_w_x = next_w_y = next_curl = NAN;
-if(!eval_direction_specifier(mf, cx, begin_e, end_e, &w1_x, &w1_y, &curl1))
+next_w_x = next_w_y = NAN;
+if(!eval_direction_specifier(mf, cx, begin_e, end_e, &w1_x, &w1_y))
   return false;
 @
 \fimcodigo
@@ -4765,7 +4760,7 @@ The function that evaluates direction specifiers is declared here:
 bool eval_direction_specifier(struct metafont *mf, struct context *cx,
                               struct generic_token *begin,
                               struct generic_token *end, float *w_x,
-                              float *w_y, float *curl);
+                              float *w_y);
 @
 \fimcodigo
 
@@ -4779,11 +4774,10 @@ specified by a pair:
 bool eval_direction_specifier(struct metafont *mf, struct context *cx,
                               struct generic_token *begin,
                               struct generic_token *end, float *w_x,
-                              float *w_y, float *curl){
+                              float *w_y){
   @<Direction Specifier: Case 1@>
   @<Direction Specifier: Case 2@>
   @<Direction Specifier: Case 3@>
-  @<Direction Specifier: Case 4@>
   return false;
 }
 @
@@ -4800,43 +4794,13 @@ if(begin == NULL || end == NULL){
 @
 \fimcodigo
 
-Now we check if we have a curl specification:
-
-\iniciocodigo
-@<Direction Specifier: Case 2@>=
-if(begin != NULL &&
-   ((struct generic_token *) (begin -> next)) -> type == TYPE_CURL){
-  struct numeric_variable result;
-  struct generic_token *begin_numeric_expr, *end_numeric_expr;
-  begin_numeric_expr = (struct generic_token *) begin -> next;
-  begin_numeric_expr = (struct generic_token *) begin_numeric_expr -> next;
-  end_numeric_expr = begin_numeric_expr;
-  while(end_numeric_expr != NULL && end_numeric_expr -> next != end)
-    end_numeric_expr = (struct generic_token *) end_numeric_expr -> next;
-  if(end_numeric_expr == NULL){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr,
-            "METAFONT: Error: %s:%d: Unrecognized direction delimiter.\n",
-            mf -> file, begin -> line);
-#endif
-    return false;
-  }
-  if(!eval_numeric_expression(mf, cx, begin_numeric_expr, end_numeric_expr,
-                              &result))
-    return false;
-  *curl = result.value;
-  return true;
-}
-@
-\fimcodigo
-
 Now we will check if we have the case ``$\{ a , b\}$'' where $a$ and
 $b$ are numbers. To check for this case, we will try to delimit $a$
 and $b$ searching for the comma. We will interpret this case only if
 the comma is found:
 
 \iniciocodigo
-@<Direction Specifier: Case 3@>=
+@<Direction Specifier: Case 2@>=
 DECLARE_NESTING_CONTROL();
 struct generic_token *begin_a, *end_a, *begin_b = NULL, *end_b;
 begin_a = (struct generic_token *) begin -> next;
@@ -4874,7 +4838,7 @@ did not delimited $b$, but still delimited $a$. Therefore, we can
 interpret the tokens as a pair expression:
 
 \iniciocodigo
-@<Direction Specifier: Case 4@>=
+@<Direction Specifier: Case 3@>=
 else{ // if in the previous case there was no comma
   struct pair_variable a;
   if(!eval_pair_expression(mf, cx, begin_a, end_a, &a))
@@ -5123,82 +5087,82 @@ direction specifiers to choose the final curve shape.
 However, the direction specifiers could be empty. In this case, there
 are several rules that we should follow to choose the default direction.
 
-The first rule is that in the beginning and end of a non-cyclic path,
-we always will have an implicit ``\monoespaco{$\{$curl 1$\}$}''.
-The same happens before and after a concatenation. Therefore:
+%The first rule is that in the beginning and end of a non-cyclic path,
+%we always will have an implicit ``\monoespaco{$\{$curl 1$\}$}''.
+%The same happens before and after a concatenation. Therefore:
 
-$$
-z_0 .. z_1 .. z_2 = \{\monoespaco{curl}\ 1\}z_0 .. z_1 .. z_2\{\monoespaco{curl}\ 1\}
-$$
+%$$
+%z_0 .. z_1 .. z_2 = \{\monoespaco{curl}\ 1\}z_0 .. z_1 .. z_2\{\monoespaco{curl}\ 1\}
+%$$
 
-And also:
+%And also:
 
-$$
-.. z_n \& z_{n+1} .. = .. z_n\{\monoespaco{curl}\ 1\} \& \{\monoespaco{curl}\ 1\}z_{n+1} ..
-$$
+%$$
+%.. z_n \& z_{n+1} .. = .. z_n\{\monoespaco{curl}\ 1\} \& \{\monoespaco{curl}\ 1\}z_{n+1} ..
+%$$
 
-This means that in the first iteration, if we are not in a cyclic
-path, we need to consider that the previous direction specifier
-is \monoespaco{curl 1}:
+%This means that in the first iteration, if we are not in a cyclic
+%path, we need to consider that the previous direction specifier
+%is \monoespaco{curl 1}:
 
-\iniciocodigo
-@<Path Expression: Determine Curve Shape@>=
-if(begin_z1 == begin_expression && end_expression -> type != TYPE_CYCLE)
-  prev_curl = 1.0;
-@
-\fimcodigo
+%\iniciocodigo
+%<Path Expression: Determine Curve Shape>=
+%if(begin_z1 == begin_expression && end_expression -> type != TYPE_CYCLE)
+%  prev_curl = 1.0;
+%
+%\fimcodigo
 
-If we are in a concatenation, if ee have no direction specifier, then
-we consider them as \monoespaco{curl 1}:
+%If we are in a concatenation, if ee have no direction specifier, then
+%we consider them as \monoespaco{curl 1}:
 
-\iniciocodigo
-@<Path Expression: Determine Curve Shape@>+=
-if(begin_j == end_j && begin_j -> type == TYPE_AMPERSAND){
-  if(isnan(curl0) && isnan(w0_x))
-    curl0 = 1.0;
-  if(isnan(curl1) && isnan(w1_x))
-    curl1 = 1.0;
-}
-@
-\fimcodigo
+%\iniciocodigo
+%<Path Expression: Determine Curve Shape>+=
+%if(begin_j == end_j && begin_j -> type == TYPE_AMPERSAND){
+%  if(isnan(curl0) && isnan(w0_x))
+%    curl0 = 1.0;
+%  if(isnan(curl1) && isnan(w1_x))
+%    curl1 = 1.0;
+%}
+%
+%\fimcodigo
 
-Anf finally, if we are not in a cyclic path and we do not have a
-direction specifier after the second current point, we must check if
-we are in the last path join. We check this looking at the tokens and
-looking if there are a next join after the second current point and
-before the end of the expression. If this is the last join, we
-consider the last delimiter as \monoespaco{curl 1}:
+%And finally, if we are not in a cyclic path and we do not have a
+%direction specifier after the second current point, we must check if
+%we are in the last path join. We check this looking at the tokens and
+%looking if there are a next join after the second current point and
+%before the end of the expression. If this is the last join, we
+%consider the last delimiter as \monoespaco{curl 1}:
 
-\iniciocodigo
-@<Path Expression: Determine Curve Shape@>+=
-if(end_z1 == end_expression)
-  next_curl = 1.0;
-else if(end_expression -> type != TYPE_CYCLE &&
-        ((struct generic_token *) (end_z1 -> next)) -> type !=
-        TYPE_OPEN_BRACES){
-  bool last_join = true;
-  struct generic_token *p = (struct generic_token *) end_z1 -> next;
-  DECLARE_NESTING_CONTROL();
-  while(p != end_expression){
-    COUNT_NESTING(p);
-    if(IS_NOT_NESTED() &&
-       (p -> type == TYPE_AMPERSAND || p -> type == TYPE_JOIN)){
-      last_join = false;
-      break;
-    }
-    p = (struct generic_token *) p -> next;
-  }
-  if(last_join)
-    next_curl = 1.0;
-}
-@
-\fimcodigo
+%\iniciocodigo
+%<Path Expression: Determine Curve Shape>+=
+%if(end_z1 == end_expression)
+%  next_curl = 1.0;
+%else if(end_expression -> type != TYPE_CYCLE &&
+%        ((struct generic_token *) (end_z1 -> next)) -> type !=
+%        TYPE_OPEN_BRACES){
+%  bool last_join = true;
+%  struct generic_token *p = (struct generic_token *) end_z1 -> next;
+%  DECLARE_NESTING_CONTROL();
+%  while(p != end_expression){
+%    COUNT_NESTING(p);
+%    if(IS_NOT_NESTED() &&
+%       (p -> type == TYPE_AMPERSAND || p -> type == TYPE_JOIN)){
+%      last_join = false;
+%      break;
+%    }
+%    p = (struct generic_token *) p -> next;
+%  }
+%  if(last_join)
+%    next_curl = 1.0;
+%}
+%
+%\fimcodigo
 
-These rules by themselves do not do anything. The beginning and end
-points in a non-cyclic path are discontinuous, we do not need control
-points after them. Likewise, in a concatenation we have equal points
-joining. We do not need anything between them. However, these previous
-rules became relevant when combined with the next rules.
+%These rules by themselves do not do anything. The beginning and end
+%points in a non-cyclic path are discontinuous, we do not need control
+%points after them. Likewise, in a concatenation we have equal points
+%joining. We do not need anything between them. However, these previous
+%rules became relevant when combined with the next rules.
 
 If there is a direction specifier after a point, but not before, we
 copy the direction specifier. We do the same when there is a direction
@@ -5219,11 +5183,9 @@ The cyclic nature of a path must be taken into consideration.
 For the case where we want to copy the direction specifier in the left
 side to the right side of a point, we need to preserve this value
 between iterations. By our rules, it is important to preserve the
-value only when we read it explicitly between braces, when we are in a
-concatenation or when we are in the beginning of an iteration. In the
-last two cases because we need to copy the \monoespaco{curl 1}
-specifier. Then, when we are in the end of each iteration, we preserve
-the specifier in these cases, otherwise we erase it:
+value only when we read it explicitly between braces. Then, when we
+are in the end of each iteration, we preserve the specifier in these
+cases, otherwise we erase it:
 
 \iniciocodigo
 @<Path Expression: End of Each Iteration@>=
@@ -5232,12 +5194,10 @@ if((begin_z1 == begin_expression && end_expression -> type != TYPE_CYCLE) ||
    (begin_e != NULL && end_e != NULL)){
   prev_w_x = w1_x;
   prev_w_y = w1_y;
-  prev_curl = curl1;
 }
 else{
   prev_w_x = NAN;
   prev_w_y = NAN;
-  prev_curl = NAN;
 }
 @
 \fimcodigo
@@ -5247,10 +5207,9 @@ point to its right, we use the code:
 
 \iniciocodigo
 @<Path Expression: Determine Curve Shape@>+=
-if(isnan(w0_x) && isnan(w0_y) && isnan(curl0)){
+if(isnan(w0_x) && isnan(w0_y)){
   w0_x = prev_w_x;
   w0_y = prev_w_y;
-  curl0 = prev_curl;
 }
 @
 \fimcodigo
@@ -5261,12 +5220,10 @@ specifier to the right is given explicitly between braces:
 
 \iniciocodigo
 @<Path Expression: Determine Curve Shape@>+=
-if(isnan(w1_x) && isnan(w1_y) && isnan(curl1)){
-  if(!isnan(next_curl))
-    curl1 = next_curl;
-  else if(end_z2 -> next != NULL && end_z2 != end_expression &&
-          ((struct generic_token *) (end_z2 -> next)) -> type ==
-          TYPE_OPEN_BRACES){
+if(isnan(w1_x) && isnan(w1_y)               ){
+  if(end_z2 -> next != NULL && end_z2 != end_expression &&
+     ((struct generic_token *) (end_z2 -> next)) -> type ==
+     TYPE_OPEN_BRACES){
     struct generic_token *next0, *next1;
     DECLARE_NESTING_CONTROL();
     next0 = (struct generic_token *) end_z2 -> next;
@@ -5278,12 +5235,11 @@ if(isnan(w1_x) && isnan(w1_y) && isnan(curl1)){
       next1 = (struct generic_token *) next1 -> next;
     }
     if(next0 -> type == TYPE_OPEN_BRACES && next1 -> type == TYPE_CLOSE_BRACES){
-      if(!eval_direction_specifier(mf, cx, begin_e, end_e, &next_w_x, &next_w_y,
-                                   &next_curl))
+      if(!eval_direction_specifier(mf, cx, begin_e, end_e, &next_w_x,
+                                   &next_w_y))
         return false;
       w1_x = next_w_x;
       w1_y = next_w_y;
-      curl1 = next_curl;
     }
     else{
 #if defined(W_DEBUG_METAFONT)
@@ -5314,7 +5270,7 @@ the curve. To store it, we will need the following new variables:
 
 \iniciocodigo
 @<Path Expression: Additional Variables Declaration@>+=
-float first_w_x = NAN, first_w_y = NAN, first_curl = NAN;
+float first_w_x = NAN, first_w_y = NAN;
 @
 \fimcodigo
 
@@ -5327,7 +5283,6 @@ if(begin_z1 == begin_expression && end_expression -> type == TYPE_CYCLE &&
    begin_d != NULL && end_d != NULL){
   first_w_x = w0_x;
   first_w_y = w0_y;
-  first_curl = curl0;
 }
 @
 \fimcodigo
@@ -5338,10 +5293,9 @@ extremities, we will take into account the stored value:
 \iniciocodigo
 @<Path Expression: Choose Shape in Cyclical Join@>=
 if(begin_d == NULL && end_d == NULL){
-  if(!isnan(first_w_x) || !isnan(first_curl)){
+  if(!isnan(first_w_x)){
     w1_x = first_w_x;
     w1_y = first_w_y;
-    curl1 = first_curl;
   }
 }
 @
@@ -5352,14 +5306,12 @@ iteration, we need to look at the last join. First we walk over the
 expression until the end (until finding \monoespaco{cycle}) always
 storing the last direction specifier and the last join. If the
 token \monoespaco{cycle} appear after the last specifier, then we need
-to check its value and copy it. Otherwise, we also check if we have a
-concatenation as the last join and in this case we need to apply the
-rule of copying the implicit \monoespaco{curl 1}:
+to check its value and copy it.
 
 \iniciocodigo
 @<Path Expression: Determine Curve Shape@>+=
 if(begin_z1 == begin_expression && end_expression -> type == TYPE_CYCLE &&
-   begin_d == NULL && isnan(curl0) && isnan(w0_x)){
+   begin_d == NULL && isnan(w0_x)){
   struct generic_token *begin_last_spec = NULL, *end_last_spec = NULL,
                        *last_join = NULL, *p;
   DECLARE_NESTING_CONTROL();
@@ -5381,11 +5333,9 @@ if(begin_z1 == begin_expression && end_expression -> type == TYPE_CYCLE &&
   if(end_last_spec != NULL && end_last_spec -> next == p &&
      p -> type == TYPE_CYCLE){
     if(!eval_direction_specifier(mf, cx, begin_last_spec, end_last_spec,
-                                 &w0_x, &w0_y, &curl0))
+                                 &w0_x, &w0_y))
       return false;
   }
-  else if(last_join != NULL && last_join -> type == TYPE_AMPERSAND)
-    curl0 = 1.0;
   @<Code After Peeking the Last Join in Cyclic Path@>
 }
 @
@@ -5404,9 +5354,8 @@ $$
 $$
 
 But only if the result of subtracting the pairs $u-z$ and $z-v$ is
-different than zero. If it is equal zero, we use instead the
-value \monoespaco{curl 1}. If a path is cyclic, the cyclic nature is
-taken into account.
+different than zero. If equal zero, we will raise an erros as we still
+do not support this.
 
 First the easiest case: the explicit control points appear before the
 current join. In this case we already read these control points in the
@@ -5427,13 +5376,15 @@ whose distance is lesser or equal than 0.00002.
 \iniciocodigo
 @<Path Expression: Determine Curve Shape@>+=
 if(begin_d == NULL && end_d == NULL && !isnan(previous_point_x) &&
-   !isnan(previous_point_y) && isnan(w0_x) && isnan(curl0)){
+   !isnan(previous_point_y) && isnan(w0_x)){
   w0_x = z1_point -> x - previous_point_x;
   w0_y = z1_point -> y - previous_point_y;
   if(hypot(w0_x * w0_x, w0_y * w0_y) <= 0.00002){
-    w0_x = NAN;
-    w0_y = NAN;
-    curl0 = 1.0;
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Could not find a suitable "
+                    "direction specifier.\n",  mf -> file, begin_j -> line);
+#endif
+    return false;
   }
 }
 @
@@ -5464,7 +5415,7 @@ and use its value like described in the rules above:
 
 \iniciocodigo
 @<Path Expression: Determine Curve Shape@>+=
-if(begin_e == NULL && end_e == NULL &&  isnan(w1_x) && isnan(curl1) &&
+if(begin_e == NULL && end_e == NULL &&  isnan(w1_x) &&
    end_z1 != end_expression){
   DECLARE_NESTING_CONTROL();
   struct generic_token *begin_point, *end_point;
@@ -5496,9 +5447,12 @@ if(begin_e == NULL && end_e == NULL &&  isnan(w1_x) && isnan(curl1) &&
         w1_x = var.x - z2_point -> x;
         w1_y = var.y - z2_point -> y;
         if(hypot(w1_x * w1_x, w1_y * w1_y) <= 0.00002){
-          w1_x = NAN;
-          w1_y = NAN;
-          curl1 = 1.0;
+#if defined(W_DEBUG_METAFONT)
+          fprintf(stderr, "METAFONT: Error: %s:%d: Could not find a suitable "
+                          "direction specifier.\n",  mf -> file,
+                          begin_j -> line);
+#endif
+          return false;
         }
       }
     }
@@ -5536,13 +5490,15 @@ extremity, we take into account the existance of this variable:
 \iniciocodigo
 @<Path Expression: Choose Shape in Cyclical Join@>+=
 if(begin_d == NULL && end_d == NULL){
-  if(!isnan(first_point_x) && isnan(curl1) && isnan(w1_x)){
+  if(!isnan(first_point_x) && isnan(w1_x)){
     w1_x = first_point_x - z2_point -> x;
     w1_y = first_point_y - z2_point -> y;
     if(hypot(w1_x * w1_x, w1_y * w1_y) <= 0.00002){
-      w1_x = NAN;
-      w1_y = NAN;
-      curl1 = 1.0;
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: Could not find a suitable "
+                      "direction specifier.\n",  mf -> file, begin_j -> line);
+#endif
+      return false;
     }
   }
 }
@@ -5580,15 +5536,37 @@ if(last_join != NULL && last_join -> type == TYPE_JOIN){
       w0_x = z1_point -> x - var.x;
       w0_y = z1_point -> y - var.y;
       if(hypot(w0_x * w0_x, w0_y * w0_y) <= 0.00002){
-        w0_x = NAN;
-        w0_y = NAN;
-        curl0 = 1.0;
+#if defined(W_DEBUG_METAFONT)
+        fprintf(stderr, "METAFONT: Error: %s:%d: Could not find a suitable "
+                        "direction specifier.\n",  mf -> file, begin_j -> line);
+#endif
+        return false;
       }
     }
   }
 }
 @
 \fimcodigo
+
+After applying the rules, we expect to have either defined control
+points or direction specifiers well-defined. If we have neither, we
+raise an error and exit:
+
+\iniciocodigo
+@<Path Expression: Determine Curve Shape@>+=
+if(isnan(u_x) || isnan(u_y) || isnan(v_x) ||  isnan(v_y)){
+  if(isnan(w0_x) || isnan(w0_y) || isnan(w1_x) || isnan(w1_y)){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Could not find a suitable "
+                    "direction specifier.\n",  mf -> file, begin_j -> line);
+#endif
+    return false;
+  }
+}
+@
+\fimcodigo
+
+
 
 
 
