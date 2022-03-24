@@ -4913,7 +4913,7 @@ agora as variáveis que irão armazenar os valores:
 @<Expressão de Caminho: Interpreta Junção@>=
 float tension0 = NAN, tension1 = NAN, u_x = NAN, u_y = NAN, v_x = NAN,
       v_y = NAN;
-bool atleast0, atleast1; // Se a tensão é só um limite inferior
+bool atleast0 = false, atleast1 = false; // Se a tensão é só um limite inferior
 @
 \fimcodigo
 
@@ -5626,6 +5626,312 @@ if(isnan(u_x) || isnan(u_y) || isnan(v_x) ||  isnan(v_y)){
 @
 \fimcodigo
 
+Se tudo deu certo até aqui, ou já temos os nossos pontos de controle,
+ou então temos que descobrir quais são os pontos de controle por meio
+de uma construção como a abaixo:
+
+$$
+z_n\{w_n\}..\ {\hskip2mm \monoespaco{tension}\hskip2mm } \alpha {\hskip2mm \monoespaco{and}\hskip2mm } \beta .. \{w_{n+1}\}z_{n+1}
+$$
+
+Para calcular os pontos de controle à partir destas informações,
+tratamos os pontos como números complexos e calculamos:
+
+$$
+\theta = arg(w_n/(z_{n+1}-z_n))
+$$
+
+$$
+\phi = arg((z_{n+1}-z_n)/w_{n+1})
+$$
+
+Em seguida, os pontos de controle $u$ e $v$ são:
+
+$$
+u = z_{n} + e^{i\theta}(z_{n+1}-z_n)f(\theta, \phi)/\alpha
+$$
+
+$$
+v = z_{n+1} - e^{-i\phi}(z_{n+1}-z_n)f(\phi, \theta)/\beta
+$$
+
+Exceto quando é usada a palavra-chave ``atleast'', o que significa que
+o valor de $\alpha$ ou $\beta$ é aumentado de modo que o resultado
+fique dentro da área delimitada pelo triângulo cujos dois pontos são
+os pontos de extremidade e o ângulo em cada um destes pontos é dado
+pelo especificador de direção. Caso isso não forme um triângulo
+válido, mantemos os valores de tensão sem os modificar.
+
+A função $f$ que aparece acima é definida como:
+
+$$
+f(\theta, \phi) = {{2+\sqrt{2}(\sin\theta-{{1}\over{16}}\sin\phi)(\sin\phi-{{1}\over{16}}\sin\theta)(\cos\theta-\cos\phi)}\over{3(1+{1\over 2}(\sqrt 5 - 1)\cos\theta+{1\over 2}(3-\sqrt 5)\cos\phi)}}
+$$
+
+Primeiro vamos implementar a função $f$ como uma função auxiliar:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+double compute_f(double theta, double phi);
+@
+\fimcodigo
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+double compute_f(double theta, double phi){
+  double n = 2 + sqrt(2) * (sin(theta) - 0.0625 * sin(phi)) *
+             (sin(phi) - 0.0625 * sin(theta)) * (cos(theta) - cos(phi));
+  double d = 3 * (1 + 0.5 * (sqrt(5) - 1) * cos(theta) + 0.5 * (3 - sqrt(5)) *
+                  cos(phi));
+  return n/d;
+}
+@
+\fimcodigo
+
+Agora podemos calcular os pontos de controle caso ainda não tenhamos
+eles. Como devemos tratar os pontos como números complexos, vamos
+precisar do seguinte cabeçalho:
+
+\iniciocodigo
+@<Cabeçalhos Locais (metafont.c)@>+=
+#include <complex.h>
+@
+\fimcodigo
+
+E com ajuda das funções da biblioteca padrão para números complexos,
+calculamos a fórmula para os pontos de controle:
+
+\iniciocodigo
+@<Expressão de Caminho: Decide Forma da Curva@>+=
+if(isnan(u_x) || isnan(u_y) || isnan(v_x) ||  isnan(v_y)){
+  double complex u, v;
+  double complex z0 = z1_point -> x + z1_point -> y * I;
+  double complex z1 = z2_point -> x + z2_point -> y * I;
+  double theta = carg(z0 / (z1 - z0));
+  double phi = carg((z1 - z0)/z1);
+  u = z0 + (cexp(theta * I) * (z1 - z0) * compute_f(theta, phi)) / tension0;
+  v = z1 - (cexp(-phi * I) * (z1 - z0) * compute_f(phi, theta)) / tension1;
+  u_x = creal(u);
+  u_y = cimag(u);
+  v_x = creal(v);
+  v_y = cimag(v);
+  @<Ajusta Tensão em Caso de 'atleast'@>
+}
+@
+\fimcodigo
+
+Vamos agora tratar o caso de termos encontrado a palavra-chave
+``atleast''. Se ela existir, o ponto de controle correspondente deve,
+se possível, ser ajustado para estar dentro do triângulo delimitado
+pelos dois pontos de extremidade e pelos ângulos definidos pelos seus
+especificadores de direção.
+
+A primeira coisa que teremos que calcular é se temos um triângulo
+válido. Para isso devemos checar os seus ângulos internos. Dados três
+pares de coordenadas, sendo o primeiro par um vértice onde queremos
+medir o ângulo, podemos calcular o ângulo existente ali com ajuda da
+seguinte função auxiliar:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+double get_angle(double v_x, double v_y, double c0_x, double c0_y,
+                 double c1_x, double c1_y);
+@
+\fimcodigo
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+double get_angle(double v_x, double v_y, double c0_x, double c0_y,
+                 double c1_x, double c1_y){
+  double v0_x, v0_y, v1_x, v1_y;
+  v0_x = c0_x - v_x;
+  v0_y = c0_y - v_y;
+  v1_x = c1_x - v_x;
+  v1_y = c1_y - v_y;
+  if(abs(v0_x) <= 0.00002 &&  abs(v0_y) <= 0.00002)
+    return INFINITY;
+  if(abs(v1_x) <= 0.00002 &&  abs(v1_y) <= 0.00002)
+    return INFINITY;
+  return acos((v0_x * v1_x + v0_y * v1_y) /
+                (hypot(v0_x * v0_x, v0_y * v0_y) *
+                 hypot(v1_x * v1_x, v1_y * v1_y)));
+}
+@
+\fimcodigo
+
+Sabendo medir os ângulos podemos verificar se o triângulo é
+válido. Sabendo fazer isso, podemos escrever uma função que ajusta o
+valor do ponto de controle para o valor adequado de modo a permanecer
+dentro do triângulo. Primeiro medimos e obtemos todos os ângulos
+internos. Depois, para descobrir a coordenada do terceiro vértice do
+triângulo (os dois outros vértices são pontos de extremidade) usamos a
+Lei do Senos. Sabendo quais são os vértices todos, verificamos se os
+pontos de controle estão dentro do triângulo. E somente se não
+estiver, fazemos o ajuste:
+
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+void correct_tension(double p0_x, double p0_y, double p1_x, double p1_y,
+                     double d0_x, double d0_y, double d1_x, double d1_y,
+                     float *control_x, float *control_y);
+@
+\fimcodigo
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+void correct_tension(double p0_x, double p0_y, double p1_x, double p1_y,
+                     double d0_x, double d0_y, double d1_x, double d1_y,
+                     float *control_x, float *control_y){
+  double internal_angle0, internal_angle1, internal_angle2;
+  double triangle_angle;
+  double p2_x, p2_y;
+  internal_angle0 = get_angle(p0_x, p0_y, p1_x, p1_y, p0_x + d0_x, p0_y + d0_y);
+  internal_angle1 = get_angle(p1_x, p1_y, p0_x, p0_y, p1_x + d1_x, p1_y + d1_y);
+  internal_angle2 = M_PI - internal_angle0 - internal_angle1;
+  if(internal_angle0 + internal_angle1 >= M_PI - 0.00002)
+    return; // Não é triângulo válido
+  { // Descobrir coordenada do terceiro vértice:
+    // Primeiro calculamos o lado do triângulo que vai de p0 ao vértice
+    // desconhecido
+    double known_side = hypot((p1_x - p0_x) * (p1_x - p0_x),
+                              (p1_y - p0_y) * (p1_y - p0_y));
+    double triangle_side = known_side * sin(internal_angle0) /
+                           sin(internal_angle2);
+    // Conhecendo o tamanho do lado do triângulo, basta combinar com o
+    // ângulo e chegamos ao vértice desconhecido:
+    triangle_angle = get_angle(p0_x, p0_y, p1_x, p1_y, p0_x + 1.0, p0_y);
+    p2_x = p0_x + triangle_side * cos(triangle_angle + internal_angle0);
+    p2_y = p0_y + triangle_side * sin(triangle_angle + internal_angle0);
+  }
+  {
+    @<Checa se Ponto Está Dentro do Triângulo@>
+    @<Se Não Estiver, Ajusta Tensão para Ficar@>
+  }
+}
+@
+\fimcodigo
+
+Como checar se um ponto está dentro de um triângulo? Há várias formas,
+a que usaremos consiste em medir a área com sinal dos três novos
+triângulos formados pelo ponto e dois vértices do triângulo. A ``área
+com sinal'' é a área do triângulo, só que ela tem valor positivo ou
+negativo dependendo se passamos os vértices no sentido horário ou
+anti-horário. Em seguida, apenas verificamos se todas as áreas tem o
+mesmo sinal (positivo ou negativo). Se tiver, então o ponto certamente
+está fora. Caso contrário, o ponto está dentro do triângulo:
+
+\iniciocodigo
+@<Checa se Ponto Está Dentro do Triângulo@>=
+bool s1, s2, s3; // O sinal das áreas
+s1 = ((*control_x - p1_x) * (p0_y - p1_y) -
+      (p0_x - p1_x) * (*control_y - p1_y)) < 0;
+s2 = ((*control_x - p2_x) * (p1_y - p2_y) -
+      (p1_x - p2_x) * (*control_y - p2_y)) < 0;
+s3 = ((*control_x - p0_x) * (p2_y - p0_y) -
+      (p2_x - p0_x) * (*control_y - p0_y)) < 0;
+if(s1 == s2 && s2 == s3)
+  return;
+@
+\fimcodigo
+
+Uma vantagem deste método é que dependendo de qual área com sinal tem
+um sinal diferente das outras, isso determina qual dos lados do
+triângulo é mais próximo do ponto. Então, se ainda estivermos na
+função, checamos qual é o lado mais próximo, obtemos sua equação de
+reta e calculamos o ponto mais próximo na reta. Se o ponto estiver no
+lado do triângulo, este é o novo ponto do ponto de controle. Se não, o
+ponto de controle se torna a extremidade do triângulo mais próxima do
+ponto.
+
+\iniciocodigo
+@<Se Não Estiver, Ajusta Tensão para Ficar@>=
+{
+  double x0, y0, x1, y1;
+  if(s1 != s2 && s1 != s3){
+    x0 = p0_x; y0 = p0_y;
+    x1 = p1_x; y1 = p1_y;
+  }
+  else if(s2 != s1 && s2 != s3){
+    x0 = p1_x; y0 = p1_y;
+    x1 = p2_x; y1 = p2_y;
+  }
+  else{
+    x0 = p2_x; y0 = p2_y;
+    x1 = p0_x; y1 = p0_y;
+  }
+  if(x1 < x0){ // x1 deve ser maior ou igual a x0
+    double tmp;
+    tmp = x1 ; x1 = x0; x0 = tmp;
+    tmp = y1; y1 = y0; y0 = tmp;
+  }
+  if(x0 == x1){ // Reta vertical (equação da reta daria divisão por zero)
+    *control_x = x0;
+    if(*control_y > y0 && *control_y > y1){
+      if(y0 > y1)
+        *control_y = y0;
+      else
+        *control_y = y1;
+    }
+    else if(*control_y < y0 && *control_y < y1){
+      if(y0 < y1)
+        *control_y = y0;
+      else
+        *control_y = y1;
+    }
+  }
+  else if(y0 == y1) // Reta horizontal
+    *control_y = y0;
+  else{ // Usar equação da reta
+    // m0 x + b0 = y é a reta que contém o lado do triângulo
+    double m0 = (y1 - y0) / (x1 - x0);
+    double b0 = y1 - m0 * x1;
+    // m1 x + b1 = y é a perpendicular ao lado do triângulo e passa pelo ponto
+    double m1 = - m0;
+    double b1 = *control_y - m1 * *control_x;
+    *control_x = (b1 - b0) / (m0 - m1);
+    *control_y = m0 * *control_x + b0;
+  }
+  if(*control_x > x1){
+    *control_x = x1;
+    *control_y = y1;
+  }
+  else if(*control_x < x0){
+    *control_x = x0;
+    *control_y = y0;
+  }
+}
+@
+\fimcodigo
+
+Isso finaliza a nossa função para ajustar a tensão caso estejamos
+lidando com pontos de controle com a palavra-chave
+``\monoespaco{atleast}''. Agora podemos apenas usar esta função sempre
+que estivermos lidando com um caso assim:
+
+\iniciocodigo
+@<Ajusta Tensão em Caso de 'atleast'@>=
+if(atleast0)
+  correct_tension(z1_point -> x, z1_point -> y, z2_point -> x, z2_point -> y,
+                  w0_x, w0_y, w1_x, w1_y, &u_x, &u_y);
+if(atleast1)
+  correct_tension(z1_point -> x, z1_point -> y, z2_point -> x, z2_point -> y,
+                  w0_x, w0_y, w1_x, w1_y, &v_x, &v_y);
+@
+\fimcodigo
+
+E com isso terminamos de calcular os pontos de controle e podemos
+atualizar seu valor na variável de caminho que estamos montando ao
+avaliar a expressão:
+
+\iniciocodigo
+@<Expressão de Caminho: Decide Forma da Curva@>+=
+result -> points[result -> length].u_x = u_x;
+result -> points[result -> length].u_y = u_y;
+result -> points[result -> length].v_x = v_x;
+result -> points[result -> length].v_y = v_y;
+@
+\fimcodigo
 
 \secao{Referências}
 

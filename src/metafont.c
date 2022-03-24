@@ -18,7 +18,11 @@
 #line 1775 "weaver-interface-metafont_en.tex"
 
 #include <math.h> 
-/*:79*/
+/*:79*//*224:*/
+#line 5635 "weaver-interface-metafont_en.tex"
+
+#include <complex.h> 
+/*:224*/
 #line 199 "weaver-interface-metafont_en.tex"
 
 /*82:*/
@@ -472,7 +476,22 @@ bool eval_direction_specifier(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
 struct generic_token*end,float*w_x,
 float*w_y);
-/*:195*/
+/*:195*//*222:*/
+#line 5613 "weaver-interface-metafont_en.tex"
+
+double compute_f(double theta,double phi);
+/*:222*//*226:*/
+#line 5669 "weaver-interface-metafont_en.tex"
+
+double get_angle(double v_x,double v_y,double c0_x,double c0_y,
+double c1_x,double c1_y);
+/*:226*//*228:*/
+#line 5703 "weaver-interface-metafont_en.tex"
+
+void correct_tension(double p0_x,double p0_y,double p1_x,double p1_y,
+double d0_x,double d0_y,double d1_x,double d1_y,
+float*control_x,float*control_y);
+/*:228*/
 #line 203 "weaver-interface-metafont_en.tex"
 
 /*13:*/
@@ -3093,7 +3112,7 @@ return false;
 
 float tension0= NAN,tension1= NAN,u_x= NAN,u_y= NAN,v_x= NAN,
 v_y= NAN;
-bool atleast0,atleast1;
+bool atleast0= false,atleast1= false;
 /*:200*//*201:*/
 #line 4878 "weaver-interface-metafont_en.tex"
 
@@ -3327,7 +3346,7 @@ struct generic_token*begin_last_spec= NULL,*end_last_spec= NULL,
 *last_join= NULL,*p;
 DECLARE_NESTING_CONTROL();
 p= end_z2;
-while(p->type!=end_expression){
+while(p!=end_expression){
 if(IS_NOT_NESTED()&&p->type==TYPE_OPEN_BRACES)
 begin_last_spec= p;
 COUNT_NESTING(p);
@@ -3478,7 +3497,42 @@ fprintf(stderr,"METAFONT: Error: %s:%d: Could not find a suitable "
 return false;
 }
 }
-/*:221*/
+/*:221*//*225:*/
+#line 5644 "weaver-interface-metafont_en.tex"
+
+if(isnan(u_x)||isnan(u_y)||isnan(v_x)||isnan(v_y)){
+double complex u,v;
+double complex z0= z1_point->x+z1_point->y*I;
+double complex z1= z2_point->x+z2_point->y*I;
+double theta= carg(z0/(z1-z0));
+double phi= carg((z1-z0)/z1);
+u= z0+(cexp(theta*I)*(z1-z0)*compute_f(theta,phi))/tension0;
+v= z1-(cexp(-phi*I)*(z1-z0)*compute_f(phi,theta))/tension1;
+u_x= creal(u);
+u_y= cimag(u);
+v_x= creal(v);
+v_y= cimag(v);
+/*232:*/
+#line 5839 "weaver-interface-metafont_en.tex"
+
+if(atleast0)
+correct_tension(z1_point->x,z1_point->y,z2_point->x,z2_point->y,
+w0_x,w0_y,w1_x,w1_y,&u_x,&u_y);
+if(atleast1)
+correct_tension(z1_point->x,z1_point->y,z2_point->x,z2_point->y,
+w0_x,w0_y,w1_x,w1_y,&v_x,&v_y);
+/*:232*/
+#line 5657 "weaver-interface-metafont_en.tex"
+
+}
+/*:225*//*233:*/
+#line 5853 "weaver-interface-metafont_en.tex"
+
+result->points[result->length].u_x= u_x;
+result->points[result->length].u_y= u_y;
+result->points[result->length].v_x= v_x;
+result->points[result->length].v_y= v_y;
+/*:233*/
 #line 4450 "weaver-interface-metafont_en.tex"
 
 /*206:*/
@@ -3603,7 +3657,139 @@ return true;
 
 return false;
 }
-/*:196*/
+/*:196*//*223:*/
+#line 5619 "weaver-interface-metafont_en.tex"
+
+double compute_f(double theta,double phi){
+double n= 2+sqrt(2)*(sin(theta)-0.0625*sin(phi))*
+(sin(phi)-0.0625*sin(theta))*(cos(theta)-cos(phi));
+double d= 3*(1+0.5*(sqrt(5)-1)*cos(theta)+0.5*(3-sqrt(5))*
+cos(phi));
+return n/d;
+}
+/*:223*//*227:*/
+#line 5676 "weaver-interface-metafont_en.tex"
+
+double get_angle(double v_x,double v_y,double c0_x,double c0_y,
+double c1_x,double c1_y){
+double v0_x,v0_y,v1_x,v1_y;
+v0_x= c0_x-v_x;
+v0_y= c0_y-v_y;
+v1_x= c1_x-v_x;
+v1_y= c1_y-v_y;
+if(abs(v0_x)<=0.00002&&abs(v0_y)<=0.00002)
+return INFINITY;
+if(abs(v1_x)<=0.00002&&abs(v1_y)<=0.00002)
+return INFINITY;
+return acos((v0_x*v1_x+v0_y*v1_y)/
+(hypot(v0_x*v0_x,v0_y*v0_y)*
+hypot(v1_x*v1_x,v1_y*v1_y)));
+}
+/*:227*//*229:*/
+#line 5711 "weaver-interface-metafont_en.tex"
+
+void correct_tension(double p0_x,double p0_y,double p1_x,double p1_y,
+double d0_x,double d0_y,double d1_x,double d1_y,
+float*control_x,float*control_y){
+double internal_angle0,internal_angle1,internal_angle2;
+double triangle_angle;
+double p2_x,p2_y;
+internal_angle0= get_angle(p0_x,p0_y,p1_x,p1_y,p0_x+d0_x,p0_y+d0_y);
+internal_angle1= get_angle(p1_x,p1_y,p0_x,p0_y,p1_x+d1_x,p1_y+d1_y);
+internal_angle2= M_PI-internal_angle0-internal_angle1;
+if(internal_angle0+internal_angle1>=M_PI-0.00002)
+return;
+{
+
+double known_side= hypot((p1_x-p0_x)*(p1_x-p0_x),
+(p1_y-p0_y)*(p1_y-p0_y));
+double triangle_side= known_side*sin(internal_angle0)/
+sin(internal_angle2);
+
+triangle_angle= get_angle(p0_x,p0_y,p1_x,p1_y,p0_x+1.0,p0_y);
+p2_x= p0_x+triangle_side*cos(triangle_angle+internal_angle0);
+p2_y= p0_y+triangle_side*sin(triangle_angle+internal_angle0);
+}
+{
+/*230:*/
+#line 5753 "weaver-interface-metafont_en.tex"
+
+bool s1,s2,s3;
+s1= ((*control_x-p1_x)*(p0_y-p1_y)-
+(p0_x-p1_x)*(*control_y-p1_y))<0;
+s2= ((*control_x-p2_x)*(p1_y-p2_y)-
+(p1_x-p2_x)*(*control_y-p2_y))<0;
+s3= ((*control_x-p0_x)*(p2_y-p0_y)-
+(p2_x-p0_x)*(*control_y-p0_y))<0;
+if(s1==s2&&s2==s3)
+return;
+/*:230*/
+#line 5735 "weaver-interface-metafont_en.tex"
+
+/*231:*/
+#line 5775 "weaver-interface-metafont_en.tex"
+
+{
+double x0,y0,x1,y1;
+if(s1!=s2&&s1!=s3){
+x0= p0_x;y0= p0_y;
+x1= p1_x;y1= p1_y;
+}
+else if(s2!=s1&&s2!=s3){
+x0= p1_x;y0= p1_y;
+x1= p2_x;y1= p2_y;
+}
+else{
+x0= p2_x;y0= p2_y;
+x1= p0_x;y1= p0_y;
+}
+if(x1<x0){
+double tmp;
+tmp= x1;x1= x0;x0= tmp;
+tmp= y1;y1= y0;y0= tmp;
+}
+if(x0==x1){
+*control_x= x0;
+if(*control_y> y0&&*control_y> y1){
+if(y0> y1)
+*control_y= y0;
+else
+*control_y= y1;
+}
+else if(*control_y<y0&&*control_y<y1){
+if(y0<y1)
+*control_y= y0;
+else
+*control_y= y1;
+}
+}
+else if(y0==y1)
+*control_y= y0;
+else{
+
+double m0= (y1-y0)/(x1-x0);
+double b0= y1-m0*x1;
+
+double m1= -m0;
+double b1= *control_y-m1**control_x;
+*control_x= (b1-b0)/(m0-m1);
+*control_y= m0**control_x+b0;
+}
+if(*control_x> x1){
+*control_x= x1;
+*control_y= y1;
+}
+else if(*control_x<x0){
+*control_x= x0;
+*control_y= y0;
+}
+}
+/*:231*/
+#line 5736 "weaver-interface-metafont_en.tex"
+
+}
+}
+/*:229*/
 #line 204 "weaver-interface-metafont_en.tex"
 
 /*8:*/
