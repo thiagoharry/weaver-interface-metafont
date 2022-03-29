@@ -4347,11 +4347,8 @@ bool eval_path_expression(struct metafont *mf, struct context *cx,
 \fimcodigo
 
 Knowing the number of joins is the first step to discover the size of
-our new variable and how should we allocate space for it. If we have a
-cyclic path (expression ending with \monoespaco{cycle} token), then
-the number of points to be allocated is equal the number of
-joins. Otherwise, the number of points is equal the number of joins
-plus 1:
+our new variable and how should we allocate space for it. The number
+of points is always the number of joins plus one:
 
 \iniciocodigo
 @<Auxiliary Local Functions (metafont.c)@>+=
@@ -4361,10 +4358,7 @@ bool eval_path_expression(struct metafont *mf, struct context *cx,
                           struct path_variable *result){
   int expected_length;
   int number_of_joins = count_path_joins(begin_expression, end_expression);
-  if(end_expression -> type == TYPE_CYCLE)
-    expected_length = number_of_joins;
-  else
-    expected_length = number_of_joins + 1;
+  expected_length = number_of_joins + 1;
   @<Path Expression: When There is No Joins@>
   @<Path Expression: Allocating Path Variable@>
   @<Path Expression: Iterating over Joins@>
@@ -4451,9 +4445,6 @@ will iterate over each join in the format above:
     @<Path Expression: End of Each Iteration@>
     begin_z1 = begin_z2;
     end_z1 = end_z2;
-  }
-  if(end_expression -> type == TYPE_CYCLE){
-    @<Path Expression: Choose Shape in Cyclical Join@>
   }
 }
 @
@@ -4664,11 +4655,22 @@ if(begin_z1 == begin_expression){
 @
 \fimcodigo
 
-And we need to do the same with $z_2$, the other extremity:
+And we need to do the same with $z_2$, the other extremity. But in
+this case, we need to recall that the next point may be
+a \monoespaco{cycle} token. If so, we copy the first point. Otherwise,
+we interpret the value like we did for $z_1$:
 
 \iniciocodigo
 @<Path Expression: Interpret Join Extremities@>+=
-{
+if(begin_z2 == end_z2 && begin_z2 -> type == TYPE_CYCLE){
+  struct path_points *p = result -> points;
+  while(p[0].subpath != NULL)
+    p = ((struct path_variable *) p[0].subpath) -> points;
+  result -> points[result -> length].subpath = NULL;
+  result -> points[result -> length].x = p[0].x;
+  result -> points[result -> length].y = p[0].y;
+}
+else{
   //bool ret;
   struct path_variable z2;
   //ret = eval_path_tertiary(mf, cx, begin_z2, end_z2, &z2);
@@ -5287,13 +5289,13 @@ if(begin_z1 == begin_expression && end_expression -> type == TYPE_CYCLE &&
 @
 \fimcodigo
 
-After,when we need to choose the shape when joining the cyclic
-extremities, we will take into account the stored value:
+After, when we arrive at the last iteration of a cyclic path, we will
+take into account the stored value:
 
 \iniciocodigo
-@<Path Expression: Choose Shape in Cyclical Join@>=
-if(begin_d == NULL && end_d == NULL){
-  if(!isnan(first_w_x)){
+@<Path Expression: Determine Curve Shape@>+=
+if(begin_z2 == end_z2 && begin_z2 -> type == TYPE_CYCLE){
+  if(!isnan(first_w_x) && isnan(w1_x)){
     w1_x = first_w_x;
     w1_y = first_w_y;
   }
@@ -5488,18 +5490,17 @@ After, when we need to choose the shape of the join in the cyclic
 extremity, we take into account the existance of this variable:
 
 \iniciocodigo
-@<Path Expression: Choose Shape in Cyclical Join@>+=
-if(begin_d == NULL && end_d == NULL){
-  if(!isnan(first_point_x) && isnan(w1_x)){
-    w1_x = first_point_x - z2_point -> x;
-    w1_y = first_point_y - z2_point -> y;
-    if(hypot(w1_x * w1_x, w1_y * w1_y) <= 0.00002){
+@<Path Expression: Determine Curve Shape@>+=
+if(begin_z2 == end_z2 && begin_z2 -> type == TYPE_CYCLE && begin_d == NULL &&
+   end_d == NULL && isnan(w1_x) && !isnan(first_point_x) && isnan(w1_x)){
+  w1_x = first_point_x - z2_point -> x;
+  w1_y = first_point_y - z2_point -> y;
+  if(hypot(w1_x * w1_x, w1_y * w1_y) <= 0.00002){
 #if defined(W_DEBUG_METAFONT)
-      fprintf(stderr, "METAFONT: Error: %s:%d: Could not find a suitable "
-                      "direction specifier.\n",  mf -> file, begin_j -> line);
+    fprintf(stderr, "METAFONT: Error: %s:%d: Could not find a suitable "
+                    "direction specifier.\n",  mf -> file, begin_j -> line);
 #endif
-      return false;
-    }
+    return false;
   }
 }
 @
@@ -5858,9 +5859,8 @@ result -> points[result -> length].v_y = v_y;
 @
 \fimcodigo
 
-
-
-
+This finalizes how a curve should be built given its points and
+subpaths. Now we will see how we read the points and subpaths.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

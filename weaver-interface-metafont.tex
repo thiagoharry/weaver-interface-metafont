@@ -4396,10 +4396,8 @@ bool eval_path_expression(struct metafont *mf, struct context *cx,
 
 Saber o número de junções é o primeiro passo para saber o tamanho da
 variável de caminho que estamos gerando e saber como alocar espaço
-para ela. Se temos uma expressão de caminho cíclico (o último token
-é \monoespaco{cycle}), então o número de pontos que alocaremos é igual
-ao número de junções. Se não for cíclico, iremos alocar igual ao
-número de junções mais um:
+para ela. O número de elementos (pontos e sub-caminhos) de uma
+variável de caminho é sempre igual ao número de junções mais um:
 
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
@@ -4409,10 +4407,7 @@ bool eval_path_expression(struct metafont *mf, struct context *cx,
                           struct path_variable *result){
   int expected_length;
   int number_of_joins = count_path_joins(begin_expression, end_expression);
-  if(end_expression -> type == TYPE_CYCLE)
-    expected_length = number_of_joins;
-  else
-    expected_length = number_of_joins + 1;
+  expected_length = number_of_joins + 1;
   @<Expressão de Caminho: Quando Não Há Junção@>
   @<Expressão de Caminho: Alocar Variável de Caminho@>
   @<Expressão de Caminho: Itera sobre Junções@>
@@ -4501,9 +4496,6 @@ cada uma das junções no formato acima para interpretá-las:
     @<Expressão de Caminho: Fim de Cada Iteração@>
     begin_z1 = begin_z2;
     end_z1 = end_z2;
-  }
-  if(end_expression -> type == TYPE_CYCLE){
-    @<Expressão de Caminho: Escolhe Forma da Junção Cíclica@>
   }
 }
 @
@@ -4713,11 +4705,23 @@ if(begin_z1 == begin_expression){
 @
 \fimcodigo
 
-E devemos fazer o mesmo com a outra extremidade da junção: $z_2$:
+E devemos fazer o mesmo com a outra extremidade da junção: $z_2$. Para
+este caso, devemos levar em conta que podemos estar diante de um
+token \texttt{cycle} ou de um ponto ou sub-caminho normal. Se for um
+token \monoespaco{cycle}, devemos copiar o primeiro ponto. Caso
+contrário, fazemos tal como fizemos para obter o $z_1$:
 
 \iniciocodigo
 @<Expressão de Caminho: Interpreta Extremidades da Junção@>+=
-{
+if(begin_z2 == end_z2 && begin_z2 -> type == TYPE_CYCLE){
+  struct path_points *p = result -> points;
+  while(p[0].subpath != NULL)
+    p = ((struct path_variable *) p[0].subpath) -> points;
+  result -> points[result -> length].subpath = NULL;
+  result -> points[result -> length].x = p[0].x;
+  result -> points[result -> length].y = p[0].y;
+}
+else{
   //bool ret;
   struct path_variable z2;
   //ret = eval_path_tertiary(mf, cx, begin_z2, end_z2, &z2);
@@ -5344,13 +5348,13 @@ if(begin_z1 == begin_expression && end_expression -> type == TYPE_CYCLE &&
 @
 \fimcodigo
 
-Depois, quando chegar a hora de escolher o formato da junção das
-extremidades cíclicas, vamos levar isso em conta:
+Depois, quando chegarmos na última iteração de um caminho cíclico,
+vamos levar estes valores em conta:
 
 \iniciocodigo
-@<Expressão de Caminho: Escolhe Forma da Junção Cíclica@>=
-if(begin_d == NULL && end_d == NULL){
-  if(!isnan(first_w_x)){
+@<Expressão de Caminho: Decide Forma da Curva@>+=
+if(begin_z2 == end_z2 && begin_z2 -> type == TYPE_CYCLE){
+  if(!isnan(first_w_x) && isnan(w1_x)){
     w1_x = first_w_x;
     w1_y = first_w_y;
   }
@@ -5548,18 +5552,17 @@ Depois, quando chegar a hora de escolher o formato da junção das
 extremidades cíclicas, levaremos a existência desta variável em conta:
 
 \iniciocodigo
-@<Expressão de Caminho: Escolhe Forma da Junção Cíclica@>+=
-if(begin_d == NULL && end_d == NULL){
-  if(!isnan(first_point_x) && isnan(w1_x)){
-    w1_x = first_point_x - z2_point -> x;
-    w1_y = first_point_y - z2_point -> y;
-    if(hypot(w1_x * w1_x, w1_y * w1_y) <= 0.00002){
+@<Expressão de Caminho: Decide Forma da Curva@>+=
+if(begin_z2 == end_z2 && begin_z2 -> type == TYPE_CYCLE && begin_d == NULL &&
+   end_d == NULL && isnan(w1_x) && !isnan(first_point_x) && isnan(w1_x)){
+  w1_x = first_point_x - z2_point -> x;
+  w1_y = first_point_y - z2_point -> y;
+  if(hypot(w1_x * w1_x, w1_y * w1_y) <= 0.00002){
 #if defined(W_DEBUG_METAFONT)
-      fprintf(stderr, "METAFONT: Error: %s:%d: Could not find a suitable "
-                      "direction specifier.\n",  mf -> file, begin_j -> line);
+    fprintf(stderr, "METAFONT: Error: %s:%d: Could not find a suitable "
+                    "direction specifier.\n",  mf -> file, begin_j -> line);
 #endif
-      return false;
-    }
+    return false;
   }
 }
 @
@@ -5932,6 +5935,10 @@ result -> points[result -> length].v_x = v_x;
 result -> points[result -> length].v_y = v_y;
 @
 \fimcodigo
+
+Isso finaliza a construção de uma curva dados seus pontos e
+subcaminhos lidos. Agora iremos estabelecer como ler os pontos e
+subcaminhos.
 
 \secao{Referências}
 
