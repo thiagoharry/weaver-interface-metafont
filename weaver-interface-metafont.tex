@@ -4175,10 +4175,10 @@ usamos o código abaixo:
 else if(type == TYPE_T_PATH){
   int i;
   struct path_variable result;
-  //if(!eval_path_expression(mf, cx, begin_expression,
-  //                         (struct generic_token *) *end_token_list,
-  //                         &result))
-  //  return false;
+  if(!eval_path_expression(mf, cx, begin_expression,
+                           (struct generic_token *) *end_token_list,
+                           &result))
+    return false;
   var = (struct symbolic_token *) begin_token_list;
   for(i = 0; i < number_of_variables; i ++){
     assign_path_variable(mf, (struct path_variable *) var -> var,
@@ -4291,7 +4291,7 @@ Vejamos agora a expressões que existem para expressões de caminhos:
 A gramática para a expressão de caminhos começa com:
 
 \alinhaverbatim
-<Expressão de Caminho> -> <Expressão de Par> | <Caminho Terciário> |
+<Expressão de Caminho> -> <Expressão de Par> | <Terciário de Caminho> |
                           <Sub-expressão de Caminho><Especificador de Direção> |
                           <Sub-expressão de Caminho><Junção de Caminho> cycle
 <Junção de Caminho> -> <Especificador de Direção><Junção Básica>
@@ -4307,7 +4307,7 @@ A gramática para a expressão de caminhos começa com:
                               { <Expressão Numérica> , <Expressão Numérica> }
 <Sub-expressão de Caminho> -> <Expressão de Caminho> |
                               <Sub-expressão de Caminho><Junção de Caminho>
-                              <Caminho Terciário>
+                              <Terciário de Caminho>
 \alinhanormal
 
 Tudo isso requer que registremos os seguintes novos tipos de tokens:
@@ -4439,8 +4439,8 @@ if(number_of_joins == 0){
     }
     end_expression = p;
   }
-  //return eval_path_tertiary(mf, cx, begin_expression, end_expression, result);
-  return false;
+  return eval_path_tertiary(mf, cx, begin_expression, end_expression,
+                            result);
 }
 @
 \fimcodigo
@@ -4687,11 +4687,11 @@ demais casos ela já foi obtida na iteração anterior:
 \iniciocodigo
 @<Expressão de Caminho: Interpreta Extremidades da Junção@>=
 if(begin_z1 == begin_expression){
-  //bool ret;
+  bool ret;
   struct path_variable z1;
-  //ret = eval_path_tertiary(mf, cx, begin_z1, end_z1, &z1);
-  //if(!ret)
-  //  return false;
+  ret = eval_path_tertiary(mf, cx, begin_z1, end_z1, &z1);
+  if(!ret)
+    return false;
   if(z1.length == 1 && z1.points[0].subpath == 0){
     result -> points[0].subpath = NULL;
     result -> points[0].x = z1.points[0].x;
@@ -4722,11 +4722,11 @@ if(begin_z2 == end_z2 && begin_z2 -> type == TYPE_CYCLE){
   result -> points[result -> length].y = p[0].y;
 }
 else{
-  //bool ret;
+  bool ret;
   struct path_variable z2;
-  //ret = eval_path_tertiary(mf, cx, begin_z2, end_z2, &z2);
-  //if(!ret)
-  //  return false;
+  ret = eval_path_tertiary(mf, cx, begin_z2, end_z2, &z2);
+  if(!ret)
+    return false;
   if(z2.length == 1 && z2.points[0].subpath == 0){
     result -> points[result -> length].subpath = NULL;
     result -> points[result -> length].x = z2.points[0].x;
@@ -5939,6 +5939,89 @@ result -> points[result -> length].v_y = v_y;
 Isso finaliza a construção de uma curva dados seus pontos e
 subcaminhos lidos. Agora iremos estabelecer como ler os pontos e
 subcaminhos.
+
+\subsubsecao{8.3.2. Expressões Terciárias de Caminhos}
+
+A gramática para expressões de caminho terciárias é:
+
+\alinhaverbatim
+<Terciário de Caminho> -> <Terciário de Par> | <Secundário de Caminho>
+\alinhanormal
+
+E é só isso. Então, para interpretar uma expressão terciária de
+caminho, o que faremos é percorrer ela e verificar se encontramos uma
+expressão terciária de par. Se encontrarmos, devemos interpretar a
+expressão inteira como um terciário de par. Caso contrário, a
+interpretaremos como um secundário de caminho. Se interpretarmos tudo
+como um par, devemos também depois converter o resultado de um par
+para um caminho com um único ponto.
+
+De qualquer forma, depois de interpretar a expressão e obter um
+caminho como resultado, nós retornamos o resultado.
+
+A declaração da função é:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+bool eval_path_tertiary(struct metafont *mf, struct context *cx,
+                        struct generic_token *begin_expression,
+                        struct generic_token *end_expression,
+                        struct path_variable *result);
+@
+\fimcodigo
+
+E a sua implementação:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+bool eval_path_tertiary(struct metafont *mf, struct context *cx,
+                        struct generic_token *begin_expression,
+                        struct generic_token *end_expression,
+                        struct path_variable *result){
+  struct generic_token *p, *prev = NULL;
+  bool this_expression_is_pair = false;
+  DECLARE_NESTING_CONTROL();
+  p = begin_expression;
+  do{
+    COUNT_NESTING(p);
+    if(IS_NOT_NESTED() && IS_VALID_SUM_OR_SUB(prev, p)){
+      this_expression_is_pair = true;
+      break;
+    }
+    prev = p;
+    if(p != end_expression)
+      p = (struct generic_token *) p -> next;
+    else
+      p = NULL;
+  }while(p != NULL);
+  if(this_expression_is_pair){
+    struct pair_variable pair;
+    if(!eval_pair_expression(mf, cx, begin_expression, end_expression,
+                            &pair));
+      return false;
+    result -> cyclic = false;
+    result -> length = 1;
+    result -> points = (struct path_points *)
+                         temporary_alloc(sizeof(struct path_points));
+    if(result -> points == NULL){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: Not enough memory!\n",
+              mf -> file, begin_expression -> line);
+#endif
+      return false;
+    }
+    result -> points -> x = pair.x;
+    result -> points -> y = pair.y;
+    return true;
+  }
+  //else
+  //  return eval_path_secundary(mf, cx, begin_expression, end_expression,
+  //                             result);
+  return true;
+}
+@
+\fimcodigo
+
 
 \secao{Referências}
 
