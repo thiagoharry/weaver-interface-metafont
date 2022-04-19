@@ -6108,9 +6108,9 @@ bool eval_path_secundary(struct metafont *mf, struct context *cx,
                             result))
       return false;
     @<Transformação de Caminho: Rotação@>
-    //@<Transformação de Caminho: Escala@>
-    //@<Transformação de Caminho: Deslocamento@>
-    //@<Transformação de Caminho: Inclinação@>
+    @<Transformação de Caminho: Escala@>
+    @<Transformação de Caminho: Deslocamento@>
+    @<Transformação de Caminho: Inclinação@>
     //@<Transformação de Caminho: X-Escala@>
     //@<Transformação de Caminho: Y-Escala@>
     //@<Transformação de Caminho: Z-Escala@>
@@ -6208,14 +6208,148 @@ void path_rotate(struct path_variable *p, double sin_theta,
 @
 \fimcodigo
 
+Agora vamos ao operador que muda a escala de um caminho. Ele deve
+interpretar um valor numérico e depois multiplicar cada ponto do
+caminho por tal valor numérico:
 
+@<Transformação de Caminho: Escala@>=
+if(transform_op -> type == TYPE_SCALED){
+  struct numeric_variable a;
+  if(!eval_numeric_primary(mf, cx, transform_op -> next, end_expression,
+                          &a))
+    return false;
+  path_scale(result, a.value);  
+  return true;
+}
+@
+\fimcodigo
+
+A função recursiva que aplica isso a todos os pontos de um caminho é:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+void path_scale(struct path_variable *p, double scale);
+@
+\fimcodigo
+
+E sua implementação:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+void path_scale(struct path_variable *p, double scale){
+  int i;
+  for(i = 0; i < p -> length; i ++){
+    if(p -> points[i].subpath != NULL)
+      path_scale((struct path_variable *) (p -> points[i].subpath),
+                 scale);
+    else{
+      p -> points[i].x *= scale;
+      p -> points[i].y *= scale;
+      p -> points[i].u_x *= scale;
+      p -> points[i].u_y *= scale;
+      p -> points[i].v_x *= scale;
+      p -> points[i].v_y *= scale;
+    }
+  }
+}
+@
+\fimcodigo
+
+A próxima transformação é uma simples translação ou
+deslocamento. Recebemos um par e este par determina o quanto cada
+ponto deve ser deslocado no eixo $s$ e $y$:
+
+\iniciocodigo
+@<Transformação de Caminho: Deslocamento@>=
+if(transform_op -> type == TYPE_SHIFTED){
+  struct pair_variable a;
+  if(!eval_pair_primary(mf, cx, transform_op -> next, end_expression,
+                          &a))
+    return false;
+  path_shift(result, a.x, a.y);  
+  return true;
+}
+@
+\fimcodigo
+
+E a função recursiva que faz o deslocamento:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+void path_shift(struct path_variable *p, float x, float y);
+@
+\fimcodigo
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+void path_shift(struct path_variable *p, float x, float y){
+  int i;
+  for(i = 0; i < p -> length; i ++){
+    if(p -> points[i].subpath != NULL)
+      path_shift((struct path_variable *) (p -> points[i].subpath), x, y);
+    else{
+      p -> points[i].x += x;
+      p -> points[i].y += y;
+      p -> points[i].u_x += x;
+      p -> points[i].u_y += y;
+      p -> points[i].v_x += x;
+      p -> points[i].v_y += y;
+    }
+  }
+}
+@
+\fimcodigo
+
+Vamos agora à inclinação, o transformador que empurra os pontos mais à
+direita se estiverem acima do 0 no eixo $y$ e mais à esquerda se
+estiverem mais abaixo da origem no eixo $y$:
+
+\iniciocodigo
+@<Transformação de Caminho: Inclinação@>=
+if(transform_op -> type == TYPE_SLANTED){
+  struct numeric_variable a;
+  if(!eval_numeric_primary(mf, cx, transform_op -> next, end_expression,
+                          &a))
+    return false;
+  path_slant(result, a.value);  
+  return true;
+}
+@
+\fimcodigo
+
+E a função recursiva que faz a inclinação em si:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+void path_slant(struct path_variable *p, float s);
+@
+\fimcodigo
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+void path_slant(struct path_variable *p, float s){
+  int i;
+  for(i = 0; i < p -> length; i ++){
+    if(p -> points[i].subpath != NULL)
+      path_slant((struct path_variable *) (p -> points[i].subpath), s);
+    else{
+      p -> points[i].x += s * p -> points[i].y;
+      p -> points[i].u_x += s * p -> points[i].u_y;
+      p -> points[i].v_x += s * p -> points[i].v_y;
+    }
+  }
+}
+@
+\fimcodigo
 
 
 %%%%%%%
 
+
+
 \iniciocodigo
-@<Operador Secundário de Pares: Escala@>=
-else if(last_mul -> type == TYPE_SCALED){
+@<Operador Secundário de Pares: Inclinação@>=
+else if(last_mul -> type == TYPE_SLANTED){
   struct pair_variable a;
   struct numeric_variable b;
   ret = eval_pair_secundary(mf, cx, begin_expression, end_secundary, &a);
@@ -6224,8 +6358,8 @@ else if(last_mul -> type == TYPE_SCALED){
   ret = eval_numeric_primary(mf, cx, begin_primary, end_expression, &b);
   if(!ret)
     return false;
-  result -> x = a.x * b.value;
-  result -> y = a.y * b.value;
+  result -> x = a.x + b.value * a.y;
+  result -> y = a.y;
   return true;
 }
 @

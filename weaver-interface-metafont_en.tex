@@ -6030,9 +6030,9 @@ bool eval_path_secundary(struct metafont *mf, struct context *cx,
     if(!eval_path_secundary(mf, cx, begin_expression, before_transform, result))
       return false;
     @<Path Transform: Rotate@>
-    //@<Transformação de Caminho: Escala@>
-    //@<Transformação de Caminho: Deslocamento@>
-    //@<Transformação de Caminho: Inclinação@>
+    @<Path Transform: Scale@>
+    @<Path Transform: Shift@>
+    @<Path Transform: Slant@>
     //@<Transformação de Caminho: X-Escala@>
     //@<Transformação de Caminho: Y-Escala@>
     //@<Transformação de Caminho: Z-Escala@>
@@ -6122,6 +6122,143 @@ void path_rotate(struct path_variable *p, double sin_theta,
       y = p -> points[i].v_y;
       p -> points[i].v_x = x * cos_theta - y * sin_theta;
       p -> points[i].v_y = x * sin_theta + y * cos_theta;
+    }
+  }
+}
+@
+\fimcodigo
+
+Now we will interpret the scaling operator. It shoult interpret a
+numeric value and then multiply all points in the path by such value:
+
+\iniciocodigo
+@<Path Transform: Scale@>=
+if(transform_op -> type == TYPE_SCALED){
+  struct numeric_variable a;
+  if(!eval_numeric_primary(mf, cx, transform_op -> next, end_expression,
+                          &a))
+    return false;
+  path_scale(result, a.value);  
+  return true;
+}
+@
+\fimcodigo
+
+The recursive function that applies this for every point in the path
+is:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+void path_scale(struct path_variable *p, double scale);
+@
+\fimcodigo
+
+
+And its implementation:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+void path_scale(struct path_variable *p, double scale){
+  int i;
+  for(i = 0; i < p -> length; i ++){
+    if(p -> points[i].subpath != NULL)
+      path_scale((struct path_variable *) (p -> points[i].subpath),
+                 scale);
+    else{
+      p -> points[i].x *= scale;
+      p -> points[i].y *= scale;
+      p -> points[i].u_x *= scale;
+      p -> points[i].u_y *= scale;
+      p -> points[i].v_x *= scale;
+      p -> points[i].v_y *= scale;
+    }
+  }
+}
+@
+\fimcodigo
+
+The next transformer translate, or shift a given path. We first read a
+pair and this pair sets how the path should be shifted in the $x$ and
+$y$ axis:
+
+\iniciocodigo
+@<Path Transform: Shift@>=
+if(transform_op -> type == TYPE_SHIFTED){
+  struct pair_variable a;
+  if(!eval_pair_primary(mf, cx, transform_op -> next, end_expression,
+                          &a))
+    return false;
+  path_shift(result, a.x, a.y);  
+  return true;
+}
+@
+\fimcodigo
+
+And the recursive function that performs the shifting:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+void path_shift(struct path_variable *p, float x, float y);
+@
+\fimcodigo
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+void path_shift(struct path_variable *p, float x, float y){
+  int i;
+  for(i = 0; i < p -> length; i ++){
+    if(p -> points[i].subpath != NULL)
+      path_shift((struct path_variable *) (p -> points[i].subpath), x, y);
+    else{
+      p -> points[i].x += x;
+      p -> points[i].y += y;
+      p -> points[i].u_x += x;
+      p -> points[i].u_y += y;
+      p -> points[i].v_x += x;
+      p -> points[i].v_y += y;
+    }
+  }
+}
+@
+\fimcodigo
+
+Now to the slanting transformer. This transformer shifts to the right
+the points based on how above the origin they are in tha $y$ axis and
+shifts to the left based on how below the origin they are in the $y$
+axis:
+
+\iniciocodigo
+@<Path Transform: Slant@>=
+if(transform_op -> type == TYPE_SLANTED){
+  struct numeric_variable a;
+  if(!eval_numeric_primary(mf, cx, transform_op -> next, end_expression,
+                          &a))
+    return false;
+  path_slant(result, a.value);  
+  return true;
+}
+@
+\fimcodigo
+
+And the function that slants recursively:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+void path_slant(struct path_variable *p, float s);
+@
+\fimcodigo
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+void path_slant(struct path_variable *p, float s){
+  int i;
+  for(i = 0; i < p -> length; i ++){
+    if(p -> points[i].subpath != NULL)
+      path_slant((struct path_variable *) (p -> points[i].subpath), s);
+    else{
+      p -> points[i].x += s * p -> points[i].y;
+      p -> points[i].u_x += s * p -> points[i].u_y;
+      p -> points[i].v_x += s * p -> points[i].v_y;
     }
   }
 }

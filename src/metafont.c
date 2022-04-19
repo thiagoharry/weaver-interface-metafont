@@ -510,7 +510,19 @@ struct path_variable*result);
 
 void path_rotate(struct path_variable*p,double sin_theta,
 double cos_theta);
-/*:239*/
+/*:239*//*242:*/
+#line 6151 "weaver-interface-metafont_en.tex"
+
+void path_scale(struct path_variable*p,double scale);
+/*:242*//*245:*/
+#line 6200 "weaver-interface-metafont_en.tex"
+
+void path_shift(struct path_variable*p,float x,float y);
+/*:245*//*248:*/
+#line 6246 "weaver-interface-metafont_en.tex"
+
+void path_slant(struct path_variable*p,float s);
+/*:248*/
 #line 203 "weaver-interface-metafont_en.tex"
 
 /*13:*/
@@ -3923,8 +3935,47 @@ return true;
 /*:238*/
 #line 6032 "weaver-interface-metafont_en.tex"
 
+/*241:*/
+#line 6135 "weaver-interface-metafont_en.tex"
 
+if(transform_op->type==TYPE_SCALED){
+struct numeric_variable a;
+if(!eval_numeric_primary(mf,cx,transform_op->next,end_expression,
+&a))
+return false;
+path_scale(result,a.value);
+return true;
+}
+/*:241*/
+#line 6033 "weaver-interface-metafont_en.tex"
 
+/*244:*/
+#line 6185 "weaver-interface-metafont_en.tex"
+
+if(transform_op->type==TYPE_SHIFTED){
+struct pair_variable a;
+if(!eval_pair_primary(mf,cx,transform_op->next,end_expression,
+&a))
+return false;
+path_shift(result,a.x,a.y);
+return true;
+}
+/*:244*/
+#line 6034 "weaver-interface-metafont_en.tex"
+
+/*247:*/
+#line 6231 "weaver-interface-metafont_en.tex"
+
+if(transform_op->type==TYPE_SLANTED){
+struct numeric_variable a;
+if(!eval_numeric_primary(mf,cx,transform_op->next,end_expression,
+&a))
+return false;
+path_slant(result,a.value);
+return true;
+}
+/*:247*/
+#line 6035 "weaver-interface-metafont_en.tex"
 
 
 
@@ -3977,7 +4028,59 @@ p->points[i].v_y= x*sin_theta+y*cos_theta;
 }
 }
 }
-/*:240*/
+/*:240*//*243:*/
+#line 6160 "weaver-interface-metafont_en.tex"
+
+void path_scale(struct path_variable*p,double scale){
+int i;
+for(i= 0;i<p->length;i++){
+if(p->points[i].subpath!=NULL)
+path_scale((struct path_variable*)(p->points[i].subpath),
+scale);
+else{
+p->points[i].x*= scale;
+p->points[i].y*= scale;
+p->points[i].u_x*= scale;
+p->points[i].u_y*= scale;
+p->points[i].v_x*= scale;
+p->points[i].v_y*= scale;
+}
+}
+}
+/*:243*//*246:*/
+#line 6206 "weaver-interface-metafont_en.tex"
+
+void path_shift(struct path_variable*p,float x,float y){
+int i;
+for(i= 0;i<p->length;i++){
+if(p->points[i].subpath!=NULL)
+path_shift((struct path_variable*)(p->points[i].subpath),x,y);
+else{
+p->points[i].x+= x;
+p->points[i].y+= y;
+p->points[i].u_x+= x;
+p->points[i].u_y+= y;
+p->points[i].v_x+= x;
+p->points[i].v_y+= y;
+}
+}
+}
+/*:246*//*249:*/
+#line 6252 "weaver-interface-metafont_en.tex"
+
+void path_slant(struct path_variable*p,float s){
+int i;
+for(i= 0;i<p->length;i++){
+if(p->points[i].subpath!=NULL)
+path_slant((struct path_variable*)(p->points[i].subpath),s);
+else{
+p->points[i].x+= s*p->points[i].y;
+p->points[i].u_x+= s*p->points[i].u_y;
+p->points[i].v_x+= s*p->points[i].v_y;
+}
+}
+}
+/*:249*/
 #line 204 "weaver-interface-metafont_en.tex"
 
 /*8:*/
