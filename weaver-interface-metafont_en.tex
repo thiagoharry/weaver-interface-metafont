@@ -6033,9 +6033,9 @@ bool eval_path_secundary(struct metafont *mf, struct context *cx,
     @<Path Transform: Scale@>
     @<Path Transform: Shift@>
     @<Path Transform: Slant@>
-    //@<Transformação de Caminho: X-Escala@>
-    //@<Transformação de Caminho: Y-Escala@>
-    //@<Transformação de Caminho: Z-Escala@>
+    @<Path Transform: X-Scale@>
+    @<Path Transform: Y-Scale@>
+    @<Path Transform: Z-Scale@>
   }
   else if(have_pair_operator){
     struct pair_variable pair;
@@ -6138,7 +6138,7 @@ if(transform_op -> type == TYPE_SCALED){
   if(!eval_numeric_primary(mf, cx, transform_op -> next, end_expression,
                           &a))
     return false;
-  path_scale(result, a.value);  
+  path_xyscale(result, a.value, a.value);  
   return true;
 }
 @
@@ -6149,28 +6149,31 @@ is:
 
 \iniciocodigo
 @<Local Function Declaration (metafont.c)@>+=
-void path_scale(struct path_variable *p, double scale);
+void path_xyscale(struct path_variable *p, float x, float y);
 @
 \fimcodigo
 
-
-And its implementation:
+Notice that by the function signature we can pass different values to
+stretch the path horizontally and vertically. This transformer
+stretches the path always in the same proportion, but other
+transformers will also use this function to stretch not preserving
+proportions. Its implementation is:
 
 \iniciocodigo
 @<Auxiliary Local Functions (metafont.c)@>+=
-void path_scale(struct path_variable *p, double scale){
+void path_xyscale(struct path_variable *p, float x, float y){
   int i;
   for(i = 0; i < p -> length; i ++){
     if(p -> points[i].subpath != NULL)
-      path_scale((struct path_variable *) (p -> points[i].subpath),
-                 scale);
+      path_xyscale((struct path_variable *) (p -> points[i].subpath), x,
+                   y);
     else{
-      p -> points[i].x *= scale;
-      p -> points[i].y *= scale;
-      p -> points[i].u_x *= scale;
-      p -> points[i].u_y *= scale;
-      p -> points[i].v_x *= scale;
-      p -> points[i].v_y *= scale;
+      p -> points[i].x *= x;
+      p -> points[i].y *= y;
+      p -> points[i].u_x *= x;
+      p -> points[i].u_y *= y;
+      p -> points[i].v_x *= x;
+      p -> points[i].v_y *= y;
     }
   }
 }
@@ -6259,6 +6262,107 @@ void path_slant(struct path_variable *p, float s){
       p -> points[i].x += s * p -> points[i].y;
       p -> points[i].u_x += s * p -> points[i].u_y;
       p -> points[i].v_x += s * p -> points[i].v_y;
+    }
+  }
+}
+@
+\fimcodigo
+
+
+The next transformer change the horizontal size of the path while
+preserving the vertical size. We need to read a numeric value and it
+determines how much the path should be horizontally stretched:
+
+\iniciocodigo
+@<Path Transform: X-Scale@>=
+else if(transform_op -> type == TYPE_XSCALED){
+  struct numeric_variable a;
+  if(!eval_numeric_primary(mf, cx, transform_op -> next, end_expression,
+                           &a))
+    return false;
+  path_xyscale(result, a.value, 1.0);  
+  return true;
+}
+@
+\fimcodigo
+
+Here we are using a recursive function already defined. We do not need
+to redefine it again. And we also can stretch the path vertically:
+
+\iniciocodigo
+@<Path Transform: Y-Scale@>=
+else if(transform_op -> type == TYPE_YSCALED){
+  struct numeric_variable a;
+  if(!eval_numeric_primary(mf, cx, transform_op -> next, end_expression,
+                           &a))
+    return false;
+  path_xyscale(result, 1.0, a.value);  
+  return true;
+}
+@
+\fimcodigo
+
+The last transformer is the Z-scale which reads a pair, interprets it
+as a complex number, interpret all points in the path as complex
+numbers and multiply them:
+
+$$
+(a+bi)(c+di) = ac + (ad)i + (cb)i + (bd)i^2 = (ac - bd) + (cb+ad)i
+$$
+
+We interpret and make the transformation below, remembering that this
+is the last transformation and that an error should be raised if we
+need to apply a transformation and this is not the correct:
+
+
+\iniciocodigo
+@<Path Transform: Z-Scale@>=
+else if(transform_op -> type == TYPE_ZSCALED){
+  struct pair_variable a;
+  if(!eval_pair_primary(mf, cx, transform_op -> next, end_expression, &a))
+    return false;
+  path_zscale(result, a.x, a.y);  
+  return true;
+}
+else{
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable transformer\n",
+          mf -> file, transform_op -> line);
+#endif
+  return false;
+}
+@
+\fimcodigo
+
+And the recursive function:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+void path_zscale(struct path_variable *p, float x, float y);
+@
+\fimcodigo
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+void path_zscale(struct path_variable *p, float x, float y){
+  int i;
+  for(i = 0; i < p -> length; i ++){
+    if(p -> points[i].subpath != NULL)
+      path_zscale((struct path_variable *) (p -> points[i].subpath),
+                  x, y);
+    else{
+      float x0 = p -> points[i].x;
+      float y0 = p -> points[i].y;
+      p -> points[i].x = x0 * x - y0 * y;
+      p -> points[i].y = x0 * y + y0 * x;
+      x0 = p -> points[i].u_x;
+      y0 = p -> points[i].u_y;
+      p -> points[i].u_x = x0 * x - y0 * y;
+      p -> points[i].u_y = x0 * y + y0 * x;
+      x0 = p -> points[i].v_x;
+      y0 = p -> points[i].v_y;
+      p -> points[i].v_x = x0 * x - y0 * y;
+      p -> points[i].v_x = x0 * y + y0 * x;
     }
   }
 }

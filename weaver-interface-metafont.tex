@@ -6111,9 +6111,9 @@ bool eval_path_secundary(struct metafont *mf, struct context *cx,
     @<Transformação de Caminho: Escala@>
     @<Transformação de Caminho: Deslocamento@>
     @<Transformação de Caminho: Inclinação@>
-    //@<Transformação de Caminho: X-Escala@>
-    //@<Transformação de Caminho: Y-Escala@>
-    //@<Transformação de Caminho: Z-Escala@>
+    @<Transformação de Caminho: X-Escala@>
+    @<Transformação de Caminho: Y-Escala@>
+    @<Transformação de Caminho: Z-Escala@>
   }
   else if(have_pair_operator){
     struct pair_variable pair;
@@ -6213,12 +6213,12 @@ interpretar um valor numérico e depois multiplicar cada ponto do
 caminho por tal valor numérico:
 
 @<Transformação de Caminho: Escala@>=
-if(transform_op -> type == TYPE_SCALED){
+else if(transform_op -> type == TYPE_SCALED){
   struct numeric_variable a;
   if(!eval_numeric_primary(mf, cx, transform_op -> next, end_expression,
                           &a))
     return false;
-  path_scale(result, a.value);  
+  path_xyscale(result, a.value, a.value);  
   return true;
 }
 @
@@ -6228,27 +6228,30 @@ A função recursiva que aplica isso a todos os pontos de um caminho é:
 
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
-void path_scale(struct path_variable *p, double scale);
+void path_xyscale(struct path_variable *p, float x, float y);
 @
 \fimcodigo
 
-E sua implementação:
+Note que a função é mais ampla e pode ser usada para aumentar de
+maneira não-proporcional o tamanho de uma curva no eixo $x$ e $y$,
+apesar de aqui só a estarmis usando para esticá-la a mesma quantidade
+na horizontal e vertical. A sua implementação é:
 
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
-void path_scale(struct path_variable *p, double scale){
+void path_xyscale(struct path_variable *p, float x, float y){
   int i;
   for(i = 0; i < p -> length; i ++){
     if(p -> points[i].subpath != NULL)
-      path_scale((struct path_variable *) (p -> points[i].subpath),
-                 scale);
+      path_xyscale((struct path_variable *) (p -> points[i].subpath), x,
+                   y);
     else{
-      p -> points[i].x *= scale;
-      p -> points[i].y *= scale;
-      p -> points[i].u_x *= scale;
-      p -> points[i].u_y *= scale;
-      p -> points[i].v_x *= scale;
-      p -> points[i].v_y *= scale;
+      p -> points[i].x *= x;
+      p -> points[i].y *= y;
+      p -> points[i].u_x *= x;
+      p -> points[i].u_y *= y;
+      p -> points[i].v_x *= x;
+      p -> points[i].v_y *= y;
     }
   }
 }
@@ -6261,7 +6264,7 @@ ponto deve ser deslocado no eixo $s$ e $y$:
 
 \iniciocodigo
 @<Transformação de Caminho: Deslocamento@>=
-if(transform_op -> type == TYPE_SHIFTED){
+else if(transform_op -> type == TYPE_SHIFTED){
   struct pair_variable a;
   if(!eval_pair_primary(mf, cx, transform_op -> next, end_expression,
                           &a))
@@ -6306,7 +6309,7 @@ estiverem mais abaixo da origem no eixo $y$:
 
 \iniciocodigo
 @<Transformação de Caminho: Inclinação@>=
-if(transform_op -> type == TYPE_SLANTED){
+else if(transform_op -> type == TYPE_SLANTED){
   struct numeric_variable a;
   if(!eval_numeric_primary(mf, cx, transform_op -> next, end_expression,
                           &a))
@@ -6342,28 +6345,108 @@ void path_slant(struct path_variable *p, float s){
 @
 \fimcodigo
 
-
-%%%%%%%
-
+A próxima transformação muda o tamanho horizontal do caminho, mas
+preserva o tamanho vertical. Devemos ler um valor numérico e ele
+determina o quanto o caminho deve ser esticado horizontalmente:
 
 
 \iniciocodigo
-@<Operador Secundário de Pares: Inclinação@>=
-else if(last_mul -> type == TYPE_SLANTED){
-  struct pair_variable a;
-  struct numeric_variable b;
-  ret = eval_pair_secundary(mf, cx, begin_expression, end_secundary, &a);
-  if(!ret)
+@<Transformação de Caminho: X-Escala@>=
+else if(transform_op -> type == TYPE_XSCALED){
+  struct numeric_variable a;
+  if(!eval_numeric_primary(mf, cx, transform_op -> next, end_expression,
+                           &a))
     return false;
-  ret = eval_numeric_primary(mf, cx, begin_primary, end_expression, &b);
-  if(!ret)
-    return false;
-  result -> x = a.x + b.value * a.y;
-  result -> y = a.y;
+  path_xyscale(result, a.value, 1.0);  
   return true;
 }
 @
 \fimcodigo
+
+Aqui estamos usando uma função recursiva já definida, então não
+precisamos defini-la novamente. Além de transformar esticando
+horizontalmente, vamos agora esticar verticalmente:
+
+\iniciocodigo
+@<Transformação de Caminho: Y-Escala@>=
+else if(transform_op -> type == TYPE_YSCALED){
+  struct numeric_variable a;
+  if(!eval_numeric_primary(mf, cx, transform_op -> next, end_expression,
+                           &a))
+    return false;
+  path_xyscale(result, 1.0, a.value);  
+  return true;
+}
+@
+\fimcodigo
+
+A última transformação é a mudança de escala Z que lê um par, o
+interpreta como número complexo, e também interpreta cada ponto do
+caminho como número complexo fazendo a multiplicação:
+
+$$
+(a+bi)(c+di) = ac + (ad)i + (cb)i + (bd)i^2 = (ac - bd) + (cb+ad)i
+$$
+
+Interpretamos e realizamos a transformação da forma abaixo, lembrando
+também que esta é a última transformação possível:
+
+\iniciocodigo
+@<Transformação de Caminho: Z-Escala@>=
+else if(transform_op -> type == TYPE_ZSCALED){
+  struct pair_variable a;
+  if(!eval_pair_primary(mf, cx, transform_op -> next, end_expression, &a))
+    return false;
+  path_zscale(result, a.x, a.y);  
+  return true;
+}
+else{
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable transformer\n",
+          mf -> file, transform_op -> line);
+#endif
+  return false;
+}
+@
+\fimcodigo
+
+E a função recursiva que fará isso:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+void path_zscale(struct path_variable *p, float x, float y);
+@
+\fimcodigo
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+void path_zscale(struct path_variable *p, float x, float y){
+  int i;
+  for(i = 0; i < p -> length; i ++){
+    if(p -> points[i].subpath != NULL)
+      path_zscale((struct path_variable *) (p -> points[i].subpath),
+                  x, y);
+    else{
+      float x0 = p -> points[i].x;
+      float y0 = p -> points[i].y;
+      p -> points[i].x = x0 * x - y0 * y;
+      p -> points[i].y = x0 * y + y0 * x;
+      x0 = p -> points[i].u_x;
+      y0 = p -> points[i].u_y;
+      p -> points[i].u_x = x0 * x - y0 * y;
+      p -> points[i].u_y = x0 * y + y0 * x;
+      x0 = p -> points[i].v_x;
+      y0 = p -> points[i].v_y;
+      p -> points[i].v_x = x0 * x - y0 * y;
+      p -> points[i].v_x = x0 * y + y0 * x;
+    }
+  }
+}
+@
+\fimcodigo
+
+
+%%%%%%%
 
 
 \secao{Referências}
