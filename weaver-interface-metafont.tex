@@ -4321,7 +4321,8 @@ Tudo isso requer que registremos os seguintes novos tipos de tokens:
 #define TYPE_AND            54 // O token simbólico 'and'
 #define TYPE_ATLEAST        55 // O token simbólico 'atleast'
 #define TYPE_CONTROLS       56 // O token simbólico 'controls'
-#define TYPE_CURL           57 // O token simbólico 'curl' (ainda não suportado)
+#define TYPE_CURL           57 // O token simbólico 'curl'
+                               // (ainda não suportado)
 @
 \fimcodigo
 
@@ -6021,7 +6022,7 @@ bool eval_path_tertiary(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
-\subsubsecao{8.3.2. Expressões Secundárias de Caminhos}
+\subsubsecao{8.3.3. Expressões Secundárias de Caminhos: Transformadores}
 
 A gramática para expressões secundárias de caminho é:
 
@@ -6445,6 +6446,85 @@ void path_zscale(struct path_variable *p, float x, float y){
 @
 \fimcodigo
 
+
+\subsubsecao{8.3.4. Expressões Primárias de Caminhos}
+
+A gramática para expressões primárias de caminho é:
+
+\alinhaverbatim
+<Primário de Caminho> -> <Primário de Par> | <Variável de Caminho> |
+                       ( <Expressão de Caminho> ) |
+                       reverse <Primário de Caminho> |
+                       subpath <Expressão de Par> of <Primário de Caminho>
+\alinhanormal
+
+Isso significa que devemos registrar tokens
+novos: \monoespaco{reverse}, \monoespaco{subpath} e \monoespaco{of}:
+
+\iniciocodigo
+@<METAFONT: Definição de Token Simbólico@>+=
+#define TYPE_REVERSE        58 // O token simbólico 'reverse'
+#define TYPE_SUBPATH        59 // O token simbólico 'subpath'
+#define TYPE_OF             60 // O token simbólico 'of'
+@
+\fimcodigo
+
+E para cada um deles adicionemos sua string na lista de palavras
+reservadas:
+
+\iniciocodigo
+@<Lista de Palavras Reservadas@>+=
+"reverse", "subpath", "of",
+@
+\fimcodigo
+
+O que as regras gramaticais dizem é que no fim de toda expressão de
+caminho, terminaremos encontrando no fim uma uma variável de caminho,
+um parênteses, algum destes operadores novos de subcaminho e de
+caminho reverso, ou em todos os demais casos, isso se encaixa em uma
+expressão primária de par que irá nos dar um par. Devemos então testar
+se estamos nestes casos, e se não estivermos, basta interpretar como
+par.
+
+A função que irá interpretar expressões primárias é:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+bool eval_path_primary(struct metafont *mf, struct context *cx,
+                      struct generic_token *begin_expression,
+                      struct generic_token *end_expression,
+                      struct path_variable *result);
+@
+\fimcodigo
+
+E sua implementação:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+bool eval_path_primary(struct metafont *mf, struct context *cx,
+                      struct generic_token *begin_expression,
+                      struct generic_token *end_expression,
+                      struct path_variable *result){
+  if(begin_expression -> type == TYPE_REVERSE){
+    @<Caminho Primário: Reverso@>
+  }
+  else if(begin_expression -> type == TYPE_SUBPATH){
+    @<Caminho Primário: Subcaminho@>
+  }
+  else if(begin_expression == end_expression &&
+          begin_expression -> type == TYPE_SYMBOLIC){
+    @<Caminho Primário: Variável@>
+  }
+  else if(begin_expression -> type == TYPE_OPEN_PARENTHESIS &&
+          end_expression -> type == TYPE_CLOSE_PARENTHESIS){
+    @<Caminho Primário: Parênteses@>
+  }
+  else{
+    @<Caminho Primário: Par Primário@>
+  }
+}
+@
+\fimcodigo
 
 %%%%%%%
 
