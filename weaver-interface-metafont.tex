@@ -6136,8 +6136,9 @@ bool eval_path_secundary(struct metafont *mf, struct context *cx,
     result -> points -> y = pair.y;
     return true;    
   }
-  //else
-  //  return eval_path_primary(mf, cx, begin_expression, end_expression, result);
+  else
+    return eval_path_primary(mf, cx, begin_expression, end_expression,
+                             result);
 }
 @
 \fimcodigo
@@ -6509,25 +6510,110 @@ bool eval_path_primary(struct metafont *mf, struct context *cx,
     @<Caminho Primário: Reverso@>
   }
   else if(begin_expression -> type == TYPE_SUBPATH){
-    @<Caminho Primário: Subcaminho@>
+    //@<Caminho Primário: Subcaminho@>
   }
   else if(begin_expression == end_expression &&
           begin_expression -> type == TYPE_SYMBOLIC){
-    @<Caminho Primário: Variável@>
+    //@<Caminho Primário: Variável@>
   }
   else if(begin_expression -> type == TYPE_OPEN_PARENTHESIS &&
           end_expression -> type == TYPE_CLOSE_PARENTHESIS){
-    @<Caminho Primário: Parênteses@>
+    //@<Caminho Primário: Parênteses@>
   }
   else{
-    @<Caminho Primário: Par Primário@>
+    //@<Caminho Primário: Par Primário@>
   }
 }
 @
 \fimcodigo
 
+Vamos ao primeiro caso: devemos calcular o reverso de um caminho. Para
+isso, devemos inverter a ordem na qual aparecem os pontos de
+extremidade, e também para cada um deles, inverter a ordem de seus
+dois pontos de controle. A reversão deve ser feita recursivamente
+inclusive entre os sub-caminhos. O código para isso é:
+
+\iniciocodigo
+@<Caminho Primário: Reverso@>=
+if(begin_expression -> next == NULL ||
+   begin_expression == end_expression){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
+          "expression.",  mf -> file, begin_expression -> line);
+#endif
+  return false;
+}
+if(!eval_path_primary(mf, cx, begin_expression -> next, end_expression,
+                      result))
+  return false;
+reverse_path(result);
+return true;
+@
+\fimcodigo
+
+Temos agora que definir a função recursiva que realiza a reversão. A
+declaração da função é:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+void reverse_path(struct path_variable *path);
+@
+\fimcodigo
+
+E sua implementação:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+void reverse_path(struct path_variable *path){
+  struct path_points tmp;
+  int i, iter = (path -> length) / 2;
+  for(i = 0; i < iter; i ++){
+    memcpy(&tmp, &(path -> points[i]), sizeof(struct path_points));
+    memcpy(&(path -> points[i]),
+           &(path -> points[path -> length - i - 1]),
+           sizeof(struct path_points));
+    memcpy(&(path -> points[path -> length - i - 1]), &tmp,
+           sizeof(struct path_points));
+    tmp.u_x = path -> points[i].u_x;
+    tmp.u_y = path -> points[i].u_y;
+    path -> points[i].u_x = path -> points[i].v_x;
+    path -> points[i].u_y = path -> points[i].v_y;
+    path -> points[i].v_x = tmp.u_x;
+    path -> points[i].v_y = tmp.u_y;
+    tmp.u_x = path -> points[path -> length - i - 1].u_x;
+    tmp.u_y = path -> points[path -> length - i - 1].u_y;
+    path -> points[path -> length - i - 1].u_x =
+                              path -> points[path -> length - i - 1].v_x;
+    path -> points[path -> length - i - 1].u_y =
+                              path -> points[path -> length - i - 1].v_y;
+    path -> points[path -> length - i - 1].v_x = tmp.u_x;
+    path -> points[path -> length - i - 1].v_y = tmp.u_y;
+    if(path -> points[i].subpath != NULL)
+      reverse_path((struct path_variable *) path -> points[i].subpath);
+    if(path -> points[path -> length - i - 1].subpath != NULL)
+      reverse_path((struct path_variable *)
+                   path -> points[path -> length - i - 1].subpath);
+  }
+}
+@
+\iniciocodigo
+
 %%%%%%%
 
+
+struct path_points{
+  float x, y; // Ponto de extremidade
+  float u_x, u_y, v_x, v_y;   // Pontos de controle
+  void *subpath;
+};
+struct path_variable{
+  int type; // Deve ser 'TYPE_T_PATH'
+  int nesting_level;
+  void *next;
+  bool cyclic;
+  int length;
+  struct path_points *points;
+};
 
 \secao{Referências}
 
