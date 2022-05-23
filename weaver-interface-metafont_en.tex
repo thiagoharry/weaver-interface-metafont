@@ -5683,9 +5683,9 @@ double get_angle(double v_x, double v_y, double c0_x, double c0_y,
   v0_y = c0_y - v_y;
   v1_x = c1_x - v_x;
   v1_y = c1_y - v_y;
-  if(abs(v0_x) <= 0.00002 &&  abs(v0_y) <= 0.00002)
+  if(fabs(v0_x) <= 0.00002 &&  fabs(v0_y) <= 0.00002)
     return INFINITY;
-  if(abs(v1_x) <= 0.00002 &&  abs(v1_y) <= 0.00002)
+  if(fabs(v1_x) <= 0.00002 &&  fabs(v1_y) <= 0.00002)
     return INFINITY;
   return acos((v0_x * v1_x + v0_y * v1_y) /
                 (hypot(v0_x * v0_x, v0_y * v0_y) *

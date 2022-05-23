@@ -118,8 +118,8 @@ void test_variables(void){
   assert("Chained assignments are working", n -> value == 116.0);
   p = (struct pair_variable *) mf -> global_variables;
   assert("Testing pair expression", p -> type == TYPE_T_PAIR &&
-         abs(p -> x) < 0.00002 && abs(p -> y - 3.0) < 0.00002);
-  if(abs(p -> x) >= 0.00002 && abs(p -> y - 3.0) >= 0.00002){
+         fabs(p -> x) < 0.00002 && fabs(p -> y - 3.0) < 0.00002);
+  if(fabs(p -> x) >= 0.00002 && fabs(p -> y - 3.0) >= 0.00002){
     printf("ERROR: Exprected value: '(%f, %f)', Found value: '(%f,%f)'\n",
            0.0, 3.0, p -> x, p -> y);
   }
