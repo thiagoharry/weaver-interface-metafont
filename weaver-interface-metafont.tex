@@ -2009,14 +2009,8 @@ estiver inicializada, precisamos remover a lista de pontos alocada:
 @<Finaliza Variável Global 'v'@>=
 if(v -> type == TYPE_T_PATH){
   struct path_variable *path = (struct path_variable *) v;
-  if(path -> length != -1 && mf -> free != NULL){
-    int i;
-    for(i = 0; i < path -> length; i ++)
-      if(path -> points[i].subpath != NULL)
-        path_recursive_free(mf -> free, (struct path_variable *)
-                                        path -> points[i].subpath);
-    mf -> free(path -> points);
-  }
+  if(path -> length != -1 && mf -> free != NULL)
+    path_recursive_free(mf -> free, path, false);
 }
 @
 \fimcodigo
@@ -2029,14 +2023,8 @@ desalocação para variáveis temporárias:
 @<Finaliza Variável Local 'v'@>=
 if(v -> type == TYPE_T_PATH){
   struct path_variable *path = (struct path_variable *) v;
-  if(path -> length != -1 && temporary_free != NULL){
-    int i;
-    for(i = 0; i < path -> length; i ++)
-      if(path -> points[i].subpath != NULL)
-        path_recursive_free(temporary_free, (struct path_variable *)
-                                            path -> points[i].subpath);
-    temporary_free(path -> points);
-  }
+  if(path -> length != -1 && temporary_free != NULL)
+    path_recursive_free(temporary_free, path, false);
 }
 @
 \fimcodigo
@@ -2050,7 +2038,8 @@ subcaminhos e depois a desalocamos. A declaração da função é:
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
 void path_recursive_free(void (*free_func)(void *),
-                         struct path_variable *path);
+                         struct path_variable *path,
+                         bool free_first_pointer);
 @
 \fimcodigo
 
@@ -2059,16 +2048,18 @@ E sua implementação é:
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
 void path_recursive_free(void (*free_func)(void *),
-                         struct path_variable *path){
+                         struct path_variable *path,
+                         bool free_first_pointer){
   if(free_func != NULL){
     int i;
     for(i = 0; i < path -> length; i ++){
       if(path -> points[i].subpath != NULL)
         path_recursive_free(free_func, (struct path_variable *)
-                                       path -> points[i].subpath);
+                                       path -> points[i].subpath, true);
     }
     free_func(path -> points);
-    free_func(path);
+    if(free_first_pointer)
+      free_func(path);
   }
 }
 @
@@ -4186,12 +4177,8 @@ else if(type == TYPE_T_PATH){
     var = (struct symbolic_token *) (var -> next);
     var = (struct symbolic_token *) (var -> next);
   }
-  if(temporary_free != NULL){
-    for(i = 0; i < result.length; i ++)
-      if(result.points[i].subpath != NULL)
-        path_recursive_free(temporary_free, result.points[i].subpath);
-    temporary_free(result.points);
-  }
+  if(temporary_free != NULL)
+    path_recursive_free(temporary_free, &result, false);
 }
 @
 \fimcodigo
@@ -4224,12 +4211,8 @@ void assign_path_variable(struct metafont *mf,
     disalloc = temporary_free;
     alloc = temporary_alloc;
   }
-  if(target -> length != -1 && disalloc != NULL){
-    for(i = 0; i < target -> length; i ++)
-      if(target -> points[i].subpath != NULL)
-        path_recursive_free(disalloc, (struct path_variable *)
-                                      target -> points[i].subpath);
-  }
+  if(target -> length != -1 && disalloc != NULL)
+    path_recursive_free(disalloc, target, false);
   target -> cyclic = source -> cyclic;
   target -> length = source -> length;
   target -> points = (struct path_points *)
@@ -4702,6 +4685,7 @@ if(begin_z1 == begin_expression){
     recursive_copy_points(temporary_alloc, (struct path_variable **)
                                            &(result -> points[0].subpath), &z1);
   result -> length ++;
+  // XXX: Desalocar z1.points
 }
 @
 \fimcodigo
@@ -4738,6 +4722,7 @@ else{
                          (struct path_variable **)
                          &(result -> points[result -> length].subpath), &z2);
   result -> length ++;
+ // XXX: Desalocar z2.points
 }
 @
 \fimcodigo
@@ -6394,7 +6379,7 @@ Interpretamos e realizamos a transformação da forma abaixo, lembrando
 também que esta é a última transformação possível:
 
 \iniciocodigo
-@<Transformação de Caminho: Z-Escala@>=
+ @<Transformação de Caminho: Z-Escala@>=
 else if(transform_op -> type == TYPE_ZSCALED){
   struct pair_variable a;
   if(!eval_pair_primary(mf, cx, transform_op -> next, end_expression, &a))
@@ -6480,7 +6465,7 @@ reservadas:
 \fimcodigo
 
 O que as regras gramaticais dizem é que no fim de toda expressão de
-caminho, terminaremos encontrando no fim uma uma variável de caminho,
+caminho, terminaremos encontrando no fim uma variável de caminho,
 um parênteses, algum destes operadores novos de subcaminho e de
 caminho reverso, ou em todos os demais casos, isso se encaixa em uma
 expressão primária de par que irá nos dar um par. Devemos então testar
@@ -6510,7 +6495,7 @@ bool eval_path_primary(struct metafont *mf, struct context *cx,
     @<Caminho Primário: Reverso@>
   }
   else if(begin_expression -> type == TYPE_SUBPATH){
-    //@<Caminho Primário: Subcaminho@>
+    @<Caminho Primário: Subcaminho@>
   }
   else if(begin_expression == end_expression &&
           begin_expression -> type == TYPE_SYMBOLIC){
@@ -6523,6 +6508,7 @@ bool eval_path_primary(struct metafont *mf, struct context *cx,
   else{
     //@<Caminho Primário: Par Primário@>
   }
+  return false;
 }
 @
 \fimcodigo
@@ -6597,6 +6583,86 @@ void reverse_path(struct path_variable *path){
 }
 @
 \iniciocodigo
+
+O próximo passo é calcular um subcaminho. No METAFONT original, é
+possível calcular subcaminhos entre pontos em posições
+não-inteiras. Por exemplo, calcular o subcaminho do ponto 0,5 até
+1,8. O METAFONT obteria um ponto intermediário entre os pontos de
+controle 0 e 1 e entre 1 e 2 conforme pedido. Novos pontos de
+extremidade e de controle adequados seriam gerados.  Aqui por hora
+iremos suportar só uma versão mais simples de subcaminhos. Somente
+subcaminhos inteiros serão suportados.
+
+\iniciocodigo
+@<Caminho Primário: Subcaminho@>=
+DECLARE_NESTING_CONTROL();
+struct pair_variable a;
+struct path_variable b;
+struct generic_token *of, *end_pair_expr = begin_expression -> next;
+struct generic_token *begin_subexpr;
+if(begin_expression -> next == NULL ||
+   end_pair_expr -> type == TYPE_OF ||
+   begin_expression == end_expression){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
+          "expression.",  mf -> file, begin_expression -> line);
+#endif
+  return false;
+}
+of = (struct generic_token *) (end_pair_expr -> next);
+while((!IS_NOT_NESTED() || of -> type != TYPE_OF) && of != NULL &&
+      of != end_expression){
+  COUNT_NESTING(end_pair_expr);
+  end_pair_expr = of;
+  of = (struct generic_token *) (of -> next);
+}
+if(of == NULL || of == end_expression){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
+          "expression.",  mf -> file, begin_expression -> line);
+#endif
+  return false;
+}
+if(!eval_pair_expression(mf, cx, (struct generic_token *) begin_expression -> next,
+                         end_pair_expr, &a))
+  return false;
+begin_subexpr = of -> next;
+if(!eval_path_primary(mf, cx, begin_subexpr, end_expression, &b))
+  return false;
+{
+  int final_path_size;
+  if(a.x < 0)
+    a.x = 0;
+  if(a.y < 0)
+    a.y = 0;
+  if(a.x >= result -> length)
+    a.x = result -> length - 1;
+  if(a.y >= result -> length)
+    a.y = result -> length - 1;
+  final_path_size = a.y - a.x;
+  if(final_path_size < 0)
+    final_path_size *= -1;
+  final_path_size ++;
+  result -> length = final_path_size;
+  result -> points = (struct path_points *)
+                       temporary_alloc(final_path_size *
+                                       sizeof(struct path_points));
+  if(result -> points == NULL){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: No enough memory!\n" , mf -> file,
+            begin_expression -> line);
+#endif
+    return false;
+  }
+  /*recursive_copy_subpath(alloc, result -> points, b, (a.x <= a.b)?(a.x):(a.y),
+                         final_path_size);*/
+  // XXX: Desalocar b
+  if(a.x > a.y)
+    reverse_path(result);
+  return true;
+}
+@
+\fimcodigo
 
 %%%%%%%
 

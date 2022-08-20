@@ -1985,14 +1985,8 @@ points:
 @<Finalize Global Variable 'v'@>=
 if(v -> type == TYPE_T_PATH){
   struct path_variable *path = (struct path_variable *) v;
-  if(path -> length != -1 && mf -> free != NULL){
-    int i;
-    for(i = 0; i < path -> length; i ++)
-      if(path -> points[i].subpath != NULL)
-        path_recursive_free(mf -> free, (struct path_variable *)
-                                        path -> points[i].subpath);
-    mf -> free(path -> points);
-  }
+  if(path -> length != -1 && mf -> free != NULL)
+    path_recursive_free(mf -> free, path, false);
 }
 @
 \fimcodigo
@@ -2004,14 +1998,8 @@ disallocation function:
 @<Finalize Local Variable 'v'@>=
 if(v -> type == TYPE_T_PATH){
   struct path_variable *path = (struct path_variable *) v;
-  if(path -> length != -1 && temporary_free != NULL){
-    int i;
-    for(i = 0; i < path -> length; i ++)
-      if(path -> points[i].subpath != NULL)
-        path_recursive_free(temporary_free, (struct path_variable *)
-                                            path -> points[i].subpath);
-    temporary_free(path -> points);
-  }
+  if(path -> length != -1 && temporary_free != NULL)
+    path_recursive_free(temporary_free, path, false);
 }
 @
 \fimcodigo
@@ -2025,7 +2013,8 @@ variable. The function declaration is:
 \iniciocodigo
 @<Local Function Declaration (metafont.c)@>+=
 void path_recursive_free(void (*free_func)(void *),
-                         struct path_variable *path);
+                         struct path_variable *path,
+                         bool free_first_pointer);
 @
 \fimcodigo
 
@@ -2034,16 +2023,18 @@ And its implementation:
 \iniciocodigo
 @<Auxiliary Local Functions (metafont.c)@>+=
 void path_recursive_free(void (*free_func)(void *),
-                         struct path_variable *path){
+                         struct path_variable *path,
+                         bool free_first_pointer){
   if(free_func != NULL){
     int i;
     for(i = 0; i < path -> length; i ++){
       if(path -> points[i].subpath != NULL)
         path_recursive_free(free_func, (struct path_variable *)
-                                       path -> points[i].subpath);
+                                       path -> points[i].subpath, true);
     }
     free_func(path -> points);
-    free_func(path);
+    if(free_first_pointer)
+      free_func(path);
   }
 }
 @
@@ -4148,12 +4139,8 @@ else if(type == TYPE_T_PATH){
     var = (struct symbolic_token *) (var -> next);
     var = (struct symbolic_token *) (var -> next);
   }
-  if(temporary_free != NULL){
-    for(i = 0; i < result.length; i ++)
-      if(result.points[i].subpath != NULL)
-        path_recursive_free(temporary_free, result.points[i].subpath);
-    temporary_free(result.points);
-  }
+  if(temporary_free != NULL)
+    path_recursive_free(temporary_free, &result, false);
 }
 @
 \fimcodigo
@@ -4186,12 +4173,8 @@ void assign_path_variable(struct metafont *mf,
     disalloc = temporary_free;
     alloc = temporary_alloc;
   }
-  if(target -> length != -1 && disalloc != NULL){
-    for(i = 0; i < target -> length; i ++)
-      if(target -> points[i].subpath != NULL)
-        path_recursive_free(disalloc, (struct path_variable *)
-                                      target -> points[i].subpath);
-  }
+  if(target -> length != -1 && disalloc != NULL)
+    path_recursive_free(disalloc, target, false);
   target -> cyclic = source -> cyclic;
   target -> length = source -> length;
   target -> points = (struct path_points *)
@@ -6444,6 +6427,7 @@ bool eval_path_primary(struct metafont *mf, struct context *cx,
   else{
     //@<Primary Path: Primary Pair@>
   }
+  return false;
 }
 @
 \fimcodigo
@@ -6519,6 +6503,14 @@ void reverse_path(struct path_variable *path){
 @
 \iniciocodigo
 
+The next step is compute the subpath. In the original METAFONT, we
+could pass non-integer point positions. For example, we could select a
+subpath between the conrol points 0.5 and 1.8. With such positions,
+METAFONT would generate new intermediary control points betwwen the
+first and the second and between the second and third as
+indicated. New extemity and control points would be generated. 'But as
+this is a little messy computation, here we will support only subpaths
+between integer positions.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
