@@ -4685,7 +4685,8 @@ if(begin_z1 == begin_expression){
     recursive_copy_points(temporary_alloc, (struct path_variable **)
                                            &(result -> points[0].subpath), &z1);
   result -> length ++;
-  // XXX: Desalocar z1.points
+  if(temporary_free != NULL)
+    path_recursive_free(temporary_free, &z1, false);
 }
 @
 \fimcodigo
@@ -4722,7 +4723,8 @@ else{
                          (struct path_variable **)
                          &(result -> points[result -> length].subpath), &z2);
   result -> length ++;
- // XXX: Desalocar z2.points
+  if(temporary_free != NULL)
+    path_recursive_free(temporary_free, &z2, false);
 }
 @
 \fimcodigo
@@ -6654,15 +6656,82 @@ if(!eval_path_primary(mf, cx, begin_subexpr, end_expression, &b))
 #endif
     return false;
   }
-  /*recursive_copy_subpath(alloc, result -> points, b, (a.x <= a.b)?(a.x):(a.y),
-                         final_path_size);*/
-  // XXX: Desalocar b
+  recursive_copy_subpath(result -> points, &b, (a.x <= a.y)?(a.x):(a.y),
+                         final_path_size);
+  if(temporary_free != NULL)
+    path_recursive_free(temporary_free, &b, false);
   if(a.x > a.y)
     reverse_path(result);
   return true;
 }
 @
 \fimcodigo
+
+Temos agora que apresentar a função que efetivamente copia
+recursivamente um caminho para o outro, como visto no código
+acima. Temos que o caminho de origem pode ser um caminho com vários
+subcaminhos recursivos. Mas o caminho de destino não terá subcaminhos
+e já teve toda a sua memória alocada. De fato, nós já recebemos como
+endereço de destino o endereço onde escreveremos cada um dos
+pontos. Já como origem, recebemos como endereço a posição de uma
+variável de caminho. A função recebe como argumento um ``offset'' que
+determina quantos pontos iniciais devem ser ignorados e um tamanho que
+representa quantos pontos devem ser copiados. A função deve sempre
+retornar quantos pontos foram percorridos e funcionará recursivamente:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+int recursive_copy_subpath(struct path_points *dst, struct path_variable *src,
+                           int offset, int size);
+@
+\fimcodigo
+
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+int recursive_copy_subpath(struct path_points *dst, struct path_variable *src,
+                           int offset, int size){
+  int i, read_data = 0;
+  for(i = 0; i < src -> length; i ++){
+    if(size <= 0)
+      break;
+    if(src -> points[i].subpath == NULL){
+      if(offset <= 0){
+        dst -> subpath = NULL;
+        dst -> x = src -> points[i].x;
+        dst -> y = src -> points[i].y;
+        dst -> u_x = src -> points[i].u_x;
+        dst -> u_y = src -> points[i].u_y;
+        dst -> v_x = src -> points[i].v_x;
+        dst -> v_y = src -> points[i].v_y;
+        size --;
+        dst ++;
+      }
+      else
+        offset --;
+      read_data ++;
+    }
+    else{
+      int recursive_read = recursive_copy_subpath(dst, (struct path_variable *)
+                                                       src -> points[i].subpath,
+                                                  offset, size);
+      if(offset > recursive_read){
+        offset -= recursive_read;
+        read_data += recursive_read;
+      }
+      else{
+        read_data += recursive_read;
+        dst += (read_data - offset);
+        size -= (read_data - offset);
+        offset = 0;
+      }
+    }
+  }
+  return read_data;
+}
+@
+\fimcodigo
+
 
 %%%%%%%
 

@@ -4635,6 +4635,8 @@ if(begin_z1 == begin_expression){
     recursive_copy_points(temporary_alloc, (struct path_variable **)
                                            &(result -> points[0].subpath), &z1);
   result -> length ++;
+  if(temporary_free != NULL)
+    path_recursive_free(temporary_free, &z1, false);
 }
 @
 \fimcodigo
@@ -4670,6 +4672,8 @@ else{
                          (struct path_variable **)
                          &(result -> points[result -> length].subpath), &z2);
   result -> length ++;
+  if(temporary_free != NULL)
+    path_recursive_free(temporary_free, &z2, false);
 }
 @
 \fimcodigo
@@ -6414,7 +6418,7 @@ bool eval_path_primary(struct metafont *mf, struct context *cx,
     @<Primary Path: Reverse@>
   }
   else if(begin_expression -> type == TYPE_SUBPATH){
-    //@<Primary Path: Subpath@>
+    @<Primary Path: Subpath@>
   }
   else if(begin_expression == end_expression &&
           begin_expression -> type == TYPE_SYMBOLIC){
@@ -6511,6 +6515,143 @@ first and the second and between the second and third as
 indicated. New extemity and control points would be generated. 'But as
 this is a little messy computation, here we will support only subpaths
 between integer positions.
+
+\iniciocodigo
+@<Primary Path: Subpath@>=
+DECLARE_NESTING_CONTROL();
+struct pair_variable a;
+struct path_variable b;
+struct generic_token *of, *end_pair_expr = begin_expression -> next;
+struct generic_token *begin_subexpr;
+if(begin_expression -> next == NULL ||
+   end_pair_expr -> type == TYPE_OF ||
+   begin_expression == end_expression){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
+          "expression.",  mf -> file, begin_expression -> line);
+#endif
+  return false;
+}
+of = (struct generic_token *) (end_pair_expr -> next);
+while((!IS_NOT_NESTED() || of -> type != TYPE_OF) && of != NULL &&
+      of != end_expression){
+  COUNT_NESTING(end_pair_expr);
+  end_pair_expr = of;
+  of = (struct generic_token *) (of -> next);
+}
+if(of == NULL || of == end_expression){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
+          "expression.",  mf -> file, begin_expression -> line);
+#endif
+  return false;
+}
+if(!eval_pair_expression(mf, cx, (struct generic_token *) begin_expression -> next,
+                         end_pair_expr, &a))
+  return false;
+begin_subexpr = of -> next;
+if(!eval_path_primary(mf, cx, begin_subexpr, end_expression, &b))
+  return false;
+{
+  int final_path_size;
+  if(a.x < 0)
+    a.x = 0;
+  if(a.y < 0)
+    a.y = 0;
+  if(a.x >= result -> length)
+    a.x = result -> length - 1;
+  if(a.y >= result -> length)
+    a.y = result -> length - 1;
+  final_path_size = a.y - a.x;
+  if(final_path_size < 0)
+    final_path_size *= -1;
+  final_path_size ++;
+  result -> length = final_path_size;
+  result -> points = (struct path_points *)
+                       temporary_alloc(final_path_size *
+                                       sizeof(struct path_points));
+  if(result -> points == NULL){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: No enough memory!\n" , mf -> file,
+            begin_expression -> line);
+#endif
+    return false;
+  }
+  recursive_copy_subpath(result -> points, &b, (a.x <= a.y)?(a.x):(a.y),
+                         final_path_size);
+  if(temporary_free != NULL)
+    path_recursive_free(temporary_free, &b, false);
+  if(a.x > a.y)
+    reverse_path(result);
+  return true;
+}
+@
+\fimcodigo
+
+We need now to present the function that will recursively copy a path
+to another path. The origin path can have recursive subpaths while the
+destiny path is flat, have no recursive subpaths and already had its
+memory allocated. The destiny address is a pointer to path points
+inside a path variable. The origin address is a pointer to some poath
+variable. The function will get as arguent an offset that defines how
+many points in the beginning will be ignored. And also a size argument
+to represent the number of points to be copied. The function always
+return how many points were read (even if they were not opied because
+we have a positive offset):
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+int recursive_copy_subpath(struct path_points *dst, struct path_variable *src,
+                           int offset, int size);
+@
+\fimcodigo
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+int recursive_copy_subpath(struct path_points *dst, struct path_variable *src,
+                           int offset, int size){
+  int i, read_data = 0;
+  for(i = 0; i < src -> length; i ++){
+    if(size <= 0)
+      break;
+    if(src -> points[i].subpath == NULL){
+      if(offset <= 0){
+        dst -> subpath = NULL;
+        dst -> x = src -> points[i].x;
+        dst -> y = src -> points[i].y;
+        dst -> u_x = src -> points[i].u_x;
+        dst -> u_y = src -> points[i].u_y;
+        dst -> v_x = src -> points[i].v_x;
+        dst -> v_y = src -> points[i].v_y;
+        size --;
+        dst ++;
+      }
+      else
+        offset --;
+      read_data ++;
+    }
+    else{
+      int recursive_read = recursive_copy_subpath(dst, (struct path_variable *)
+                                                       src -> points[i].subpath,
+                                                  offset, size);
+      if(offset > recursive_read){
+        offset -= recursive_read;
+        read_data += recursive_read;
+      }
+      else{
+        read_data += recursive_read;
+        dst += (read_data - offset);
+        size -= (read_data - offset);
+        offset = 0;
+      }
+    }
+  }
+  return read_data;
+}
+@
+\fimcodigo
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
