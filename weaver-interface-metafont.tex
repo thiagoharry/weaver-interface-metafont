@@ -2417,6 +2417,7 @@ subtração válida com a macro abaixo:
           prev -> type != TYPE_XSCALED &&               \
           prev -> type != TYPE_YSCALED &&               \
           prev -> type != TYPE_ZSCALED &&               \
+          prev -> type != TYPE_OF &&                    \
           prev -> type != TYPE_UNIFORMDEVIATE))
 @
 \fimcodigo
@@ -4200,7 +4201,6 @@ E a sua implementação:
 void assign_path_variable(struct metafont *mf,
                           struct path_variable *target,
                           struct path_variable *source){
-  int i;
   void *(*alloc)(size_t);
   void (*disalloc)(void *);
   if(target -> nesting_level == 0){
@@ -4213,19 +4213,7 @@ void assign_path_variable(struct metafont *mf,
   }
   if(target -> length != -1 && disalloc != NULL)
     path_recursive_free(disalloc, target, false);
-  target -> cyclic = source -> cyclic;
-  target -> length = source -> length;
-  target -> points = (struct path_points *)
-                       alloc(sizeof(struct path_points) *
-                       target -> length);
-  for(i = 0; i < target -> length; i ++){ // Copiar pontos
-    memcpy(&(target -> points[i]), &(source -> points[i]),
-           sizeof(struct path_points));
-    if(source -> points[i].subpath != NULL)
-      recursive_copy_points(alloc, (struct path_variable **)
-                                   &(target -> points[i].subpath),
-                            source -> points[i].subpath);
-  }
+  recursive_copy_points(alloc, &target, source, false);
 }
 @
 \fimcodigo
@@ -4239,7 +4227,8 @@ recursivamente. Para fazer isso, usamos a seguinte função auxiliar:
 @<Declaração de Função Local (metafont.c)@>+=
 void recursive_copy_points(void *(*alloc)(size_t),
                           struct path_variable **target,
-                          struct path_variable *source);
+                          struct path_variable *source,
+                          bool alloc_target);
 @
 \fimcodigo
 
@@ -4247,9 +4236,11 @@ void recursive_copy_points(void *(*alloc)(size_t),
 @<Funções Auxiliares Locais (metafont.c)@>+=
 void recursive_copy_points(void *(*alloc)(size_t),
                           struct path_variable **target,
-                          struct path_variable *source){
+                          struct path_variable *source,
+                          bool alloc_target){
   int i;
-  *target = (struct path_variable *) alloc(sizeof(struct path_variable));
+  if(alloc_target)
+    *target = (struct path_variable *) alloc(sizeof(struct path_variable));
   (*target) -> cyclic = source -> cyclic;
   (*target) -> length = source -> length;
   (*target) -> points = (struct path_points *)
@@ -4261,7 +4252,7 @@ void recursive_copy_points(void *(*alloc)(size_t),
     if(source -> points[i].subpath != NULL)
       recursive_copy_points(alloc, (struct path_variable **)
                                    &((*target) -> points[i].subpath),
-                            source -> points[i].subpath);
+                            source -> points[i].subpath, true);
   }
 }
 @
@@ -4683,7 +4674,8 @@ if(begin_z1 == begin_expression){
   }
   else
     recursive_copy_points(temporary_alloc, (struct path_variable **)
-                                           &(result -> points[0].subpath), &z1);
+                                           &(result -> points[0].subpath), &z1,
+                                           true);
   result -> length ++;
   if(temporary_free != NULL)
     path_recursive_free(temporary_free, &z1, false);
@@ -4721,7 +4713,7 @@ else{
   else
     recursive_copy_points(temporary_alloc,
                          (struct path_variable **)
-                         &(result -> points[result -> length].subpath), &z2);
+                         &(result -> points[result -> length].subpath), &z2, true);
   result -> length ++;
   if(temporary_free != NULL)
     path_recursive_free(temporary_free, &z2, false);
@@ -6501,7 +6493,7 @@ bool eval_path_primary(struct metafont *mf, struct context *cx,
   }
   else if(begin_expression == end_expression &&
           begin_expression -> type == TYPE_SYMBOLIC){
-    //@<Caminho Primário: Variável@>
+    @<Caminho Primário: Variável@>
   }
   else if(begin_expression -> type == TYPE_OPEN_PARENTHESIS &&
           end_expression -> type == TYPE_CLOSE_PARENTHESIS){
@@ -6732,6 +6724,44 @@ int recursive_copy_subpath(struct path_points *dst, struct path_variable *src,
 @
 \fimcodigo
 
+O próximo caso a tratar é quando estamos diante de uma variável. Neste
+caso, devemos determinar seu tipo. Pode ser um par ou um caminho. Em
+seguida, alocamos o tamanho certo para nosso resultado e copiamos o
+conteúdo da variável para ele:
+
+\iniciocodigo
+@<Caminho Primário: Variável@>=
+{
+  struct symbolic_token *v = (struct symbolic_token *) begin_expression;
+  void *content = v -> var;
+  if(((struct pair_variable *) content) -> type == TYPE_T_PAIR){
+    result -> length = 1;
+    result -> cyclic = false;
+    result -> points = (struct path_points *)
+                         temporary_alloc(sizeof(struct path_points));
+    result -> points[0].x = ((struct pair_variable *) content) -> x;
+    result -> points[0].y = ((struct pair_variable *) content) -> y;
+    result -> points[0].u_x = ((struct pair_variable *) content) -> x;
+    result -> points[0].u_y = ((struct pair_variable *) content) -> y;
+    result -> points[0].v_x = ((struct pair_variable *) content) -> x;
+    result -> points[0].v_y = ((struct pair_variable *) content) -> y;
+    return true;
+  }
+  else if(((struct path_variable *) content) -> type == TYPE_T_PATH){
+    recursive_copy_points(temporary_alloc, &result,
+                          (struct path_variable *) content, false);
+    return true;
+  }
+  else{
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Variable is not pair nor path!\n",
+            mf -> file, begin_expression -> line);
+#endif
+    return false;
+  }
+}
+@
+\fimcodigo
 
 %%%%%%%
 
@@ -6753,9 +6783,9 @@ struct path_variable{
 \secao{Referências}
 
 % Ignorar + e - depois de:
-% ['penoffset'], ['point'], ['precontrol'], ['of'], ['postcontrol'],
-% ['intersectiontimes']
-
+% ['penoffset'], ['point'], ['precontrol'], ['postcontrol'],
+% ['intersectiontimes']w
+j
 
 \referencia{Knuth, D. E. (1984) ``Literate Programming'', The Computer
   Journal, Volume 27, Edição 2, Páginas 97--111.}
