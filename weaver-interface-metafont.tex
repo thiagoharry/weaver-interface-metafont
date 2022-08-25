@@ -6497,9 +6497,9 @@ bool eval_path_primary(struct metafont *mf, struct context *cx,
   }
   else if(begin_expression -> type == TYPE_OPEN_PARENTHESIS &&
           end_expression -> type == TYPE_CLOSE_PARENTHESIS){
-    //@<Caminho Primário: Parênteses@>
+    @<Caminho Primário: Parênteses@>
   }
-  else{
+  { // Se ainda não retornou, é um par primário
     //@<Caminho Primário: Par Primário@>
   }
   return false;
@@ -6759,6 +6759,38 @@ conteúdo da variável para ele:
 #endif
     return false;
   }
+}
+@
+\fimcodigo
+
+O próximo caso a ser tratado é quando a expressão primária de caminho
+começa e termina com parênteses. E não estamos diante de um par. Neste
+caso, devemos avaliar a expressão entre parênteses como uma nova
+expressão de caminho. Mas para isso temos antes que checar que não há
+uma vírgula dentro dela, caso em que estamos diante de um par:
+
+\iniciocodigo
+@<Caminho Primário: Parênteses@>=
+struct generic_token *t = begin_expression -> next;
+bool found_comma = false;
+DECLARE_NESTING_CONTROL();
+if(begin_expression -> next == end_expression){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Empty parenthesis.\n",
+          mf -> file, begin_expression -> line);
+#endif
+  return false;
+}
+while(t != NULL && t -> next != end_expression){
+  COUNT_NESTING(t);
+  if(IS_NOT_NESTED() && t -> type == TYPE_COMMA){
+    found_comma = true;
+    break;
+  }
+  t = t -> next;
+}
+if(!found_comma){
+  return eval_path_expression(mf, cx, begin_expression -> next, t, result);
 }
 @
 \fimcodigo

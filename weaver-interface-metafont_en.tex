@@ -6419,9 +6419,9 @@ bool eval_path_primary(struct metafont *mf, struct context *cx,
   }
   else if(begin_expression -> type == TYPE_OPEN_PARENTHESIS &&
           end_expression -> type == TYPE_CLOSE_PARENTHESIS){
-    //@<Primary Path: Parenthesis@>
+    @<Primary Path: Parenthesis@>
   }
-  else{
+  { // If we still did not return, then it is a primary pair
     //@<Primary Path: Primary Pair@>
   }
   return false;
@@ -6682,6 +6682,40 @@ the result points and copy the variable content to the result:
 @
 \fimcodigo
 
+The next primary path expression is when we have an expression between
+parenthesis. And this expression is not a pair, it is another path
+expression that need to be evaluated. First we check if there is
+nothing between parenthesis and produce and error in this case. Next,
+we check if we do not have a non-nested comma inside the
+parenthesis. If so, we ignore the expression because we have a pair
+primary. In all other cases, we evaluate whatever expression we have
+inside the parenthesis as a path expression:
+
+\iniciocodigo
+@<Primary Path: Parenthesis@>=
+struct generic_token *t = begin_expression -> next;
+bool found_comma = false;
+DECLARE_NESTING_CONTROL();
+if(begin_expression -> next == end_expression){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Empty parenthesis.\n",
+          mf -> file, begin_expression -> line);
+#endif
+  return false;
+}
+while(t != NULL && t -> next != end_expression){
+  COUNT_NESTING(t);
+  if(IS_NOT_NESTED() && t -> type == TYPE_COMMA){
+    found_comma = true;
+    break;
+  }
+  t = t -> next;
+}
+if(!found_comma){
+  return eval_path_expression(mf, cx, begin_expression -> next, t, result);
+}
+@
+\fimcodigo
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

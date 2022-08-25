@@ -4298,9 +4298,35 @@ return false;
 }
 else if(begin_expression->type==TYPE_OPEN_PARENTHESIS&&
 end_expression->type==TYPE_CLOSE_PARENTHESIS){
+/*266:*/
+#line 6695 "weaver-interface-metafont_en.tex"
+
+struct generic_token*t= begin_expression->next;
+bool found_comma= false;
+DECLARE_NESTING_CONTROL();
+if(begin_expression->next==end_expression){
+#if defined(W_DEBUG_METAFONT)
+fprintf(stderr,"METAFONT: Error: %s:%d: Empty parenthesis.\n",
+mf->file,begin_expression->line);
+#endif
+return false;
+}
+while(t!=NULL&&t->next!=end_expression){
+COUNT_NESTING(t);
+if(IS_NOT_NESTED()&&t->type==TYPE_COMMA){
+found_comma= true;
+break;
+}
+t= t->next;
+}
+if(!found_comma){
+return eval_path_expression(mf,cx,begin_expression->next,t,result);
+}
+/*:266*/
+#line 6422 "weaver-interface-metafont_en.tex"
 
 }
-else{
+{
 
 }
 return false;
