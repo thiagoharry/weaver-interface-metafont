@@ -6422,7 +6422,7 @@ bool eval_path_primary(struct metafont *mf, struct context *cx,
     @<Primary Path: Parenthesis@>
   }
   { // If we still did not return, then it is a primary pair
-    //@<Primary Path: Primary Pair@>
+    @<Primary Path: Primary Pair@>
   }
   return false;
 }
@@ -6716,6 +6716,64 @@ if(!found_comma){
 }
 @
 \fimcodigo
+
+And finally, the last kind of primary expression for pairs is when we
+have a pair primary expression. In this case, we just interpret the
+expression, allocate the single point in our path and copy the result
+of the expression to that point:
+
+\iniciocodigo
+@<Primary Path: Primary Pair@>=
+struct pair_variable v;
+if(!eval_pair_primary(mf, cx, begin_expression, end_expression, &v))
+  return false;
+result -> length = 1;
+result -> cyclic = false;
+result -> points = (struct path_points *)
+                     temporary_alloc(sizeof(struct path_points));
+result -> points[0].x = v.x;
+result -> points[0].y = v.y;
+result -> points[0].u_x = v.x;
+result -> points[0].u_y = v.y;
+result -> points[0].v_x = v.x;
+result -> points[0].v_y = v.y;
+return true;
+@
+\fimcodigo
+
+\subsubsecao{8.3.5. Path in Numeric Expressions}
+
+We can nuse the numeric expression with the
+operator \monoespaco{length} to obtain the number of extremity points
+in a path minus one. The syntax is:
+
+\alinhaverbatim
+<Primário Numérico> -> length <Caminho Primário>
+\alinhanormal
+%                       turningnumber <Caminho Primário> |
+%                       directiontime <Expressão de Par> of <Caminho Primário>
+
+We do not need a new type of token. The expression \monoespaco{length}
+was already used to compute modulus for numbers and pairs. For the
+case in which this operator gets a path, the implementation is even
+simpler:
+
+\iniciocodigo
+@<Evaluate 'length'@>+=
+else if(expr_type == TYPE_T_PATH){
+  struct path_variable p;
+  if(!eval_path_primary(mf, cx, (struct generic_token *)
+                                begin_expression -> next, end_expression,
+                                &p))
+    return false;
+  result -> value = (float) (p.length - 1);
+  if(temporary_free != NULL)
+    path_recursive_free(temporary_free, &p, false);
+  return true;
+}
+@
+\fimcodigo
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

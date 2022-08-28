@@ -1832,7 +1832,21 @@ return false;
 result->value= (float)hypot(p.x*p.x,p.y*p.y);
 return true;
 }
-/*:167*/
+/*:167*//*268:*/
+#line 6762 "weaver-interface-metafont_en.tex"
+
+else if(expr_type==TYPE_T_PATH){
+struct path_variable p;
+if(!eval_path_primary(mf,cx,(struct generic_token*)
+begin_expression->next,end_expression,
+&p))
+return false;
+result->value= (float)(p.length-1);
+if(temporary_free!=NULL)
+path_recursive_free(temporary_free,&p,false);
+return true;
+}
+/*:268*/
 #line 2702 "weaver-interface-metafont_en.tex"
 
 else{
@@ -4327,6 +4341,25 @@ return eval_path_expression(mf,cx,begin_expression->next,t,result);
 
 }
 {
+/*267:*/
+#line 6726 "weaver-interface-metafont_en.tex"
+
+struct pair_variable v;
+if(!eval_pair_primary(mf,cx,begin_expression,end_expression,&v))
+return false;
+result->length= 1;
+result->cyclic= false;
+result->points= (struct path_points*)
+temporary_alloc(sizeof(struct path_points));
+result->points[0].x= v.x;
+result->points[0].y= v.y;
+result->points[0].u_x= v.x;
+result->points[0].u_y= v.y;
+result->points[0].v_x= v.x;
+result->points[0].v_y= v.y;
+return true;
+/*:267*/
+#line 6425 "weaver-interface-metafont_en.tex"
 
 }
 return false;

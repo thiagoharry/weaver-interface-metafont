@@ -6500,7 +6500,7 @@ bool eval_path_primary(struct metafont *mf, struct context *cx,
     @<Caminho Primário: Parênteses@>
   }
   { // Se ainda não retornou, é um par primário
-    //@<Caminho Primário: Par Primário@>
+    @<Caminho Primário: Par Primário@>
   }
   return false;
 }
@@ -6795,22 +6795,80 @@ if(!found_comma){
 @
 \fimcodigo
 
+E finalmente, o último caso de expressãso primária é quando temos uma
+expressão primária de par. Neste caso, alocamos o único ponto de nosso
+caminho, avaliamos a expressão de par e passamos o resultado para o
+ponto alocado:
+
+\iniciocodigo
+@<Caminho Primário: Par Primário@>=
+struct pair_variable v;
+if(!eval_pair_primary(mf, cx, begin_expression, end_expression, &v))
+  return false;
+result -> length = 1;
+result -> cyclic = false;
+result -> points = (struct path_points *)
+                     temporary_alloc(sizeof(struct path_points));
+result -> points[0].x = v.x;
+result -> points[0].y = v.y;
+result -> points[0].u_x = v.x;
+result -> points[0].u_y = v.y;
+result -> points[0].v_x = v.x;
+result -> points[0].v_y = v.y;
+return true;
+@
+\fimcodigo
+
+\subsubsecao{8.3.5. Caminhos em Expressões Numéricas}
+
+Existe a expressão numérica primária com o
+operador \monoespaco{length} que retorna o número de pontos de
+extremidade de um caminho menos um. A sua sintaxe é:
+
+\alinhaverbatim
+<Primário Numérico> -> length <Caminho Primário>
+\alinhanormal
+%                       turningnumber <Caminho Primário> |
+%                       directiontime <Expressão de Par> of <Caminho Primário>
+
+Não precisamos aqui de nenhum tipo de token novo. A
+expressão \monoespaco{length} já era usada para obter o módulo de
+números e de pares. Para o caso deste operador obter um caminho, sua
+implementação é ainda mais simples:
+
+\iniciocodigo
+@<Avalia 'length'@>+=
+else if(expr_type == TYPE_T_PATH){
+  struct path_variable p;
+  if(!eval_path_primary(mf, cx, (struct generic_token *)
+                                begin_expression -> next, end_expression,
+                                &p))
+    return false;
+  result -> value = (float) (p.length - 1);
+  if(temporary_free != NULL)
+    path_recursive_free(temporary_free, &p, false);
+  return true;
+}
+@
+\fimcodigo
+
+
 %%%%%%%
 
 
-struct path_points{
-  float x, y; // Ponto de extremidade
-  float u_x, u_y, v_x, v_y;   // Pontos de controle
-  void *subpath;
-};
-struct path_variable{
-  int type; // Deve ser 'TYPE_T_PATH'
-  int nesting_level;
-  void *next;
-  bool cyclic;
-  int length;
-  struct path_points *points;
-};
+%struct path_points{
+%  float x, y; // Ponto de extremidade
+%  float u_x, u_y, v_x, v_y;   // Pontos de controle
+%  void *subpath;
+%};
+%struct path_variable{
+%  int type; // Deve ser 'TYPE_T_PATH'
+%  int nesting_level;
+%  void *next;
+%  bool cyclic;
+%  int length;
+%  struct path_points *points;
+%};
 
 \secao{Referências}
 
