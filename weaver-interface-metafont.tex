@@ -3750,9 +3750,9 @@ As regras gramaticais finais para a expressão de pares é:
 <Primário de Par> -> <Variável de Par> |
                      ( <Expressão Numérica> , <Expressão Numérica> ) |
                      ( <Expressão de Par> ) |
+                     (...) |
                      <Átomo Numérico>[<Expressão de Par,
                                       <Expressão de Par]  |
-                     (...) |
                      <Operador de Multiplicação Escalar><Primário de Par>
 \alinhanormal
 
@@ -3793,6 +3793,7 @@ bool eval_pair_primary(struct metafont *mf, struct context *cx,
     @<Primário de Par: Regra 2@>
     @<Primário de Par: Regra 3@>
   }
+  @<Primário de Par: Outras Regras a Definir Depois@>
   @<Primário de Par: Regra 4@>
   @<Primário de Par: Regra 5@>
 #if defined(W_DEBUG_METAFONT)
@@ -6847,6 +6848,100 @@ else if(expr_type == TYPE_T_PATH){
   result -> value = (float) (p.length - 1);
   if(temporary_free != NULL)
     path_recursive_free(temporary_free, &p, false);
+  return true;
+}
+@
+\fimcodigo
+
+\subsubsecao{8.3.5. Caminhos em Expressões de Pares}
+
+Dado um caminho, nós podemos extrair pares dele. O par pode ser um dos
+pontos de extremidade ou algum dos pontos de controle. A sintaxe para
+isso é:
+
+\alinhaverbatim
+<Primário de Par> -> point <Expressão Numérica> of <Primário de Caminho> |
+                     precontrol <Expressão Numérica> of <Primário de Caminho> |
+                     postcontrol <Expressão Numérica> of <Primário de Caminho>
+\alinhanormal
+
+Isso requer adicionarmos os seguintes novos tipos de tokens:
+
+\iniciocodigo
+@<METAFONT: Definição de Token Simbólico@>+=
+#define TYPE_POINT             61 // O token simbólico 'point'
+#define TYPE_PRECONTROL        62 // O token simbólico 'precontrol'
+#define TYPE_POSTCONTROL       63 // O token simbólico 'postcontrol'
+@
+\fimcodigo
+
+E os adicionamos à lista de palavras reservadas:
+
+\iniciocodigo
+@<Lista de Palavras Reservadas@>+=
+"point", "precontrol", "postcontrol",
+@
+\fimcodigo
+
+No caso do primeiro operador, \monoespaco{point}, ele nos retorna o
+ponto de extremidade indicado. Se o caminho não for cíclico, os pontos
+de índice menor que zero serão iguais ao de índice zero (o primeiro) e
+os pontos de índice maior ou igual ao tamanho serão iguais ao último
+ponto. Se o caminho for cíclico, o índice é contado seguindo o
+ciclo. No METAFONT original, índices não-positivos eram permitidos,
+mas aqui eles serão convertidos para inteiros.
+
+\iniciocodigo
+@<Primário de Par: Outras Regras a Definir Depois@>=
+if(begin_expression -> type == TYPE_POINT){
+  DECLARE_NESTING_CONTROL();
+  struct generic_token *begin_num, *end_num , *of = NULL, *begin_path, *end_path;
+  struct numeric_variable a;
+  struct path_variable b;
+  begin_num = begin_expression -> next;
+  end_num = begin_num;
+  while(end_num != NULL && end_num -> next != end_expression){
+    COUNT_NESTING(end_num);
+    if(IS_NOT_NESTED() &&
+       ((struct generic_token *) end_num -> next) -> type == TYPE_OF){
+      of = end_num -> next;
+      break;
+    }
+    end_num = end_num -> next;
+  }
+  if(of == NULL){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Missing 'of' in 'point' expression\n",
+            mf -> file, begin_expression -> line);
+#endif
+    return false;
+  }
+  if(of -> next == NULL || of == end_expression){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Missing path expression in "
+            "'point' expression\n", mf -> file, begin_expression -> line);
+#endif
+    return false;
+  }
+  begin_path = of -> next;
+  end_path = end_expression;
+  if(!eval_numeric_expression(mf, cx, begin_num, end_num, &a))
+    return false;
+  if(!eval_path_primary(mf, cx, begin_path, end_path, &b))
+    return false;
+  if(b.cyclic){
+    result -> x = b.points[((int)(a.value)) %b.length].x;
+    result -> y = b.points[((int)(a.value)) %b.length].y;
+  }
+  else{
+    int index = (int) (a.value);
+    if(index < 0) index = 0;
+    if(index >= b.length) index = b.length - 1;
+    result -> x = b.points[index].x;
+    result -> y = b.points[index].y;
+  }
+  if(temporary_free != NULL)
+    path_recursive_free(temporary_free, &b, false);
   return true;
 }
 @
