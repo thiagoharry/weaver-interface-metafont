@@ -129,7 +129,7 @@ void test_variables(void){
 }
 
 void test_assignments(void){
- struct metafont *mf;
+  struct metafont *mf;
   struct context *cx;
   bool ret;
   mf = init_metafont(malloc, free, "tests/wrong_assignment.mf");
@@ -331,6 +331,49 @@ void test_lexer(void){
   destroy_context(cx);
 }
 
+void test_primary_path(void){
+  struct metafont *mf;
+  struct context *cx;
+  bool ret;
+  struct named_variable *p1, *p2, *p3, *p4;
+  struct path_variable *path_p1, *path_p2, *path_p3, *path_p4;
+  mf = init_metafont(malloc, free, "tests/primary_path.mf");
+  cx = init_context();
+  void *p = lexer(mf, malloc, free, "tests/primary_path.mf");
+  ret = eval_program(mf, cx, p);
+  assert("Interpreting program with primary path expressions", ret);
+  p1 = (struct named_variable *) mf -> named_variables;
+  p2 = p1 -> next;
+  p3 = p2 -> next;
+  p4 = p3 -> next;
+  path_p1 = (struct path_variable *) p1 -> var;
+  path_p2 = (struct path_variable *) p2 -> var;
+  path_p3 = (struct path_variable *) p3 -> var;
+  path_p4 = (struct path_variable *) p4 -> var;
+  assert("Assigning pair literal to path",
+	 path_p1 -> cyclic == false && path_p1 -> length == 1 &&
+	 path_p1 -> points[0].x == 1.0 && path_p1 -> points[0].y == 5.0 &&
+	 path_p1 -> points[0].u_x == 1.0 && path_p1 -> points[0].u_y == 5.0 &&
+	 path_p1 -> points[0].v_x == 1.0 && path_p1 -> points[0].v_y == 5.0);
+  assert("Assigning between path variables",
+	 path_p2 -> cyclic == false && path_p2 -> length == 1 &&
+	 path_p2 -> points[0].x == 1.0 && path_p2 -> points[0].y == 5.0 &&
+	 path_p2 -> points[0].u_x == 1.0 && path_p2 -> points[0].u_y == 5.0 &&
+	 path_p2 -> points[0].v_x == 1.0 && path_p2 -> points[0].v_y == 5.0);
+  assert("Reversing single point",
+	 path_p3 -> cyclic == false && path_p3 -> length == 1 &&
+	 path_p3 -> points[0].x == 1.0 && path_p3 -> points[0].y == 5.0 &&
+	 path_p3 -> points[0].u_x == 1.0 && path_p3 -> points[0].u_y == 5.0 &&
+	 path_p3 -> points[0].v_x == 1.0 && path_p3 -> points[0].v_y == 5.0);
+  assert("Subpath of single point",
+	 path_p4 -> cyclic == false && path_p4 -> length == 1 &&
+	 path_p4 -> points[0].x == 1.0 && path_p4 -> points[0].y == 5.0 &&
+	 path_p4 -> points[0].u_x == 1.0 && path_p4 -> points[0].u_y == 5.0 &&
+	 path_p4 -> points[0].v_x == 1.0 && path_p4 -> points[0].v_y == 5.0);
+  free_token_list(free, p);
+  destroy_metafont(mf);
+  destroy_context(cx);
+}
 
 int main(int argc, char **argv){
   Winit_metafont(malloc, free, malloc, free, my_rand, 36);
@@ -339,6 +382,7 @@ int main(int argc, char **argv){
   test_compound_statements();
   test_variables();
   test_assignments();
+  test_primary_path();
   imprime_resultado();
   return 0;
 }

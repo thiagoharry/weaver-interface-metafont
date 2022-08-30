@@ -6813,15 +6813,23 @@ following the cycle. In the original METAFONT language, non-integer
 indices were allowed, but here we will interpret all indices as
 integers, casting them to C int type.
 
+The operator \monoespaco{postcontrol} is similar, but it gets the
+first control point after the given extremity point pointed by the
+index. And the operator \monoespaco{precontrol} gets the control point
+before the given extremity point.
+
 \iniciocodigo
 @<Pair Primary: Other Rules to Be Defined Later@>=
-if(begin_expression -> type == TYPE_POINT){
+if(begin_expression -> type == TYPE_POINT ||
+   begin_expression -> type == TYPE_PRECONTROL ||
+   begin_expression -> type == TYPE_POSTCONTROL){
   DECLARE_NESTING_CONTROL();
   struct generic_token *begin_num, *end_num , *of = NULL, *begin_path, *end_path;
   struct numeric_variable a;
   struct path_variable b;
   begin_num = begin_expression -> next;
   end_num = begin_num;
+  int index;
   while(end_num != NULL && end_num -> next != end_expression){
     COUNT_NESTING(end_num);
     if(IS_NOT_NESTED() &&
@@ -6852,15 +6860,34 @@ if(begin_expression -> type == TYPE_POINT){
   if(!eval_path_primary(mf, cx, begin_path, end_path, &b))
     return false;
   if(b.cyclic){
-    result -> x = b.points[((int)(a.value)) %b.length].x;
-    result -> y = b.points[((int)(a.value)) %b.length].y;
+    index = ((int)(a.value)) % b.length;
+    if(begin_expression -> type == TYPE_PRECONTROL)
+      index = (index - 1) % b.length;
   }
   else{
-    int index = (int) (a.value);
+    index = (int) (a.value);
     if(index < 0) index = 0;
     if(index >= b.length) index = b.length - 1;
+    if(begin_expression -> type == TYPE_PRECONTROL)
+      index = (index - 1) % b.length;
+  }
+  if(begin_expression -> type == TYPE_POINT){
     result -> x = b.points[index].x;
     result -> y = b.points[index].y;
+  }
+  else if(begin_expression -> type == TYPE_PRECONTROL){
+    if(index < 0){
+      result -> x = b.points[0].x;
+      result -> y = b.points[0].y;
+    }
+    else{
+      result -> x = b.points[index].v_x;
+      result -> y = b.points[index].v_y;
+    }
+  }
+  else{
+    result -> x = b.points[index].u_x;
+    result -> y = b.points[index].u_y;
   }
   if(temporary_free != NULL)
     path_recursive_free(temporary_free, &b, false);

@@ -2149,8 +2149,8 @@ else if(((struct generic_token *) begin_token_list) -> type ==
     if(var -> type != TYPE_SYMBOLIC){
 #if defined(W_DEBUG_METAFONT)
       fprintf(stderr, "METAFONT: Error: %s:%d: Non-symbolic "
-              "token in left side of assignment.\n", mf -> file,
-              var -> line);
+              "token in left side of assignment (type: %d).\n", mf -> file,
+              var -> line, var -> type);
 #endif
       return false;
     }
@@ -4575,7 +4575,7 @@ if(begin_j -> type == TYPE_JOIN){
 else if(begin_j -> type != TYPE_AMPERSAND){
 #if defined(W_DEBUG_METAFONT)
   fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognized path expression.\n",
-          mf -> file, begin_f -> line);
+          mf -> file, begin_j -> line);
 #endif
   return false;
 }
@@ -4590,7 +4590,7 @@ termos um token ``$\{$'' após a junção:
 if(end_j == end_expression){
 #if defined(W_DEBUG_METAFONT)
   fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognized path expression.\n",
-          mf -> file, end_f -> line);
+          mf -> file, end_j -> line);
 #endif
   return false;
 }
@@ -4920,7 +4920,7 @@ if(begin_j == end_j && begin_j -> type == TYPE_AMPERSAND){
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr,
             "METAFONT: Error: %s:%d: Concatenating discontinuous paths.\n",
-            mf -> file, begin_f -> line);
+            mf -> file, begin_j -> line);
 #endif
     return false;
   }
@@ -6611,6 +6611,7 @@ while((!IS_NOT_NESTED() || of -> type != TYPE_OF) && of != NULL &&
   end_pair_expr = of;
   of = (struct generic_token *) (of -> next);
 }
+// TODO: Error happening here:
 if(of == NULL || of == end_expression){
 #if defined(W_DEBUG_METAFONT)
   fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
@@ -6891,15 +6892,23 @@ ponto. Se o caminho for cíclico, o índice é contado seguindo o
 ciclo. No METAFONT original, índices não-positivos eram permitidos,
 mas aqui eles serão convertidos para inteiros.
 
+O operador \monoespaco{postcontrol} é semelhante, mas ele obtém o
+primeiro ponto de controle imediatamente após o ponto cujo índice é
+indicado. E o \monoespaco{precontrol} obtém o ponto de controle
+imediatamente antes do ponto indicado.
+
 \iniciocodigo
 @<Primário de Par: Outras Regras a Definir Depois@>=
-if(begin_expression -> type == TYPE_POINT){
+if(begin_expression -> type == TYPE_POINT ||
+   begin_expression -> type == TYPE_PRECONTROL ||
+   begin_expression -> type == TYPE_POSTCONTROL){
   DECLARE_NESTING_CONTROL();
   struct generic_token *begin_num, *end_num , *of = NULL, *begin_path, *end_path;
   struct numeric_variable a;
   struct path_variable b;
   begin_num = begin_expression -> next;
   end_num = begin_num;
+  int index;
   while(end_num != NULL && end_num -> next != end_expression){
     COUNT_NESTING(end_num);
     if(IS_NOT_NESTED() &&
@@ -6930,15 +6939,34 @@ if(begin_expression -> type == TYPE_POINT){
   if(!eval_path_primary(mf, cx, begin_path, end_path, &b))
     return false;
   if(b.cyclic){
-    result -> x = b.points[((int)(a.value)) %b.length].x;
-    result -> y = b.points[((int)(a.value)) %b.length].y;
+    index = ((int)(a.value)) % b.length;
+    if(begin_expression -> type == TYPE_PRECONTROL)
+      index = (index - 1) % b.length;
   }
   else{
-    int index = (int) (a.value);
+    index = (int) (a.value);
     if(index < 0) index = 0;
     if(index >= b.length) index = b.length - 1;
+    if(begin_expression -> type == TYPE_PRECONTROL)
+      index = (index - 1) % b.length;
+  }
+  if(begin_expression -> type == TYPE_POINT){
     result -> x = b.points[index].x;
     result -> y = b.points[index].y;
+  }
+  else if(begin_expression -> type == TYPE_PRECONTROL){
+    if(index < 0){
+      result -> x = b.points[0].x;
+      result -> y = b.points[0].y;
+    }
+    else{
+      result -> x = b.points[index].v_x;
+      result -> y = b.points[index].v_y;
+    }
+  }
+  else{
+    result -> x = b.points[index].u_x;
+    result -> y = b.points[index].u_y;
   }
   if(temporary_free != NULL)
     path_recursive_free(temporary_free, &b, false);
