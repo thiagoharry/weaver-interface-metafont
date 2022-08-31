@@ -331,25 +331,27 @@ void test_lexer(void){
   destroy_context(cx);
 }
 
-void test_primary_path(void){
+void test_path_expressions(void){
   struct metafont *mf;
   struct context *cx;
   bool ret;
-  struct named_variable *p1, *p2, *p3, *p4;
-  struct path_variable *path_p1, *path_p2, *path_p3, *path_p4;
-  mf = init_metafont(malloc, free, "tests/primary_path.mf");
+  struct named_variable *p1, *p2, *p3, *p4, *p5;
+  struct path_variable *path_p1, *path_p2, *path_p3, *path_p4, *path_p5;
+  mf = init_metafont(malloc, free, "tests/path_expressions.mf");
   cx = init_context();
-  void *p = lexer(mf, malloc, free, "tests/primary_path.mf");
+  void *p = lexer(mf, malloc, free, "tests/path_expressions.mf");
   ret = eval_program(mf, cx, p);
   assert("Interpreting program with primary path expressions", ret);
   p1 = (struct named_variable *) mf -> named_variables;
   p2 = p1 -> next;
   p3 = p2 -> next;
   p4 = p3 -> next;
+  p5 = p4 -> next;
   path_p1 = (struct path_variable *) p1 -> var;
   path_p2 = (struct path_variable *) p2 -> var;
   path_p3 = (struct path_variable *) p3 -> var;
   path_p4 = (struct path_variable *) p4 -> var;
+  path_p5 = (struct path_variable *) p5 -> var;
   assert("Assigning pair literal to path",
 	 path_p1 -> cyclic == false && path_p1 -> length == 1 &&
 	 path_p1 -> points[0].x == 1.0 && path_p1 -> points[0].y == 5.0 &&
@@ -370,6 +372,11 @@ void test_primary_path(void){
 	 path_p4 -> points[0].x == 1.0 && path_p4 -> points[0].y == 5.0 &&
 	 path_p4 -> points[0].u_x == 1.0 && path_p4 -> points[0].u_y == 5.0 &&
 	 path_p4 -> points[0].v_x == 1.0 && path_p4 -> points[0].v_y == 5.0);
+  assert("Pair secundary as path expression",
+	 path_p5 -> cyclic == false && path_p5 -> length == 1 &&
+	 path_p5 -> points[0].x == 2.0 && path_p5 -> points[0].y == 10.0 &&
+	 path_p5 -> points[0].u_x == 2.0 && path_p5 -> points[0].u_y == 10.0 &&
+	 path_p5 -> points[0].v_x == 2.0 && path_p5 -> points[0].v_y == 10.0);
   free_token_list(free, p);
   destroy_metafont(mf);
   destroy_context(cx);
@@ -382,7 +389,7 @@ int main(int argc, char **argv){
   test_compound_statements();
   test_variables();
   test_assignments();
-  test_primary_path();
+  test_path_expressions();
   imprime_resultado();
   return 0;
 }

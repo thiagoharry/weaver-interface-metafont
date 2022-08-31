@@ -4525,7 +4525,7 @@ if(begin_j -> type == TYPE_JOIN){
 else if(begin_j -> type != TYPE_AMPERSAND){
 #if defined(W_DEBUG_METAFONT)
   fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognized path expression.\n",
-          mf -> file, begin_f -> line);
+          mf -> file, begin_j -> line);
 #endif
   return false;
 }
@@ -4540,7 +4540,7 @@ token is ``$\{$'':
 if(end_j == end_expression){
 #if defined(W_DEBUG_METAFONT)
   fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognized path expression.\n",
-          mf -> file, end_f -> line);
+          mf -> file, end_j -> line);
 #endif
   return false;
 }
@@ -4867,7 +4867,7 @@ if(begin_j == end_j && begin_j -> type == TYPE_AMPERSAND){
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr,
             "METAFONT: Error: %s:%d: Concatenating discontinuous paths.\n",
-            mf -> file, begin_f -> line);
+            mf -> file, begin_j -> line);
 #endif
     return false;
   }
@@ -6035,6 +6035,10 @@ bool eval_path_secundary(struct metafont *mf, struct context *cx,
     }
     result -> points -> x = pair.x;
     result -> points -> y = pair.y;
+    result -> points -> u_x = pair.x;
+    result -> points -> u_y = pair.y;
+    result -> points -> v_x = pair.x;
+    result -> points -> v_y = pair.y;
     return true;    
   }
   else
@@ -6515,10 +6519,9 @@ between integer positions.
 DECLARE_NESTING_CONTROL();
 struct pair_variable a;
 struct path_variable b;
-struct generic_token *of, *end_pair_expr = begin_expression -> next;
+struct generic_token *of, *end_pair_expr = begin_expression;
 struct generic_token *begin_subexpr;
-if(begin_expression -> next == NULL ||
-   end_pair_expr -> type == TYPE_OF ||
+if(begin_expression -> next == NULL ||  end_pair_expr -> type == TYPE_OF ||
    begin_expression == end_expression){
 #if defined(W_DEBUG_METAFONT)
   fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
@@ -6527,9 +6530,10 @@ if(begin_expression -> next == NULL ||
   return false;
 }
 of = (struct generic_token *) (end_pair_expr -> next);
-while((!IS_NOT_NESTED() || of -> type != TYPE_OF) && of != NULL &&
-      of != end_expression){
-  COUNT_NESTING(end_pair_expr);
+while(of != NULL && of != end_expression){
+  COUNT_NESTING(of);
+  if(IS_NOT_NESTED() && of -> type == TYPE_OF)
+    break;
   end_pair_expr = of;
   of = (struct generic_token *) (of -> next);
 }
