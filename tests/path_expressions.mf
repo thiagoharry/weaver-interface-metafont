@@ -1,0 +1,12 @@
+% To test primary path expressions
+% This program should work and be accepted.
+
+path p1, p2, p3, p4, p5;
+
+p1 = (1, 5);
+p2 = p1;
+p3 = reverse p1;
+p4 = subpath (0, 0) of p3;
+p5 = (1, 5) * 2;
+
+end
