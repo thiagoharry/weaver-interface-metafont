@@ -1146,6 +1146,7 @@ declaração para essa próxima função de avaliação:
 @<Funções Auxiliares Locais (metafont.c)@>=
 bool eval_list_of_statements(struct metafont *mf, struct context *cx,
                             void *begin_token_list, void *end_token_list){
+  printf("EVAL STATEMENT LIST\n");
   bool ret = true;
   struct generic_token *begin, *end = NULL;
   begin = (struct generic_token *) begin_token_list;
@@ -1642,6 +1643,12 @@ struct variable *insert_variable(int nesting_level,
     case TYPE_T_NUMERIC:
       var_size = sizeof(struct numeric_variable);
       break;
+    case TYPE_T_PAIR:
+      var_size = sizeof(struct pair_variable);
+      break;
+    case TYPE_T_PATH:
+      var_size = sizeof(struct path_variable);
+      break;
     default:
       var_size = sizeof(struct variable);
   }
@@ -1709,8 +1716,9 @@ struct variable *insert_named_global_variable(struct metafont *mf,
       return NULL;
     }
   }
-  if(mf -> named_variables == NULL)
+  if(mf -> named_variables == NULL){
     mf -> named_variables = named;
+  }  
   else{
     struct named_variable *p = (struct named_variable *)
                                    mf -> named_variables;
