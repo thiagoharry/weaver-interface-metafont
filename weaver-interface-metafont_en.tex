@@ -1619,6 +1619,12 @@ struct variable *insert_variable(int nesting_level,
     case TYPE_T_NUMERIC:
       var_size = sizeof(struct numeric_variable);
       break;
+    case TYPE_T_PAIR:
+      var_size = sizeof(struct pair_variable);
+      break;
+    case TYPE_T_PATH:
+      var_size = sizeof(struct path_variable);
+      break;
     default:
       var_size = sizeof(struct variable);
   }
