@@ -1146,7 +1146,6 @@ declaração para essa próxima função de avaliação:
 @<Funções Auxiliares Locais (metafont.c)@>=
 bool eval_list_of_statements(struct metafont *mf, struct context *cx,
                             void *begin_token_list, void *end_token_list){
-  printf("EVAL STATEMENT LIST\n");
   bool ret = true;
   struct generic_token *begin, *end = NULL;
   begin = (struct generic_token *) begin_token_list;
@@ -6758,6 +6757,7 @@ conteúdo da variável para ele:
     result -> points[0].u_y = ((struct pair_variable *) content) -> y;
     result -> points[0].v_x = ((struct pair_variable *) content) -> x;
     result -> points[0].v_y = ((struct pair_variable *) content) -> y;
+    result -> points[0].subpath = NULL;
     return true;
   }
   else if(((struct path_variable *) content) -> type == TYPE_T_PATH){
@@ -6822,6 +6822,7 @@ result -> length = 1;
 result -> cyclic = false;
 result -> points = (struct path_points *)
                      temporary_alloc(sizeof(struct path_points));
+result -> points[0].subpath = NULL;
 result -> points[0].x = v.x;
 result -> points[0].y = v.y;
 result -> points[0].u_x = v.x;

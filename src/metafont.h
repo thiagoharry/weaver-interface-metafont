@@ -23,11 +23,11 @@ extern"C"{
 
 struct context{
 /*55:*/
-#line 1275 "weaver-interface-metafont.tex"
+#line 1274 "weaver-interface-metafont.tex"
 
 int nesting_level;
 /*:55*//*66:*/
-#line 1509 "weaver-interface-metafont.tex"
+#line 1508 "weaver-interface-metafont.tex"
 
 void*variables;
 /*:66*/
@@ -42,16 +42,16 @@ char*file;
 void*(*alloc)(size_t);
 void(*free)(void*);
 /*62:*/
-#line 1447 "weaver-interface-metafont.tex"
+#line 1446 "weaver-interface-metafont.tex"
 
 void*named_variables;
 void*global_variables;
 /*:62*//*80:*/
-#line 1827 "weaver-interface-metafont.tex"
+#line 1826 "weaver-interface-metafont.tex"
 
 void*internal_numeric_variables;
 /*:80*//*134:*/
-#line 3188 "weaver-interface-metafont.tex"
+#line 3187 "weaver-interface-metafont.tex"
 
 bool have_stored_normaldeviate;
 float normaldeviate;
