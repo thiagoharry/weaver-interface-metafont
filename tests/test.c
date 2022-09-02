@@ -384,11 +384,11 @@ void test_path_expressions(void){
 
 int main(int argc, char **argv){
   Winit_metafont(malloc, free, malloc, free, my_rand, 36);
-  //test_lexer();
-  //test_empty_programs();
-  //test_compound_statements();
-  //test_variables();
-  //test_assignments();
+  test_lexer();
+  test_empty_programs();
+  test_compound_statements();
+  test_variables();
+  test_assignments();
   test_path_expressions();
   imprime_resultado();
   return 0;
