@@ -1,6 +1,15 @@
 % To test primary path expressions
 % This program should work and be accepted.
 
+% Coisas únicas no p4: recursive_copy_subpath
+
+% A variável é criada em insert_named_global_variable, (1709)
+% como named -> var (setada como NULL)
+% Alocada por insert_variable em (1654) e inicializada.
+% Passada para variable_pointer em (1599)
+% Passada como argumento em update_token_pointer_for_variable
+% E repassada para cada token simbólico que deve apontar para ela.
+
 path p1, p2, p3, p4, p5;
 
 p1 = (1, 5);

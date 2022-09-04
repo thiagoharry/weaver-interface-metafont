@@ -2005,6 +2005,7 @@ mantendo seu tamanho (\monoespaco{length}) como sendo igual a -1:
 @<Inicialização de Nova Variável@>=
 if(type == TYPE_T_PATH){
   ((struct path_variable *) var) -> length = -1;
+  ((struct path_variable *) var) -> points = NULL;
 }
 @
 \fimcodigo
@@ -6651,6 +6652,7 @@ if(!eval_path_primary(mf, cx, begin_subexpr, end_expression, &b))
     final_path_size *= -1;
   final_path_size ++;
   result -> length = final_path_size;
+  result -> cyclic = false;     
   result -> points = (struct path_points *)
                        temporary_alloc(final_path_size *
                                        sizeof(struct path_points));

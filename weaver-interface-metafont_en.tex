@@ -6572,6 +6572,7 @@ if(!eval_path_primary(mf, cx, begin_subexpr, end_expression, &b))
     final_path_size *= -1;
   final_path_size ++;
   result -> length = final_path_size;
+  result -> cyclic = false;
   result -> points = (struct path_points *)
                        temporary_alloc(final_path_size *
                                        sizeof(struct path_points));
