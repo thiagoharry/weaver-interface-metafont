@@ -2753,7 +2753,14 @@ int get_primary_expression_type(struct metafont *mf, struct context *cx,
       }
     }
   }
-  else{
+  else{ // TODO: FIXME: Temporary code. Do a proper detection.
+    struct generic_token *aux;
+    aux = (struct generic_token *) begin_expr -> next;
+    aux = (struct generic_token *) aux -> next;
+    if(begin_expr -> type == TYPE_OPEN_PARENTHESIS &&
+       end_expr -> type == TYPE_CLOSE_PARENTHESIS &&
+       aux != NULL &&  aux -> type == TYPE_COMMA)
+      return TYPE_T_PAIR;
     //@<Discover Primary Expression Type@>
   }
   return TYPE_T_NUMERIC;
@@ -6559,6 +6566,9 @@ if(!eval_path_primary(mf, cx, begin_subexpr, end_expression, &b))
   return false;
 {
   int final_path_size;
+  result -> cyclic = false;
+  if(b.cyclic && ((a.x - a.y) >= b.length || -(a.x - a.y) >= b.length))
+    result -> cyclic = true;
   if(a.x < 0)
     a.x = 0;
   if(a.y < 0)
@@ -6572,7 +6582,6 @@ if(!eval_path_primary(mf, cx, begin_subexpr, end_expression, &b))
     final_path_size *= -1;
   final_path_size ++;
   result -> length = final_path_size;
-  result -> cyclic = false;
   result -> points = (struct path_points *)
                        temporary_alloc(final_path_size *
                                        sizeof(struct path_points));
