@@ -14,6 +14,8 @@
 
 #include <string.h>
 
+#define ALMOST_EQUAL(a, b) (fabs(a - b) < 0.00002)
+
 int numero_de_testes = 0, acertos = 0, falhas = 0;
 void imprime_resultado(void){
   printf("\n%d tests: %d sucess, %d fails\n\n",
@@ -335,9 +337,9 @@ void test_path_expressions(void){
   struct metafont *mf;
   struct context *cx;
   bool ret;
-  struct named_variable *p1, *p2, *p3, *p4, *p5, *p6, *p7;
+  struct named_variable *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8;
   struct path_variable *path_p1, *path_p2, *path_p3, *path_p4, *path_p5, *path_p6,
-    *path_p7;
+    *path_p7, *path_p8;
   mf = init_metafont(malloc, free, "tests/path_expressions.mf");
   cx = init_context();
   void *p = lexer(mf, malloc, free, "tests/path_expressions.mf");
@@ -350,6 +352,7 @@ void test_path_expressions(void){
   p5 = p4 -> next;
   p6 = p5 -> next;
   p7 = p6 -> next;
+  p8 = p7 -> next;
   path_p1 = (struct path_variable *) p1 -> var;
   path_p2 = (struct path_variable *) p2 -> var;
   path_p3 = (struct path_variable *) p3 -> var;
@@ -357,6 +360,7 @@ void test_path_expressions(void){
   path_p5 = (struct path_variable *) p5 -> var;
   path_p6 = (struct path_variable *) p6 -> var;
   path_p7 = (struct path_variable *) p7 -> var;
+  path_p8 = (struct path_variable *) p8 -> var;
   assert("Assigning pair literal to path",
 	 path_p1 -> cyclic == false && path_p1 -> length == 1 &&
 	 path_p1 -> points[0].x == 1.0 && path_p1 -> points[0].y == 5.0 &&
@@ -390,15 +394,19 @@ void test_path_expressions(void){
 	 path_p6 -> points[0].x == 2.0 && path_p6 -> points[0].y == 10.0 &&
 	 path_p6 -> points[0].u_x == 2.0 && path_p6 -> points[0].u_y == 10.0 &&
 	 path_p6 -> points[0].v_x == 2.0 && path_p6 -> points[0].v_y == 10.0);
-  printf("cyclic: %d length: %d x: %f y: %f\n",
-	 path_p7 -> cyclic, path_p7 -> length, path_p7 -> points[0].x,
-	 path_p7 -> points[0].y);
   assert("Pair with transformer as path expression",
 	 path_p7 -> cyclic == false && path_p7 -> length == 1 &&
-	 path_p7 -> points[0].x == 0.0 && path_p7 -> points[0].y == 1.0 &&
-	 path_p7 -> points[0].u_x == 0.0 && path_p7 -> points[0].u_y == 1.0 &&
-	 path_p7 -> points[0].v_x == 0.0 && path_p7 -> points[0].v_y == 1.0);
-
+	 ALMOST_EQUAL(path_p7 -> points[0].x, 0.0) &&
+	 ALMOST_EQUAL(path_p7 -> points[0].y, 1.0) &&
+	 ALMOST_EQUAL(path_p7 -> points[0].u_x, 0.0) &&
+	 ALMOST_EQUAL(path_p7 -> points[0].u_y, 1.0) &&
+	 ALMOST_EQUAL(path_p7 -> points[0].v_x, 0.0) &&
+	 ALMOST_EQUAL(path_p7 -> points[0].v_y, 1.0));
+  assert("Tertiary pair expression as path expression",
+	 path_p8 -> cyclic == false && path_p8 -> length == 1 &&
+	 path_p8 -> points[0].x == 1.0 && path_p8 -> points[0].y == 1.0 &&
+	 path_p8 -> points[0].u_x == 1.0 && path_p8 -> points[0].u_y == 1.0 &&
+	 path_p8 -> points[0].v_x == 1.0 && path_p8 -> points[0].v_y == 1.0);
   free_token_list(free, p);
   destroy_metafont(mf);
   destroy_context(cx);

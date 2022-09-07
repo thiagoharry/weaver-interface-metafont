@@ -5914,7 +5914,7 @@ bool eval_path_tertiary(struct metafont *mf, struct context *cx,
   if(this_expression_is_pair){
     struct pair_variable pair;
     if(!eval_pair_expression(mf, cx, begin_expression, end_expression,
-                            &pair));
+                            &pair))
       return false;
     result -> cyclic = false;
     result -> length = 1;
@@ -5929,6 +5929,10 @@ bool eval_path_tertiary(struct metafont *mf, struct context *cx,
     }
     result -> points -> x = pair.x;
     result -> points -> y = pair.y;
+    result -> points -> u_x = pair.x;
+    result -> points -> u_y = pair.y;
+    result -> points -> v_x = pair.x;
+    result -> points -> v_y = pair.y;
     return true;
   }
   else

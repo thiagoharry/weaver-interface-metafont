@@ -1,7 +1,7 @@
-% To test primary path expressions
+% To test path expressions
 % This program should work and be accepted.
 
-path p1, p2, p3, p4, p5, p6, p7;
+path p1, p2, p3, p4, p5, p6, p7, p8;
 
 p1 = (1, 5);
 p2 = p1;
@@ -10,5 +10,6 @@ p4 = subpath (-10, 8) of p3;
 p5 = (1, 5) / 2;
 p6 = 2 * (1, 5);
 p7 = (1, 0) rotated 90;
+p8 = (1, 5) - (0, 4);
 
 end
