@@ -5933,6 +5933,7 @@ bool eval_path_tertiary(struct metafont *mf, struct context *cx,
     result -> points -> u_y = pair.y;
     result -> points -> v_x = pair.x;
     result -> points -> v_y = pair.y;
+    result -> points -> subpath = NULL;
     return true;
   }
   else
