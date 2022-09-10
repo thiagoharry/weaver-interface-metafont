@@ -2157,7 +2157,8 @@ else if(((struct generic_token *) begin_token_list) -> type ==
     if(var -> type != TYPE_SYMBOLIC){
 #if defined(W_DEBUG_METAFONT)
       fprintf(stderr, "METAFONT: Error: %s:%d: Non-symbolic "
-              "token in left side of assignment (type: %d).\n", mf -> file,
+              "token in left side of assignment (type: %d).\n",
+              mf -> file,
               var -> line, var -> type);
 #endif
       return false;
@@ -4478,6 +4479,7 @@ cada uma das junções no formato acima para interpretá-las:
   struct path_points *z1_point = NULL, *z2_point = NULL;
   @<Expressão de Caminho: Declaração de Variáveis Adicionais@>
   begin_z1 = begin_expression;
+  end_z1 = begin_z1;
   while(begin_z1 != end_expression || result -> length < expected_length){
     @<Expressão de Caminho: Separa Tokens da Junção@>
     @<Expressão de Caminho: Interpreta Extremidades da Junção@>
@@ -4581,7 +4583,7 @@ if(begin_j -> type == TYPE_JOIN){
     end_j = next_token;
     while(end_j != end_expression){
       COUNT_NESTING(end_j);
-      if(IS_NOT_NESTED() && end_j -> type != TYPE_JOIN)
+      if(IS_NOT_NESTED() && end_j -> type == TYPE_JOIN)
         break;
       end_j = (struct generic_token *) end_j -> next;
     }
@@ -7036,3 +7038,21 @@ j
  Longsman Publishing Co., Inc}
 
 \fim
+
+  {
+    printf("Z1: ");
+    struct generic_token *t = begin_z1;
+    for(;;){
+      if(t -> type == TYPE_NUMERIC)
+        printf("t:Numeric(%f) ", ((struct numeric_token *) t) -> value);
+      else if(t -> type == TYPE_SYMBOLIC)
+        printf("t:Symbolic(%s) ", ((struct symbolic_token *) t) -> value);
+      else
+        printf("t:%d ", t -> type);
+      if(t == end_z1)
+        break;
+      else
+        t = t -> next;
+    }
+    printf("\n");
+  }

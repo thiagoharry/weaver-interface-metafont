@@ -4425,6 +4425,7 @@ will iterate over each join in the format above:
   struct path_points *z1_point = NULL, *z2_point = NULL;
   @<Path Expression: Additional Variables Declaration@>
   begin_z1 = begin_expression;
+  end_z1 = begin_z1;
   while(begin_z1 != end_expression || result -> length < expected_length){
     @<Path Expression: Delimit Join Tokens@>
     @<Path Expression: Interpret Join Extremities@>
@@ -4529,7 +4530,7 @@ if(begin_j -> type == TYPE_JOIN){
     end_j = next_token;
     while(end_j != end_expression){
       COUNT_NESTING(end_j);
-      if(IS_NOT_NESTED() && end_j -> type != TYPE_JOIN)
+      if(IS_NOT_NESTED() && end_j -> type == TYPE_JOIN)
         break;
       end_j = (struct generic_token *) end_j -> next;
     }
