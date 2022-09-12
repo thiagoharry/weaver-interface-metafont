@@ -4351,7 +4351,7 @@ bool eval_path_expression(struct metafont *mf, struct context *cx,
   @<Path Expression: When There is No Joins@>
   @<Path Expression: Allocating Path Variable@>
   @<Path Expression: Iterating over Joins@>
-  return false;
+  return true;
 }
 @
 \fimcodigo
@@ -5845,14 +5845,22 @@ if(atleast1)
 \fimcodigo
 
 And with this we get the control points and we can update its value in
-the path variable that we are building:
+the path variable that we are building. If we are in the last
+iteration of a non-cyclic curve, then we also fill the last control
+points turning them equal the last extremity point:
 
 \iniciocodigo
 @<Path Expression: Determine Curve Shape@>+=
-result -> points[result -> length].u_x = u_x;
-result -> points[result -> length].u_y = u_y;
-result -> points[result -> length].v_x = v_x;
-result -> points[result -> length].v_y = v_y;
+result -> points[result -> length - 2].u_x = u_x;
+result -> points[result -> length - 2].u_y = u_y;
+result -> points[result -> length - 2].v_x = v_x;
+result -> points[result -> length - 2].v_y = v_y;
+if(result -> length >= expected_length && result -> cyclic == false){
+  result -> points[result -> length - 1].u_x = z2_point -> x;
+  result -> points[result -> length - 1].u_y = z2_point -> y;
+  result -> points[result -> length - 1].v_x = z2_point -> x;
+  result -> points[result -> length - 1].v_y = z2_point -> y;
+}
 @
 \fimcodigo
 

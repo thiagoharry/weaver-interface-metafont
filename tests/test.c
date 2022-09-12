@@ -412,8 +412,9 @@ void test_path_expressions(void){
   assert("Simple join between two path variables",
 	 path_p9 -> cyclic == false && path_p9 -> length == 2 &&
 	 path_p9 -> points[0].x == 1.0 && path_p9 -> points[0].y == 5.0 &&
+	 
 	 path_p9 -> points[0].u_x == 1.0 && path_p9 -> points[0].u_y == 3.0 &&
-	 path_p9 -> points[0].v_x == 1.0 && path_p9 -> points[0].v_y == 2.0 &&
+	 path_p9 -> points[0].v_x == 2.0 && path_p9 -> points[0].v_y == 2.0 &&
 	 path_p9 -> points[1].x == 1.0 && path_p9 -> points[1].y == 1.0 &&
 	 path_p9 -> points[1].u_x == 1.0 && path_p9 -> points[1].u_y == 1.0 &&
 	 path_p9 -> points[1].v_x == 1.0 && path_p9 -> points[1].v_y == 1.0);

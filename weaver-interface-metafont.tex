@@ -4404,7 +4404,7 @@ bool eval_path_expression(struct metafont *mf, struct context *cx,
   @<Expressão de Caminho: Quando Não Há Junção@>
   @<Expressão de Caminho: Alocar Variável de Caminho@>
   @<Expressão de Caminho: Itera sobre Junções@>
-  return false;
+  return true;
 }
 @
 \fimcodigo
@@ -4491,6 +4491,7 @@ cada uma das junções no formato acima para interpretá-las:
     begin_z1 = begin_z2;
     end_z1 = end_z2;
   }
+  
 }
 @
 \fimcodigo
@@ -5924,14 +5925,22 @@ if(atleast1)
 
 E com isso terminamos de calcular os pontos de controle e podemos
 atualizar seu valor na variável de caminho que estamos montando ao
-avaliar a expressão:
+avaliar a expressão. Se estivermos na última iteração de uma curva
+não-cíclica, além disso nós preenchemos os últimos pontos de controle
+como sendo iguais ao último ponto de extremidade:
 
 \iniciocodigo
 @<Expressão de Caminho: Decide Forma da Curva@>+=
-result -> points[result -> length].u_x = u_x;
-result -> points[result -> length].u_y = u_y;
-result -> points[result -> length].v_x = v_x;
-result -> points[result -> length].v_y = v_y;
+result -> points[result -> length - 2].u_x = u_x;
+result -> points[result -> length - 2].u_y = u_y;
+result -> points[result -> length - 2].v_x = v_x;
+result -> points[result -> length - 2].v_y = v_y;
+if(result -> length >= expected_length && result -> cyclic == false){
+  result -> points[result -> length - 1].u_x = z2_point -> x;
+  result -> points[result -> length - 1].u_y = z2_point -> y;
+  result -> points[result -> length - 1].v_x = z2_point -> x;
+  result -> points[result -> length - 1].v_y = z2_point -> y;
+}
 @
 \fimcodigo
 
