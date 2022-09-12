@@ -330,10 +330,11 @@ dinamicamente de acordo com o tamanho do símbolo:
 #define TYPE_SYMBOLIC 3
 struct symbolic_token{
   int type;   // Deve ser igual a 'TYPE_SYMBOLIC'
-  void *next, *var;
+  void *next;
 #if defined(W_DEBUG_METAFONT)
   int line;
 #endif
+  void *var;
   char *value;
 };
 @

@@ -312,10 +312,11 @@ a string to store its name:
 #define TYPE_SYMBOLIC 3
 struct symbolic_token{
   int type;   // Should be equal 'TYPE_SYMBOLIC'
-  void *next, *var;
+  void *next;
 #if defined(W_DEBUG_METAFONT)
   int line;
 #endif
+  void *var;
   char *value;
 };
 @

@@ -19,44 +19,44 @@ extern"C"{
 
 
 /*43:*/
-#line 1034 "weaver-interface-metafont.tex"
+#line 1035 "weaver-interface-metafont.tex"
 
 struct context{
 /*55:*/
-#line 1274 "weaver-interface-metafont.tex"
+#line 1275 "weaver-interface-metafont.tex"
 
 int nesting_level;
 /*:55*//*66:*/
-#line 1508 "weaver-interface-metafont.tex"
+#line 1509 "weaver-interface-metafont.tex"
 
 void*variables;
 /*:66*/
-#line 1036 "weaver-interface-metafont.tex"
+#line 1037 "weaver-interface-metafont.tex"
 
 };
 /*:43*//*44:*/
-#line 1047 "weaver-interface-metafont.tex"
+#line 1048 "weaver-interface-metafont.tex"
 
 struct metafont{
 char*file;
 void*(*alloc)(size_t);
 void(*free)(void*);
 /*62:*/
-#line 1446 "weaver-interface-metafont.tex"
+#line 1447 "weaver-interface-metafont.tex"
 
 void*named_variables;
 void*global_variables;
 /*:62*//*80:*/
-#line 1826 "weaver-interface-metafont.tex"
+#line 1827 "weaver-interface-metafont.tex"
 
 void*internal_numeric_variables;
 /*:80*//*134:*/
-#line 3196 "weaver-interface-metafont.tex"
+#line 3197 "weaver-interface-metafont.tex"
 
 bool have_stored_normaldeviate;
 float normaldeviate;
 /*:134*/
-#line 1052 "weaver-interface-metafont.tex"
+#line 1053 "weaver-interface-metafont.tex"
 
 };
 /*:44*/
