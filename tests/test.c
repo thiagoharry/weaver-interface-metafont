@@ -337,9 +337,10 @@ void test_path_expressions(void){
   struct metafont *mf;
   struct context *cx;
   bool ret;
-  struct named_variable *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9;
+  struct named_variable *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9,
+    *quartercircle, *halfcircle;
   struct path_variable *path_p1, *path_p2, *path_p3, *path_p4, *path_p5, *path_p6,
-    *path_p7, *path_p8, *path_p9;
+    *path_p7, *path_p8, *path_p9, *quartercircle_path, *halfcircle_path;
   mf = init_metafont(malloc, free, "tests/path_expressions.mf");
   cx = init_context();
   void *p = lexer(mf, malloc, free, "tests/path_expressions.mf");
@@ -354,6 +355,8 @@ void test_path_expressions(void){
   p7 = p6 -> next;
   p8 = p7 -> next;
   p9 = p8 -> next;
+  quartercircle = p9 -> next;
+  halfcircle = quartercircle -> next;
   path_p1 = (struct path_variable *) p1 -> var;
   path_p2 = (struct path_variable *) p2 -> var;
   path_p3 = (struct path_variable *) p3 -> var;
@@ -363,6 +366,8 @@ void test_path_expressions(void){
   path_p7 = (struct path_variable *) p7 -> var;
   path_p8 = (struct path_variable *) p8 -> var;
   path_p9 = (struct path_variable *) p9 -> var;
+  quartercircle_path = (struct path_variable *) quartercircle -> var;
+  halfcircle_path = (struct path_variable *) halfcircle -> var;
   assert("Assigning pair literal to path",
 	 path_p1 -> cyclic == false && path_p1 -> length == 1 &&
 	 path_p1 -> points[0].x == 1.0 && path_p1 -> points[0].y == 5.0 &&
@@ -409,19 +414,73 @@ void test_path_expressions(void){
 	 path_p8 -> points[0].x == 1.0 && path_p8 -> points[0].y == 1.0 &&
 	 path_p8 -> points[0].u_x == 1.0 && path_p8 -> points[0].u_y == 1.0 &&
 	 path_p8 -> points[0].v_x == 1.0 && path_p8 -> points[0].v_y == 1.0);
-  assert("Simple join between two path variables",
+  assert("Simple join with single control point between two path variables",
 	 path_p9 -> cyclic == false && path_p9 -> length == 2 &&
 	 path_p9 -> points[0].x == 1.0 && path_p9 -> points[0].y == 5.0 &&
-	 
 	 path_p9 -> points[0].u_x == 1.0 && path_p9 -> points[0].u_y == 3.0 &&
-	 path_p9 -> points[0].v_x == 2.0 && path_p9 -> points[0].v_y == 2.0 &&
+	 path_p9 -> points[0].v_x == 1.0 && path_p9 -> points[0].v_y == 3.0 &&
 	 path_p9 -> points[1].x == 1.0 && path_p9 -> points[1].y == 1.0 &&
 	 path_p9 -> points[1].u_x == 1.0 && path_p9 -> points[1].u_y == 1.0 &&
 	 path_p9 -> points[1].v_x == 1.0 && path_p9 -> points[1].v_y == 1.0);
+    assert("Simple join with double control points between two path variables",
+	   quartercircle_path -> cyclic == false &&
+	   quartercircle_path -> length == 3 &&
+	   quartercircle_path -> points[0].x == 0.5 &&
+	   quartercircle_path -> points[0].y == 0.0 &&
+	   quartercircle_path -> points[0].u_x == 0.5 &&
+	   ALMOST_EQUAL(quartercircle_path -> points[0].u_y, 0.13261) &&
+	   ALMOST_EQUAL(quartercircle_path -> points[0].v_x, 0.44733) &&
+	   ALMOST_EQUAL(quartercircle_path -> points[0].v_y, 0.2598) &&
+	   ALMOST_EQUAL(quartercircle_path -> points[1].x, 0.35356) &&
+	   ALMOST_EQUAL(quartercircle_path -> points[1].y, 0.35356) &&
+	   ALMOST_EQUAL(quartercircle_path -> points[1].u_x, 0.0) &&
+	   ALMOST_EQUAL(quartercircle_path -> points[1].u_y, 0.44733) &&
+	   ALMOST_EQUAL(quartercircle_path -> points[1].v_x, 0.13261) &&
+	   ALMOST_EQUAL(quartercircle_path -> points[1].v_y, 0.5) &&
+	   quartercircle_path -> points[2].x == 0.0 &&
+	   quartercircle_path -> points[2].y == 0.5 &&
+	   quartercircle_path -> points[2].v_x == 0.0 &&
+	   quartercircle_path -> points[2].v_y == 0.5 &&
+	   quartercircle_path -> points[2].v_x == 0.0 &&
+	   quartercircle_path -> points[2].v_y == 0.5);
+    assert("Path concatenation and rotation",
+	   halfcircle_path -> cyclic == false &&
+	   halfcircle_path -> length == 5 &&
+	   halfcircle_path -> points[0].x == 0.5 &&
+	   halfcircle_path -> points[0].y == 0.0 &&
+	   halfcircle_path -> points[0].u_x == 0.5 &&
+	   ALMOST_EQUAL(halfcircle_path -> points[0].u_y, 0.13261) &&
+	   ALMOST_EQUAL(halfcircle_path -> points[0].v_x, 0.44733) &&
+	   ALMOST_EQUAL(halfcircle_path -> points[0].v_y, 0.2598) &&
+	   ALMOST_EQUAL(halfcircle_path -> points[1].x, 0.35356) &&
+	   ALMOST_EQUAL(halfcircle_path -> points[1].y, 0.35356) &&
+	   ALMOST_EQUAL(halfcircle_path -> points[1].u_x, 0.2598) &&
+	   ALMOST_EQUAL(halfcircle_path -> points[1].u_y, 0.44733) &&
+	   ALMOST_EQUAL(halfcircle_path -> points[1].v_x, 0.13261) &&
+	   ALMOST_EQUAL(halfcircle_path -> points[1].v_y, 0.5) &&
+	   ALMOST_EQUAL(halfcircle_path -> points[2].x, 0.0) &&
+	   ALMOST_EQUAL(halfcircle_path -> points[2].y, 0.5) &&
+	   ALMOST_EQUAL(halfcircle_path -> points[2].u_x, -0.13261) &&
+	   ALMOST_EQUAL(halfcircle_path -> points[2].u_y, 0.5) &&
+	   ALMOST_EQUAL(halfcircle_path -> points[2].v_x, -0.2598) &&
+	   ALMOST_EQUAL(halfcircle_path -> points[2].v_y, 0.44733) &&
+	   ALMOST_EQUAL(halfcircle_path -> points[3].x, -0.35356) &&
+	   ALMOST_EQUAL(halfcircle_path -> points[3].y, 0.35356) &&
+	   ALMOST_EQUAL(halfcircle_path -> points[3].u_x, -0.35356) &&
+	   ALMOST_EQUAL(halfcircle_path -> points[3].u_y, 0.35356) &&
+	   ALMOST_EQUAL(halfcircle_path -> points[3].v_x, -0.35356) &&
+	   ALMOST_EQUAL(halfcircle_path -> points[3].v_y, 0.35356) &&
+	   ALMOST_EQUAL(halfcircle_path -> points[4].x, -0.5) &&
+	   ALMOST_EQUAL(halfcircle_path -> points[4].y, 0.0) &&
+	   ALMOST_EQUAL(halfcircle_path -> points[4].u_x, -0.5) &&
+	   ALMOST_EQUAL(halfcircle_path -> points[4].u_y, 0.0) &&
+	   ALMOST_EQUAL(halfcircle_path -> points[4].v_x, -0.5) &&
+	   ALMOST_EQUAL(halfcircle_path -> points[4].v_y, 0.0));
   free_token_list(free, p);
   destroy_metafont(mf);
   destroy_context(cx);
 }
+
 
 int main(int argc, char **argv){
   Winit_metafont(malloc, free, malloc, free, my_rand, 36);

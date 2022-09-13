@@ -4937,6 +4937,9 @@ if(begin_j == end_j && begin_j -> type == TYPE_AMPERSAND){
   double dif_y = z1_point -> y - z2_point -> y;
   if(hypot(dif_x * dif_x, dif_y * dif_y) > 0.00002){
 #if defined(W_DEBUG_METAFONT)
+printf("Discontinuous: (%f, %f) ... (%f, %f)\n",
+                       z1_point -> x, z1_point -> y,
+                       z2_point -> x, z2_point -> y);
     fprintf(stderr,
             "METAFONT: Error: %s:%d: Concatenating discontinuous paths.\n",
             mf -> file, begin_j -> line);
