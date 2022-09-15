@@ -3868,6 +3868,14 @@ $b$, não deve estar dentro de outros parênteses e colchetes.
 \iniciocodigo
 @<Primário de Par: Regra 2@>=
   struct generic_token *begin_a, *end_a, *begin_b, *end_b, *comma;
+  if(begin_expression -> next == end_expression){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
+              "expression (empty parenthesis).\n ", mf -> file,
+              begin_expression -> line);
+#endif
+    return false;
+  }
   begin_a = (struct generic_token *) begin_expression -> next;
   end_a = begin_a;
   DECLARE_NESTING_CONTROL();
@@ -4457,6 +4465,7 @@ if(result -> points == NULL){
 }
 result -> length = 0; // Inicialização
 result -> points[0].x = NAN;
+result -> cyclic = false;
 @
 \fimcodigo
 
@@ -4937,9 +4946,6 @@ if(begin_j == end_j && begin_j -> type == TYPE_AMPERSAND){
   double dif_y = z1_point -> y - z2_point -> y;
   if(hypot(dif_x * dif_x, dif_y * dif_y) > 0.00002){
 #if defined(W_DEBUG_METAFONT)
-printf("Discontinuous: (%f, %f) ... (%f, %f)\n",
-                       z1_point -> x, z1_point -> y,
-                       z2_point -> x, z2_point -> y);
     fprintf(stderr,
             "METAFONT: Error: %s:%d: Concatenating discontinuous paths.\n",
             mf -> file, begin_j -> line);
@@ -7041,7 +7047,7 @@ if(begin_expression -> type == TYPE_POINT ||
 
 % Ignorar + e - depois de:
 % ['penoffset'], ['point'], ['precontrol'], ['postcontrol'],
-% ['intersectiontimes']w
+% ['intersectiontimes']
 j
 
 \referencia{Knuth, D. E. (1984) ``Literate Programming'', The Computer

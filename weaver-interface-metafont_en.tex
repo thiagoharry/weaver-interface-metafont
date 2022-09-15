@@ -3831,6 +3831,14 @@ bracket.
 \iniciocodigo
 @<Pair Primary: Rule 2@>=
   struct generic_token *begin_a, *end_a, *begin_b, *end_b, *comma;
+  if(begin_expression -> next == end_expression){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
+              "expression (empty parenthesis).\n ", mf -> file,
+              begin_expression -> line);
+#endif
+    return false;
+  }
   begin_a = (struct generic_token *) begin_expression -> next;
   end_a = begin_a;
   DECLARE_NESTING_CONTROL();
@@ -4403,6 +4411,7 @@ if(result -> points == NULL){
 }
 result -> length = 0; // Initialization
 result -> points[0].x = NAN;
+result -> cyclic = false;
 @
 \fimcodigo
 
