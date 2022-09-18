@@ -370,16 +370,19 @@ void test_path_expressions(void){
   halfcircle_path = (struct path_variable *) halfcircle -> var;
   assert("Assigning pair literal to path",
 	 path_p1 -> cyclic == false && path_p1 -> length == 1 &&
+	 path_p1 -> total_length == 1 &&
 	 path_p1 -> points[0].x == 1.0 && path_p1 -> points[0].y == 5.0 &&
 	 path_p1 -> points[0].u_x == 1.0 && path_p1 -> points[0].u_y == 5.0 &&
 	 path_p1 -> points[0].v_x == 1.0 && path_p1 -> points[0].v_y == 5.0);
   assert("Assigning between path variables",
 	 path_p2 -> cyclic == false && path_p2 -> length == 1 &&
+	 path_p2 -> total_length == 1 &&
 	 path_p2 -> points[0].x == 1.0 && path_p2 -> points[0].y == 5.0 &&
 	 path_p2 -> points[0].u_x == 1.0 && path_p2 -> points[0].u_y == 5.0 &&
 	 path_p2 -> points[0].v_x == 1.0 && path_p2 -> points[0].v_y == 5.0);
   assert("Reversing single point",
 	 path_p3 -> cyclic == false && path_p3 -> length == 1 &&
+	 path_p3 -> total_length == 1 &&
 	 path_p3 -> points[0].x == 1.0 && path_p3 -> points[0].y == 5.0 &&
 	 path_p3 -> points[0].u_x == 1.0 && path_p3 -> points[0].u_y == 5.0 &&
 	 path_p3 -> points[0].v_x == 1.0 && path_p3 -> points[0].v_y == 5.0);
@@ -387,22 +390,25 @@ void test_path_expressions(void){
   assert("Subpath of single point",
 	 path_p4 != NULL &&
 	 path_p4 -> cyclic == false &&
-	 path_p4 -> length == 1 &&
+	 path_p4 -> length == 1 && path_p4 -> total_length == 1 &&
 	 path_p4 -> points[0].x == 1.0 && path_p4 -> points[0].y == 5.0 &&
 	 path_p4 -> points[0].u_x == 1.0 && path_p4 -> points[0].u_y == 5.0 &&
 	 path_p4 -> points[0].v_x == 1.0 && path_p4 -> points[0].v_y == 5.0);
   assert("Dividing pair by numeric as path expression",
 	 path_p5 -> cyclic == false && path_p5 -> length == 1 &&
+	 path_p5 -> total_length == 1 &&
 	 path_p5 -> points[0].x == 0.5 && path_p5 -> points[0].y == 2.5 &&
 	 path_p5 -> points[0].u_x == 0.5 && path_p5 -> points[0].u_y == 2.5 &&
 	 path_p5 -> points[0].v_x == 0.5 && path_p5 -> points[0].v_y == 2.5);
   assert("Multiplying numeric by pair as path expression",
 	 path_p6 -> cyclic == false && path_p6 -> length == 1 &&
+	 path_p6 -> total_length == 1 &&
 	 path_p6 -> points[0].x == 2.0 && path_p6 -> points[0].y == 10.0 &&
 	 path_p6 -> points[0].u_x == 2.0 && path_p6 -> points[0].u_y == 10.0 &&
 	 path_p6 -> points[0].v_x == 2.0 && path_p6 -> points[0].v_y == 10.0);
   assert("Pair with transformer as path expression",
 	 path_p7 -> cyclic == false && path_p7 -> length == 1 &&
+	 path_p7 -> total_length == 1 &&
 	 ALMOST_EQUAL(path_p7 -> points[0].x, 0.0) &&
 	 ALMOST_EQUAL(path_p7 -> points[0].y, 1.0) &&
 	 ALMOST_EQUAL(path_p7 -> points[0].u_x, 0.0) &&
@@ -411,11 +417,13 @@ void test_path_expressions(void){
 	 ALMOST_EQUAL(path_p7 -> points[0].v_y, 1.0));
   assert("Tertiary pair expression as path expression",
 	 path_p8 -> cyclic == false && path_p8 -> length == 1 &&
+	 path_p8 -> total_length == 1 &&
 	 path_p8 -> points[0].x == 1.0 && path_p8 -> points[0].y == 1.0 &&
 	 path_p8 -> points[0].u_x == 1.0 && path_p8 -> points[0].u_y == 1.0 &&
 	 path_p8 -> points[0].v_x == 1.0 && path_p8 -> points[0].v_y == 1.0);
   assert("Simple join with single control point between two path variables",
 	 path_p9 -> cyclic == false && path_p9 -> length == 2 &&
+	 path_p9 -> total_length == 2 &&
 	 path_p9 -> points[0].x == 1.0 && path_p9 -> points[0].y == 5.0 &&
 	 path_p9 -> points[0].u_x == 1.0 && path_p9 -> points[0].u_y == 3.0 &&
 	 path_p9 -> points[0].v_x == 1.0 && path_p9 -> points[0].v_y == 3.0 &&
@@ -425,6 +433,7 @@ void test_path_expressions(void){
     assert("Simple join with double control points between two path variables",
 	   quartercircle_path -> cyclic == false &&
 	   quartercircle_path -> length == 3 &&
+	   quartercircle_path -> total_length == 3 &&
 	   quartercircle_path -> points[0].x == 0.5 &&
 	   quartercircle_path -> points[0].y == 0.0 &&
 	   quartercircle_path -> points[0].u_x == 0.5 &&
@@ -446,6 +455,7 @@ void test_path_expressions(void){
     assert("Path concatenation and rotation",
 	   halfcircle_path -> cyclic == false &&
 	   halfcircle_path -> length == 5 &&
+	   halfcircle_path -> total_length == 5 &&
 	   halfcircle_path -> points[0].x == 0.5 &&
 	   halfcircle_path -> points[0].y == 0.0 &&
 	   halfcircle_path -> points[0].u_x == 0.5 &&
