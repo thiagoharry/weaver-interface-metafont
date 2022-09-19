@@ -4953,9 +4953,9 @@ token ``\&'', então estamos lidando com a concatenação de dois pontos
 ou (mais provavelmente) sub-caminhos. Neste caso, devemos checar se os
 dois pontos que estão sendo unidos ocupam a mesma posição
 (consideramos a mesma posição como sendo uma distância menor que
-0,00002). Se não estiverem, um erro deve ser gerado. Se estiverem, os
-pontos de controle devem ficar no meio do caminho que os pontos que
-estão sendo unidos.
+0,00002). Se não estiverem, um erro deve ser gerado. Se estiverem,
+juntaremos ambos os caminhos removendo a segunda cópia do ponto onde
+está sendo feita a junção.
 
 \iniciocodigo
 @<Expressão de Caminho: Interpreta Junção@>+=
@@ -4970,8 +4970,12 @@ if(begin_j == end_j && begin_j -> type == TYPE_AMPERSAND){
 #endif
     return false;
   }
-  v_x = u_x = (z1_point -> x + z2_point -> x) / 2.0;
-  v_y = u_y = (z1_point -> y + z2_point -> y) / 2.0;
+  v_x = u_x = z1_point -> x;
+  v_y = u_y = z1_point -> y;
+  // Isso fará o primeiro ponto de extremidade ser sobrescrito
+  result -> total_length --;
+  z1_point -> x = NAN;
+  z1_point -> y = NAN;
 }
 @
 \fimcodigo
@@ -5958,15 +5962,15 @@ como sendo iguais ao último ponto de extremidade:
 
 \iniciocodigo
 @<Expressão de Caminho: Decide Forma da Curva@>+=
-result -> points[result -> length - 2].u_x = u_x;
-result -> points[result -> length - 2].u_y = u_y;
-result -> points[result -> length - 2].v_x = v_x;
-result -> points[result -> length - 2].v_y = v_y;
+z1_point -> u_x = u_x;
+z1_point -> u_y = u_y;
+z1_point -> v_x = v_x;
+z1_point -> v_y = v_y;
 if(result -> length >= expected_length && result -> cyclic == false){
-  result -> points[result -> length - 1].u_x = z2_point -> x;
-  result -> points[result -> length - 1].u_y = z2_point -> y;
-  result -> points[result -> length - 1].v_x = z2_point -> x;
-  result -> points[result -> length - 1].v_y = z2_point -> y;
+  z2_point -> u_x = z2_point -> x;
+  z2_point -> u_y = z2_point -> y;
+  z2_point -> v_x = z2_point -> x;
+  z2_point -> v_y = z2_point -> y;
 }
 @
 \fimcodigo

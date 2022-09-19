@@ -4896,8 +4896,10 @@ concatenation, characterized by the ``\&'' token, we are concatenating
 tow points or (more probably) two sub-paths. In this case we should
 check is the two joining points occupy the same place (which means
 having a distance lesser than 0.00002). If not, we should raise an
-error. If so, we create control points halfway between the two joining
-points.
+error. If so, we join both paths removing the second copy of the point
+where the join is happening.
+
+XXX
 
 \iniciocodigo
 @<Path Expression: Interpret the Join@>+=
@@ -4912,8 +4914,13 @@ if(begin_j == end_j && begin_j -> type == TYPE_AMPERSAND){
 #endif
     return false;
   }
-  v_x = u_x = (z1_point -> x + z2_point -> x) / 2.0;
-  v_y = u_y = (z1_point -> y + z2_point -> y) / 2.0;
+  v_x = u_x = z1_point -> x;
+  v_y = u_y = z1_point -> y;
+  // This will overwrite the second extremity point
+  // and also the control points below in the case of a next iteration:
+  result -> total_length --;
+  z1_point -> x = NAN;
+  z1_point -> y = NAN;
 }
 @
 \fimcodigo
@@ -5580,6 +5587,7 @@ raise an error and exit:
 @<Path Expression: Determine Curve Shape@>+=
 if(isnan(u_x) || isnan(u_y) || isnan(v_x) ||  isnan(v_y)){
   if(isnan(w0_x) || isnan(w0_y) || isnan(w1_x) || isnan(w1_y)){
+  printf("ERROR!!!!\n");
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr, "METAFONT: Error: %s:%d: Could not find a suitable "
                     "direction specifier.\n",  mf -> file, begin_j -> line);
@@ -5877,15 +5885,15 @@ points turning them equal the last extremity point:
 
 \iniciocodigo
 @<Path Expression: Determine Curve Shape@>+=
-result -> points[result -> length - 2].u_x = u_x;
-result -> points[result -> length - 2].u_y = u_y;
-result -> points[result -> length - 2].v_x = v_x;
-result -> points[result -> length - 2].v_y = v_y;
+z1_point -> u_x = u_x;
+z1_point -> u_y = u_y;
+z1_point -> v_x = v_x;
+z1_point -> v_y = v_y;
 if(result -> length >= expected_length && result -> cyclic == false){
-  result -> points[result -> length - 1].u_x = z2_point -> x;
-  result -> points[result -> length - 1].u_y = z2_point -> y;
-  result -> points[result -> length - 1].v_x = z2_point -> x;
-  result -> points[result -> length - 1].v_y = z2_point -> y;
+  z2_point -> u_x = z2_point -> x;
+  z2_point -> u_y = z2_point -> y;
+  z2_point -> v_x = z2_point -> x;
+  z2_point -> v_y = z2_point -> y;
 }
 @
 \fimcodigo
