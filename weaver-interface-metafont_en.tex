@@ -4684,6 +4684,9 @@ if(begin_z2 == end_z2 && begin_z2 -> type == TYPE_CYCLE){
   result -> points[result -> length].subpath = NULL;
   result -> points[result -> length].x = p[0].x;
   result -> points[result -> length].y = p[0].y;
+  result -> length ++;
+  result -> total_length ++;
+  result -> cyclic = true;
 }
 else{
   bool ret;

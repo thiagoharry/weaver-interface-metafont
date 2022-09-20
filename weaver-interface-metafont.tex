@@ -4740,6 +4740,9 @@ if(begin_z2 == end_z2 && begin_z2 -> type == TYPE_CYCLE){
   result -> points[result -> length].subpath = NULL;
   result -> points[result -> length].x = p[0].x;
   result -> points[result -> length].y = p[0].y;
+  result -> length ++;
+  result -> total_length ++;
+  result -> cyclic = true;
 }
 else{
   bool ret;
@@ -5645,6 +5648,8 @@ Após executar as regras, espera-se que tenhamos já ou dois pontos de
 controle bem-definidos, ou então valores de tensão com especificadores
 de direção à partir dos quais iremos deduzir os pontos de controle. Se
 não tivermos nem um e nem outro, geraremos um erro e encerraremos:
+
+XXX: FIXME: Terminando com & cycle, esse erro ocorre:
 
 \iniciocodigo
 @<Expressão de Caminho: Decide Forma da Curva@>+=
