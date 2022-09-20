@@ -468,7 +468,7 @@ void test_path_expressions(void){
 	   ALMOST_EQUAL(quartercircle_path -> points[0].v_y, 0.2598) &&
 	   ALMOST_EQUAL(quartercircle_path -> points[1].x, 0.35356) &&
 	   ALMOST_EQUAL(quartercircle_path -> points[1].y, 0.35356) &&
-	   ALMOST_EQUAL(quartercircle_path -> points[1].u_x, 0.0) &&
+	   ALMOST_EQUAL(quartercircle_path -> points[1].u_x, 0.2598) &&
 	   ALMOST_EQUAL(quartercircle_path -> points[1].u_y, 0.44733) &&
 	   ALMOST_EQUAL(quartercircle_path -> points[1].v_x, 0.13261) &&
 	   ALMOST_EQUAL(quartercircle_path -> points[1].v_y, 0.5) &&
@@ -478,8 +478,6 @@ void test_path_expressions(void){
 	   quartercircle_path -> points[2].v_y == 0.5 &&
 	   quartercircle_path -> points[2].v_x == 0.0 &&
 	   quartercircle_path -> points[2].v_y == 0.5);
-    printf("DEBUG: %f %f\n", get_point(halfcircle_path, 2) -> u_x,
-	   get_point(halfcircle_path, 2) -> u_y);
     assert("Path concatenation and rotation",
 	   halfcircle_path -> cyclic == false &&
 	   halfcircle_path -> total_length == 5 &&
@@ -491,27 +489,27 @@ void test_path_expressions(void){
 	   ALMOST_EQUAL(get_point(halfcircle_path, 0) -> v_y, 0.2598) &&
 	   ALMOST_EQUAL(get_point(halfcircle_path, 1) -> x, 0.35356) &&
 	   ALMOST_EQUAL(get_point(halfcircle_path, 1) -> y, 0.35356) &&
-	   ALMOST_EQUAL(get_point(halfcircle_path, 1) -> u_x, 0.0) &&
+	   ALMOST_EQUAL(get_point(halfcircle_path, 1) -> u_x, 0.2598) &&
 	   ALMOST_EQUAL(get_point(halfcircle_path, 1) -> u_y, 0.44733) &&
 	   ALMOST_EQUAL(get_point(halfcircle_path, 1) -> v_x, 0.13261) &&
 	   ALMOST_EQUAL(get_point(halfcircle_path, 1) -> v_y, 0.5) &&
 	   ALMOST_EQUAL(get_point(halfcircle_path, 2) -> x, 0.0) &&
 	   ALMOST_EQUAL(get_point(halfcircle_path, 2) -> y, 0.5) &&
 	   ALMOST_EQUAL(get_point(halfcircle_path, 2) -> u_x, -0.13261) &&
-	   //ALMOST_EQUAL(get_point(halfcircle_path, 2) -> u_y, 0.5) &&
-	   //ALMOST_EQUAL(get_point(halfcircle_path, 2) -> v_x, -0.2598) &&
-	   //ALMOST_EQUAL(get_point(halfcircle_path, 2) -> v_y, 0.44733) &&
-	   //ALMOST_EQUAL(get_point(halfcircle_path, 3) -> x, -0.35356) &&
-	   //ALMOST_EQUAL(get_point(halfcircle_path, 3) -> y, 0.35356) &&
-	   //ALMOST_EQUAL(get_point(halfcircle_path, 3) -> u_x, -0.35356) &&
-	   //ALMOST_EQUAL(get_point(halfcircle_path, 3) -> u_y, 0.35356) &&
-	   //ALMOST_EQUAL(get_point(halfcircle_path, 3) -> v_x, -0.35356) &&
-	   //ALMOST_EQUAL(get_point(halfcircle_path, 3) -> v_y, 0.35356) &&
-	   //ALMOST_EQUAL(get_point(halfcircle_path, 4) -> x, -0.5) &&
-	   //ALMOST_EQUAL(get_point(halfcircle_path, 4) -> y, 0.0) &&
-	   //ALMOST_EQUAL(get_point(halfcircle_path, 4) -> u_x, -0.5) &&
-	   //ALMOST_EQUAL(get_point(halfcircle_path, 4) -> u_y, 0.0) &&
-	   //ALMOST_EQUAL(get_point(halfcircle_path, 4) -> v_x, -0.5) &&
+	   ALMOST_EQUAL(get_point(halfcircle_path, 2) -> u_y, 0.5) &&
+	   ALMOST_EQUAL(get_point(halfcircle_path, 2) -> v_x, -0.2598) &&
+	   ALMOST_EQUAL(get_point(halfcircle_path, 2) -> v_y, 0.44733) &&
+	   ALMOST_EQUAL(get_point(halfcircle_path, 3) -> x, -0.35356) &&
+	   ALMOST_EQUAL(get_point(halfcircle_path, 3) -> y, 0.35356) &&
+	   ALMOST_EQUAL(get_point(halfcircle_path, 3) -> u_x, -0.44733) &&
+	   ALMOST_EQUAL(get_point(halfcircle_path, 3) -> u_y, 0.2598) &&
+	   ALMOST_EQUAL(get_point(halfcircle_path, 3) -> v_x, -0.5) &&
+	   ALMOST_EQUAL(get_point(halfcircle_path, 3) -> v_y, 0.13261) &&
+	   ALMOST_EQUAL(get_point(halfcircle_path, 4) -> x, -0.5) &&
+	   ALMOST_EQUAL(get_point(halfcircle_path, 4) -> y, 0.0) &&
+	   ALMOST_EQUAL(get_point(halfcircle_path, 4) -> u_x, -0.5) &&
+	   ALMOST_EQUAL(get_point(halfcircle_path, 4) -> u_y, 0.0) &&
+	   ALMOST_EQUAL(get_point(halfcircle_path, 4) -> v_x, -0.5) &&
 	   ALMOST_EQUAL(get_point(halfcircle_path, 4) -> v_y, 0.0));
   free_token_list(free, p);
   destroy_metafont(mf);

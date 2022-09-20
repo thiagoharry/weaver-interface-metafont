@@ -5967,10 +5967,17 @@ z1_point -> u_y = u_y;
 z1_point -> v_x = v_x;
 z1_point -> v_y = v_y;
 if(result -> length >= expected_length && result -> cyclic == false){
-  z2_point -> u_x = z2_point -> x;
-  z2_point -> u_y = z2_point -> y;
-  z2_point -> v_x = z2_point -> x;
-  z2_point -> v_y = z2_point -> y;
+  struct path_points *final_point =
+                           &(result -> points[result -> length - 1]);
+  while(final_point -> subpath != NULL){
+    struct path_variable *p = (struct path_variable *)
+                                (final_point -> subpath);
+    final_point = &(p -> points[p -> length - 1]);
+  }
+  final_point -> u_x = final_point -> x;
+  final_point -> u_y = final_point -> y;
+  final_point -> v_x = final_point -> x;
+  final_point -> v_y = final_point -> y;
 }
 @
 \fimcodigo
