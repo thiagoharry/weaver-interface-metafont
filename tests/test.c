@@ -584,27 +584,27 @@ void test_path_expressions(void){
 	   ALMOST_EQUAL(get_point(unitsquare_path, 1) -> x, 1.0) &&
 	   ALMOST_EQUAL(get_point(unitsquare_path, 1) -> y, 0.0) &&
 	   ALMOST_EQUAL(get_point(unitsquare_path, 1) -> u_x, 1.0) &&
-	   //ALMOST_EQUAL(get_point(unitsquare_path, 1) -> u_y, 0.33333) &&
-	   //ALMOST_EQUAL(get_point(unitsquare_path, 1) -> v_x, 1.0) &&
-	   //ALMOST_EQUAL(get_point(unitsquare_path, 1) -> v_y, 0.66667) &&
-	   //ALMOST_EQUAL(get_point(unitsquare_path, 2) -> x, 1.0) &&
-	   //ALMOST_EQUAL(get_point(unitsquare_path, 2) -> y, 1.0) &&
-	   //ALMOST_EQUAL(get_point(unitsquare_path, 2) -> u_x, 0.66667) &&
-	   //ALMOST_EQUAL(get_point(unitsquare_path, 2) -> u_y, 1.0) &&
-	   //ALMOST_EQUAL(get_point(unitsquare_path, 2) -> v_x, 0.33333) &&
-	   //ALMOST_EQUAL(get_point(unitsquare_path, 2) -> v_y, 1.0) &&
-	   //ALMOST_EQUAL(get_point(unitsquare_path, 3) -> x, 0.0) &&
-	   //ALMOST_EQUAL(get_point(unitsquare_path, 3) -> y, 1.0) &&
-	   //ALMOST_EQUAL(get_point(unitsquare_path, 3) -> u_x, 0.0) &&
-	   //ALMOST_EQUAL(get_point(unitsquare_path, 3) -> u_y, 0.66667) &&
-	   //ALMOST_EQUAL(get_point(unitsquare_path, 3) -> v_x, 0.0) &&
-	   //ALMOST_EQUAL(get_point(unitsquare_path, 3) -> v_y, 0.33333) &&
-	   //ALMOST_EQUAL(get_point(unitsquare_path, 4) -> x, 0.0) &&
-	   //ALMOST_EQUAL(get_point(unitsquare_path, 4) -> y, 0.0) &&
-	   //ALMOST_EQUAL(get_point(unitsquare_path, 4) -> u_x, 0.33333) &&
-	   //ALMOST_EQUAL(get_point(unitsquare_path, 4) -> u_y, 0.0) &&
-	   //ALMOST_EQUAL(get_point(unitsquare_path, 4) -> v_x, 0.66667) &&
-	   //ALMOST_EQUAL(get_point(unitsquare_path, 4) -> v_y, 0.0) &&
+	   ALMOST_EQUAL(get_point(unitsquare_path, 1) -> u_y, 0.33333) &&
+	   ALMOST_EQUAL(get_point(unitsquare_path, 1) -> v_x, 1.0) &&
+	   ALMOST_EQUAL(get_point(unitsquare_path, 1) -> v_y, 0.66667) &&
+	   ALMOST_EQUAL(get_point(unitsquare_path, 2) -> x, 1.0) &&
+	   ALMOST_EQUAL(get_point(unitsquare_path, 2) -> y, 1.0) &&
+	   ALMOST_EQUAL(get_point(unitsquare_path, 2) -> u_x, 0.66667) &&
+	   ALMOST_EQUAL(get_point(unitsquare_path, 2) -> u_y, 1.0) &&
+	   ALMOST_EQUAL(get_point(unitsquare_path, 2) -> v_x, 0.33333) &&
+	   ALMOST_EQUAL(get_point(unitsquare_path, 2) -> v_y, 1.0) &&
+	   ALMOST_EQUAL(get_point(unitsquare_path, 3) -> x, 0.0) &&
+	   ALMOST_EQUAL(get_point(unitsquare_path, 3) -> y, 1.0) &&
+	   ALMOST_EQUAL(get_point(unitsquare_path, 3) -> u_x, 0.0) &&
+	   ALMOST_EQUAL(get_point(unitsquare_path, 3) -> u_y, 0.66667) &&
+	   ALMOST_EQUAL(get_point(unitsquare_path, 3) -> v_x, 0.0) &&
+	   ALMOST_EQUAL(get_point(unitsquare_path, 3) -> v_y, 0.33333) &&
+	   ALMOST_EQUAL(get_point(unitsquare_path, 4) -> x, 0.0) &&
+	   ALMOST_EQUAL(get_point(unitsquare_path, 4) -> y, 0.0) &&
+	   ALMOST_EQUAL(get_point(unitsquare_path, 4) -> u_x, 0.33333) &&
+	   ALMOST_EQUAL(get_point(unitsquare_path, 4) -> u_y, 0.0) &&
+	   ALMOST_EQUAL(get_point(unitsquare_path, 4) -> v_x, 0.66667) &&
+	   ALMOST_EQUAL(get_point(unitsquare_path, 4) -> v_y, 0.0) &&
 	   unitsquare_path -> cyclic == true);	       
   free_token_list(free, p);
   destroy_metafont(mf);

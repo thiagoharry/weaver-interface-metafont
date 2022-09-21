@@ -4999,10 +4999,10 @@ formando uma reta:
 \iniciocodigo
 @<Expressão de Caminho: Interpreta Junção@>+=
 else if(begin_j == end_j && begin_j -> type == TYPE_STRAIGHT_JOIN){
-  u_x = (1.0/3.0) * (z1_point -> x + z2_point -> x);
-  u_y = (1.0/3.0) * (z1_point -> y + z2_point -> y);
-  v_x = (2.0/3.0) * (z1_point -> x + z2_point -> x);
-  v_y = (2.0/3.0) * (z1_point -> y + z2_point -> y);
+  u_x = z1_point -> x + (1.0/3.0) * (z2_point -> x - z1_point -> x);
+  u_y = z1_point -> y + (1.0/3.0) * (z2_point -> y - z1_point -> y);
+  v_x = z1_point -> x + (2.0/3.0) * (z2_point -> x - z1_point -> x);
+  v_y = z1_point -> y + (2.0/3.0) * (z2_point -> y - z1_point -> y);
 }
 @
 \fimcodigo
