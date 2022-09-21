@@ -364,10 +364,10 @@ void test_path_expressions(void){
   struct context *cx;
   bool ret;
   struct named_variable *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9,
-    *quartercircle, *halfcircle, *fullcircle;
+    *quartercircle, *halfcircle, *fullcircle, *unitsquare;
   struct path_variable *path_p1, *path_p2, *path_p3, *path_p4, *path_p5,
     *path_p6, *path_p7, *path_p8, *path_p9, *quartercircle_path,
-    *halfcircle_path, *fullcircle_path;
+    *halfcircle_path, *fullcircle_path, *unitsquare_path;
   mf = init_metafont(malloc, free, "tests/path_expressions.mf");
   cx = init_context();
   void *p = lexer(mf, malloc, free, "tests/path_expressions.mf");
@@ -385,6 +385,7 @@ void test_path_expressions(void){
   quartercircle = p9 -> next;
   halfcircle = quartercircle -> next;
   fullcircle = halfcircle -> next;
+  unitsquare = fullcircle -> next;
   path_p1 = (struct path_variable *) p1 -> var;
   path_p2 = (struct path_variable *) p2 -> var;
   path_p3 = (struct path_variable *) p3 -> var;
@@ -397,6 +398,7 @@ void test_path_expressions(void){
   quartercircle_path = (struct path_variable *) quartercircle -> var;
   halfcircle_path = (struct path_variable *) halfcircle -> var;
   fullcircle_path = (struct path_variable *) fullcircle -> var;
+  unitsquare_path = (struct path_variable *) unitsquare -> var;
   assert("Assigning pair literal to path",
 	 path_p1 -> cyclic == false && path_p1 -> length == 1 &&
 	 path_p1 -> total_length == 1 &&
@@ -571,6 +573,39 @@ void test_path_expressions(void){
 	   ALMOST_EQUAL(get_point(fullcircle_path, 8) -> v_x, 0.44733) &&
 	   ALMOST_EQUAL(get_point(fullcircle_path, 8) -> v_y, 0.2598) &&
 	   fullcircle_path -> cyclic == true);
+    assert("Path composed by straight lines",
+	   unitsquare_path -> total_length == 5 &&
+	   ALMOST_EQUAL(get_point(unitsquare_path, 0) -> x, 0.0) &&
+	   ALMOST_EQUAL(get_point(unitsquare_path, 0) -> y, 0.0) &&
+	   ALMOST_EQUAL(get_point(unitsquare_path, 0) -> u_x, 0.33333) &&
+	   ALMOST_EQUAL(get_point(unitsquare_path, 0) -> u_y, 0.0) &&
+	   ALMOST_EQUAL(get_point(unitsquare_path, 0) -> v_x, 0.66667) &&
+	   ALMOST_EQUAL(get_point(unitsquare_path, 0) -> v_y, 0.0) &&
+	   ALMOST_EQUAL(get_point(unitsquare_path, 1) -> x, 1.0) &&
+	   ALMOST_EQUAL(get_point(unitsquare_path, 1) -> y, 0.0) &&
+	   ALMOST_EQUAL(get_point(unitsquare_path, 1) -> u_x, 1.0) &&
+	   //ALMOST_EQUAL(get_point(unitsquare_path, 1) -> u_y, 0.33333) &&
+	   //ALMOST_EQUAL(get_point(unitsquare_path, 1) -> v_x, 1.0) &&
+	   //ALMOST_EQUAL(get_point(unitsquare_path, 1) -> v_y, 0.66667) &&
+	   //ALMOST_EQUAL(get_point(unitsquare_path, 2) -> x, 1.0) &&
+	   //ALMOST_EQUAL(get_point(unitsquare_path, 2) -> y, 1.0) &&
+	   //ALMOST_EQUAL(get_point(unitsquare_path, 2) -> u_x, 0.66667) &&
+	   //ALMOST_EQUAL(get_point(unitsquare_path, 2) -> u_y, 1.0) &&
+	   //ALMOST_EQUAL(get_point(unitsquare_path, 2) -> v_x, 0.33333) &&
+	   //ALMOST_EQUAL(get_point(unitsquare_path, 2) -> v_y, 1.0) &&
+	   //ALMOST_EQUAL(get_point(unitsquare_path, 3) -> x, 0.0) &&
+	   //ALMOST_EQUAL(get_point(unitsquare_path, 3) -> y, 1.0) &&
+	   //ALMOST_EQUAL(get_point(unitsquare_path, 3) -> u_x, 0.0) &&
+	   //ALMOST_EQUAL(get_point(unitsquare_path, 3) -> u_y, 0.66667) &&
+	   //ALMOST_EQUAL(get_point(unitsquare_path, 3) -> v_x, 0.0) &&
+	   //ALMOST_EQUAL(get_point(unitsquare_path, 3) -> v_y, 0.33333) &&
+	   //ALMOST_EQUAL(get_point(unitsquare_path, 4) -> x, 0.0) &&
+	   //ALMOST_EQUAL(get_point(unitsquare_path, 4) -> y, 0.0) &&
+	   //ALMOST_EQUAL(get_point(unitsquare_path, 4) -> u_x, 0.33333) &&
+	   //ALMOST_EQUAL(get_point(unitsquare_path, 4) -> u_y, 0.0) &&
+	   //ALMOST_EQUAL(get_point(unitsquare_path, 4) -> v_x, 0.66667) &&
+	   //ALMOST_EQUAL(get_point(unitsquare_path, 4) -> v_y, 0.0) &&
+	   unitsquare_path -> cyclic == true);	       
   free_token_list(free, p);
   destroy_metafont(mf);
   destroy_context(cx);

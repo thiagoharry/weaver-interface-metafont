@@ -2688,7 +2688,7 @@ bool eval_numeric_primary(struct metafont *mf, struct context *cx,
   @<Primário Numérico: Regra 4@>
 #if defined(W_DEBUG_METAFONT)
   fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
-          "expression.",  mf -> file, begin_expression -> line);
+          "expression.\n",  mf -> file, begin_expression -> line);
 #endif
   return false;
 }
@@ -3535,7 +3535,7 @@ bool eval_pair_secundary(struct metafont *mf, struct context *cx,
                              end_expression, result);
 #if defined(W_DEBUG_METAFONT)
   fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
-          "expression.",  mf -> file, begin_expression -> line);
+          "expression.\n",  mf -> file, begin_expression -> line);
 #endif
   return false;
 }
@@ -3822,7 +3822,7 @@ bool eval_pair_primary(struct metafont *mf, struct context *cx,
   @<Primário de Par: Regra 5@>
 #if defined(W_DEBUG_METAFONT)
   fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
-          "expression.",  mf -> file, begin_expression -> line);
+          "expression.\n",  mf -> file, begin_expression -> line);
 #endif
   return false;
 }
@@ -4304,7 +4304,7 @@ A gramática para a expressão de caminhos começa com:
                           <Sub-expressão de Caminho><Junção de Caminho> cycle
 <Junção de Caminho> -> <Especificador de Direção><Junção Básica>
                        <Especificador de Direção>
-<Junção Básica> -> & | .. | .. <Tensão> .. | .. <Controles> ..
+<Junção Básica> -> & | .. | .. <Tensão> .. | .. <Controles> .. | --
 <Tensão> -> tension <Quantidade de Tensão> |
             tension <Quantidade de Tensão> and <Quantidade de Tensão>
 <Quantidade de Tensão> -> <Primário Numérico> | atleast <Primário Numérico>
@@ -4331,6 +4331,7 @@ Tudo isso requer que registremos os seguintes novos tipos de tokens:
 #define TYPE_CONTROLS       56 // O token simbólico 'controls'
 #define TYPE_CURL           57 // O token simbólico 'curl'
                                // (ainda não suportado)
+#define TYPE_STRAIGHT_JOIN  58 // O token simbólico '--'
 @
 \fimcodigo
 
@@ -4339,7 +4340,7 @@ reservadas:
 
 \iniciocodigo
 @<Lista de Palavras Reservadas@>+=
-"cycle", "&", "..", "tension", "and", "atleast", "controls", "curl",
+"cycle", "&", "..", "tension", "and", "atleast", "controls", "curl", "--",
 @
 \fimcodigo
 
@@ -4358,7 +4359,7 @@ int count_path_joins(struct generic_token *begin, struct generic_token *end);
 @
 \fimcodigo
 
-A função funciona contando o número de ``\&'' e também contando os
+A função funciona contando o número de ``\&'', ``--'' e também contando os
 ``..'' quando eles aparecem sozinhos ou quando eles aparecem pela
 segunda vez dentro de uma junção que especifica pontos de controle ou
 tensão:
@@ -4373,6 +4374,8 @@ int count_path_joins(struct generic_token *begin, struct generic_token *end){
     COUNT_NESTING(p);
     if(IS_NOT_NESTED()){
       if(p -> type == TYPE_AMPERSAND)
+        count ++;
+      else if(p -> type == TYPE_STRAIGHT_JOIN)
         count ++;
       else if(p -> type == TYPE_JOIN){
         struct generic_token *next = (struct generic_token *) p -> next;
@@ -4516,7 +4519,7 @@ cada uma das junções no formato acima para interpretá-las:
 
 Para delimitar o primeiro elemento $z_1$, na primeira vez quando ainda
 estamos no começo da expressão, basta avançarmos os tokens até
-acharmos o primeiro ``{'', ``..'' ou ``\&'' fora de qualquer
+acharmos o primeiro ``{'', ``..'', ``\-\-'' ou ``\&'' fora de qualquer
 parênteses ou colchetes. Nas demais vezes, o primeiro elemento $z_1$
 já começa uma nova iteração delimitado como indicado no código acima.
 
@@ -4530,7 +4533,7 @@ if(begin_z1 == begin_expression){
     next_type = ((struct generic_token *) end_z1 -> next) -> type;
     if(IS_NOT_NESTED() &&
        (next_type == TYPE_OPEN_BRACES || next_type == TYPE_JOIN ||
-        next_type == TYPE_AMPERSAND))
+        next_type == TYPE_AMPERSAND || next_type == TYPE_STRAIGHT_JOIN))
       break;
     end_z1 = (struct generic_token *) end_z1 -> next;
   }
@@ -4578,11 +4581,11 @@ else{
 @
 \fimcodigo
 
-Agora vamos delimitar a junção. Se ela for um ``\&'', ela corresponde
-a um único token. Se for um ``..'', devemos checar o próximo token
-para identificar se temos um ``\monoespaco{controls}'' ou
-``\monoespaco{tension}''. Em caso afirmativo, teremos que delimitar a
-junção englobando do primeiro ``..'' até o segundo ``..''. Em caso
+Agora vamos delimitar a junção. Se ela for um ``\&'' ou um ``--'', ela
+corresponde a um único token. Se for um ``..'', devemos checar o
+próximo token para identificar se temos um ``\monoespaco{controls}''
+ou ``\monoespaco{tension}''. Em caso afirmativo, teremos que delimitar
+a junção englobando do primeiro ``..'' até o segundo ``..''. Em caso
 negativo, a junção é somente um token ``..''.
 
 \iniciocodigo
@@ -4609,7 +4612,8 @@ if(begin_j -> type == TYPE_JOIN){
     }
   }
 }
-else if(begin_j -> type != TYPE_AMPERSAND){
+else if(begin_j -> type != TYPE_AMPERSAND &&
+        begin_j -> type != TYPE_STRAIGHT_JOIN){
 #if defined(W_DEBUG_METAFONT)
   fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognized path expression.\n",
           mf -> file, begin_j -> line);
@@ -4682,7 +4686,7 @@ chaves, ou pelo começo da próxima junção:
     next_type = ((struct generic_token *) end_z2 -> next) -> type;
     if(IS_NOT_NESTED() &&
        (next_type == TYPE_OPEN_BRACES || next_type == TYPE_JOIN ||
-        next_type == TYPE_AMPERSAND))
+        next_type == TYPE_AMPERSAND || next_type == TYPE_STRAIGHT_JOIN))
       break;
     end_z2 = (struct generic_token *) end_z2 -> next;
   }
@@ -4987,6 +4991,23 @@ if(begin_j == end_j && begin_j -> type == TYPE_AMPERSAND){
 @
 \fimcodigo
 
+Outro caso simples será quando usamos a junção composta por
+``\monoespaco{--}''. Neste caso, devemos preencher os pontos de
+controle como igualmente espaçados entre os dois pontos de extremidade
+formando uma reta:
+
+\iniciocodigo
+@<Expressão de Caminho: Interpreta Junção@>+=
+else if(begin_j == end_j && begin_j -> type == TYPE_STRAIGHT_JOIN){
+  u_x = (1.0/3.0) * (z1_point -> x + z2_point -> x);
+  u_y = (1.0/3.0) * (z1_point -> y + z2_point -> y);
+  v_x = (2.0/3.0) * (z1_point -> x + z2_point -> x);
+  v_y = (2.0/3.0) * (z1_point -> y + z2_point -> y);
+}
+@
+\fimcodigo
+
+
 Se a nossa junção for somente o token ``..'', então nossa junção será
 definida como tendo uma tensão de exatamente 1 e 1:
 
@@ -5289,6 +5310,7 @@ especificador anterior nestes casos. Nos demais, nós só os apagamos:
 @<Expressão de Caminho: Fim de Cada Iteração@>=
 if((begin_z1 == begin_expression && end_expression -> type != TYPE_CYCLE) ||
    (begin_j == end_j && begin_j -> type == TYPE_AMPERSAND) ||
+   (begin_j == end_j && begin_j -> type == TYPE_STRAIGHT_JOIN) ||
    (begin_e != NULL && end_e != NULL)){
   prev_w_x = w1_x;
   prev_w_y = w1_y;
@@ -5423,7 +5445,8 @@ if(begin_z1 == begin_expression && end_expression -> type == TYPE_CYCLE &&
     if(IS_NOT_NESTED()){
       if(p -> type == TYPE_CLOSE_BRACES)
         end_last_spec = p;
-      else if(p -> type == TYPE_JOIN || p -> type == TYPE_AMPERSAND)
+      else if(p -> type == TYPE_JOIN || p -> type == TYPE_AMPERSAND ||
+              p -> type == TYPE_STRAIGHT_JOIN)
         last_join = p;
       else if(p -> type == TYPE_CYCLE)
         break;
@@ -5524,11 +5547,14 @@ if(begin_e == NULL && end_e == NULL &&  isnan(w1_x) &&
   while(begin_point != end_expression){
     COUNT_NESTING(begin_point);
     if(IS_NOT_NESTED() && (begin_point -> type == TYPE_JOIN ||
-                          begin_point -> type == TYPE_AMPERSAND))
+                          begin_point -> type == TYPE_AMPERSAND ||
+                          begin_point -> type == TYPE_STRAIGHT_JOIN))
       break;
     begin_point = (struct generic_token *) begin_point -> next;
   }
-  if(begin_point != end_expression && begin_point -> type != TYPE_AMPERSAND){
+  if(begin_point != end_expression &&
+     begin_point -> type != TYPE_AMPERSAND &&
+     begin_point -> type != TYPE_STRAIGHT_JOIN){
     begin_point = (struct generic_token *) begin_point -> next;
     if(begin_point != end_expression && begin_point -> type == TYPE_CONTROLS){
       begin_point = (struct generic_token *) begin_point -> next;
@@ -6161,7 +6187,7 @@ bool eval_path_secundary(struct metafont *mf, struct context *cx,
     if(transform_op -> next == NULL){
 #if defined(W_DEBUG_METAFONT)
       fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
-              "expression.",  mf -> file, begin_expression -> line);
+              "expression.\n",  mf -> file, begin_expression -> line);
 #endif
       return false;
     }
@@ -6530,9 +6556,9 @@ novos: \monoespaco{reverse}, \monoespaco{subpath} e \monoespaco{of}:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_REVERSE        58 // O token simbólico 'reverse'
-#define TYPE_SUBPATH        59 // O token simbólico 'subpath'
-#define TYPE_OF             60 // O token simbólico 'of'
+#define TYPE_REVERSE        59 // O token simbólico 'reverse'
+#define TYPE_SUBPATH        60 // O token simbólico 'subpath'
+#define TYPE_OF             61 // O token simbólico 'of'
 @
 \fimcodigo
 
@@ -6606,7 +6632,7 @@ if(begin_expression -> next == NULL ||
    begin_expression == end_expression){
 #if defined(W_DEBUG_METAFONT)
   fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
-          "expression.",  mf -> file, begin_expression -> line);
+          "expression.\n",  mf -> file, begin_expression -> line);
 #endif
   return false;
 }
@@ -6685,7 +6711,7 @@ if(begin_expression -> next == NULL ||  end_pair_expr -> type == TYPE_OF ||
    begin_expression == end_expression){
 #if defined(W_DEBUG_METAFONT)
   fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
-          "expression.",  mf -> file, begin_expression -> line);
+          "expression.\n",  mf -> file, begin_expression -> line);
 #endif
   return false;
 }
@@ -6963,9 +6989,9 @@ Isso requer adicionarmos os seguintes novos tipos de tokens:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_POINT             61 // O token simbólico 'point'
-#define TYPE_PRECONTROL        62 // O token simbólico 'precontrol'
-#define TYPE_POSTCONTROL       63 // O token simbólico 'postcontrol'
+#define TYPE_POINT             62 // O token simbólico 'point'
+#define TYPE_PRECONTROL        63 // O token simbólico 'precontrol'
+#define TYPE_POSTCONTROL       64 // O token simbólico 'postcontrol'
 @
 \fimcodigo
 
