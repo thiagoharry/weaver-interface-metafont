@@ -4684,6 +4684,10 @@ if(begin_z2 == end_z2 && begin_z2 -> type == TYPE_CYCLE){
   result -> points[result -> length].subpath = NULL;
   result -> points[result -> length].x = p[0].x;
   result -> points[result -> length].y = p[0].y;
+  result -> points[result -> length].u_x = p[0].u_x;
+  result -> points[result -> length].u_y = p[0].u_y;
+  result -> points[result -> length].v_x = p[0].v_x;
+  result -> points[result -> length].v_y = p[0].v_y;
   result -> length ++;
   result -> total_length ++;
   result -> cyclic = true;

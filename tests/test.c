@@ -543,9 +543,33 @@ void test_path_expressions(void){
 	   ALMOST_EQUAL(get_point(fullcircle_path, 4) -> x, -0.5) &&
 	   ALMOST_EQUAL(get_point(fullcircle_path, 4) -> y, 0.0) &&
 	   ALMOST_EQUAL(get_point(fullcircle_path, 4) -> u_x, -0.5) &&
-	   ALMOST_EQUAL(get_point(fullcircle_path, 4) -> u_y, 0.0) &&
-	   ALMOST_EQUAL(get_point(fullcircle_path, 4) -> v_x, -0.5) &&
-	   ALMOST_EQUAL(get_point(fullcircle_path, 4) -> v_y, 0.0) &&
+	   ALMOST_EQUAL(get_point(fullcircle_path, 4) -> u_y, -0.13261) &&
+	   ALMOST_EQUAL(get_point(fullcircle_path, 4) -> v_x, -0.44733) &&
+	   ALMOST_EQUAL(get_point(fullcircle_path, 4) -> v_y, -0.2598) &&
+	   ALMOST_EQUAL(get_point(fullcircle_path, 5) -> x, -0.35356) &&
+	   ALMOST_EQUAL(get_point(fullcircle_path, 5) -> y, -0.35356) &&
+	   ALMOST_EQUAL(get_point(fullcircle_path, 5) -> u_x, -0.2598) &&
+	   ALMOST_EQUAL(get_point(fullcircle_path, 5) -> u_y, -0.44733) &&
+	   ALMOST_EQUAL(get_point(fullcircle_path, 5) -> v_x, -0.13261) &&
+	   ALMOST_EQUAL(get_point(fullcircle_path, 5) -> v_y, -0.5) &&
+	   ALMOST_EQUAL(get_point(fullcircle_path, 6) -> x, 0.0) &&
+	   ALMOST_EQUAL(get_point(fullcircle_path, 6) -> y, -0.5) &&
+	   ALMOST_EQUAL(get_point(fullcircle_path, 6) -> u_x, 0.13261) &&
+	   ALMOST_EQUAL(get_point(fullcircle_path, 6) -> u_y, -0.5) &&
+	   ALMOST_EQUAL(get_point(fullcircle_path, 6) -> v_x, 0.2598) &&
+	   ALMOST_EQUAL(get_point(fullcircle_path, 6) -> v_y, -0.44733) &&
+	   ALMOST_EQUAL(get_point(fullcircle_path, 7) -> x, 0.35356) &&
+	   ALMOST_EQUAL(get_point(fullcircle_path, 7) -> y, -0.35356) &&
+	   ALMOST_EQUAL(get_point(fullcircle_path, 7) -> u_x, 0.44733) &&
+	   ALMOST_EQUAL(get_point(fullcircle_path, 7) -> u_y, -0.2598) &&
+	   ALMOST_EQUAL(get_point(fullcircle_path, 7) -> v_x, 0.5) &&
+	   ALMOST_EQUAL(get_point(fullcircle_path, 7) -> v_y, -0.13261) &&
+	   ALMOST_EQUAL(get_point(fullcircle_path, 8) -> x, 0.5) &&
+	   ALMOST_EQUAL(get_point(fullcircle_path, 8) -> y, 0.0) &&
+	   ALMOST_EQUAL(get_point(fullcircle_path, 8) -> u_x, 0.5) &&
+	   ALMOST_EQUAL(get_point(fullcircle_path, 8) -> u_y, 0.13261) &&
+	   ALMOST_EQUAL(get_point(fullcircle_path, 8) -> v_x, 0.44733) &&
+	   ALMOST_EQUAL(get_point(fullcircle_path, 8) -> v_y, 0.2598) &&
 	   fullcircle_path -> cyclic == true);
   free_token_list(free, p);
   destroy_metafont(mf);
