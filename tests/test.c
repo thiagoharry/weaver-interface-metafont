@@ -38,8 +38,16 @@ struct path_points *_get_point(struct path_variable *v, int n,
 }
 
 struct path_points *get_point(struct path_variable *v, int n){
-  int count = 0;
-  return _get_point(v, n, &count);
+  if(v -> length == v -> total_length){
+    struct path_points *ret = (struct path_points *) &(v -> points[n]);
+    while(ret -> subpath != NULL)
+      ret = &(((struct path_variable *) (ret -> subpath)) -> points[0]);
+    return ret;
+  }
+  else{
+    int count = 0;
+    return _get_point(v, n, &count);
+  }
 }
 
 int numero_de_testes = 0, acertos = 0, falhas = 0;
@@ -364,10 +372,10 @@ void test_path_expressions(void){
   struct context *cx;
   bool ret;
   struct named_variable *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9,
-    *quartercircle, *halfcircle, *fullcircle, *unitsquare;
+    *quartercircle, *halfcircle, *fullcircle, *unitsquare, *a;
   struct path_variable *path_p1, *path_p2, *path_p3, *path_p4, *path_p5,
     *path_p6, *path_p7, *path_p8, *path_p9, *quartercircle_path,
-    *halfcircle_path, *fullcircle_path, *unitsquare_path;
+    *halfcircle_path, *fullcircle_path, *unitsquare_path, *path_a;
   mf = init_metafont(malloc, free, "tests/path_expressions.mf");
   cx = init_context();
   void *p = lexer(mf, malloc, free, "tests/path_expressions.mf");
@@ -386,6 +394,7 @@ void test_path_expressions(void){
   halfcircle = quartercircle -> next;
   fullcircle = halfcircle -> next;
   unitsquare = fullcircle -> next;
+  a = unitsquare -> next;
   path_p1 = (struct path_variable *) p1 -> var;
   path_p2 = (struct path_variable *) p2 -> var;
   path_p3 = (struct path_variable *) p3 -> var;
@@ -399,6 +408,7 @@ void test_path_expressions(void){
   halfcircle_path = (struct path_variable *) halfcircle -> var;
   fullcircle_path = (struct path_variable *) fullcircle -> var;
   unitsquare_path = (struct path_variable *) unitsquare -> var;
+  path_a = (struct path_variable *) a -> var;
   assert("Assigning pair literal to path",
 	 path_p1 -> cyclic == false && path_p1 -> length == 1 &&
 	 path_p1 -> total_length == 1 &&
@@ -605,7 +615,22 @@ void test_path_expressions(void){
 	   ALMOST_EQUAL(get_point(unitsquare_path, 4) -> u_y, 0.0) &&
 	   ALMOST_EQUAL(get_point(unitsquare_path, 4) -> v_x, 0.66667) &&
 	   ALMOST_EQUAL(get_point(unitsquare_path, 4) -> v_y, 0.0) &&
-	   unitsquare_path -> cyclic == true);	       
+	   unitsquare_path -> cyclic == true);
+    assert("Path composed by direction specifiers",
+	   path_a -> total_length == 2 &&
+	   ALMOST_EQUAL(get_point(path_a, 0) -> x, 0.0) &&
+	   ALMOST_EQUAL(get_point(path_a, 0) -> y, 0.0) &&
+	   ALMOST_EQUAL(get_point(path_a, 0) -> u_x, 5.52284) &&
+	   ALMOST_EQUAL(get_point(path_a, 0) -> u_y, 0.0) &&
+	   ALMOST_EQUAL(get_point(path_a, 0) -> v_x, 10.0) &&
+	   ALMOST_EQUAL(get_point(path_a, 0) -> v_y, 4.47716) &&
+	   ALMOST_EQUAL(get_point(path_a, 1) -> x, 10.0) &&
+	   ALMOST_EQUAL(get_point(path_a, 1) -> y, 10.0) &&
+	   ALMOST_EQUAL(get_point(path_a, 1) -> u_x, 10.0) &&
+	   ALMOST_EQUAL(get_point(path_a, 1) -> u_y, 10.0) &&
+	   ALMOST_EQUAL(get_point(path_a, 1) -> v_x, 10.0) &&
+	   ALMOST_EQUAL(get_point(path_a, 1) -> v_y, 10.0) &&
+	   path_a -> cyclic == false); 
   free_token_list(free, p);
   destroy_metafont(mf);
   destroy_context(cx);

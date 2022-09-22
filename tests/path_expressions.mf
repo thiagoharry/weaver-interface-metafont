@@ -4,6 +4,7 @@
 path p1, p2, p3, p4, p5, p6, p7, p8, p9;
 path quartercircle, halfcircle, fullcircle;
 path unitsquare;
+path a;
 
 p1 = (1, 5);
 p2 = p1;
@@ -18,6 +19,7 @@ quartercircle = (0.5, 0) .. controls (0.5, 0.13261) and (0.44733, 0.2598) .. (0.
 halfcircle = quartercircle & quartercircle rotated 90;
 fullcircle = halfcircle & halfcircle rotated 180 & cycle;
 unitsquare = (0, 0)--(1, 0)--(1, 1)--(0, 1)--cycle;
+a = (0, 0){(1, 0)} .. {(0, 1)} (10, 10);
 
 end
 

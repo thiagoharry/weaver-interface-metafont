@@ -2395,6 +2395,9 @@ subtraction with the macro below:
           prev -> type != TYPE_YSCALED &&               \
           prev -> type != TYPE_ZSCALED &&               \
           prev -> type != TYPE_OF &&                    \
+          prev -> type != TYPE_POINT &&                 \
+          prev -> type != TYPE_PRECONTROL &&            \
+          prev -> type != TYPE_POSTCONTROL &&           \
           prev -> type != TYPE_UNIFORMDEVIATE))
 @
 \fimcodigo
@@ -4510,12 +4513,10 @@ else{
   while(end_d != end_expression){
     COUNT_NESTING(end_d);
     if(IS_NOT_NESTED() &&
-       ((struct generic_token *) (end_d -> next)) -> type == TYPE_CLOSE_BRACES)
+       ((struct generic_token *) end_d) -> type == TYPE_CLOSE_BRACES)
       break;
     end_d = (struct generic_token *) end_d -> next;
   }
-  if(end_d != end_expression)
-    end_d = (struct generic_token *) end_d -> next;
   if(begin_d == end_d){
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr, "METAFONT: Error: %s:%d: Unclosed brace '{'.\n",
@@ -4591,12 +4592,10 @@ else{
   while(end_e  != end_expression){
     COUNT_NESTING(end_e);
     if(IS_NOT_NESTED() &&
-       ((struct generic_token *) (end_e -> next)) ->  type == TYPE_CLOSE_BRACES)
+       ((struct generic_token *) end_e) ->  type == TYPE_CLOSE_BRACES)
       break;
     end_e = (struct generic_token *) end_e -> next;
   }
-  if(end_e != end_expression)
-    end_e = (struct generic_token *) end_e -> next;
   if(begin_e == end_e){
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr, "METAFONT: Error: %s:%d: Unclosed brace '{'.\n",
@@ -5114,23 +5113,6 @@ else if(begin_j -> type == TYPE_JOIN &&
   else{
     tension1 = t0.value;
   }
-}
-@
-\fimcodigo
-
-With this we already dealt with all the different join types. If we
-could not interpret the join in any of the cases above, then we should
-raise an error:
-
-\iniciocodigo
-@<Path Expression: Interpret the Join@>+=
-else{
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr,
-          "METAFONT: Error: %s:%d: Unrecognized join expression.\n",
-          mf -> file, begin_j -> line);
-#endif
-  return false;
 }
 @
 \fimcodigo
@@ -5707,8 +5689,8 @@ if(isnan(u_x) || isnan(u_y) || isnan(v_x) ||  isnan(v_y)){
   double complex u, v;
   double complex z0 = z1_point -> x + z1_point -> y * I;
   double complex z1 = z2_point -> x + z2_point -> y * I;
-  double theta = carg(z0 / (z1 - z0));
-  double phi = carg((z1 - z0)/z1);
+  double theta = carg((w0_x + w0_y * I) / (z1 - z0));
+  double phi = carg((z1 - z0)/(w1_x + w1_y * I));
   u = z0 + (cexp(theta * I) * (z1 - z0) * compute_f(theta, phi)) / tension0;
   v = z1 - (cexp(-phi * I) * (z1 - z0) * compute_f(phi, theta)) / tension1;
   u_x = creal(u);

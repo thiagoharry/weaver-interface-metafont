@@ -2435,6 +2435,9 @@ subtração válida com a macro abaixo:
           prev -> type != TYPE_YSCALED &&               \
           prev -> type != TYPE_ZSCALED &&               \
           prev -> type != TYPE_OF &&                    \
+          prev -> type != TYPE_POINT &&                 \
+          prev -> type != TYPE_PRECONTROL &&            \
+          prev -> type != TYPE_POSTCONTROL &&           \
           prev -> type != TYPE_UNIFORMDEVIATE))
 @
 \fimcodigo
@@ -4564,12 +4567,10 @@ else{
   while(end_d  != end_expression){
     COUNT_NESTING(end_d);
     if(IS_NOT_NESTED() &&
-       ((struct generic_token *) (end_d -> next)) -> type == TYPE_CLOSE_BRACES)
+       ((struct generic_token *) end_d) -> type == TYPE_CLOSE_BRACES)
       break;
     end_d = (struct generic_token *) end_d -> next;
   }
-  if(end_d != end_expression)
-    end_d = (struct generic_token *) end_d -> next;
   if(begin_d == end_d){
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr, "METAFONT: Error: %s:%d: Unclosed brace '{'.\n",
@@ -4646,12 +4647,10 @@ else{
   while(end_e  != end_expression){
     COUNT_NESTING(end_e);
     if(IS_NOT_NESTED() &&
-       ((struct generic_token *) (end_e -> next)) ->  type == TYPE_CLOSE_BRACES)
+       ((struct generic_token *) end_e) ->  type == TYPE_CLOSE_BRACES)
       break;
     end_e = (struct generic_token *) end_e -> next;
   }
-  if(end_e != end_expression)
-    end_e = (struct generic_token *) end_e -> next;
   if(begin_e == end_e){
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr, "METAFONT: Error: %s:%d: Unclosed brace '{'.\n",
@@ -5176,22 +5175,6 @@ else if(begin_j -> type == TYPE_JOIN &&
 @
 \fimcodigo
 
-Com isso nós já tratamos todos os tipos de junção existentes. Se não
-conseguimos interpretar a junção que temos em nenhum dos casos acima,
-devemos gerar um erro:
-
-@<Expressão de Caminho: Interpreta Junção@>+=
-else{
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr,
-          "METAFONT: Error: %s:%d: Unrecognized join expression.\n",
-          mf -> file, begin_j -> line);
-#endif
-  return false;
-}
-@
-\fimcodigo
-
 Depois de termos interpretado a junção, isso significa que já temos ou
 um par de pontos de controle, caso em que não precisaremos fazer mais
 nada além de apenas registrar tais pontos de controle na nossa
@@ -5679,8 +5662,6 @@ controle bem-definidos, ou então valores de tensão com especificadores
 de direção à partir dos quais iremos deduzir os pontos de controle. Se
 não tivermos nem um e nem outro, geraremos um erro e encerraremos:
 
-XXX: FIXME: Terminando com & cycle, esse erro ocorre:
-
 \iniciocodigo
 @<Expressão de Caminho: Decide Forma da Curva@>+=
 if(isnan(u_x) || isnan(u_y) || isnan(v_x) ||  isnan(v_y)){
@@ -5776,8 +5757,8 @@ if(isnan(u_x) || isnan(u_y) || isnan(v_x) ||  isnan(v_y)){
   double complex u, v;
   double complex z0 = z1_point -> x + z1_point -> y * I;
   double complex z1 = z2_point -> x + z2_point -> y * I;
-  double theta = carg(z0 / (z1 - z0));
-  double phi = carg((z1 - z0)/z1);
+  double theta = carg((w0_x + w0_y * I) / (z1 - z0));
+  double phi = carg((z1 - z0)/(w1_x + w1_y * I));
   u = z0 + (cexp(theta * I) * (z1 - z0) * compute_f(theta, phi)) / tension0;
   v = z1 - (cexp(-phi * I) * (z1 - z0) * compute_f(phi, theta)) / tension1;
   u_x = creal(u);
