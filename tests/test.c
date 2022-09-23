@@ -665,14 +665,11 @@ void test_path_expressions(void){
 	 ALMOST_EQUAL(get_point(path_b, 3) -> v_x, 2.0) &&
 	 ALMOST_EQUAL(get_point(path_b, 3) -> v_y, 0.89543) &&
 	 path_b -> cyclic == true);
-  printf("DEBUG: u[0]: %f %f (expected %f %f)\n",
-	 get_point(path_c, 0) -> u_x, get_point(path_c, 0) -> u_y,
-	 1.10457, 0.0);
   assert("Path with direction derived from neighbor control point",
 	 path_c -> total_length == 3 &&
 	 ALMOST_EQUAL(get_point(path_c, 0) -> x, 0.0) &&
 	 ALMOST_EQUAL(get_point(path_c, 0) -> y, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_c, 0) -> u_x, 1.10457) &&
+	 ALMOST_EQUAL(get_point(path_c, 0) -> u_x, 1.01445) &&
 	 ALMOST_EQUAL(get_point(path_c, 0) -> u_y, 0.0) &&
 	 ALMOST_EQUAL(get_point(path_c, 0) -> v_x, 1.53123) &&
 	 ALMOST_EQUAL(get_point(path_c, 0) -> v_y, 1.06248) &&

@@ -5731,7 +5731,7 @@ double compute_f(double theta, double phi);
 double compute_f(double theta, double phi){
   double n = 2 + sqrt(2) * (sin(theta) - 0.0625 * sin(phi)) *
              (sin(phi) - 0.0625 * sin(theta)) * (cos(theta) - cos(phi));
-  double d = 3 * (1 + 0.5 * (sqrt(5) - 1) * cos(theta) + 0.5 * (3 - sqrt(5)) *
+  double d = 3 * (1 + 0.5 * (sqrt(5.0) - 1) * cos(theta) + 0.5 * (3 - sqrt(5)) *
                   cos(phi));
   return n/d;
 }
