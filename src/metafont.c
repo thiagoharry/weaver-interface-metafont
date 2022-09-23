@@ -3636,10 +3636,10 @@ previous_point_y= NAN;
 #line 5458 "weaver-interface-metafont_en.tex"
 
 if(begin_e==NULL&&end_e==NULL&&isnan(w1_x)&&
-end_z1!=end_expression){
+end_z2!=end_expression){
 DECLARE_NESTING_CONTROL();
 struct generic_token*begin_point,*end_point;
-begin_point= (struct generic_token*)end_z1->next;
+begin_point= (struct generic_token*)end_z2->next;
 while(begin_point!=end_expression){
 COUNT_NESTING(begin_point);
 if(IS_NOT_NESTED()&&(begin_point->type==TYPE_JOIN||
