@@ -372,11 +372,12 @@ void test_path_expressions(void){
   struct context *cx;
   bool ret;
   struct named_variable *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9,
-    *quartercircle, *halfcircle, *fullcircle, *unitsquare, *a, *b, *c, *d;
+    *quartercircle, *halfcircle, *fullcircle, *unitsquare, *a, *b, *c,
+    *d, *e;
   struct path_variable *path_p1, *path_p2, *path_p3, *path_p4, *path_p5,
     *path_p6, *path_p7, *path_p8, *path_p9, *quartercircle_path,
     *halfcircle_path, *fullcircle_path, *unitsquare_path, *path_a,
-    *path_b, *path_c, *path_d;
+    *path_b, *path_c, *path_d, *path_e;
   mf = init_metafont(malloc, free, "tests/path_expressions.mf");
   cx = init_context();
   void *p = lexer(mf, malloc, free, "tests/path_expressions.mf");
@@ -399,6 +400,7 @@ void test_path_expressions(void){
   b = a -> next;
   c = b -> next;
   d = c -> next;
+  e = d -> next;
   path_p1 = (struct path_variable *) p1 -> var;
   path_p2 = (struct path_variable *) p2 -> var;
   path_p3 = (struct path_variable *) p3 -> var;
@@ -416,6 +418,7 @@ void test_path_expressions(void){
   path_b = (struct path_variable *) b -> var;
   path_c = (struct path_variable *) c -> var;
   path_d = (struct path_variable *) d -> var;
+  path_e = (struct path_variable *) e -> var;
   assert("Assigning pair literal to path",
 	 path_p1 -> cyclic == false && path_p1 -> length == 1 &&
 	 path_p1 -> total_length == 1 &&
@@ -713,6 +716,28 @@ void test_path_expressions(void){
 	 ALMOST_EQUAL(get_point(path_c, 2) -> v_x, 1.2532) &&
 	 ALMOST_EQUAL(get_point(path_c, 2) -> v_y, 0.50641) &&
 	 path_c -> cyclic == true);
+  assert("Second path with directions derived from neighbor control points",
+	 path_e -> total_length == 3 &&
+	 ALMOST_EQUAL(get_point(path_e, 0) -> x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_e, 0) -> y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_e, 0) -> u_x, 3.0) &&
+	 ALMOST_EQUAL(get_point(path_e, 0) -> u_y, 4.0) &&
+	 ALMOST_EQUAL(get_point(path_e, 0) -> v_x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_e, 0) -> v_y, 3.0) &&
+	 ALMOST_EQUAL(get_point(path_e, 1) -> x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_e, 1) -> y, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_e, 1) -> u_x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_e, 1) -> u_y, 0.07417) &&
+	 ALMOST_EQUAL(get_point(path_e, 1) -> v_x, -1.57869) &&
+	 ALMOST_EQUAL(get_point(path_e, 1) -> v_y, -2.10492) &&
+	 ALMOST_EQUAL(get_point(path_e, 2) -> x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_e, 2) -> y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_e, 2) -> u_x, 3.0) &&
+	 ALMOST_EQUAL(get_point(path_e, 2) -> u_y, 4.0) &&
+	 ALMOST_EQUAL(get_point(path_e, 2) -> v_x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_e, 2) -> v_y, 3.0) &&
+	 path_c -> cyclic == true);
+
   free_token_list(free, p);
   destroy_metafont(mf);
   destroy_context(cx);
