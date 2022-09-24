@@ -5353,7 +5353,7 @@ to check its value and copy it.
 if(begin_z1 == begin_expression && end_expression -> type == TYPE_CYCLE &&
    begin_d == NULL && isnan(w0_x) && isnan(u_x)){
   struct generic_token *begin_last_spec = NULL, *end_last_spec = NULL,
-                       *last_join = NULL, *p;
+                       *last_join = NULL, *second_last_join = NULL, *p;
   DECLARE_NESTING_CONTROL();
   p = end_z1 -> next;
   while(p != end_expression){
@@ -5364,8 +5364,10 @@ if(begin_z1 == begin_expression && end_expression -> type == TYPE_CYCLE &&
       else if(p -> type == TYPE_CLOSE_BRACES)
         end_last_spec = p;
       else if(p -> type == TYPE_JOIN || p -> type == TYPE_AMPERSAND ||
-              p -> type == TYPE_STRAIGHT_JOIN)
+              p -> type == TYPE_STRAIGHT_JOIN){
+        second_last_join = last_join;
         last_join = p;
+      }
       else if(p -> type == TYPE_CYCLE)
         break;
       else
@@ -5563,7 +5565,7 @@ the last join:
 \iniciocodigo
 @<Code After Peeking the Last Join in Cyclic Path@>=
 if(last_join != NULL && last_join -> type == TYPE_JOIN){
-  struct generic_token *p = (struct generic_token *) last_join -> next;
+  struct generic_token *p = (struct generic_token *) second_last_join -> next;
   if(p -> type == TYPE_CONTROLS){
     struct generic_token *p_end;
     p = (struct generic_token *) p -> next;
@@ -5571,9 +5573,12 @@ if(last_join != NULL && last_join -> type == TYPE_JOIN){
     while(p_end != end_expression){
       struct generic_token *next = (struct generic_token *) p_end -> next;
       COUNT_NESTING(p_end);
-      if(IS_NOT_NESTED() && (next -> type == TYPE_JOIN ||
-                             next -> type == TYPE_AND))
-        break;
+      if(IS_NOT_NESTED()){
+        if(next -> type == TYPE_AND)
+          p = (struct generic_token *) next -> next;
+        else if(next -> type == TYPE_JOIN)
+          break;
+      }
       p_end = next;
     }
     if(p_end != end_expression){

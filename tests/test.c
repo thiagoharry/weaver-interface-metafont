@@ -696,23 +696,23 @@ void test_path_expressions(void){
 	 path_c -> total_length == 3 &&
 	 ALMOST_EQUAL(get_point(path_c, 0) -> x, 0.0) &&
 	 ALMOST_EQUAL(get_point(path_c, 0) -> y, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_c, 0) -> u_x, 1.01445) &&
-	 ALMOST_EQUAL(get_point(path_c, 0) -> u_y, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_c, 0) -> v_x, 1.53123) &&
-	 ALMOST_EQUAL(get_point(path_c, 0) -> v_y, 1.06248) &&
+	 ALMOST_EQUAL(get_point(path_c, 0) -> u_x, -1.2818) &&
+	 ALMOST_EQUAL(get_point(path_c, 0) -> u_y, -1.9227) &&
+	 ALMOST_EQUAL(get_point(path_c, 0) -> v_x, 1.2532) &&
+	 ALMOST_EQUAL(get_point(path_c, 0) -> v_y, 0.50641) &&
 	 ALMOST_EQUAL(get_point(path_c, 1) -> x, 2.0) &&
 	 ALMOST_EQUAL(get_point(path_c, 1) -> y, 2.0) &&
 	 ALMOST_EQUAL(get_point(path_c, 1) -> u_x, 3.0) &&
 	 ALMOST_EQUAL(get_point(path_c, 1) -> u_y, 4.0) &&
 	 ALMOST_EQUAL(get_point(path_c, 1) -> v_x, 2.0) &&
 	 ALMOST_EQUAL(get_point(path_c, 1) -> v_y, 3.0) &&
-	 ALMOST_EQUAL(get_point(path_c, 2) -> x, 3.0) &&
-	 ALMOST_EQUAL(get_point(path_c, 2) -> y, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_c, 2) -> u_x, 3.0) &&
-	 ALMOST_EQUAL(get_point(path_c, 2) -> u_y, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_c, 2) -> v_x, 3.0) &&
-	 ALMOST_EQUAL(get_point(path_c, 2) -> v_y, 2.0) &&
-	 path_c -> cyclic == false);
+	 ALMOST_EQUAL(get_point(path_c, 2) -> x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_c, 2) -> y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_c, 2) -> u_x, -1.2818) &&
+	 ALMOST_EQUAL(get_point(path_c, 2) -> u_y, -1.9227) &&
+	 ALMOST_EQUAL(get_point(path_c, 2) -> v_x, 1.2532) &&
+	 ALMOST_EQUAL(get_point(path_c, 2) -> v_y, 0.50641) &&
+	 path_c -> cyclic == true);
   free_token_list(free, p);
   destroy_metafont(mf);
   destroy_context(cx);
