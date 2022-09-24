@@ -4,7 +4,7 @@
 path p1, p2, p3, p4, p5, p6, p7, p8, p9;
 path quartercircle, halfcircle, fullcircle;
 path unitsquare;
-path a, b, c;
+path a, b, c, d;
 
 p1 = (1, 5);
 p2 = p1;
@@ -26,6 +26,7 @@ fullcircle = halfcircle & halfcircle rotated 180 & cycle;
 unitsquare = (0, 0)--(1, 0)--(1, 1)--(0, 1)--cycle;
 a = (0, 0){(1, 0)} .. {(0, 1)} (10, 10);
 b = (0, 0){(1, 0)} ..{(0, 1)}(2, 2) ..{(1,0)}(3, 2) .. cycle;
+d = (0, 0) .. (2, 2){(0, 1)} ..{(1,0)}(3, 2) .. {(1, 0)}cycle;
 c = (0, 0){(1, 0)} .. (2, 2) .. controls (3, 4) and (2, 3) .. (3, 2);
 
 end

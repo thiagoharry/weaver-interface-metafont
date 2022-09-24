@@ -372,11 +372,11 @@ void test_path_expressions(void){
   struct context *cx;
   bool ret;
   struct named_variable *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9,
-    *quartercircle, *halfcircle, *fullcircle, *unitsquare, *a, *b, *c;
+    *quartercircle, *halfcircle, *fullcircle, *unitsquare, *a, *b, *c, *d;
   struct path_variable *path_p1, *path_p2, *path_p3, *path_p4, *path_p5,
     *path_p6, *path_p7, *path_p8, *path_p9, *quartercircle_path,
     *halfcircle_path, *fullcircle_path, *unitsquare_path, *path_a,
-    *path_b, *path_c;
+    *path_b, *path_c, *path_d;
   mf = init_metafont(malloc, free, "tests/path_expressions.mf");
   cx = init_context();
   void *p = lexer(mf, malloc, free, "tests/path_expressions.mf");
@@ -398,6 +398,7 @@ void test_path_expressions(void){
   a = unitsquare -> next;
   b = a -> next;
   c = b -> next;
+  d = c -> next;
   path_p1 = (struct path_variable *) p1 -> var;
   path_p2 = (struct path_variable *) p2 -> var;
   path_p3 = (struct path_variable *) p3 -> var;
@@ -414,6 +415,7 @@ void test_path_expressions(void){
   path_a = (struct path_variable *) a -> var;
   path_b = (struct path_variable *) b -> var;
   path_c = (struct path_variable *) c -> var;
+  path_d = (struct path_variable *) d -> var;
   assert("Assigning pair literal to path",
 	 path_p1 -> cyclic == false && path_p1 -> length == 1 &&
 	 path_p1 -> total_length == 1 &&
@@ -636,8 +638,6 @@ void test_path_expressions(void){
 	 ALMOST_EQUAL(get_point(path_a, 1) -> v_x, 10.0) &&
 	 ALMOST_EQUAL(get_point(path_a, 1) -> v_y, 10.0) &&
 	 path_a -> cyclic == false);
-    //printf("DEBUG: u[2].x: %f (expected %f)\n",
-    //   get_point(path_b, 2) -> u_x, 17.31206);
   assert("Cyclic path composed by minimal direction specifiers",
 	 path_b -> total_length == 4 &&
 	 ALMOST_EQUAL(get_point(path_b, 0) -> x, 0.0) &&
@@ -665,6 +665,33 @@ void test_path_expressions(void){
 	 ALMOST_EQUAL(get_point(path_b, 3) -> v_x, 2.0) &&
 	 ALMOST_EQUAL(get_point(path_b, 3) -> v_y, 0.89543) &&
 	 path_b -> cyclic == true);
+  assert("Second cyclic path composed by minimal direction specifiers",
+	 path_d -> total_length == 4 &&
+	 ALMOST_EQUAL(get_point(path_d, 0) -> x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_d, 0) -> y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_d, 0) -> u_x, 1.10457) &&
+	 ALMOST_EQUAL(get_point(path_d, 0) -> u_y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_d, 0) -> v_x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_d, 0) -> v_y, 0.89543) &&
+	 ALMOST_EQUAL(get_point(path_d, 1) -> x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_d, 1) -> y, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_d, 1) -> u_x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_d, 1) -> u_y, 2.50372) &&
+	 ALMOST_EQUAL(get_point(path_d, 1) -> v_x, 2.60619) &&
+	 ALMOST_EQUAL(get_point(path_d, 1) -> v_y, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_d, 2) -> x, 3.0) &&
+	 ALMOST_EQUAL(get_point(path_d, 2) -> y, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_d, 2) -> u_x, 17.31206) &&
+	 ALMOST_EQUAL(get_point(path_d, 2) -> u_y, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_d, 2) -> v_x, -14.31206) &&
+	 ALMOST_EQUAL(get_point(path_d, 2) -> v_y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_d, 3) -> x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_d, 3) -> y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_d, 3) -> u_x, 1.10457) &&
+	 ALMOST_EQUAL(get_point(path_d, 3) -> u_y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_d, 3) -> v_x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_d, 3) -> v_y, 0.89543) &&
+	 path_d -> cyclic == true);
   assert("Path with direction derived from neighbor control point",
 	 path_c -> total_length == 3 &&
 	 ALMOST_EQUAL(get_point(path_c, 0) -> x, 0.0) &&

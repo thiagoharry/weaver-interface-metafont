@@ -5275,7 +5275,7 @@ if(isnan(w1_x) && isnan(w1_y)               ){
       next1 = (struct generic_token *) next1 -> next;
     }
     if(next0 -> type == TYPE_OPEN_BRACES && next1 -> type == TYPE_CLOSE_BRACES){
-      if(!eval_direction_specifier(mf, cx, begin_e, end_e, &next_w_x,
+      if(!eval_direction_specifier(mf, cx, next0, next1, &next_w_x,
                                    &next_w_y))
         return false;
       w1_x = next_w_x;
@@ -5351,24 +5351,28 @@ to check its value and copy it.
 \iniciocodigo
 @<Path Expression: Determine Curve Shape@>+=
 if(begin_z1 == begin_expression && end_expression -> type == TYPE_CYCLE &&
-   begin_d == NULL && isnan(w0_x)){
+   begin_d == NULL && isnan(w0_x) && isnan(u_x)){
   struct generic_token *begin_last_spec = NULL, *end_last_spec = NULL,
                        *last_join = NULL, *p;
   DECLARE_NESTING_CONTROL();
-  p = end_z2;
+  p = end_z1 -> next;
   while(p != end_expression){
-    if(IS_NOT_NESTED() && p -> type == TYPE_OPEN_BRACES)
-      begin_last_spec = p;
-    COUNT_NESTING(p);
     if(IS_NOT_NESTED()){
-      if(p -> type == TYPE_CLOSE_BRACES)
+      if(p -> type == TYPE_OPEN_BRACES){
+        begin_last_spec = p;
+      }
+      else if(p -> type == TYPE_CLOSE_BRACES)
         end_last_spec = p;
       else if(p -> type == TYPE_JOIN || p -> type == TYPE_AMPERSAND ||
               p -> type == TYPE_STRAIGHT_JOIN)
         last_join = p;
       else if(p -> type == TYPE_CYCLE)
         break;
+      else
+        COUNT_NESTING(p);
     }
+    else
+      COUNT_NESTING(p);
     p = (struct generic_token *) p -> next;
   }
   if(end_last_spec != NULL && end_last_spec -> next == p &&
