@@ -373,11 +373,11 @@ void test_path_expressions(void){
   bool ret;
   struct named_variable *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9,
     *quartercircle, *halfcircle, *fullcircle, *unitsquare, *a, *b, *c,
-    *d, *e;
+    *d, *e, *f, *g, *h;
   struct path_variable *path_p1, *path_p2, *path_p3, *path_p4, *path_p5,
     *path_p6, *path_p7, *path_p8, *path_p9, *quartercircle_path,
     *halfcircle_path, *fullcircle_path, *unitsquare_path, *path_a,
-    *path_b, *path_c, *path_d, *path_e;
+    *path_b, *path_c, *path_d, *path_e, *path_f, *path_g, *path_h;
   mf = init_metafont(malloc, free, "tests/path_expressions.mf");
   cx = init_context();
   void *p = lexer(mf, malloc, free, "tests/path_expressions.mf");
@@ -401,6 +401,9 @@ void test_path_expressions(void){
   c = b -> next;
   d = c -> next;
   e = d -> next;
+  f = e -> next;
+  g = f -> next;
+  h = g -> next;
   path_p1 = (struct path_variable *) p1 -> var;
   path_p2 = (struct path_variable *) p2 -> var;
   path_p3 = (struct path_variable *) p3 -> var;
@@ -419,6 +422,9 @@ void test_path_expressions(void){
   path_c = (struct path_variable *) c -> var;
   path_d = (struct path_variable *) d -> var;
   path_e = (struct path_variable *) e -> var;
+  path_f = (struct path_variable *) f -> var;
+  path_g = (struct path_variable *) g -> var;
+  path_h = (struct path_variable *) h -> var;
   assert("Assigning pair literal to path",
 	 path_p1 -> cyclic == false && path_p1 -> length == 1 &&
 	 path_p1 -> total_length == 1 &&
@@ -435,9 +441,45 @@ void test_path_expressions(void){
 	 path_p3 -> cyclic == false && path_p3 -> length == 1 &&
 	 path_p3 -> total_length == 1 &&
 	 path_p3 -> points[0].x == 1.0 && path_p3 -> points[0].y == 5.0 &&
-	 path_p3 -> points[0].u_x == 1.0 && path_p3 -> points[0].u_y == 5.0 &&
-	 path_p3 -> points[0].v_x == 1.0 && path_p3 -> points[0].v_y == 5.0);
-  //printf("path_p4: %p\n", path_p4);
+	 path_p3 -> points[0].u_x == 1.0 &&
+	 path_p3 -> points[0].u_y == 5.0 &&
+	 path_p3 -> points[0].v_x == 1.0 &&
+	 path_p3 -> points[0].v_y == 5.0);
+  assert("Reversing bigger path",
+	 halfcircle_path -> cyclic == false &&
+	 path_h -> total_length == 5 &&
+	 
+	 ALMOST_EQUAL(get_point(path_h, 0) -> x, -0.5) &&
+	 ALMOST_EQUAL(get_point(path_h, 0) -> y, 0.0) &&
+	 //ALMOST_EQUAL(get_point(path_h, 0) -> u_y, 0.13261) &&
+	 //ALMOST_EQUAL(get_point(path_h, 0) -> v_x, 0.44733) &&
+	 //ALMOST_EQUAL(get_point(path_h, 0) -> v_y, 0.2598) &&
+	 //ALMOST_EQUAL(get_point(path_h, 1) -> x, 0.35356) &&
+	 //ALMOST_EQUAL(get_point(path_h, 1) -> y, 0.35356) &&
+	 //ALMOST_EQUAL(get_point(path_h, 1) -> u_x, 0.2598) &&
+	 //ALMOST_EQUAL(get_point(path_h, 1) -> u_y, 0.44733) &&
+	 //ALMOST_EQUAL(get_point(path_h, 1) -> v_x, 0.13261) &&
+	 //ALMOST_EQUAL(get_point(path_h, 1) -> v_y, 0.5) &&
+	 //ALMOST_EQUAL(get_point(path_h, 2) -> x, 0.0) &&
+	 //ALMOST_EQUAL(get_point(path_h, 2) -> y, 0.5) &&
+	 //ALMOST_EQUAL(get_point(path_h, 2) -> u_x, -0.13261) &&
+	 //ALMOST_EQUAL(get_point(path_h, 2) -> u_y, 0.5) &&
+	 //ALMOST_EQUAL(get_point(path_h, 2) -> v_x, -0.2598) &&
+	 //ALMOST_EQUAL(get_point(path_h, 2) -> v_y, 0.44733) &&
+	 //ALMOST_EQUAL(get_point(path_h, 3) -> x, -0.35356) &&
+	 //ALMOST_EQUAL(get_point(path_h, 3) -> y, 0.35356) &&
+	 //ALMOST_EQUAL(get_point(path_h, 3) -> u_x, -0.44733) &&
+	 //ALMOST_EQUAL(get_point(path_h, 3) -> u_y, 0.2598) &&
+	 //ALMOST_EQUAL(get_point(path_h, 3) -> v_x, -0.5) &&
+	 //ALMOST_EQUAL(get_point(path_h, 3) -> v_y, 0.13261) &&
+	 ALMOST_EQUAL(get_point(path_h, 4) -> x, 0.5) &&
+	 ALMOST_EQUAL(get_point(path_h, 4) -> y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_h, 4) -> u_x, 0.5) &&
+	 ALMOST_EQUAL(get_point(path_h, 4) -> u_y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_h, 4) -> v_x, 0.5) &&
+	 ALMOST_EQUAL(get_point(path_h, 4) -> v_y, 0.0) &&
+	 
+	 path_h -> cyclic == false);
   assert("Subpath of single point",
 	 path_p4 != NULL &&
 	 path_p4 -> cyclic == false &&
@@ -736,8 +778,37 @@ void test_path_expressions(void){
 	 ALMOST_EQUAL(get_point(path_e, 2) -> u_y, 4.0) &&
 	 ALMOST_EQUAL(get_point(path_e, 2) -> v_x, 2.0) &&
 	 ALMOST_EQUAL(get_point(path_e, 2) -> v_y, 3.0) &&
-	 path_c -> cyclic == true);
-
+	 path_e -> cyclic == true);
+  assert("Computing non-standard path tension",
+	 path_f -> total_length == 2 &&
+	 ALMOST_EQUAL(get_point(path_f, 0) -> x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_f, 0) -> y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_f, 0) -> u_x, 1.47276) &&
+	 ALMOST_EQUAL(get_point(path_f, 0) -> u_y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_f, 0) -> v_x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_f, 0) -> v_y, 1.72386) &&
+	 ALMOST_EQUAL(get_point(path_f, 1) -> x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_f, 1) -> y, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_f, 1) -> u_x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_f, 1) -> u_y, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_f, 1) -> v_x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_f, 1) -> v_y, 2.0) &&
+	 path_f -> cyclic == false);
+  assert("Computing path tension with 'atleast' keyword",
+	 path_g -> total_length == 2 &&
+	 ALMOST_EQUAL(get_point(path_g, 0) -> x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_g, 0) -> y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_g, 0) -> u_x, 0.42995) &&
+	 ALMOST_EQUAL(get_point(path_g, 0) -> u_y, 0.42995) &&
+	 ALMOST_EQUAL(get_point(path_g, 0) -> v_x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_g, 0) -> v_y, 2.06097) &&
+	 ALMOST_EQUAL(get_point(path_g, 1) -> x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_g, 1) -> y, 1.0) &&
+	 ALMOST_EQUAL(get_point(path_g, 1) -> u_x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_g, 1) -> u_y, 1.0) &&
+	 ALMOST_EQUAL(get_point(path_g, 1) -> v_x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_g, 1) -> v_y, 1.0) &&
+	 path_g -> cyclic == false);
   free_token_list(free, p);
   destroy_metafont(mf);
   destroy_context(cx);

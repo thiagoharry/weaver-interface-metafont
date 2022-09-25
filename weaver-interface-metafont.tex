@@ -5088,11 +5088,11 @@ else if(begin_j -> type == TYPE_JOIN &&
 
 O último tipo de junção tem a forma ``.. tension $t_0$ ..'' ou
 ``.. tension $t_0$ and $t_1$ .. '' onde $t_0$ e $t_1$ são expressões
-primárias numéricas que podem ou não estar precedidas pelo token
-``\monoespaco{atleast}''. Se somente um valor de tensão for
-especificado, assumimos que ambos os valores necessários são iguais a
-este valor único passado. Interpretemos então este tipo de junção com
-o código abaixo:
+primárias numéricas representando um número maior ou igual a 3/4 que
+podem ou não estar precedidas pelo token ``\monoespaco{atleast}''. Se
+somente um valor de tensão for especificado, assumimos que ambos os
+valores necessários são iguais a este valor único
+passado. Interpretemos então este tipo de junção com o código abaixo:
 
 \iniciocodigo
 @<Expressão de Caminho: Interpreta Junção@>+=
@@ -5170,6 +5170,14 @@ else if(begin_j -> type == TYPE_JOIN &&
   }
   else{
     tension1 = t0.value;
+  }
+  if(tension0 < 0.75 || tension1 < 0.75){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr,
+          "METAFONT: Error: %s:%d: Improper tension. Should be >= 0.75\n",
+          mf -> file, begin_j -> line);
+#endif
+    return false;
   }
 }
 @

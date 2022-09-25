@@ -5030,7 +5030,8 @@ else if(begin_j -> type == TYPE_JOIN &&
 
 The last join type have the format ``.. tension $t_0$ ..'' or
 ``.. tension $t_0$ and $t_1$ .. '' where $t_0$ and $t_1$ are primary
-numeric expressions which could or not be preceded by the token
+numeric expressions that should evaluate to a value greater or equal
+than 3/4 and which can optionally be preceded by the token
 ``\monoespaco{atleast}''. If just $t_0$ is defined but not $t_1$, we
 assume that $t_1$ have the same value than $t_0$. We can then
 interpret this join with the code below:
@@ -5112,6 +5113,14 @@ else if(begin_j -> type == TYPE_JOIN &&
   }
   else{
     tension1 = t0.value;
+  }
+  if(tension0 < 0.75 || tension1 < 0.75){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr,
+          "METAFONT: Error: %s:%d: Improper tension. Should be >= 0.75\n",
+          mf -> file, begin_j -> line);
+#endif
+    return false;
   }
 }
 @

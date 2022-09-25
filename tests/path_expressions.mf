@@ -4,7 +4,7 @@
 path p1, p2, p3, p4, p5, p6, p7, p8, p9;
 path quartercircle, halfcircle, fullcircle;
 path unitsquare;
-path a, b, c, d, e;
+path a, b, c, d, e, f, g, h;
 
 p1 = (1, 5);
 p2 = p1;
@@ -29,6 +29,10 @@ b = (0, 0){(1, 0)} ..{(0, 1)}(2, 2) ..{(1,0)}(3, 2) .. cycle;
 d = (0, 0) .. (2, 2){(0, 1)} ..{(1,0)}(3, 2) .. {(1, 0)}cycle;
 c = (0, 0) .. (2, 2) .. controls (3, 4) and (2, 3) .. cycle;
 e = (0, 0) .. controls (3, 4) and (2, 3) .. (2, 2) .. cycle;
+f = (0, 0){(1, 0)} .. tension 0.75 and 4 .. {(0, 1)}(2, 2);
+g = (0, 0){(0.25, 0.25)} .. tension atleast 1 .. {(0, -0.25)}(0, 1);
+h = reverse halfcircle;
+
 
 end
 
