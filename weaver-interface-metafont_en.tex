@@ -6536,13 +6536,78 @@ bool eval_path_primary(struct metafont *mf, struct context *cx,
 \fimcodigo
 
 The first case: we must compute the reverse of a path. For this, we
-need to reverse the order for all exptremity points and for each one
-of them, we need also to swap the two control points. We need to do
-the reversion recursively inside the subpaths. The code for detecting
-the path to be reversed and apply the reversion is:
+need to reverse the order for all extremity points and move the
+control points for its new posisiton.
+
+Given the recursive nature of path variables, we need a recursive
+function that given an already allocated path variable destiny, it
+copies the source points content in the reverse order.
+
+This auxiliary recursive function will need to know for each function
+call the destiny pointer where the next point need to be copied. At
+first, as we are copying in the reverse order, the pointer represent
+the last possible position for points in the path variable.  After
+copying each value, we decrement the pointer, copying values from
+right to left.
+
+To manipulate the original path and extract its points, the recursive
+function must get as argument the current path variable, and the
+current index in the point array in that variable. The function will
+walk over the points from left to right.
+
+
+Doing this we will get as result a variable with all its points in the
+same array, without recursive path variables inside the initial path
+variable. The function definition can be seen below:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+bool aux_reverse(struct path_points **right_dst,
+                 struct path_variable *pointer, int *index,
+                 int *copied_points, int total_points){
+  while(*copied_points < total_points){
+    if(pointer -> points[*index].subpath == NULL &&
+       !isnan(pointer -> points[*index].x)){
+      // Copy:
+      memcpy(*right_dst, &(pointer -> points[*index]),
+             sizeof(struct path_points));
+      (*right_dst) -> subpath = NULL;
+      (*right_dst) --;
+      (*copied_points) ++;
+      if(*index < pointer -> length - 1)
+        (*index) ++;
+      else
+        return false;
+    }
+    else if(pointer -> points[*index].subpath != NULL){
+      int new_index = 0;
+      aux_reverse(right_dst, (struct path_variable *)
+                  (pointer -> points[*index].subpath),
+                  &new_index, copied_points, total_points);
+      if(*index >= pointer -> length - 1)
+        return false;
+      else
+        (*index) ++;
+    }
+    else{
+      if(*index >= pointer -> length - 1)
+        return false;
+      else
+        (*index)  ++;
+    }
+  }
+  return true;
+}
+@
+\fimcodigo
+
+This auxiliary function will help us to define the true function that
+will reverse a path variable. The reversion function will be called
+below, when we detect the reverse operator:
 
 \iniciocodigo
 @<Primary Path: Reverse@>=
+struct path_variable tmp;
 if(begin_expression -> next == NULL ||
    begin_expression == end_expression){
 #if defined(W_DEBUG_METAFONT)
@@ -6552,19 +6617,26 @@ if(begin_expression -> next == NULL ||
   return false;
 }
 if(!eval_path_primary(mf, cx, begin_expression -> next, end_expression,
-                      result))
+                      &tmp))
   return false;
-reverse_path(result);
+result -> length = tmp.total_length;
+result -> total_length = tmp.total_length;
+result -> points =
+     (struct path_points *)
+     temporary_alloc(sizeof(struct path_points) * tmp.total_length);
+reverse_path(&tmp, result);
+if(temporary_free != NULL)
+  path_recursive_free(temporary_free, &tmp, false);
 return true;
 @
 \fimcodigo
 
-We need now to define the function that makes the reversion. The
-function declaration is:
+Now wee need now to define the true function that makes the
+reversion. The function declaration is:
 
 \iniciocodigo
 @<Local Function Declaration (metafont.c)@>+=
-void reverse_path(struct path_variable *path);
+void reverse_path(struct path_variable *src, struct path_variable *dst);
 @
 \fimcodigo
 
@@ -6572,36 +6644,22 @@ And its implementation:
 
 \iniciocodigo
 @<Auxiliary Local Functions (metafont.c)@>+=
-void reverse_path(struct path_variable *path){
-  struct path_points tmp;
-  int i, iter = (path -> length) / 2;
-  for(i = 0; i < iter; i ++){
-    memcpy(&tmp, &(path -> points[i]), sizeof(struct path_points));
-    memcpy(&(path -> points[i]),
-           &(path -> points[path -> length - i - 1]),
-           sizeof(struct path_points));
-    memcpy(&(path -> points[path -> length - i - 1]), &tmp,
-           sizeof(struct path_points));
-    tmp.u_x = path -> points[i].u_x;
-    tmp.u_y = path -> points[i].u_y;
-    path -> points[i].u_x = path -> points[i].v_x;
-    path -> points[i].u_y = path -> points[i].v_y;
-    path -> points[i].v_x = tmp.u_x;
-    path -> points[i].v_y = tmp.u_y;
-    tmp.u_x = path -> points[path -> length - i - 1].u_x;
-    tmp.u_y = path -> points[path -> length - i - 1].u_y;
-    path -> points[path -> length - i - 1].u_x =
-                              path -> points[path -> length - i - 1].v_x;
-    path -> points[path -> length - i - 1].u_y =
-                              path -> points[path -> length - i - 1].v_y;
-    path -> points[path -> length - i - 1].v_x = tmp.u_x;
-    path -> points[path -> length - i - 1].v_y = tmp.u_y;
-    if(path -> points[i].subpath != NULL)
-      reverse_path((struct path_variable *) path -> points[i].subpath);
-    if(path -> points[path -> length - i - 1].subpath != NULL)
-      reverse_path((struct path_variable *)
-                   path -> points[path -> length - i - 1].subpath);
+void reverse_path(struct path_variable *src, struct path_variable *dst){
+  int index = 0, i, copied_points = 0;
+  struct path_points *right = &(dst -> points[dst -> length - 1]);
+  struct path_variable *l = src;
+  aux_reverse(&right, l, &index, &copied_points, dst -> length);
+  for(i = 0; i < dst -> length - 1; i ++){
+    dst -> points[i].u_x = dst -> points[i + 1].v_x;
+    dst -> points[i].u_y = dst -> points[i + 1].v_y;
+    dst -> points[i].v_x = dst -> points[i + 1].u_x;
+    dst -> points[i].v_y = dst -> points[i + 1].u_y;
   }
+  dst -> points[i].u_x = dst -> points[i].x;
+  dst -> points[i].u_y = dst -> points[i].y;
+  dst -> points[i].v_x = dst -> points[i].x;
+  dst -> points[i].v_y = dst -> points[i].y;
+  dst -> cyclic = src -> cyclic;
 }
 @
 \iniciocodigo
@@ -6684,8 +6742,8 @@ if(!eval_path_primary(mf, cx, begin_subexpr, end_expression, &b))
                          final_path_size);
   if(temporary_free != NULL)
     path_recursive_free(temporary_free, &b, false);
-  if(a.x > a.y)
-    reverse_path(result);
+  //if(a.x > a.y)
+  //  reverse_path(result);
   return true;
 }
 @
@@ -6862,7 +6920,7 @@ operator \monoespaco{length} to obtain the number of extremity points
 in a path minus one. The syntax is:
 
 \alinhaverbatim
-<Primário Numérico> -> length <Caminho Primário>
+<Numeric Primary> -> length <Path Primary>
 \alinhanormal
 %                       turningnumber <Caminho Primário> |
 %                       directiontime <Expressão de Par> of <Caminho Primário>

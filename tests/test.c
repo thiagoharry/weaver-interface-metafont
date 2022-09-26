@@ -440,7 +440,8 @@ void test_path_expressions(void){
   assert("Reversing single point",
 	 path_p3 -> cyclic == false && path_p3 -> length == 1 &&
 	 path_p3 -> total_length == 1 &&
-	 path_p3 -> points[0].x == 1.0 && path_p3 -> points[0].y == 5.0 &&
+	 path_p3 -> points[0].x == 1.0 &&
+	 path_p3 -> points[0].y == 5.0 &&
 	 path_p3 -> points[0].u_x == 1.0 &&
 	 path_p3 -> points[0].u_y == 5.0 &&
 	 path_p3 -> points[0].v_x == 1.0 &&
