@@ -4,7 +4,7 @@
 path p1, p2, p3, p4, p5, p6, p7, p8, p9;
 path quartercircle, halfcircle, fullcircle;
 path unitsquare;
-path a, b, c, d, e, f, g, h;
+path a, b, c, d, e, f, g, h, i, j;
 
 p1 = (1, 5);
 p2 = p1;
@@ -32,7 +32,12 @@ e = (0, 0) .. controls (3, 4) and (2, 3) .. (2, 2) .. cycle;
 f = (0, 0){(1, 0)} .. tension 0.75 and 4 .. {(0, 1)}(2, 2);
 g = (0, 0){(0.25, 0.25)} .. tension atleast 1 .. {(0, -0.25)}(0, 1);
 h = reverse halfcircle;
+i = subpath (-2, 5) of g; % This makes i = g
+j = subpath (-1, 3) of e; % Erases cyclic nature, creates bigger path
 
+% TODO: bigger subpath of cycle]
+% TODO: Subpath with reverse
+% TODO: Usual smaller subpath
 
 end
 

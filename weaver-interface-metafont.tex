@@ -6795,15 +6795,13 @@ if(!eval_path_primary(mf, cx, begin_subexpr, end_expression, &b))
 {
   int final_path_size;
   result -> cyclic = false;
-  if(b.cyclic && ((a.x - a.y) >= b.length || -(a.x - a.y) >= b.length))
-    result -> cyclic = true;
-  if(a.x < 0)
+  if(a.x < 0 && !b.cyclic)
     a.x = 0;
-  if(a.y < 0)
+  if(a.y < 0  && !b.cyclic)
     a.y = 0;
-  if(a.x >= b.length)
+  if(a.x >= b.length  && !b.cyclic)
     a.x = b.length - 1;
-  if(a.y >= b.length)
+  if(a.y >= b.length  && !b.cyclic)
     a.y = b.length - 1;
   final_path_size = a.y - a.x;
   if(final_path_size < 0)
