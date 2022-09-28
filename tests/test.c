@@ -373,12 +373,12 @@ void test_path_expressions(void){
   bool ret;
   struct named_variable *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9,
     *quartercircle, *halfcircle, *fullcircle, *unitsquare, *a, *b, *c,
-    *d, *e, *f, *g, *h, *i, *j;
+    *d, *e, *f, *g, *h, *i, *j, *k;
   struct path_variable *path_p1, *path_p2, *path_p3, *path_p4, *path_p5,
     *path_p6, *path_p7, *path_p8, *path_p9, *quartercircle_path,
     *halfcircle_path, *fullcircle_path, *unitsquare_path, *path_a,
     *path_b, *path_c, *path_d, *path_e, *path_f, *path_g, *path_h,
-    *path_i, *path_j;
+    *path_i, *path_j, *path_k;
   mf = init_metafont(malloc, free, "tests/path_expressions.mf");
   cx = init_context();
   void *p = lexer(mf, malloc, free, "tests/path_expressions.mf");
@@ -407,6 +407,7 @@ void test_path_expressions(void){
   h = g -> next;
   i = h -> next;
   j = i -> next;
+  k = j -> next;
   path_p1 = (struct path_variable *) p1 -> var;
   path_p2 = (struct path_variable *) p2 -> var;
   path_p3 = (struct path_variable *) p3 -> var;
@@ -430,6 +431,7 @@ void test_path_expressions(void){
   path_h = (struct path_variable *) h -> var;
   path_i = (struct path_variable *) i -> var;
   path_j = (struct path_variable *) j -> var;
+  path_k = (struct path_variable *) k -> var;
   assert("Assigning pair literal to path",
 	 path_p1 -> cyclic == false && path_p1 -> length == 1 &&
 	 path_p1 -> total_length == 1 &&
@@ -862,7 +864,69 @@ void test_path_expressions(void){
 	 ALMOST_EQUAL(get_point(path_j, 4) -> v_x, 2.0) &&
 	 ALMOST_EQUAL(get_point(path_j, 4) -> v_y, 2.0) &&
 	 path_j -> cyclic == false);
-
+  assert("Creating subpath with reversed indices reverse the result",
+	 path_k -> total_length == path_h -> total_length &&
+	 ALMOST_EQUAL(get_point(path_k, 0) -> x,
+		      get_point(path_h, 0) -> x) &&
+	 ALMOST_EQUAL(get_point(path_k, 0) -> y,
+		      get_point(path_h, 0) -> y) &&
+	 ALMOST_EQUAL(get_point(path_k, 0) -> u_x,
+		      get_point(path_h, 0) -> u_x) &&
+	 ALMOST_EQUAL(get_point(path_k, 0) -> u_y,
+		      get_point(path_h, 0) -> u_y) &&
+	 ALMOST_EQUAL(get_point(path_k, 0) -> v_x,
+		      get_point(path_h, 0) -> v_x) &&
+	 ALMOST_EQUAL(get_point(path_k, 0) -> v_y,
+		      get_point(path_h, 0) -> v_y) &&
+	 ALMOST_EQUAL(get_point(path_k, 1) -> x,
+		      get_point(path_h, 1) -> x) &&
+	 ALMOST_EQUAL(get_point(path_k, 1) -> y,
+		      get_point(path_h, 1) -> y) &&
+	 ALMOST_EQUAL(get_point(path_k, 1) -> u_x,
+		      get_point(path_h, 1) -> u_x) &&
+	 ALMOST_EQUAL(get_point(path_k, 1) -> u_y,
+		      get_point(path_h, 1) -> u_y) &&
+	 ALMOST_EQUAL(get_point(path_k, 1) -> v_x,
+		      get_point(path_h, 1) -> v_x) &&
+	 ALMOST_EQUAL(get_point(path_k, 1) -> v_y,
+		      get_point(path_h, 1) -> v_y) &&
+	 ALMOST_EQUAL(get_point(path_k, 2) -> x,
+		      get_point(path_h, 2) -> x) &&
+	 ALMOST_EQUAL(get_point(path_k, 2) -> y,
+		      get_point(path_h, 2) -> y) &&
+	 ALMOST_EQUAL(get_point(path_k, 2) -> u_x,
+		      get_point(path_h, 2) -> u_x) &&
+	 ALMOST_EQUAL(get_point(path_k, 2) -> u_y,
+		      get_point(path_h, 2) -> u_y) &&
+	 ALMOST_EQUAL(get_point(path_k, 2) -> v_x,
+		      get_point(path_h, 2) -> v_x) &&
+	 ALMOST_EQUAL(get_point(path_k, 2) -> v_y,
+		      get_point(path_h, 2) -> v_y) &&
+	 ALMOST_EQUAL(get_point(path_k, 3) -> x,
+		      get_point(path_h, 3) -> x) &&
+	 ALMOST_EQUAL(get_point(path_k, 3) -> y,
+		      get_point(path_h, 3) -> y) &&
+	 ALMOST_EQUAL(get_point(path_k, 3) -> u_x,
+		      get_point(path_h, 3) -> u_x) &&
+	 ALMOST_EQUAL(get_point(path_k, 3) -> u_y,
+		      get_point(path_h, 3) -> u_y) &&
+	 ALMOST_EQUAL(get_point(path_k, 3) -> v_x,
+		      get_point(path_h, 3) -> v_x) &&
+	 ALMOST_EQUAL(get_point(path_k, 3) -> v_y,
+		      get_point(path_h, 3) -> v_y) &&
+	 ALMOST_EQUAL(get_point(path_k, 4) -> x,
+		      get_point(path_h, 4) -> x) &&
+	 ALMOST_EQUAL(get_point(path_k, 4) -> y,
+		      get_point(path_h, 4) -> y) &&
+	 ALMOST_EQUAL(get_point(path_k, 4) -> u_x,
+		      get_point(path_h, 4) -> u_x) &&
+	 ALMOST_EQUAL(get_point(path_k, 4) -> u_y,
+		      get_point(path_h, 4) -> u_y) &&
+	 ALMOST_EQUAL(get_point(path_k, 4) -> v_x,
+		      get_point(path_h, 4) -> v_x) &&
+	 ALMOST_EQUAL(get_point(path_k, 4) -> v_y,
+		      get_point(path_h, 4) -> v_y) &&
+	 path_k -> cyclic == false);
   free_token_list(free, p);
   destroy_metafont(mf);
   destroy_context(cx);

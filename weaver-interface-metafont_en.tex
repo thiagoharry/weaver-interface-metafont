@@ -6736,19 +6736,19 @@ if(!eval_path_primary(mf, cx, begin_subexpr, end_expression, &b))
     a.x = 0;
   if(a.y < 0  && !b.cyclic)
     a.y = 0;
-  if(a.x >= b.length  && !b.cyclic)
-    a.x = b.length - 1;
-  if(a.y >= b.length  && !b.cyclic)
-    a.y = b.length - 1;
+  if(a.x >= b.total_length  && !b.cyclic)
+    a.x = b.total_length - 1;
+  if(a.y >= b.total_length  && !b.cyclic)
+    a.y = b.total_length - 1;
   final_path_size = a.y - a.x;
   if(final_path_size < 0)
     final_path_size *= -1;
   final_path_size ++;
   offset = (a.x <= a.y)?(a.x):(a.y);
   if(b.cyclic)
-    offset = offset % (b.length - 1);
+    offset = offset % (b.total_length - 1);
   else
-    offset = offset % b.length;
+    offset = offset % b.total_length;
   if(offset < 0)
     offset *= -1;
   result -> length = final_path_size;
@@ -6775,8 +6775,23 @@ if(!eval_path_primary(mf, cx, begin_subexpr, end_expression, &b))
                                       result -> points[result -> length - 1].y;
   if(temporary_free != NULL)
     path_recursive_free(temporary_free, &b, false);
-  //if(a.x > a.y)
-  //  reverse_path(result);
+  if(a.x > a.y){
+    struct path_variable c;
+    c.length = result -> total_length;
+    c.total_length = result -> total_length;
+    c.points = (struct path_points *) temporary_alloc(sizeof(struct path_points) *
+                                                      c.total_length);
+    if(c.points == NULL){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: No enough memory!\n" , mf -> file,
+              begin_expression -> line);
+#endif
+      return false;
+    }
+    reverse_path(result, &c);
+    temporary_free(result -> points);
+    result -> points = c.points;
+  }
   return true;
 }
 @
