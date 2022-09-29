@@ -16,40 +16,6 @@
 
 #define ALMOST_EQUAL(a, b) (fabs(a - b) < 0.00004)
 
-struct path_points *_get_point(struct path_variable *v, int n,
-			       int *count){
-  int i;
-  for(i = 0; i < v -> length; i ++){
-    if(v -> points[i].subpath == NULL) {
-      if(*count == n && !isnan(v -> points[i].x))
-	return ((struct path_points *) &(v -> points[i]));
-      else if(!isnan(v -> points[i].x))
-	(*count) ++;
-    }
-    else{
-      struct path_points *r =
-	_get_point((struct path_variable *) (v -> points[i].subpath),
-		   n, count);
-      if(r != NULL)
-	return r;
-    }
-  }
-  return NULL;
-}
-
-struct path_points *get_point(struct path_variable *v, int n){
-  if(v -> length == v -> total_length){
-    struct path_points *ret = (struct path_points *) &(v -> points[n]);
-    while(ret -> subpath != NULL)
-      ret = &(((struct path_variable *) (ret -> subpath)) -> points[0]);
-    return ret;
-  }
-  else{
-    int count = 0;
-    return _get_point(v, n, &count);
-  }
-}
-
 int numero_de_testes = 0, acertos = 0, falhas = 0;
 void imprime_resultado(void){
   printf("\n%d tests: %d sucess, %d fails\n\n",
@@ -373,12 +339,14 @@ void test_path_expressions(void){
   bool ret;
   struct named_variable *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9,
     *quartercircle, *halfcircle, *fullcircle, *unitsquare, *a, *b, *c,
-    *d, *e, *f, *g, *h, *i, *j, *k;
+    *d, *e, *f, *g, *h, *i, *j, *k, *l, *n, *q, *r, *s;
   struct path_variable *path_p1, *path_p2, *path_p3, *path_p4, *path_p5,
     *path_p6, *path_p7, *path_p8, *path_p9, *quartercircle_path,
     *halfcircle_path, *fullcircle_path, *unitsquare_path, *path_a,
     *path_b, *path_c, *path_d, *path_e, *path_f, *path_g, *path_h,
-    *path_i, *path_j, *path_k;
+    *path_i, *path_j, *path_k, *path_l;
+  struct numeric_variable *numeric_n;
+  struct pair_variable *pair_q, *pair_r, *pair_s;
   mf = init_metafont(malloc, free, "tests/path_expressions.mf");
   cx = init_context();
   void *p = lexer(mf, malloc, free, "tests/path_expressions.mf");
@@ -408,6 +376,11 @@ void test_path_expressions(void){
   i = h -> next;
   j = i -> next;
   k = j -> next;
+  l = k -> next;
+  n = l -> next;
+  q = n -> next;
+  r = q -> next;
+  s = r -> next;
   path_p1 = (struct path_variable *) p1 -> var;
   path_p2 = (struct path_variable *) p2 -> var;
   path_p3 = (struct path_variable *) p3 -> var;
@@ -432,6 +405,11 @@ void test_path_expressions(void){
   path_i = (struct path_variable *) i -> var;
   path_j = (struct path_variable *) j -> var;
   path_k = (struct path_variable *) k -> var;
+  path_l = (struct path_variable *) l -> var;
+  numeric_n = (struct numeric_variable *) n -> var;
+  pair_q = (struct pair_variable *) q -> var;
+  pair_r = (struct pair_variable *) r -> var;
+  pair_s = (struct pair_variable *) s -> var;
   assert("Assigning pair literal to path",
 	 path_p1 -> cyclic == false && path_p1 -> length == 1 &&
 	 path_p1 -> total_length == 1 &&
@@ -846,11 +824,10 @@ void test_path_expressions(void){
 	 ALMOST_EQUAL(get_point(path_j, 1) -> v_y, 3.0) &&
 	 ALMOST_EQUAL(get_point(path_j, 2) -> x, 2.0) &&
 	 ALMOST_EQUAL(get_point(path_j, 2) -> y, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_j, 0) -> u_y, 0.07417) &&
-	 ALMOST_EQUAL(get_point(path_j, 0) -> v_x, -1.57869) &&
-	 ALMOST_EQUAL(get_point(path_j, 0) -> v_y, -2.10492) &&
-	 ALMOST_EQUAL(get_point(path_j, 1) -> x, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_j, 1) -> y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_j, 2) -> u_x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_j, 2) -> u_y, 0.07417) &&
+	 ALMOST_EQUAL(get_point(path_j, 2) -> v_x, -1.57869) &&
+	 ALMOST_EQUAL(get_point(path_j, 2) -> v_y, -2.10492) &&
 	 ALMOST_EQUAL(get_point(path_j, 3) -> x, 0.0) &&
 	 ALMOST_EQUAL(get_point(path_j, 3) -> y, 0.0) &&
 	 ALMOST_EQUAL(get_point(path_j, 3) -> u_x, 3.0) &&
@@ -927,6 +904,38 @@ void test_path_expressions(void){
 	 ALMOST_EQUAL(get_point(path_k, 4) -> v_y,
 		      get_point(path_h, 4) -> v_y) &&
 	 path_k -> cyclic == false);
+  assert("Creating subpath smaller than initial path",
+	 path_l -> total_length == 3 &&
+	 ALMOST_EQUAL(get_point(path_l, 0) -> x, 0.35356) &&
+	 ALMOST_EQUAL(get_point(path_l, 0) -> y, 0.35356) &&
+	 ALMOST_EQUAL(get_point(path_l, 0) -> u_x, 0.2598) &&
+	 ALMOST_EQUAL(get_point(path_l, 0) -> u_y, 0.44733) &&
+	 ALMOST_EQUAL(get_point(path_l, 0) -> v_x, 0.13261) &&
+	 ALMOST_EQUAL(get_point(path_l, 0) -> v_y, 0.5) &&
+	 ALMOST_EQUAL(get_point(path_l, 1) -> x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_l, 1) -> y, 0.5) &&
+	 ALMOST_EQUAL(get_point(path_l, 1) -> u_x, -0.13261) &&
+	 ALMOST_EQUAL(get_point(path_l, 1) -> u_y, 0.5) &&
+	 ALMOST_EQUAL(get_point(path_l, 1) -> v_x, -0.2598) &&
+	 ALMOST_EQUAL(get_point(path_l, 1) -> v_y, 0.44733) &&
+	 ALMOST_EQUAL(get_point(path_l, 2) -> x, -0.35356) &&
+	 ALMOST_EQUAL(get_point(path_l, 2) -> y, 0.35356) &&
+	 ALMOST_EQUAL(get_point(path_l, 2) -> u_x, -0.35356) &&
+	 ALMOST_EQUAL(get_point(path_l, 2) -> u_y, 0.35356) &&
+	 ALMOST_EQUAL(get_point(path_l, 2) -> v_x, -0.35356) &&
+	 ALMOST_EQUAL(get_point(path_l, 2) -> v_y, 0.35356) &&
+	 path_j -> cyclic == false);
+  assert("Computing correctly the lenght of a path",
+	 numeric_n -> value == 8.0);
+  assert("Getting correct point in a path by index",
+	 ALMOST_EQUAL(pair_q -> x, 0.0) &&
+	 ALMOST_EQUAL(pair_q -> y, 0.5));
+  assert("Getting correct precontrol point in a path by index",
+	 ALMOST_EQUAL(pair_r -> x, -0.5) &&
+	 ALMOST_EQUAL(pair_r -> y, 0.13261));
+  assert("Getting correct postcontrol point in a path by index",
+	 ALMOST_EQUAL(pair_s -> x, 0.2598) &&
+	 ALMOST_EQUAL(pair_s -> y, 0.44733));
   free_token_list(free, p);
   destroy_metafont(mf);
   destroy_context(cx);

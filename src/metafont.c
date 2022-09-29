@@ -575,7 +575,15 @@ void copy_subpath(struct path_points*dst,struct path_variable*src,int offset,int
 int recursive_copy_subpath(struct path_points**dst,
 struct path_variable*pointer,
 int*index,int*offset,int*size);
-/*:266*/
+/*:266*//*274:*/
+#line 7064 "weaver-interface-metafont_en.tex"
+
+struct path_points*get_point(struct path_variable*v,int n);
+/*:274*//*276:*/
+#line 7093 "weaver-interface-metafont_en.tex"
+
+struct path_points*_get_point(struct path_variable*v,int n,int*count);
+/*:276*/
 #line 203 "weaver-interface-metafont_en.tex"
 
 /*13:*/
@@ -2694,8 +2702,8 @@ return eval_pair_expression(mf,cx,begin_a,end_a,result);
 #line 3780 "weaver-interface-metafont_en.tex"
 
 }
-/*274:*/
-#line 7068 "weaver-interface-metafont_en.tex"
+/*278:*/
+#line 7140 "weaver-interface-metafont_en.tex"
 
 if(begin_expression->type==TYPE_POINT||
 begin_expression->type==TYPE_PRECONTROL||
@@ -2737,40 +2745,40 @@ return false;
 if(!eval_path_primary(mf,cx,begin_path,end_path,&b))
 return false;
 if(b.cyclic){
-index= ((int)(a.value))%b.length;
+index= ((int)(a.value))%(b.total_length-1);
 if(begin_expression->type==TYPE_PRECONTROL)
-index= (index-1)%b.length;
+index= (index-1)%(b.total_length-1);
 }
 else{
 index= (int)(a.value);
 if(index<0)index= 0;
-if(index>=b.length)index= b.length-1;
+if(index>=b.total_length)index= b.total_length-1;
 if(begin_expression->type==TYPE_PRECONTROL)
-index= (index-1)%b.length;
+index--;
 }
 if(begin_expression->type==TYPE_POINT){
-result->x= b.points[index].x;
-result->y= b.points[index].y;
+result->x= get_point(&b,index)->x;
+result->y= get_point(&b,index)->y;
 }
 else if(begin_expression->type==TYPE_PRECONTROL){
 if(index<0){
-result->x= b.points[0].x;
-result->y= b.points[0].y;
+result->x= get_point(&b,0)->x;
+result->y= get_point(&b,0)->y;
 }
 else{
-result->x= b.points[index].v_x;
-result->y= b.points[index].v_y;
+result->x= get_point(&b,index)->v_x;
+result->y= get_point(&b,index)->v_y;
 }
 }
 else{
-result->x= b.points[index].u_x;
-result->y= b.points[index].u_y;
+result->x= get_point(&b,index)->u_x;
+result->y= get_point(&b,index)->u_y;
 }
 if(temporary_free!=NULL)
 path_recursive_free(temporary_free,&b,false);
 return true;
 }
-/*:274*/
+/*:278*/
 #line 3782 "weaver-interface-metafont_en.tex"
 
 /*163:*/
@@ -4716,7 +4724,44 @@ else
 }
 return true;
 }
-/*:267*/
+/*:267*//*275:*/
+#line 7070 "weaver-interface-metafont_en.tex"
+
+struct path_points*get_point(struct path_variable*v,int n){
+if(v->length==v->total_length){
+struct path_points*ret= (struct path_points*)&(v->points[n]);
+while(ret->subpath!=NULL)
+ret= &(((struct path_variable*)(ret->subpath))->points[0]);
+return ret;
+}
+else{
+int count= 0;
+return _get_point(v,n,&count);
+}
+}
+/*:275*//*277:*/
+#line 7101 "weaver-interface-metafont_en.tex"
+
+struct path_points*_get_point(struct path_variable*v,int n,int*count){
+int i;
+for(i= 0;i<v->length;i++){
+if(v->points[i].subpath==NULL){
+if(*count==n&&!isnan(v->points[i].x))
+return((struct path_points*)&(v->points[i]));
+else if(!isnan(v->points[i].x))
+(*count)++;
+}
+else{
+struct path_points*r= 
+_get_point((struct path_variable*)(v->points[i].subpath),
+n,count);
+if(r!=NULL)
+return r;
+}
+}
+return NULL;
+}
+/*:277*/
 #line 204 "weaver-interface-metafont_en.tex"
 
 /*8:*/

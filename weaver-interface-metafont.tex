@@ -7134,6 +7134,79 @@ E os adicionamos à lista de palavras reservadas:
 @
 \fimcodigo
 
+Todos estes operadores requerem que nós encontremos determinado ponto
+na posição $n$ de um caminho. Para isso, será útil uma função auxiliar
+que irá receber uma variável de caminho e um número e irá retornar um
+ponteiro para um dos pontos desta variável. Essa função irá primeiro
+verificar se temos um caminho onde o tamanho total é igual ao tamanho
+(\monoespaco{length == total\_length}). Se for o caso, assumiremos
+estar diante de um caminho sem subcaminhos recursivos e retornar o
+ponto correto será fácil e rápido. Caso contrário, vamos chamar uma
+função recursiva auxiliaar para nos responder qual é o ponto correto:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+struct path_points *get_point(struct path_variable *v, int n);
+@
+\fimcodigo
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+struct path_points *get_point(struct path_variable *v, int n){
+  if(v -> length == v -> total_length){
+    struct path_points *ret = (struct path_points *) &(v -> points[n]);
+    while(ret -> subpath != NULL)
+      ret = &(((struct path_variable *) (ret -> subpath)) -> points[0]);
+    return ret;
+  }
+  else{
+    int count = 0;
+    return _get_point(v, n, &count);
+  }
+}
+@
+\fimcodigo
+
+Essa função auxiliar recursiva para obter o ponto correto no caso de
+caminhos com subcaminhos recursivos irá percorrer os pontos do caminho
+na ordem, contando quantos são encontrados. E irá retornar o ponto
+quando chegar ao correto. Para isso ela precisa saber qual a variável
+de caminho, qual o índice $n$ do ponto e por fim, quantos pontos já
+foram percorridos:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+struct path_points *_get_point(struct path_variable *v, int n, int *count);
+@
+\fimcodigo
+
+A definição desta função será:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+struct path_points *_get_point(struct path_variable *v, int n, int *count){
+  int i;
+  for(i = 0; i < v -> length; i ++){
+    if(v -> points[i].subpath == NULL) {
+      if(*count == n && !isnan(v -> points[i].x))
+	return ((struct path_points *) &(v -> points[i]));
+      else if(!isnan(v -> points[i].x))
+	(*count) ++;
+    }
+    else{
+      struct path_points *r =
+	_get_point((struct path_variable *) (v -> points[i].subpath),
+		   n, count);
+      if(r != NULL)
+	return r;
+    }
+  }
+  return NULL;
+}
+@
+\fimcodigo
+
+
 No caso do primeiro operador, \monoespaco{point}, ele nos retorna o
 ponto de extremidade indicado. Se o caminho não for cíclico, os pontos
 de índice menor que zero serão iguais ao de índice zero (o primeiro) e
@@ -7189,34 +7262,34 @@ if(begin_expression -> type == TYPE_POINT ||
   if(!eval_path_primary(mf, cx, begin_path, end_path, &b))
     return false;
   if(b.cyclic){
-    index = ((int)(a.value)) % b.length;
+    index = ((int)(a.value)) % (b.total_length - 1);
     if(begin_expression -> type == TYPE_PRECONTROL)
-      index = (index - 1) % b.length;
+      index = (index - 1) % (b.total_length - 1);
   }
   else{
     index = (int) (a.value);
     if(index < 0) index = 0;
-    if(index >= b.length) index = b.length - 1;
+    if(index >= b.total_length) index = b.total_length - 1;
     if(begin_expression -> type == TYPE_PRECONTROL)
-      index = (index - 1) % b.length;
+      index --;
   }
   if(begin_expression -> type == TYPE_POINT){
-    result -> x = b.points[index].x;
-    result -> y = b.points[index].y;
+    result -> x = get_point(&b, index) -> x;
+    result -> y = get_point(&b, index) -> y;
   }
   else if(begin_expression -> type == TYPE_PRECONTROL){
     if(index < 0){
-      result -> x = b.points[0].x;
-      result -> y = b.points[0].y;
+      result -> x = get_point(&b, 0) -> x;
+      result -> y = get_point(&b, 0) -> y;
     }
     else{
-      result -> x = b.points[index].v_x;
-      result -> y = b.points[index].v_y;
+      result -> x = get_point(&b, index) -> v_x;
+      result -> y = get_point(&b, index) -> v_y;
     }
   }
   else{
-    result -> x = b.points[index].u_x;
-    result -> y = b.points[index].u_y;
+    result -> x = get_point(&b, index) -> u_x;
+    result -> y = get_point(&b, index) -> u_y;
   }
   if(temporary_free != NULL)
     path_recursive_free(temporary_free, &b, false);

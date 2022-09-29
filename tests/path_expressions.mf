@@ -4,7 +4,9 @@
 path p1, p2, p3, p4, p5, p6, p7, p8, p9;
 path quartercircle, halfcircle, fullcircle;
 path unitsquare;
-path a, b, c, d, e, f, g, h, i, j, k;
+path a, b, c, d, e, f, g, h, i, j, k, l;
+numeric n;
+pair q, r, s;
 
 p1 = (1, 5);
 p2 = p1;
@@ -35,8 +37,13 @@ h = reverse halfcircle;
 i = subpath (-2, 5) of g; % This makes i = g
 j = subpath (-1, 3) of e; % Erases cyclic nature, creates bigger path
 k = subpath (10, -15) of halfcircle; % Generates 'reverse halfcircle'
+l = subpath (1, 3) of halfcircle;
+n = length fullcircle;
+q = point 666 of fullcircle;
+r = precontrol 666 of halfcircle;
+s = postcontrol 1 of halfcircle;
 
-% TODO: Usual smaller subpath
+% TODO precontrol 666666 of non-cyclic;
 
 end
 
