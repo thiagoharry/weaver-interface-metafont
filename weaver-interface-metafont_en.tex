@@ -4226,32 +4226,63 @@ void recursive_copy_points(void *(*alloc)(size_t),
 @
 \fimcodigo
 
+This function will make the allocation for the new variable if
+necessary, will also get the pointers por the point array in the
+destiny and will call another auxiliary function to walk recursively
+over the destiny while copying the points:
+
 \iniciocodigo
 @<Auxiliary Local Functions (metafont.c)@>+=
 void recursive_copy_points(void *(*alloc)(size_t),
                           struct path_variable **target,
                           struct path_variable *source,
                           bool alloc_target){
-  int i;
+  struct path_points *p;
   if(alloc_target)
     *target = (struct path_variable *) alloc(sizeof(struct path_variable));
   (*target) -> cyclic = source -> cyclic;
-  (*target) -> length = source -> length;
+  (*target) -> length = source -> total_length;
   (*target) -> total_length = source -> total_length;
   (*target) -> points = (struct path_points *)
                           alloc(sizeof(struct path_points) *
-                                (*target) -> length);
-  for(i = 0; i < (*target) -> length; i ++){
-    memcpy(&((*target) -> points[i]), &(source -> points[i]),
-           sizeof(struct path_points));
-    if(source -> points[i].subpath != NULL)
-      recursive_copy_points(alloc, (struct path_variable **)
-                                   &((*target) -> points[i].subpath),
-                            source -> points[i].subpath, true);
-  }
+                                (*target) -> total_length);
+  p = (*target) -> points;
+  recursive_aux_copy(&p, source);
 }
 @
 \fimcodigo
+
+The function that will walk over the origin recursively copying the
+points:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+void recursive_aux_copy(struct path_points **dst, struct path_variable *origin);
+@
+\fimcodigo
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+void recursive_aux_copy(struct path_points **dst, struct path_variable *origin){
+  int index = 0;
+  while(index <= origin -> length - 1){
+    if(origin -> points[index].subpath == NULL &&
+       !isnan(origin -> points[index].x)){
+      // Copy:
+      memcpy(*dst, &(origin -> points[index]),  sizeof(struct path_points));
+      (*dst) -> subpath = NULL;
+      (*dst) ++;
+    }
+    else if(origin -> points[index].subpath != NULL)
+      recursive_aux_copy(dst, (struct path_variable *)
+                              (origin -> points[index].subpath));
+    index  ++;
+  }
+  return;
+}
+@
+\fimcodigo
+
 
 Now we can examine the path expressions.
 

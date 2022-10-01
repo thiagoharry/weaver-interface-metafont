@@ -43,7 +43,5 @@ q = point 666 of fullcircle;
 r = precontrol 666 of halfcircle;
 s = postcontrol 1 of halfcircle;
 
-% TODO precontrol 666666 of non-cyclic;
-
 end
 
