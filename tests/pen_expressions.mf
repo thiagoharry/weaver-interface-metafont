@@ -1,0 +1,7 @@
+% To test pen expressions
+% This program should work and be accepted.
+
+pen p1;
+
+
+end

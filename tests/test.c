@@ -941,6 +941,21 @@ void test_path_expressions(void){
   destroy_context(cx);
 }
 
+void test_pen_expressions(void){
+  struct metafont *mf;
+  struct context *cx;
+  bool ret;
+  //struct named_variable *p1;
+  //struct path_variable *path_p1;
+  mf = init_metafont(malloc, free, "tests/pen_expressions.mf");
+  cx = init_context();
+  void *p = lexer(mf, malloc, free, "tests/pen_expressions.mf");
+  ret = eval_program(mf, cx, p);
+  assert("Interpreting program with pen expressions", ret);
+  free_token_list(free, p);
+  destroy_metafont(mf);
+  destroy_context(cx);
+}
 
 int main(int argc, char **argv){
   Winit_metafont(malloc, free, malloc, free, my_rand, 36);
@@ -950,6 +965,7 @@ int main(int argc, char **argv){
   test_variables();
   test_assignments();
   test_path_expressions();
+  test_pen_expressions();
   imprime_resultado();
   return 0;
 }

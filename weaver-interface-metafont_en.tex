@@ -1626,6 +1626,9 @@ struct variable *insert_variable(int nesting_level,
     case TYPE_T_PATH:
       var_size = sizeof(struct path_variable);
       break;
+    case TYPE_T_PEN:
+      var_size = sizeof(struct pen_variable);
+      break;
     default:
       var_size = sizeof(struct variable);
   }
@@ -2052,6 +2055,128 @@ void path_recursive_free(void (*free_func)(void *),
 }
 @
 \fimcodigo
+
+\subsecao{7.3. Pen Variables}
+
+A pen variable stores the structure needed to draw lines and forms in
+METAFONT. The pens specify the diameter and format of all drawed lines
+and points. They are stored in the following structure:
+
+\iniciocodigo
+@<Local Data Structures (metafont.c)@>+=
+struct pen_variable{
+  int type; // Must be 'TYPE_T_PEN'
+  int nesting_level;
+  void *next;
+  struct path_variable *format; // The format as a cyclic path
+  bool convex, straight, referenced; // About the path
+  GLuint gl_vbo; // The OpenGL vertices after triangulation
+  int number_of_vertices; // How many vertices we have
+  float gl_matrix; // OpenGL matrix transformation
+  float width, height, rotation;
+};
+@
+\fimcodigo
+
+Here we will give a brief explanation about these variables and why do
+we need them:
+
+The variables \monoespaco{type}, \monoespaco{nesting\_level}
+are \monoespaco{next} common for all variable types and are not
+something new. They are needed so that we will know which variable
+type we have, its scope and which is the next variable if we are in a
+linked list.
+
+The variable \monoespaco{format} specifies the pen format as a cyclic
+path. In the original METAFONT, the format needed to be both cyclic
+and convex. Here, we will require that the path must be cyclic and
+also should be simple. A simple path is a path whose perimeter do not
+crosss over itself. If the restriction is not respected, then the
+result will be undefined and we will not ensure that the pen will have
+the specified format.
+
+It does not matter how complex is the pen format, to draw it in the
+screen, we need to convert it to a set of triangles in a process
+called triangulation.
+
+The variable \monoespaco{convex} stores if our pen is convex. If so,
+we can use very simple triangulation algorithms that will perform the
+computations in O(n).
+
+The variable \monoespaco{straight} stores if the pen format is
+composed only by straight lines. If so, we can represent it exactly by
+triangulation, the result is perfect, not just approximated. This
+means that we do not need to redo the triangulation if the pen changes
+its size, for example. Conversely, if our pen has non-straight curves,
+then the triangulation needs to be redone to show more details if the
+pen size is increased.
+
+The variable \monoespaco{referenced} will be non-NULL if we are
+dealing with a temporary pen which is not stored in a variable and if
+this pen references another pen format and vertices. In this case, we
+will use if possible the same path format and the same triangulation
+than the referenced pen variable. This also means that if the pen is
+deallocated, we should not destroy its format nor throw away the
+triangulation vertices.
+
+The variables \monoespaco{gl\_vbo}
+and \monoespaco{number\_of\_vertices} represent the vertices if the
+pen were already triangulated.
+
+The variable \monoespaco{gl\_matrix} stores the OpenGL matrix
+transformation. As the pens will have a more definitive format which
+will not be subdivided nor concatenated as in the subpath operations,
+then we can represent their linear transformations using this matrix
+instead of updating manually their points.
+
+The variables \monoespaco{width}, \monoespaco{height}
+and \monoespaco{rotation} store the pen size and how much it were
+rotated.
+
+A pen variable that was declared but not initialized will have its
+format set as the null pointer, and if it were not yet triangulated,
+its vertex ID will be zero:
+
+\iniciocodigo
+@<Initializing New Variable@>+=
+if(type == TYPE_T_PEN){
+  ((struct pen_variable *) var) -> format = NULL;
+  ((struct pen_variable *) var) -> gl_vbo = 0;
+}
+@
+\fimcodigo
+
+
+Which means that when we remove a global variable and it is a pen
+variable, we need to deallocate the format and throw away its vertices:
+
+\iniciocodigo
+@<Finalize Global Variable 'v'@>+=
+if(v -> type == TYPE_T_PEN){
+  struct pen_variable *pen = (struct pen_variable *) v;
+  if(pen -> format != NULL && mf -> free != NULL)
+    path_recursive_free(mf -> free, pen -> format, true);
+  if(pen -> gl_vbo != 0)
+    glDeleteBuffers(1, &(pen -> gl_vbo));
+}
+@
+\fimcodigo
+
+If the variable is not global we do the same, but using a different
+disallocation function:
+
+\iniciocodigo
+@<Finalize Local Variable 'v'@>=
+if(v -> type == TYPE_T_PEN){
+  struct pen_variable *pen = (struct pen_variable *) v;
+  if(pen -> format != NULL && temporary_free != NULL)
+    path_recursive_free(temporary_free, pen -> format, true);
+  if(pen -> gl_vbo != 0)
+    glDeleteBuffers(1, &(pen -> gl_vbo));
+}
+@
+\fimcodigo
+
 
 \secao{8. Assignments}
 

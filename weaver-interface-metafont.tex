@@ -1649,6 +1649,10 @@ struct variable *insert_variable(int nesting_level,
     case TYPE_T_PATH:
       var_size = sizeof(struct path_variable);
       break;
+    case TYPE_T_PEN:
+      var_size = sizeof(struct pen_variable);
+      break;
+    // XXX: TODO: pen, picture and boolean
     default:
       var_size = sizeof(struct variable);
   }
@@ -2077,6 +2081,135 @@ void path_recursive_free(void (*free_func)(void *),
     if(free_first_pointer)
       free_func(path);
   }
+}
+@
+\fimcodigo
+
+\subsecao{7.3. Variáveis de Caneta}
+
+Uma variável de caneta armazena a estrutura utilizada para desenhar
+formas no METAFONT. As canetas especificam o diâmetro e formato das
+linhas e pontos a serem desenhados. Elas são armazenadas na seguinte
+estrutura:
+
+\iniciocodigo
+@<Estrutura de Dados Locais (metafont.c)@>+=
+struct pen_variable{
+  int type; // Deve ser 'TYPE_T_PEN'
+  int nesting_level;
+  void *next;
+  struct path_variable *format; // O formato como caminho cíclico
+  bool convex, straight; // Sobre o caminho
+  void *referenced;
+  GLuint gl_vbo; // Os vértices OpenGL após triangulação
+  int number_of_vertices; // Quantos vértices são
+  float gl_matrix; // Matriz de transformação OpenGL
+  float width, height, rotation; // Altura, largura e rotação
+};
+@
+\fimcodigo
+
+Aqui vamos dar uma breve explicação do que são cada uma destas
+variáveis e por que elas são necessárias:
+
+As variáveis \monoespaco{type}, \monoespaco{nesting\_level}
+e \monoespaco{next} são comuns a todos os tipos de variáveis e não
+apresentam novidade. Servem para que saibamos qual tipo de dado está
+sendo armazenado na variável, qual o seu escopo e qual a próxima
+variável caso ela esteja em uma lista encadeada.
+
+A variável \monoespaco{format} especifica o formato de nossa caneta
+como um caminho cíclico. No METAFONT original, era necessário que além
+de cíclico, o caminho seja convexo. Para nós, será necessário apenas
+que o caminho seja cíclico e simples. O que significa que o perímetro
+do caminho não pode ter ter intersecções e cruzar consigo mesmo. Caso
+isso não seja respeitado, o resultado será indefinido e não iremos
+garantir que as canetas gerem o resultado esperado.
+
+Não importa o quão complexo seja o formato da caneta, para que ele
+possa ser desenhado na tela via OpenGL, ele deve ser convertido para
+um conjunto de triângulos em um processo chamado de triangulação.
+
+A variável \monoespaco{convex} armazena se estamos diante de um
+formato convexo. Se esse for o caso, fazer a triangulação será um
+processo muito simples. Poderemos usar um algoritmo muito mais simples
+e rápido que fará tudo em O(n) quando precisarmos.
+
+A variável \monoespaco{straight} armazena se o formato de nossa caneta
+é formado apenas por linhas retas, sem curvas. Se isso for verdade,
+então quer dizer que uma vez que ele seja triangulado, nunca mais
+precisaremos fazer isso novamente, mesmo que a caneta depois seja
+ampliada ou reduzida. Se ela é formada só por linhas retas, os
+triângulos são capazes de represerntar seu formato com perfeição, não
+estamos usando nenhum tipo de aproximação. Por isso, não precisamos
+gerar a triangulação novamente para poder mostrar mais detalhes
+quando, por exempolo, a caneta se torna maior.
+
+A variável \monoespaco{referenced} será não-nula quando estamos
+lidando com uma caneta temporária que não está armazenada em uma
+variável e quando ela referencia uma outra caneta que está armazenada
+em uma variável. Em tais casos, estaremos usando o formato, a
+triangulação e a lista de vértices da variável referenciada sempre que
+for possível, ao invés de ter que gerar tais coisas novamente. Isso
+também significa que caso a variável seja desalocada, não devemos
+destruir o seu formato, e nem pedir para o OpenGL jogar fora a lista
+de vértices.
+
+As variáveis \monoespaco{gl\_vbo} e \monoespaco{number\_of\_vertices}
+representam os vértices caso a caneta já tenha tido a sua triangulação
+feita.
+
+A variável \monoespaco{gl\_matrix} armazena a matriz de transformação
+OpenGL. Como as canetas possuem um formato bem-definido e não serão
+depois subdivididos ou concatenados como podem ser os subcaminhos,
+então podemos representar eventuais transformações lineares nela por
+meio dessa matriz ao invés de ter que computar novos valores para seus
+pontos.
+
+As variáveis \monoespaco{width}, \monoespaco{height}
+e \monoespaco{rotation} armazenam a largura, altura e o quanto a
+caneta já foi rotacionada.
+
+Uma variável de caneta declarada, mas ainda não inicializada terá seu
+formato igual ao ponteiro nulo, e se ela ainda não foi triangulada,
+terá seu ID de vértices OpenGL igual a zero:
+
+\iniciocodigo
+@<Inicialização de Nova Variável@>+=
+if(type == TYPE_T_PEN){
+  ((struct pen_variable *) var) -> format = NULL;
+  ((struct pen_variable *) var) -> gl_vbo = 0;
+}
+@
+\fimcodigo
+
+O que significa que ao remover uma variável global e ela for de
+caminho, devemos fazer a desalocação do formato e jogar fora os
+vértices:
+
+\iniciocodigo
+@<Finaliza Variável Global 'v'@>=
+if(v -> type == TYPE_T_PEN){
+  struct pen_variable *pen = (struct pen_variable *) v;
+  if(pen -> format != NULL && mf -> free != NULL)
+    path_recursive_free(mf -> free, pen -> format, true);
+  if(pen -> gl_vbo != 0)
+    glDeleteBuffers(1, &(pen -> gl_vbo));
+}
+@
+\fimcodigo
+
+Se a variável for local ao invés de global, nós fazemos o mesmo usando
+uma função diferente de desalocação:
+
+\iniciocodigo
+@<Finaliza Variável Local 'v'@>+=
+if(v -> type == TYPE_T_PEN){
+  struct pen_variable *pen = (struct pen_variable *) v;
+  if(pen -> format != NULL && temporary_free != NULL)
+    path_recursive_free(temporary_free, pen -> format, true);
+  if(pen -> gl_vbo != 0)
+    glDeleteBuffers(1, &(pen -> gl_vbo));
 }
 @
 \fimcodigo
