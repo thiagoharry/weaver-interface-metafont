@@ -2069,10 +2069,11 @@ struct pen_variable{
   int nesting_level;
   void *next;
   struct path_variable *format; // The format as a cyclic path
-  bool convex, straight, referenced; // About the path
+  bool convex, straight, circular; // About the path
+  void *referenced;
   GLuint gl_vbo; // The OpenGL vertices after triangulation
   int number_of_vertices; // How many vertices we have
-  float gl_matrix; // OpenGL matrix transformation
+  float gl_matrix[9]; // OpenGL matrix transformation
   float width, height, rotation;
 };
 @
@@ -2109,7 +2110,11 @@ triangulation, the result is perfect, not just approximated. This
 means that we do not need to redo the triangulation if the pen changes
 its size, for example. Conversely, if our pen has non-straight curves,
 then the triangulation needs to be redone to show more details if the
-pen size is increased.
+pen size is increased. 
+
+The variable \monoespaco{circular} stores if we know that the pen has
+a circular format. In this case, we can generate the triangulation
+without looking at the path variable format.
 
 The variable \monoespaco{referenced} will be non-NULL if we are
 dealing with a temporary pen which is not stored in a variable and if
@@ -2134,14 +2139,15 @@ and \monoespaco{rotation} store the pen size and how much it were
 rotated.
 
 A pen variable that was declared but not initialized will have its
-format set as the null pointer, and if it were not yet triangulated,
-its vertex ID will be zero:
+format set as the null pointer, will be non-circular and if it were
+not yet triangulated, its vertex ID will be zero:
 
 \iniciocodigo
 @<Initializing New Variable@>+=
 if(type == TYPE_T_PEN){
   ((struct pen_variable *) var) -> format = NULL;
   ((struct pen_variable *) var) -> gl_vbo = 0;
+  ((struct pen_variable *) var) -> circular = false;
 }
 @
 \fimcodigo
@@ -2177,6 +2183,132 @@ if(v -> type == TYPE_T_PEN){
 @
 \fimcodigo
 
+Besides qhe pen variables declared by the user, we will also support
+two other internal pen variables that can be used by the users that
+will always be declared and initialized. One of them will
+be \monoespaco{currentpen} variable that always will store the pen
+that we currently are using to draw. The other variable will be a pen
+with square format that will be already initialized to obtain better
+performance when used.
+
+Such variables will be stored in the Metafont structure:
+
+\iniciocodigo
+@<Attributes (struct metafont)@>+=
+struct pen_variable *internal_pen_variables;
+@
+\fimcodigo
+
+During initialization we will allocate space for both and we will
+initialize them. The variable \monoespaco{currentpen} by default will
+begin as a circle with diameter 1 and \monoespaco{pensquare} will be a
+square with side 1:
+
+\iniciocodigo
+@<Initialization (struct metafont)@>+=
+mf -> internal_pen_variables = (struct pen_variable *)
+                                 mf -> alloc(2 * sizeof(struct pen_variable));
+if(mf -> internal_pen_variables == NULL){
+  if(disalloc != NULL)
+    disalloc(mf);
+}
+mf -> internal_pen_variables[0].format = NULL; // The pen 'currentpen'
+mf -> internal_pen_variables[0].convex = true;
+mf -> internal_pen_variables[0].straight = false;
+mf -> internal_pen_variables[0].circular = true;
+mf -> internal_pen_variables[0].referenced = NULL;
+mf -> internal_pen_variables[0].gl_vbo = 0;
+mf -> internal_pen_variables[0].number_of_vertices = 0;
+mf -> internal_pen_variables[0].width = 1.0;
+mf -> internal_pen_variables[0].height = 1.0;
+mf -> internal_pen_variables[0].rotation = 0.0;
+mf -> internal_pen_variables[1].convex = true; // The pen 'pensquare'
+mf -> internal_pen_variables[1].straight = true;
+mf -> internal_pen_variables[1].circular = false;
+mf -> internal_pen_variables[1].referenced = NULL;
+mf -> internal_pen_variables[1].gl_vbo = 0;
+mf -> internal_pen_variables[1].number_of_vertices = 0;
+{ // Initializating both transformation matrices
+  int i, j;
+  for(j = 0; j < 2; j ++)
+    for(i = 0; i < 9; i++)
+      if(i % 3 == 0)
+        mf -> internal_pen_variables[j].gl_matrix[i] = 1.0;
+      else
+        mf -> internal_pen_variables[j].gl_matrix[i] = 0.0;
+}
+mf -> internal_pen_variables[1].format =
+    (struct path_variable *) mf -> alloc(sizeof(struct path_variable));
+if(mf -> internal_pen_variables[1].format == NULL){
+  if(disalloc != NULL){
+    disalloc(mf -> internal_pen_variables);
+    disalloc(mf);
+  }
+  return NULL;
+} // Allocated above the format for the square pen
+mf -> internal_pen_variables[1].format -> points =
+    (struct path_points *) mf -> alloc(sizeof(struct path_points) * 5);
+if(mf -> internal_pen_variables[1].format -> points == NULL){
+  if(disalloc != NULL){
+    disalloc(mf -> internal_pen_variables[1].format);
+    disalloc(mf -> internal_pen_variables);
+    disalloc(mf);
+  }
+  return NULL;
+}
+// We fill below the coordinates for points in the 'pensquare'.
+// We do not need to fill the control points, just the extremity points.
+// As we declared it as having straight format, control points are ignored.
+mf -> internal_pen_variables[1].format -> cyclic = true;
+mf -> internal_pen_variables[1].format -> length = 5;
+mf -> internal_pen_variables[1].format -> total_length = 5;
+mf -> internal_pen_variables[1].format -> points[0].x = -0.5;
+mf -> internal_pen_variables[1].format -> points[0].y = -0.5;
+mf -> internal_pen_variables[1].format -> points[0].x = 0.5;
+mf -> internal_pen_variables[1].format -> points[0].y = -0.5;
+mf -> internal_pen_variables[1].format -> points[0].x = 0.5;
+mf -> internal_pen_variables[1].format -> points[0].y = 0.5;
+mf -> internal_pen_variables[1].format -> points[0].x = -0.5;
+mf -> internal_pen_variables[1].format -> points[0].y = 0.5;
+mf -> internal_pen_variables[1].format -> points[0].subpath = NULL;
+@
+\fimcodigo
+
+The following macro will help us to access more easily the position
+for each of these internal variables:
+
+\iniciocodigo
+@<Local Macros (metafont.c)@>+=
+#define INTERNAL_PEN_CURRENTPEN 0
+#define INTERNAL_PEN_PENSQUARE  1
+@
+\fimcodigo
+
+And to finalize the Metafont structure, we need to deallocate the
+internal variables:
+
+\iniciocodigo
+@<Finalization (struct metafont)@>+=
+mf -> free(mf -> internal_pen_variables[1].format -> points);
+mf -> free(mf -> internal_pen_variables[1].format);
+mf -> free(mf -> internal_pen_variables);
+@
+\fimcodigo
+
+And when we read a source code, we need to adjust correctly the
+variable pointers when we find reference for internal variables:
+
+
+\iniciocodigo
+@<Set Pointer to Internal Variable@>+=
+else if(!strcmp(buffer, "currentpen"))
+  new_token -> var =
+          &(mf -> internal_pen_variables[INTERNAL_PEN_CURRENTPEN]);
+else if(!strcmp(buffer, "pensquare"))
+  new_token -> var =
+          &(mf -> internal_pen_variables[INTERNAL_PEN_PENSQUARE]);
+@
+\fimcodigo
 
 \secao{8. Assignments}
 

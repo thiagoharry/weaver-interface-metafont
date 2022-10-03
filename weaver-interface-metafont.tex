@@ -2093,17 +2093,23 @@ linhas e pontos a serem desenhados. Elas são armazenadas na seguinte
 estrutura:
 
 \iniciocodigo
+@<Cabeçalhos Locais (metafont.c)@>+=
+struct pen_variable;
+@
+\fimcodigo
+
+\iniciocodigo
 @<Estrutura de Dados Locais (metafont.c)@>+=
 struct pen_variable{
   int type; // Deve ser 'TYPE_T_PEN'
   int nesting_level;
   void *next;
   struct path_variable *format; // O formato como caminho cíclico
-  bool convex, straight; // Sobre o caminho
+  bool convex, straight, circular; // Sobre o caminho
   void *referenced;
   GLuint gl_vbo; // Os vértices OpenGL após triangulação
   int number_of_vertices; // Quantos vértices são
-  float gl_matrix; // Matriz de transformação OpenGL
+  float gl_matrix[9]; // Matriz de transformação OpenGL
   float width, height, rotation; // Altura, largura e rotação
 };
 @
@@ -2145,6 +2151,11 @@ estamos usando nenhum tipo de aproximação. Por isso, não precisamos
 gerar a triangulação novamente para poder mostrar mais detalhes
 quando, por exempolo, a caneta se torna maior.
 
+A variável \monoespaco{circular} armazena se nós sabemos que a caneta
+tem um formato circular. Neste caso, seremos capazes de fazer a
+triangulação sem olhar para os pontos da variável de caminho
+representando o formato.
+
 A variável \monoespaco{referenced} será não-nula quando estamos
 lidando com uma caneta temporária que não está armazenada em uma
 variável e quando ela referencia uma outra caneta que está armazenada
@@ -2171,14 +2182,15 @@ e \monoespaco{rotation} armazenam a largura, altura e o quanto a
 caneta já foi rotacionada.
 
 Uma variável de caneta declarada, mas ainda não inicializada terá seu
-formato igual ao ponteiro nulo, e se ela ainda não foi triangulada,
-terá seu ID de vértices OpenGL igual a zero:
+formato igual ao ponteiro nulo, será não-circular e como ela ainda não
+foi triangulada, terá seu ID de vértices OpenGL igual a zero.
 
 \iniciocodigo
 @<Inicialização de Nova Variável@>+=
 if(type == TYPE_T_PEN){
   ((struct pen_variable *) var) -> format = NULL;
   ((struct pen_variable *) var) -> gl_vbo = 0;
+  ((struct pen_variable *) var) -> circular = false;
 }
 @
 \fimcodigo
@@ -2211,6 +2223,131 @@ if(v -> type == TYPE_T_PEN){
   if(pen -> gl_vbo != 0)
     glDeleteBuffers(1, &(pen -> gl_vbo));
 }
+@
+\fimcodigo
+
+Além das variáveis de caneta defiidas pelo usuário, iremos suportar a
+existência de duas outras variáveis interna de caneta. Uma delas será
+chamada de \monoespaco{currentpen} e irá representar a caneta atual
+com a qual iremos escrever e desenhar. A outra será uma caneta de
+formato perfeitamente quadrado que estará já inicializada à disposição
+do usuário e que deixamos já alocada para fins de melhor performance.
+
+Tais variáveis serão armazenadas na estrutura Metafont:
+
+\iniciocodigo
+@<Atributos (struct metafont)@>+=
+struct pen_variable *internal_pen_variables;
+@
+\fimcodigo
+
+Na inicialização iremos alocar espaço para ambas e inicializaremos
+elas. A variável \monoespaco{currentpen} por padrão começará sendo um
+círculo de diâmetro 1 e a \monoespaco{pensquare} será um quadrado de
+lado 1:
+
+\iniciocodigo
+@<Inicialização (struct metafont)@>+=
+mf -> internal_pen_variables = (struct pen_variable *)
+                                 mf -> alloc(2 * sizeof(struct pen_variable));
+if(mf -> internal_pen_variables == NULL){
+  if(disalloc != NULL)
+    disalloc(mf);
+}
+mf -> internal_pen_variables[0].format = NULL; // A caneta 'currentpen'
+mf -> internal_pen_variables[0].convex = true;
+mf -> internal_pen_variables[0].straight = false;
+mf -> internal_pen_variables[0].circular = true;
+mf -> internal_pen_variables[0].referenced = NULL;
+mf -> internal_pen_variables[0].gl_vbo = 0;
+mf -> internal_pen_variables[0].number_of_vertices = 0;
+mf -> internal_pen_variables[0].width = 1.0;
+mf -> internal_pen_variables[0].height = 1.0;
+mf -> internal_pen_variables[0].rotation = 0.0;
+mf -> internal_pen_variables[1].convex = true; // A caneta 'pensquare'
+mf -> internal_pen_variables[1].straight = true;
+mf -> internal_pen_variables[1].circular = false;
+mf -> internal_pen_variables[1].referenced = NULL;
+mf -> internal_pen_variables[1].gl_vbo = 0;
+mf -> internal_pen_variables[1].number_of_vertices = 0;
+{ // Inicializando a matriz de transformação de ambas
+  int i, j;
+  for(j = 0; j < 2; j ++)
+    for(i = 0; i < 9; i++)
+      if(i % 3 == 0)
+        mf -> internal_pen_variables[j].gl_matrix[i] = 1.0;
+      else
+        mf -> internal_pen_variables[j].gl_matrix[i] = 0.0;
+}
+mf -> internal_pen_variables[1].format =
+    (struct path_variable *) mf -> alloc(sizeof(struct path_variable));
+if(mf -> internal_pen_variables[1].format == NULL){
+  if(disalloc != NULL){
+    disalloc(mf -> internal_pen_variables);
+    disalloc(mf);
+  }
+  return NULL;
+} // Alocado o formato da caneta quadrada
+mf -> internal_pen_variables[1].format -> points =
+    (struct path_points *) mf -> alloc(sizeof(struct path_points) * 5);
+if(mf -> internal_pen_variables[1].format -> points == NULL){
+  if(disalloc != NULL){
+    disalloc(mf -> internal_pen_variables[1].format);
+    disalloc(mf -> internal_pen_variables);
+    disalloc(mf);
+  }
+  return NULL;
+}
+// Preenchendo abaixo as coordenadas dos vértices de 'pensquare'.
+// Não precisamos preencher pontos de controle, como a marcamos como tendo
+// formato reto, os pontos de controle serão ignorados.
+mf -> internal_pen_variables[1].format -> cyclic = true;
+mf -> internal_pen_variables[1].format -> length = 5;
+mf -> internal_pen_variables[1].format -> total_length = 5;
+mf -> internal_pen_variables[1].format -> points[0].x = -0.5;
+mf -> internal_pen_variables[1].format -> points[0].y = -0.5;
+mf -> internal_pen_variables[1].format -> points[0].x = 0.5;
+mf -> internal_pen_variables[1].format -> points[0].y = -0.5;
+mf -> internal_pen_variables[1].format -> points[0].x = 0.5;
+mf -> internal_pen_variables[1].format -> points[0].y = 0.5;
+mf -> internal_pen_variables[1].format -> points[0].x = -0.5;
+mf -> internal_pen_variables[1].format -> points[0].y = 0.5;
+mf -> internal_pen_variables[1].format -> points[0].subpath = NULL;
+@
+\fimcodigo
+
+As seguintes macros nos permitirão acessar mais fácil a posição de
+cada variável interna:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#define INTERNAL_PEN_CURRENTPEN 0
+#define INTERNAL_PEN_PENSQUARE  1
+@
+\fimcodigo
+
+Para finalizar a estrutura metafont, devemos desalocar as variáveis
+internas:
+
+\iniciocodigo
+@<Finalização (struct metafont)@>+=
+mf -> free(mf -> internal_pen_variables[1].format -> points);
+mf -> free(mf -> internal_pen_variables[1].format);
+mf -> free(mf -> internal_pen_variables);
+@
+\fimcodigo
+
+E ao ler um código-fonte, devemos ajustar corretamente os ponteiros
+das variáveis que apontam para tais variáveis internas:
+
+\iniciocodigo
+@<Preenche Ponteiro para Variável Interna@>=
+else if(!strcmp(buffer, "currentpen"))
+  new_token -> var =
+          &(mf -> internal_pen_variables[INTERNAL_PEN_CURRENTPEN]);
+else if(!strcmp(buffer, "pensquare"))
+  new_token -> var =
+          &(mf -> internal_pen_variables[INTERNAL_PEN_PENSQUARE]);
 @
 \fimcodigo
 
