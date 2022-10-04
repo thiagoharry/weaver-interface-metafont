@@ -2203,10 +2203,12 @@ vértices:
 @<Finaliza Variável Global 'v'@>=
 if(v -> type == TYPE_T_PEN){
   struct pen_variable *pen = (struct pen_variable *) v;
-  if(pen -> format != NULL && mf -> free != NULL)
-    path_recursive_free(mf -> free, pen -> format, true);
-  if(pen -> gl_vbo != 0)
-    glDeleteBuffers(1, &(pen -> gl_vbo));
+  if(pen -> referenced == NULL){
+    if(pen -> format != NULL && mf -> free != NULL)
+      path_recursive_free(mf -> free, pen -> format, true);
+    if(pen -> gl_vbo != 0)
+      glDeleteBuffers(1, &(pen -> gl_vbo));
+  }
 }
 @
 \fimcodigo
@@ -2218,10 +2220,12 @@ uma função diferente de desalocação:
 @<Finaliza Variável Local 'v'@>+=
 if(v -> type == TYPE_T_PEN){
   struct pen_variable *pen = (struct pen_variable *) v;
-  if(pen -> format != NULL && temporary_free != NULL)
-    path_recursive_free(temporary_free, pen -> format, true);
-  if(pen -> gl_vbo != 0)
-    glDeleteBuffers(1, &(pen -> gl_vbo));
+  if(pen -> referenced == NULL){
+    if(pen -> format != NULL && temporary_free != NULL)
+      path_recursive_free(temporary_free, pen -> format, true);
+    if(pen -> gl_vbo != 0)
+      glDeleteBuffers(1, &(pen -> gl_vbo));
+  }
 }
 @
 \fimcodigo
@@ -2488,6 +2492,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
   @<Atribuição de Variável Numérica@>
   @<Atribuição de Variável de Par@>
   @<Atribuição de Variável de Caminho@>
+  @<Atribuição de Variável de Caneta@>
   return true;
 }
 @
@@ -2722,7 +2727,7 @@ bool eval_numeric_expression(struct metafont *mf, struct context *cx,
                              struct generic_token *begin_expression,
                              struct generic_token *end_token_list,
                              struct numeric_variable *result){
-  struct generic_token *end_tertiary = NULL, *begin_secundary,
+  struct generic_token *end_tertiary = NULL, *begin_secondary,
                        *last_sum = NULL, *p, *prev = NULL;
   DECLARE_NESTING_CONTROL();
   struct numeric_variable a, b;
@@ -2742,9 +2747,9 @@ bool eval_numeric_expression(struct metafont *mf, struct context *cx,
       p = NULL;
   }while(p != NULL);
   if(end_tertiary != NULL){
-    begin_secundary = (struct generic_token *) (last_sum -> next);
+    begin_secondary = (struct generic_token *) (last_sum -> next);
     eval_numeric_expression(mf, cx, begin_expression, end_tertiary, &a);
-    eval_numeric_secundary(mf, cx, begin_secundary, end_token_list, &b);
+    eval_numeric_secondary(mf, cx, begin_secondary, end_token_list, &b);
     if(last_sum -> type == TYPE_SUM)
       result -> value = a.value + b.value;
     else if(last_sum -> type == TYPE_SUBTRACT)
@@ -2766,7 +2771,7 @@ bool eval_numeric_expression(struct metafont *mf, struct context *cx,
     return true;
   }
   else
-    return eval_numeric_secundary(mf, cx, begin_expression,
+    return eval_numeric_secondary(mf, cx, begin_expression,
                                    end_token_list, result);
 }
 @
@@ -2808,7 +2813,7 @@ expressões numéricas é:
 
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
-bool eval_numeric_secundary(struct metafont *mf, struct context *cx,
+bool eval_numeric_secondary(struct metafont *mf, struct context *cx,
                             struct generic_token *begin_expression,
                             struct generic_token *end_token_list,
                             struct numeric_variable *result);
@@ -2831,11 +2836,11 @@ como a divisão de duas frações $(1/3)/(1/3)$:
 
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
-bool eval_numeric_secundary(struct metafont *mf, struct context *cx,
+bool eval_numeric_secondary(struct metafont *mf, struct context *cx,
                              struct generic_token *begin_expression,
                              struct generic_token *end_token_list,
                              struct numeric_variable *result){
-  struct generic_token *end_secundary = NULL, *begin_primary,
+  struct generic_token *end_secondary = NULL, *begin_primary,
                        *last_mul = NULL, *p, *prev = NULL,
                        *prev_prev = NULL, *last_fraction = NULL;
   DECLARE_NESTING_CONTROL();
@@ -2853,7 +2858,7 @@ bool eval_numeric_secundary(struct metafont *mf, struct context *cx,
          last_fraction = p;
        else{ // Multiplicação ou divisão válida
          last_mul = p;
-         end_secundary = prev;
+         end_secondary = prev;
        }
     }
     prev_prev = prev;
@@ -2863,9 +2868,9 @@ bool eval_numeric_secundary(struct metafont *mf, struct context *cx,
     else
       p = NULL;
   }while(p != NULL);
-  if(end_secundary != NULL){
+  if(end_secondary != NULL){
     begin_primary = (struct generic_token *) (last_mul -> next);
-    eval_numeric_secundary(mf, cx, begin_expression, end_secundary, &a);
+    eval_numeric_secondary(mf, cx, begin_expression, end_secondary, &a);
     eval_numeric_primary(mf, cx, begin_primary, end_token_list, &b);
     if(last_mul -> type == TYPE_MULTIPLICATION)
       result -> value = a.value * b.value;
@@ -3653,7 +3658,7 @@ bool eval_pair_expression(struct metafont *mf, struct context *cx,
                           struct generic_token *begin_expression,
                           struct generic_token *end_token_list,
                           struct pair_variable *result){
-  struct generic_token *end_tertiary = NULL, *begin_secundary,
+  struct generic_token *end_tertiary = NULL, *begin_secondary,
                        *last_sum = NULL, *p, *prev = NULL;
   DECLARE_NESTING_CONTROL();
   struct pair_variable a, b;
@@ -3671,9 +3676,9 @@ bool eval_pair_expression(struct metafont *mf, struct context *cx,
       p = NULL;
   }while(p != NULL);
   if(end_tertiary != NULL){
-    begin_secundary = (struct generic_token *) (last_sum -> next);
+    begin_secondary = (struct generic_token *) (last_sum -> next);
     eval_pair_expression(mf, cx, begin_expression, end_tertiary, &a);
-    eval_pair_secundary(mf, cx, begin_secundary, end_token_list, &b);
+    eval_pair_secondary(mf, cx, begin_secondary, end_token_list, &b);
     if(last_sum -> type == TYPE_SUM){
       result -> x = a.x + b.x;
       result -> y = a.y + b.y;
@@ -3685,7 +3690,7 @@ bool eval_pair_expression(struct metafont *mf, struct context *cx,
     return true;
   }
   else
-    return eval_pair_secundary(mf, cx, begin_expression,
+    return eval_pair_secondary(mf, cx, begin_expression,
                                    end_token_list, result);
 }
 @
@@ -3737,7 +3742,7 @@ A declaração da função que avaliará expressões secundárias de pares:
 
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
-bool eval_pair_secundary(struct metafont *mf, struct context *cx,
+bool eval_pair_secondary(struct metafont *mf, struct context *cx,
                          struct generic_token *begin_expression,
                          struct generic_token *end_expression,
                          struct pair_variable *result);
@@ -3757,11 +3762,11 @@ colocá-los todos neste bloco de código abaixo:
 
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
-bool eval_pair_secundary(struct metafont *mf, struct context *cx,
+bool eval_pair_secondary(struct metafont *mf, struct context *cx,
                              struct generic_token *begin_expression,
                              struct generic_token *end_expression,
                              struct pair_variable *result){
-  struct generic_token *end_secundary = NULL, *begin_primary,
+  struct generic_token *end_secondary = NULL, *begin_primary,
                        *last_mul = NULL, *p, *prev = NULL,
                        *prev_prev = NULL, *last_fraction = NULL;
   DECLARE_NESTING_CONTROL();
@@ -3780,7 +3785,7 @@ bool eval_pair_secundary(struct metafont *mf, struct context *cx,
          last_fraction = p;
        else{ //  Divisão ou operadores válidos
          last_mul = p;
-         end_secundary = prev;
+         end_secondary = prev;
        }
     }
     prev_prev = prev;
@@ -3790,7 +3795,7 @@ bool eval_pair_secundary(struct metafont *mf, struct context *cx,
     else
       p = NULL;
   }while(p != NULL);
-  if(end_secundary != NULL){
+  if(end_secondary != NULL){
     bool ret;
     begin_primary = (struct generic_token *) (last_mul -> next);
     @<Operador Secundário de Pares: Multiplicação@>
@@ -3829,7 +3834,7 @@ if(last_mul -> type == TYPE_MULTIPLICATION){
      TYPE_T_PAIR){
     struct numeric_variable a;
     struct pair_variable b;
-    ret = eval_numeric_secundary(mf, cx, begin_expression, end_secundary,
+    ret = eval_numeric_secondary(mf, cx, begin_expression, end_secondary,
                                  &a);
     if(!ret)
       return false;
@@ -3843,7 +3848,7 @@ if(last_mul -> type == TYPE_MULTIPLICATION){
   else{
     struct pair_variable a;
     struct numeric_variable b;
-    ret = eval_pair_secundary(mf, cx, begin_expression, end_secundary,
+    ret = eval_pair_secondary(mf, cx, begin_expression, end_secondary,
                               &a);
     if(!ret)
       return false;
@@ -3866,7 +3871,7 @@ numérico. Devemos gerar erro em caso de divisão por zero:
 else if(last_mul -> type == TYPE_DIVISION){
   struct pair_variable a;
   struct numeric_variable b;
-  ret = eval_pair_secundary(mf, cx, begin_expression, end_secundary, &a);
+  ret = eval_pair_secondary(mf, cx, begin_expression, end_secondary, &a);
   if(!ret)
     return false;
   ret = eval_numeric_primary(mf, cx, begin_primary, end_expression, &b);
@@ -3895,7 +3900,7 @@ else if(last_mul -> type == TYPE_ROTATED){
   struct pair_variable a;
   struct numeric_variable b;
   double sin_theta, cos_theta, theta;
-  ret = eval_pair_secundary(mf, cx, begin_expression, end_secundary, &a);
+  ret = eval_pair_secondary(mf, cx, begin_expression, end_secondary, &a);
   if(!ret)
     return false;
   ret = eval_numeric_primary(mf, cx, begin_primary, end_expression, &b);
@@ -3918,7 +3923,7 @@ Se temos uma mudança de escala, isso é sinônimo a uma multiplicação:
 else if(last_mul -> type == TYPE_SCALED){
   struct pair_variable a;
   struct numeric_variable b;
-  ret = eval_pair_secundary(mf, cx, begin_expression, end_secundary, &a);
+  ret = eval_pair_secondary(mf, cx, begin_expression, end_secondary, &a);
   if(!ret)
     return false;
   ret = eval_numeric_primary(mf, cx, begin_primary, end_expression, &b);
@@ -3938,7 +3943,7 @@ maior:
 @<Operador Secundário de Pares: Deslocamento@>=
 else if(last_mul -> type == TYPE_SHIFTED){
   struct pair_variable a, b;
-  ret = eval_pair_secundary(mf, cx, begin_expression, end_secundary, &a);
+  ret = eval_pair_secondary(mf, cx, begin_expression, end_secondary, &a);
   if(!ret)
     return false;
   ret = eval_pair_primary(mf, cx, begin_primary, end_expression, &b);
@@ -3960,7 +3965,7 @@ eixo $x$ ele está:
 else if(last_mul -> type == TYPE_SLANTED){
   struct pair_variable a;
   struct numeric_variable b;
-  ret = eval_pair_secundary(mf, cx, begin_expression, end_secundary, &a);
+  ret = eval_pair_secondary(mf, cx, begin_expression, end_secondary, &a);
   if(!ret)
     return false;
   ret = eval_numeric_primary(mf, cx, begin_primary, end_expression, &b);
@@ -3981,7 +3986,7 @@ primeiro valor do par:
 else if(last_mul -> type == TYPE_XSCALED){
   struct pair_variable a;
   struct numeric_variable b;
-  ret = eval_pair_secundary(mf, cx, begin_expression, end_secundary, &a);
+  ret = eval_pair_secondary(mf, cx, begin_expression, end_secondary, &a);
   if(!ret)
     return false;
   ret = eval_numeric_primary(mf, cx, begin_primary, end_expression, &b);
@@ -4002,7 +4007,7 @@ par:
 else if(last_mul -> type == TYPE_YSCALED){
   struct pair_variable a;
   struct numeric_variable b;
-  ret = eval_pair_secundary(mf, cx, begin_expression, end_secundary, &a);
+  ret = eval_pair_secondary(mf, cx, begin_expression, end_secondary, &a);
   if(!ret)
     return false;
   ret = eval_numeric_primary(mf, cx, begin_primary, end_expression, &b);
@@ -4026,7 +4031,7 @@ $$
 @<Operador Secundário de Pares: Z-Escala@>=
 else if(last_mul -> type == TYPE_ZSCALED){
   struct pair_variable a, b;
-  ret = eval_pair_secundary(mf, cx, begin_expression, end_secundary, &a);
+  ret = eval_pair_secondary(mf, cx, begin_expression, end_secondary, &a);
   if(!ret)
     return false;
   ret = eval_pair_primary(mf, cx, begin_primary, end_expression, &b);
@@ -6399,7 +6404,7 @@ bool eval_path_tertiary(struct metafont *mf, struct context *cx,
     return true;
   }
   else
-    return eval_path_secundary(mf, cx, begin_expression, end_expression,
+    return eval_path_secondary(mf, cx, begin_expression, end_expression,
                                result);
 }
 @
@@ -6431,7 +6436,7 @@ A declaração da função que fará isso é:
 
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
-bool eval_path_secundary(struct metafont *mf, struct context *cx,
+bool eval_path_secondary(struct metafont *mf, struct context *cx,
                         struct generic_token *begin_expression,
                         struct generic_token *end_expression,
                         struct path_variable *result);
@@ -6442,7 +6447,7 @@ E sua implementação:
 
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
-bool eval_path_secundary(struct metafont *mf, struct context *cx,
+bool eval_path_secondary(struct metafont *mf, struct context *cx,
                         struct generic_token *begin_expression,
                         struct generic_token *end_expression,
                         struct path_variable *result){
@@ -6488,7 +6493,7 @@ bool eval_path_secundary(struct metafont *mf, struct context *cx,
 #endif
       return false;
     }
-    if(!eval_path_secundary(mf, cx, begin_expression, before_transform,
+    if(!eval_path_secondary(mf, cx, begin_expression, before_transform,
                             result))
       return false;
     @<Transformação de Caminho: Rotação@>
@@ -6501,7 +6506,7 @@ bool eval_path_secundary(struct metafont *mf, struct context *cx,
   }
   else if(have_pair_operator){
     struct pair_variable pair;
-    if(!eval_pair_secundary(mf, cx, begin_expression, end_expression,
+    if(!eval_pair_secondary(mf, cx, begin_expression, end_expression,
                             &pair))
       return false;
     result -> cyclic = false;
@@ -7597,30 +7602,214 @@ if(begin_expression -> type == TYPE_POINT ||
 @
 \fimcodigo
 
+\subsecao{8.4. Atribuições e Expressões de Caneta}
 
-%%%%%%%
+Para realizar a atribuição de canetas a variáveis do tipo certo,
+usamos o código abaixo:
+
+\iniciocodigo
+@<Atribuição de Variável de Caneta@>=
+else if(type == TYPE_T_PEN){
+  int i;
+  struct pen_variable result;
+  if(!eval_pen_expression(mf, cx, begin_expression,
+                         (struct generic_token *) *end_token_list,
+                         &result))
+    return false;
+  var = (struct symbolic_token *) begin_token_list;
+  for(i = 0; i < number_of_variables; i ++){
+    assign_pen_variable(mf, (struct pen_variable *) var -> var,
+                         &result);
+    var = (struct symbolic_token *) (var -> next);
+    var = (struct symbolic_token *) (var -> next);
+  }
+  if(temporary_free != NULL && result.format !=  NULL &&
+     result.referenced == NULL)
+    path_recursive_free(temporary_free, result.format, true);
+}
+@
+\fimcodigo
+
+A declaração da função que faz a atribuição:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+void assign_pen_variable(struct metafont *mf,
+                        struct pen_variable *target,
+                        struct pen_variable *source);
+@
+\fimcodigo
+
+E a sua implementação:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+void assign_pen_variable(struct metafont *mf,
+                          struct pen_variable *target,
+                          struct pen_variable *source){
+  void *(*alloc)(size_t);
+  void (*disalloc)(void *);
+  if(target -> nesting_level == 0){
+    disalloc = mf -> free;
+    alloc = mf -> alloc;
+  }
+  else{
+    disalloc = temporary_free;
+    alloc = temporary_alloc;
+  }
+  if(target -> referenced == NULL){
+    if(target -> format != NULL && disalloc != NULL)
+      path_recursive_free(disalloc, target -> format, true);
+    if(target -> gl_vbo != 0)
+      glDeleteBuffers(1, &(target -> gl_vbo));
+  }
+  memcpy(target, source, sizeof(struct pen_variable));
+  recursive_copy_points(alloc, &(target -> format), source -> format, true);
+}
+@
+\fimcodigo
+
+\subsubsecao{8.4.1. Expressão Terciária de Caneta}
+
+Por enquanto não existe nenhum operador terciário de caneta:
+
+\alinhaverbatim
+<Expressão de Caneta> -> <Terciário de Caneta>
+<Terciário de Caneta> -> <Secundário de Caneta>
+\alinhanormal
+
+Então a função que avalia expressão terciária de canetas apenas
+repassa a expressão para a expressão secundária:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+bool eval_pen_expression(struct metafont *mf, struct context *cx,
+                        struct generic_token *begin_expression,
+                        struct generic_token *end_token_list,
+                        struct pen_variable *result);
+@
+\fimcodigo
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+bool eval_pen_expression(struct metafont *mf, struct context *cx,
+                        struct generic_token *begin_expression,
+                        struct generic_token *end_token_list,
+                        struct pen_variable *result){
+  return eval_pen_secondary(mf, cx, begin_expression, end_token_list, result);
+}
+@
+\fimcodigo
+
+\subsubsecao{8.4.2. Transformadores de Caneta}
+
+A sintaxe para expressões secundárias de caneta é:
+
+\alinhaverbatim
+<Secundário de Caneta> -> <Primário de Caneta> |
+                          <Secundário de Caneta> <Transformador>
+<Transformador> -> rotated <Primário Numérico> |
+                   scaled <Primário Numérico> |
+                   shifted <Par Primário> |
+                   slanted <Numérico Primário> |
+                   xscaled <Numérico Primário> |
+                   yscaled <Numérico Primário> |
+                   zscaled <Par Primário>
+\alinhanormal
+
+Transformadores não são coisas novas, eles já eram usados em
+expressões de pares e de caminho. Mas aplicá-los sobre canetas é
+diferente, pois ao invés de modificar cada um de seus pontos, nós
+modificamos apenas sua matriz de transformação OpenGL.
+
+A declaração da função que avaliará expressões secundárias de caneta
+é:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+bool eval_pen_secondary(struct metafont *mf, struct context *cx,
+                        struct generic_token *begin_expression,
+                        struct generic_token *end_token_list,
+                        struct pen_variable *result);
+@
+\fimcodigo
+
+Sua implementação consiste em percorrer os tokens da expressão até
+achar o último transformador, se houver. Se não houver, é só repassar
+a avaliação para a função que avalia expressões primárias. Se houver,
+então avaliamos como expressão secundária o que vem antes e então
+realizamos a transformação adequada:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+bool eval_pen_secondary(struct metafont *mf, struct context *cx,
+                        struct generic_token *begin_expression,
+                        struct generic_token *end_expression,
+                        struct pen_variable *result){
+  DECLARE_NESTING_CONTROL();
+  struct generic_token *p, *prev = NULL, *last_transformer = NULL,
+                       *before_last_transformer = begin_expression;
+  p = begin_expression;
+  do{
+    COUNT_NESTING(p);
+    if(IS_NOT_NESTED() && (p -> type == TYPE_ROTATED ||
+       p -> type == TYPE_SCALED || p -> type == TYPE_SHIFTED ||
+       p -> type == TYPE_SLANTED || p -> type == TYPE_XSCALED ||
+       p -> type == TYPE_YSCALED || p -> type == TYPE_ZSCALED)){
+      last_transformer = p;
+      before_last_transformer = prev;
+    }
+    prev = p;
+    if(p != end_expression)
+      p = (struct generic_token *) p -> next;
+    else
+      p = NULL;
+  }while(p != NULL);
+  if(last_transformer == NULL)
+    //return eval_pen_primary(mf, cx, begin_expression, end_expression, result);
+    return false;
+  else{
+    struct pen_variable temp;
+    if(!eval_pen_secondary(mf, cx, begin_expression, before_last_transformer, &temp))
+      return false;
+    if(last_transformer -> type == TYPE_ROTATED){
+      //@<Secundário de Caneta: Rotação@>
+    }
+    else if(last_transformer -> type == TYPE_SCALED){
+      //@<Secundário de Caneta: Escala@>
+    }
+    else if(last_transformer -> type == TYPE_SHIFTED){
+      //@<Secundário de Caneta: Deslocamento@>
+    }
+    else if(last_transformer -> type == TYPE_SLANTED){
+      //@<Secundário de Caneta: Inclinação@>
+    }
+    else if(last_transformer -> type == TYPE_XSCALED){
+      //@<Secundário de Caneta: X-Escala@>
+    }
+    else if(last_transformer -> type == TYPE_YSCALED){
+      //@<Secundário de Caneta: Y-Escala@>
+    }
+    else if(last_transformer -> type == TYPE_ZSCALED){
+      //@<Secundário de Caneta: Z-Escala@>
+    }
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognized pen transformer\n",
+            mf -> file, begin_expression -> line);
+#endif
+    return false;
+  }
+}
+@
+\fimcodigo
 
 
-%struct path_points{
-%  float x, y; // Ponto de extremidade
-%  float u_x, u_y, v_x, v_y;   // Pontos de controle
-%  void *subpath;
-%};
-%struct path_variable{
-%  int type; // Deve ser 'TYPE_T_PATH'
-%  int nesting_level;
-%  void *next;
-%  bool cyclic;
-%  int length, total_length;
-%  struct path_points *points;
-%};
 
 \secao{Referências}
 
 % Ignorar + e - depois de:
-% ['penoffset'], ['point'], ['precontrol'], ['postcontrol'],
-% ['intersectiontimes']
-j
+% ['penoffset'],
+
 
 \referencia{Knuth, D. E. (1984) ``Literate Programming'', The Computer
   Journal, Volume 27, Edição 2, Páginas 97--111.}
