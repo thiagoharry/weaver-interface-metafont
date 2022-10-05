@@ -2109,8 +2109,8 @@ struct pen_variable{
   void *referenced;
   GLuint gl_vbo; // Os vértices OpenGL após triangulação
   int number_of_vertices; // Quantos vértices são
-  float gl_matrix[9]; // Matriz de transformação OpenGL
-  float width, height, rotation; // Altura, largura e rotação
+  float gl_matrix[16]; // Matriz de transformação OpenGL
+  float width, height; // Altura, largura
 };
 @
 \fimcodigo
@@ -2177,9 +2177,8 @@ então podemos representar eventuais transformações lineares nela por
 meio dessa matriz ao invés de ter que computar novos valores para seus
 pontos.
 
-As variáveis \monoespaco{width}, \monoespaco{height}
-e \monoespaco{rotation} armazenam a largura, altura e o quanto a
-caneta já foi rotacionada.
+As variáveis \monoespaco{width} e \monoespaco{height} armazenam a
+largura e altura.
 
 Uma variável de caneta declarada, mas ainda não inicializada terá seu
 formato igual ao ponteiro nulo, será não-circular e como ela ainda não
@@ -2267,7 +2266,6 @@ mf -> internal_pen_variables[0].gl_vbo = 0;
 mf -> internal_pen_variables[0].number_of_vertices = 0;
 mf -> internal_pen_variables[0].width = 1.0;
 mf -> internal_pen_variables[0].height = 1.0;
-mf -> internal_pen_variables[0].rotation = 0.0;
 mf -> internal_pen_variables[1].convex = true; // A caneta 'pensquare'
 mf -> internal_pen_variables[1].straight = true;
 mf -> internal_pen_variables[1].circular = false;
@@ -7769,11 +7767,11 @@ bool eval_pen_secondary(struct metafont *mf, struct context *cx,
     //return eval_pen_primary(mf, cx, begin_expression, end_expression, result);
     return false;
   else{
-    struct pen_variable temp;
-    if(!eval_pen_secondary(mf, cx, begin_expression, before_last_transformer, &temp))
+    struct pen_variable pen;
+    if(!eval_pen_secondary(mf, cx, begin_expression, before_last_transformer, &pen))
       return false;
     if(last_transformer -> type == TYPE_ROTATED){
-      //@<Secundário de Caneta: Rotação@>
+      @<Secundário de Caneta: Rotação@>
     }
     else if(last_transformer -> type == TYPE_SCALED){
       //@<Secundário de Caneta: Escala@>
@@ -7803,7 +7801,47 @@ bool eval_pen_secondary(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
+Primeiro cuidaremos da rotação. Se nós representarmos cada ponto como
+quatro coordenadas como é o padrão em OpenGL (três coordenadas para
+três dimensões, uma quarta para que as principais operações possam ser
+representadas como transformações lineares), para rotacionar uma
+coordenada, é necessário multiplicar por uma matriz como mostrado
+abaixo:
 
+$$\left[x\; y\; z\; 1\right]\left[{{cos(\theta) \atop \sin(\theta)}\atop
+      {0\atop 0}}{{-sin(\theta) \atop cos(\theta)}\atop {0 \atop
+      0}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
+      1}}\right]=\left[x\cdot cos(\theta) - y\cdot sin(\theta)\;\;
+      x\cdot sin(\theta) + y\cdot cos(\theta)\;\; z\;\; 1\right]
+$$
+
+No caso, o ângulo $\theta$ é medido em radianos. Então devemos
+converter o ângulo em graus que o Metafont usa. Rotacionar uma caneta
+então envolve fazer essa conversão, somar o valor da rotação com o que
+já está armazenado na variável \monoespaco{rotation} dentro da
+variável de caneta e multiplicar a sua matriz de transformação:
+
+\iniciocodigo
+@<Secundário de Caneta: Rotação@>=
+struct numeric_variable r;
+float temp_matrix[16];
+float rotation, cos_theta, sin_theta;
+if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &r))
+  return false;
+rotation = 0.0174533 * r.value;
+sin_theta = sin(rotation);
+cos_theta = cos(rotation);
+memcpy(temp_matrix, pen.gl_matrix, 16 * sizeof(float));
+pen.gl_matrix[0] = temp_matrix[0] * cos_theta - temp_matrix[1] * sin_theta;
+pen.gl_matrix[1] = temp_matrix[0] * sin_theta + temp_matrix[1] * cos_theta;
+pen.gl_matrix[4] = temp_matrix[4] * cos_theta - temp_matrix[5] * sin_theta;
+pen.gl_matrix[5] = temp_matrix[4] * sin_theta + temp_matrix[5] * cos_theta;
+pen.gl_matrix[8] = temp_matrix[8] * cos_theta - temp_matrix[9] * sin_theta;
+pen.gl_matrix[9] = temp_matrix[8] * sin_theta + temp_matrix[9] * cos_theta;
+pen.gl_matrix[12] = temp_matrix[12] * cos_theta - temp_matrix[13] * sin_theta;
+pen.gl_matrix[13] = temp_matrix[12] * sin_theta + temp_matrix[13] * cos_theta;
+@
+\fimcodigo
 
 \secao{Referências}
 

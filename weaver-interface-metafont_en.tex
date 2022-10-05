@@ -2073,8 +2073,8 @@ struct pen_variable{
   void *referenced;
   GLuint gl_vbo; // The OpenGL vertices after triangulation
   int number_of_vertices; // How many vertices we have
-  float gl_matrix[9]; // OpenGL matrix transformation
-  float width, height, rotation;
+  float gl_matrix[16]; // OpenGL matrix transformation
+  float width, height;
 };
 @
 \fimcodigo
@@ -2134,9 +2134,8 @@ will not be subdivided nor concatenated as in the subpath operations,
 then we can represent their linear transformations using this matrix
 instead of updating manually their points.
 
-The variables \monoespaco{width}, \monoespaco{height}
-and \monoespaco{rotation} store the pen size and how much it were
-rotated.
+The variables \monoespaco{width} and \monoespaco{height} store the pen
+size.
 
 A pen variable that was declared but not initialized will have its
 format set as the null pointer, will be non-circular and if it were
@@ -2225,7 +2224,6 @@ mf -> internal_pen_variables[0].gl_vbo = 0;
 mf -> internal_pen_variables[0].number_of_vertices = 0;
 mf -> internal_pen_variables[0].width = 1.0;
 mf -> internal_pen_variables[0].height = 1.0;
-mf -> internal_pen_variables[0].rotation = 0.0;
 mf -> internal_pen_variables[1].convex = true; // The pen 'pensquare'
 mf -> internal_pen_variables[1].straight = true;
 mf -> internal_pen_variables[1].circular = false;
@@ -7673,11 +7671,11 @@ bool eval_pen_secondary(struct metafont *mf, struct context *cx,
     //return eval_pen_primary(mf, cx, begin_expression, end_expression, result);
     return false;
   else{
-    struct pen_variable temp;
-    if(!eval_pen_secondary(mf, cx, begin_expression, before_last_transformer, &temp))
+    struct pen_variable pen;
+    if(!eval_pen_secondary(mf, cx, begin_expression, before_last_transformer, &pen))
       return false;
     if(last_transformer -> type == TYPE_ROTATED){
-      //@<Secundário de Caneta: Rotação@>
+      @<Pen Secondary: Rotation@>
     }
     else if(last_transformer -> type == TYPE_SCALED){
       //@<Secundário de Caneta: Escala@>
@@ -7707,6 +7705,45 @@ bool eval_pen_secondary(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
+First we will take care of rotation. If we represent each point as 4
+coordinates as it is usually done in OpenGL (three coordinates for
+three dimensions, a fourth one to ensure that the main operations will
+be linear transformations), to rotate each point, we need to multiply
+it by a matrix as shown below:
+
+$$\left[x\; y\; z\; 1\right]\left[{{cos(\theta) \atop \sin(\theta)}\atop
+      {0\atop 0}}{{-sin(\theta) \atop cos(\theta)}\atop {0 \atop
+      0}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
+      1}}\right]=\left[x\cdot cos(\theta) - y\cdot sin(\theta)\;\;
+      x\cdot sin(\theta) + y\cdot cos(\theta)\;\; z\;\; 1\right]
+$$
+
+The angle $\theta$ here is measured in radians. So we need to convert
+from angles measured in degrees from Metafont. Rotating a pen means
+doing this conversion an multiply the transformation matrix by the
+matrix shown above:
+
+\iniciocodigo
+@<Pen Secondary: Rotation@>=
+struct numeric_variable r;
+float temp_matrix[16];
+float rotation, cos_theta, sin_theta;
+if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &r))
+  return false;
+rotation = 0.0174533 * r.value;
+sin_theta = sin(rotation);
+cos_theta = cos(rotation);
+memcpy(temp_matrix, pen.gl_matrix, 16 * sizeof(float));
+pen.gl_matrix[0] = temp_matrix[0] * cos_theta - temp_matrix[1] * sin_theta;
+pen.gl_matrix[1] = temp_matrix[0] * sin_theta + temp_matrix[1] * cos_theta;
+pen.gl_matrix[4] = temp_matrix[4] * cos_theta - temp_matrix[5] * sin_theta;
+pen.gl_matrix[5] = temp_matrix[4] * sin_theta + temp_matrix[5] * cos_theta;
+pen.gl_matrix[8] = temp_matrix[8] * cos_theta - temp_matrix[9] * sin_theta;
+pen.gl_matrix[9] = temp_matrix[8] * sin_theta + temp_matrix[9] * cos_theta;
+pen.gl_matrix[12] = temp_matrix[12] * cos_theta - temp_matrix[13] * sin_theta;
+pen.gl_matrix[13] = temp_matrix[12] * sin_theta + temp_matrix[13] * cos_theta;
+@
+\fimcodigo
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
