@@ -2106,11 +2106,10 @@ struct pen_variable{
   void *next;
   struct path_variable *format; // O formato como caminho cíclico
   bool convex, straight, circular; // Sobre o caminho
-  void *referenced;
+  struct pen_variable *referenced;
   GLuint gl_vbo; // Os vértices OpenGL após triangulação
   int number_of_vertices; // Quantos vértices são
   float gl_matrix[16]; // Matriz de transformação OpenGL
-  float width, height; // Altura, largura
 };
 @
 \fimcodigo
@@ -2176,9 +2175,6 @@ depois subdivididos ou concatenados como podem ser os subcaminhos,
 então podemos representar eventuais transformações lineares nela por
 meio dessa matriz ao invés de ter que computar novos valores para seus
 pontos.
-
-As variáveis \monoespaco{width} e \monoespaco{height} armazenam a
-largura e altura.
 
 Uma variável de caneta declarada, mas ainda não inicializada terá seu
 formato igual ao ponteiro nulo, será não-circular e como ela ainda não
@@ -2264,8 +2260,6 @@ mf -> internal_pen_variables[0].circular = true;
 mf -> internal_pen_variables[0].referenced = NULL;
 mf -> internal_pen_variables[0].gl_vbo = 0;
 mf -> internal_pen_variables[0].number_of_vertices = 0;
-mf -> internal_pen_variables[0].width = 1.0;
-mf -> internal_pen_variables[0].height = 1.0;
 mf -> internal_pen_variables[1].convex = true; // A caneta 'pensquare'
 mf -> internal_pen_variables[1].straight = true;
 mf -> internal_pen_variables[1].circular = false;
@@ -7717,8 +7711,8 @@ A sintaxe para expressões secundárias de caneta é:
 
 Transformadores não são coisas novas, eles já eram usados em
 expressões de pares e de caminho. Mas aplicá-los sobre canetas é
-diferente, pois ao invés de modificar cada um de seus pontos, nós
-modificamos apenas sua matriz de transformação OpenGL.
+ligeiramente diferente, pois ao invés de modificar cada um de seus
+pontos, nós modificamos apenas sua matriz de transformação OpenGL.
 
 A declaração da função que avaliará expressões secundárias de caneta
 é:
@@ -7774,10 +7768,10 @@ bool eval_pen_secondary(struct metafont *mf, struct context *cx,
       @<Secundário de Caneta: Rotação@>
     }
     else if(last_transformer -> type == TYPE_SCALED){
-      //@<Secundário de Caneta: Escala@>
+      @<Secundário de Caneta: Escala@>
     }
     else if(last_transformer -> type == TYPE_SHIFTED){
-      //@<Secundário de Caneta: Deslocamento@>
+      @<Secundário de Caneta: Deslocamento@>
     }
     else if(last_transformer -> type == TYPE_SLANTED){
       //@<Secundário de Caneta: Inclinação@>
@@ -7819,7 +7813,9 @@ No caso, o ângulo $\theta$ é medido em radianos. Então devemos
 converter o ângulo em graus que o Metafont usa. Rotacionar uma caneta
 então envolve fazer essa conversão, somar o valor da rotação com o que
 já está armazenado na variável \monoespaco{rotation} dentro da
-variável de caneta e multiplicar a sua matriz de transformação:
+variável de caneta e multiplicar a sua matriz de
+transformação. Rotacionar uma caneta nunca requer que tenhamos que
+retriangular ela.
 
 \iniciocodigo
 @<Secundário de Caneta: Rotação@>=
@@ -7842,6 +7838,84 @@ pen.gl_matrix[12] = temp_matrix[12] * cos_theta - temp_matrix[13] * sin_theta;
 pen.gl_matrix[13] = temp_matrix[12] * sin_theta + temp_matrix[13] * cos_theta;
 @
 \fimcodigo
+
+Para fazer a operação de escala, devemos também usar a seguinte matriz
+que irá ampliar a posição de cada um dos pontos:
+
+$$\left[x\; y\; z\; 1\right]\left[{{a \atop 0}\atop {0\atop
+      0}}{{0 \atop a}\atop {0 \atop 0}}{{0\atop 0}\atop{1 \atop
+      0}}{{0 \atop 0}\atop{0\atop 1}}\right]=\left[ax \;\; ay\;\;
+      z\;\; 1\right]
+$$
+
+Então, para aumentar ou diminuir a escala de uma caneta, devemos
+multiplicar a matriz de transformação OpenGL pela matriz
+acima. Contudo, quando mudamos o tamanho de uma caneta será necessário
+retriangulá-la caso ela não seja composta somente por linhas
+retas. Por isso também removemos seus triângulos anteriores enviados
+ao OpenGL e zeramos tal variável fazendo com que os triângulos sejam
+recomputados futuramente se necessário.
+
+\iniciocodigo
+@<Secundário de Caneta: Escala@>=
+struct numeric_variable a;
+float temp_matrix[16];
+if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &a))
+  return false;
+memcpy(temp_matrix, pen.gl_matrix, 16 * sizeof(float));
+pen.gl_matrix[0] = temp_matrix[0] * a.value;
+pen.gl_matrix[1] = temp_matrix[1] * a.value;
+pen.gl_matrix[4] = temp_matrix[4] * a.value;
+pen.gl_matrix[5] = temp_matrix[5] * a.value;
+pen.gl_matrix[8] = temp_matrix[8] * a.value;
+pen.gl_matrix[9] = temp_matrix[9] * a.value;
+pen.gl_matrix[12] = temp_matrix[12] * a.value;
+pen.gl_matrix[13] = temp_matrix[13] * a.value;
+if(!pen.straight && a.value != 1.0){ // Requer retriangular a caneta:
+  if(pen.referenced != NULL){
+    recursive_copy_points(temporary_alloc, &(pen.format),
+                          pen.referenced -> format, true);
+    pen.referenced = NULL;
+  }
+  else if(pen.gl_vbo != 0)
+    glDeleteBuffers(1, &(pen.gl_vbo));  
+  pen.gl_vbo = 0;
+}
+@
+\fimcodigo
+
+A transformação de deslocamento desloca cada um dos pontos de uma
+caneta uma dada posição. Ela nunca requer que a caneta tenha que ser
+retriangulada. Fazer o deslocamento de um ponto requer multiplicá-lo
+por uma matriz como a abaixo:
+
+$$\left[x\; y\; z\; 1\right]\left[{{1 \atop 0}\atop {0\atop
+      a}}{{0 \atop 1}\atop {0 \atop b}}{{0\atop 0}\atop{1 \atop
+      0}}{{0 \atop 0}\atop{0\atop 1}}\right]=\left[x+a \;\; y+b\;\;
+      z\;\; 1\right]
+$$
+
+Desta forma, realizar um deslocamento significa apenas multiplicar a
+matriz acima pela matriz de transformação da caneta:
+
+\iniciocodigo
+@<Secundário de Caneta: Deslocamento@>=
+struct pair_variable p;
+float temp_matrix[16];
+if(!eval_pair_primary(mf, cx, last_transformer -> next, end_expression, &p))
+  return false;
+memcpy(temp_matrix, pen.gl_matrix, 16 * sizeof(float));
+pen.gl_matrix[0] = temp_matrix[0] + temp_matrix[3] * p.x;
+pen.gl_matrix[1] = temp_matrix[1] + temp_matrix[3] * p.y;
+pen.gl_matrix[4] = temp_matrix[4] + temp_matrix[7] * p.x;
+pen.gl_matrix[5] = temp_matrix[5] + temp_matrix[7] * p.y;
+pen.gl_matrix[8] = temp_matrix[8] + temp_matrix[11] * p.x;
+pen.gl_matrix[9] = temp_matrix[8] + temp_matrix[11] * p.y;
+pen.gl_matrix[12] = temp_matrix[12] + temp_matrix[15] * p.x;
+pen.gl_matrix[13] = temp_matrix[12] + temp_matrix[15] * p.y;
+@
+\fimcodigo
+
 
 \secao{Referências}
 

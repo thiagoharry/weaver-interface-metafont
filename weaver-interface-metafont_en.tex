@@ -2070,11 +2070,10 @@ struct pen_variable{
   void *next;
   struct path_variable *format; // The format as a cyclic path
   bool convex, straight, circular; // About the path
-  void *referenced;
+  struct pen_variable *referenced;
   GLuint gl_vbo; // The OpenGL vertices after triangulation
   int number_of_vertices; // How many vertices we have
   float gl_matrix[16]; // OpenGL matrix transformation
-  float width, height;
 };
 @
 \fimcodigo
@@ -2133,9 +2132,6 @@ transformation. As the pens will have a more definitive format which
 will not be subdivided nor concatenated as in the subpath operations,
 then we can represent their linear transformations using this matrix
 instead of updating manually their points.
-
-The variables \monoespaco{width} and \monoespaco{height} store the pen
-size.
 
 A pen variable that was declared but not initialized will have its
 format set as the null pointer, will be non-circular and if it were
@@ -2222,8 +2218,6 @@ mf -> internal_pen_variables[0].circular = true;
 mf -> internal_pen_variables[0].referenced = NULL;
 mf -> internal_pen_variables[0].gl_vbo = 0;
 mf -> internal_pen_variables[0].number_of_vertices = 0;
-mf -> internal_pen_variables[0].width = 1.0;
-mf -> internal_pen_variables[0].height = 1.0;
 mf -> internal_pen_variables[1].convex = true; // The pen 'pensquare'
 mf -> internal_pen_variables[1].straight = true;
 mf -> internal_pen_variables[1].circular = false;
@@ -7640,7 +7634,8 @@ And its implementation consists in trying to find the last transformer
 in the expression. If it is not found, the function just calls another
 function to evaluate primary expression. If a transformer is found,
 then everything before it is evaluated as a secondary expression and
-then we apply the transformer:
+then we apply the transformer. Rotate a pen never requires the
+retriangulation of that pen.
 
 \iniciocodigo
 @<Auxiliary Local Functions (metafont.c)@>+=
@@ -7678,10 +7673,10 @@ bool eval_pen_secondary(struct metafont *mf, struct context *cx,
       @<Pen Secondary: Rotation@>
     }
     else if(last_transformer -> type == TYPE_SCALED){
-      //@<Secundário de Caneta: Escala@>
+      @<Pen Secondary: Scaling@>
     }
     else if(last_transformer -> type == TYPE_SHIFTED){
-      //@<Secundário de Caneta: Deslocamento@>
+      @<Pen Secondary: Shift@>
     }
     else if(last_transformer -> type == TYPE_SLANTED){
       //@<Secundário de Caneta: Inclinação@>
@@ -7744,6 +7739,83 @@ pen.gl_matrix[12] = temp_matrix[12] * cos_theta - temp_matrix[13] * sin_theta;
 pen.gl_matrix[13] = temp_matrix[12] * sin_theta + temp_matrix[13] * cos_theta;
 @
 \fimcodigo
+
+To perform the scaling tranformation, we should use the following
+matrix that will amplify the position for each point:
+
+$$\left[x\; y\; z\; 1\right]\left[{{a \atop 0}\atop {0\atop
+      0}}{{0 \atop a}\atop {0 \atop 0}}{{0\atop 0}\atop{1 \atop
+      0}}{{0 \atop 0}\atop{0\atop 1}}\right]=\left[ax \;\; ay\;\;
+      z\;\; 1\right]
+$$
+
+Therefore, to increase or decrease the size of a pen, we should
+multiply the OpenGL transform matrix by the matrix above. Moreover,
+when we change the size of a pen, we will need to retriangulate it if
+it is notm composed only by straight lines. Because of this, we will
+remove its previous triangles and store zero in the vertex buffer
+variable. Making this, the pen will be retriangulated in the future if
+needed.
+
+\iniciocodigo
+@<Pen Secondary: Scaling@>=
+struct numeric_variable a;
+float temp_matrix[16];
+if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &a))
+  return false;
+memcpy(temp_matrix, pen.gl_matrix, 16 * sizeof(float));
+pen.gl_matrix[0] = temp_matrix[0] * a.value;
+pen.gl_matrix[1] = temp_matrix[1] * a.value;
+pen.gl_matrix[4] = temp_matrix[4] * a.value;
+pen.gl_matrix[5] = temp_matrix[5] * a.value;
+pen.gl_matrix[8] = temp_matrix[8] * a.value;
+pen.gl_matrix[9] = temp_matrix[9] * a.value;
+pen.gl_matrix[12] = temp_matrix[12] * a.value;
+pen.gl_matrix[13] = temp_matrix[13] * a.value;
+if(!pen.straight && a.value != 1.0){ // Requires to retriangulate the pen:
+  if(pen.referenced != NULL){
+    recursive_copy_points(temporary_alloc, &(pen.format),
+                          pen.referenced -> format, true);
+    pen.referenced = NULL;
+  }
+  else if(pen.gl_vbo != 0)
+    glDeleteBuffers(1, &(pen.gl_vbo));  
+  pen.gl_vbo = 0;
+}
+@
+\fimcodigo
+
+The shift transformer shifts each point in the pen adding a pair to
+it. This never requires retriangulation for the pen. Performing the
+shift requires multiplying each point by the following matrix:
+
+$$\left[x\; y\; z\; 1\right]\left[{{1 \atop 0}\atop {0\atop
+      a}}{{0 \atop 1}\atop {0 \atop b}}{{0\atop 0}\atop{1 \atop
+      0}}{{0 \atop 0}\atop{0\atop 1}}\right]=\left[x+a \;\; y+b\;\;
+      z\;\; 1\right]
+$$
+
+Therefore, to shift a pen we just multiply its transform matrix by the
+matrix above:
+
+\iniciocodigo
+@<Pen Secondary: Shift@>=
+struct pair_variable p;
+float temp_matrix[16];
+if(!eval_pair_primary(mf, cx, last_transformer -> next, end_expression, &p))
+  return false;
+memcpy(temp_matrix, pen.gl_matrix, 16 * sizeof(float));
+pen.gl_matrix[0] = temp_matrix[0] + temp_matrix[3] * p.x;
+pen.gl_matrix[1] = temp_matrix[1] + temp_matrix[3] * p.y;
+pen.gl_matrix[4] = temp_matrix[4] + temp_matrix[7] * p.x;
+pen.gl_matrix[5] = temp_matrix[5] + temp_matrix[7] * p.y;
+pen.gl_matrix[8] = temp_matrix[8] + temp_matrix[11] * p.x;
+pen.gl_matrix[9] = temp_matrix[8] + temp_matrix[11] * p.y;
+pen.gl_matrix[12] = temp_matrix[12] + temp_matrix[15] * p.x;
+pen.gl_matrix[13] = temp_matrix[12] + temp_matrix[15] * p.y;
+@
+\fimcodigo
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
