@@ -7774,7 +7774,7 @@ bool eval_pen_secondary(struct metafont *mf, struct context *cx,
       @<Secundário de Caneta: Deslocamento@>
     }
     else if(last_transformer -> type == TYPE_SLANTED){
-      //@<Secundário de Caneta: Inclinação@>
+      @<Secundário de Caneta: Inclinação@>
     }
     else if(last_transformer -> type == TYPE_XSCALED){
       //@<Secundário de Caneta: X-Escala@>
@@ -7916,6 +7916,44 @@ pen.gl_matrix[13] = temp_matrix[12] + temp_matrix[15] * p.y;
 @
 \fimcodigo
 
+O próximo transformador é a inclinação. Ela muda as proporções de uma
+caneta, então requer que nós refaçamos a triangulação caso tenhamos
+uma caneta que não é composta só por linhas retas. Inclinar significa
+multiplicar pela seguinte matriz:
+
+$$\left[x\; y\; z\; 1\right]\left[{{1 \atop a}\atop {0\atop
+      0}}{{0 \atop 1}\atop {0 \atop 1}}{{0\atop 0}\atop{1 \atop
+      0}}{{0 \atop 0}\atop{0\atop 1}}\right]=\left[x+ay \;\; y\;\;
+      z\;\; 1\right]
+$$
+
+Então devemos tratar uma inclinação como a multiplicação da matriz de
+transformação OpenGL pela matriz acima:
+
+\iniciocodigo
+@<Secundário de Caneta: Inclinação@>=
+struct numeric_variable a;
+float temp_matrix[16];
+if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &a))
+  return false;
+memcpy(temp_matrix, pen.gl_matrix, 16 * sizeof(float));
+pen.gl_matrix[0] = temp_matrix[0] + a.value * temp_matrix[1];
+pen.gl_matrix[4] = temp_matrix[4] + a.value * temp_matrix[5];
+pen.gl_matrix[8] = temp_matrix[8] + a.value * temp_matrix[9];
+pen.gl_matrix[12] = temp_matrix[12] + a.value  * temp_matrix[13];
+if(!pen.straight && a.value != 0.0){ // Requer retriangular a caneta:
+  if(pen.referenced != NULL){
+    recursive_copy_points(temporary_alloc, &(pen.format),
+                          pen.referenced -> format, true);
+    pen.referenced = NULL;
+  }
+  else if(pen.gl_vbo != 0)
+    glDeleteBuffers(1, &(pen.gl_vbo));  
+  pen.gl_vbo = 0;
+}
+@
+\fimcodigo
+
 
 \secao{Referências}
 
@@ -7930,21 +7968,3 @@ pen.gl_matrix[13] = temp_matrix[12] + temp_matrix[15] * p.y;
  Longsman Publishing Co., Inc}
 
 \fim
-
-  {
-    printf("Z1: ");
-    struct generic_token *t = begin_z1;
-    for(;;){
-      if(t -> type == TYPE_NUMERIC)
-        printf("t:Numeric(%f) ", ((struct numeric_token *) t) -> value);
-      else if(t -> type == TYPE_SYMBOLIC)
-        printf("t:Symbolic(%s) ", ((struct symbolic_token *) t) -> value);
-      else
-        printf("t:%d ", t -> type);
-      if(t == end_z1)
-        break;
-      else
-        t = t -> next;
-    }
-    printf("\n");
-  }

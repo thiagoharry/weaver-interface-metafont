@@ -7679,7 +7679,7 @@ bool eval_pen_secondary(struct metafont *mf, struct context *cx,
       @<Pen Secondary: Shift@>
     }
     else if(last_transformer -> type == TYPE_SLANTED){
-      //@<Secundário de Caneta: Inclinação@>
+      @<Pen Secondary: Slanting@>
     }
     else if(last_transformer -> type == TYPE_XSCALED){
       //@<Secundário de Caneta: X-Escala@>
@@ -7816,7 +7816,43 @@ pen.gl_matrix[13] = temp_matrix[12] + temp_matrix[15] * p.y;
 @
 \fimcodigo
 
+The next transformer is the slanting operator. As it changes a pen
+size and proportion, it requires the pen to be retriangulated later,
+except if the pen were composed only by straight lines. Slant means
+multiply each point by the following matrix:
 
+$$\left[x\; y\; z\; 1\right]\left[{{1 \atop a}\atop {0\atop
+      0}}{{0 \atop 1}\atop {0 \atop 1}}{{0\atop 0}\atop{1 \atop
+      0}}{{0 \atop 0}\atop{0\atop 1}}\right]=\left[x+ay \;\; y\;\;
+      z\;\; 1\right]
+$$
+
+Therefore, we slant a pen multiplying its OpenGL transform matrix by
+the matrix above:
+
+\iniciocodigo
+@<Pen Secondary: Slanting@>=
+struct numeric_variable a;
+float temp_matrix[16];
+if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &a))
+  return false;
+memcpy(temp_matrix, pen.gl_matrix, 16 * sizeof(float));
+pen.gl_matrix[0] = temp_matrix[0] + a.value * temp_matrix[1];
+pen.gl_matrix[4] = temp_matrix[4] + a.value * temp_matrix[5];
+pen.gl_matrix[8] = temp_matrix[8] + a.value * temp_matrix[9];
+pen.gl_matrix[12] = temp_matrix[12] + a.value  * temp_matrix[13];
+if(!pen.straight && a.value != 0.0){ // Requer retriangular a caneta:
+  if(pen.referenced != NULL){
+    recursive_copy_points(temporary_alloc, &(pen.format),
+                          pen.referenced -> format, true);
+    pen.referenced = NULL;
+  }
+  else if(pen.gl_vbo != 0)
+    glDeleteBuffers(1, &(pen.gl_vbo));  
+  pen.gl_vbo = 0;
+}
+@
+\fimcodigo
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
