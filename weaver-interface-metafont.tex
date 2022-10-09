@@ -7777,13 +7777,13 @@ bool eval_pen_secondary(struct metafont *mf, struct context *cx,
       @<Secundário de Caneta: Inclinação@>
     }
     else if(last_transformer -> type == TYPE_XSCALED){
-      //@<Secundário de Caneta: X-Escala@>
+      @<Secundário de Caneta: X-Escala@>
     }
     else if(last_transformer -> type == TYPE_YSCALED){
-      //@<Secundário de Caneta: Y-Escala@>
+      @<Secundário de Caneta: Y-Escala@>
     }
     else if(last_transformer -> type == TYPE_ZSCALED){
-      //@<Secundário de Caneta: Z-Escala@>
+      @<Secundário de Caneta: Z-Escala@>
     }
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognized pen transformer\n",
@@ -7954,6 +7954,125 @@ if(!pen.straight && a.value != 0.0){ // Requer retriangular a caneta:
 @
 \fimcodigo
 
+A transformação de escala no eixo $x$ é igual à transformação de
+escala, mas ajustando para o valor de 1 a transformação no eixo
+$y$. Desta forma, a caneta é esticada ou comprimida somente no eixo
+horizontal:
+
+$$\left[x\; y\; z\; 1\right]\left[{{a \atop 0}\atop {0\atop
+      0}}{{0 \atop 1}\atop {0 \atop 0}}{{0\atop 0}\atop{1 \atop
+      0}}{{0 \atop 0}\atop{0\atop 1}}\right]=\left[ax \;\; y\;\;
+      z\;\; 1\right]
+$$
+
+Multiplicar a matriz de transformação pela matriz acima é feita no
+código abaixo:
+
+\iniciocodigo
+@<Secundário de Caneta: X-Escala@>=
+struct numeric_variable a;
+float temp_matrix[16];
+if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &a))
+  return false;
+memcpy(temp_matrix, pen.gl_matrix, 16 * sizeof(float));
+pen.gl_matrix[0] = temp_matrix[0] * a.value;
+pen.gl_matrix[4] = temp_matrix[4] * a.value;
+pen.gl_matrix[8] = temp_matrix[8] * a.value;
+pen.gl_matrix[12] = temp_matrix[12] * a.value;
+if(!pen.straight && a.value != 1.0){ // Requer retriangular a caneta:
+  if(pen.referenced != NULL){
+    recursive_copy_points(temporary_alloc, &(pen.format),
+                          pen.referenced -> format, true);
+    pen.referenced = NULL;
+  }
+  else if(pen.gl_vbo != 0)
+    glDeleteBuffers(1, &(pen.gl_vbo));  
+  pen.gl_vbo = 0;
+}
+@
+\fimcodigo
+
+Da mesma forma, mudar a escala somente no eixo $y$ é feito
+multiplicando pela matriz:
+
+$$\left[x\; y\; z\; 1\right]\left[{{1 \atop 0}\atop {0\atop
+      0}}{{0 \atop a}\atop {0 \atop 0}}{{0\atop 0}\atop{1 \atop
+      0}}{{0 \atop 0}\atop{0\atop 1}}\right]=\left[x \;\; ay\;\;
+      z\;\; 1\right]
+$$
+
+E isso é feito no código abaixo:
+
+\iniciocodigo
+@<Secundário de Caneta: Y-Escala@>=
+struct numeric_variable a;
+float temp_matrix[16];
+if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &a))
+  return false;
+memcpy(temp_matrix, pen.gl_matrix, 16 * sizeof(float));
+pen.gl_matrix[1] = temp_matrix[1] * a.value;
+pen.gl_matrix[5] = temp_matrix[5] * a.value;
+pen.gl_matrix[9] = temp_matrix[9] * a.value;
+pen.gl_matrix[13] = temp_matrix[13] * a.value;
+if(!pen.straight && a.value != 1.0){ // Requer retriangular a caneta:
+  if(pen.referenced != NULL){
+    recursive_copy_points(temporary_alloc, &(pen.format),
+                          pen.referenced -> format, true);
+    pen.referenced = NULL;
+  }
+  else if(pen.gl_vbo != 0)
+    glDeleteBuffers(1, &(pen.gl_vbo));  
+  pen.gl_vbo = 0;
+}
+@
+\fimcodigo
+
+Por fim, a mudança de escala $z$ înterpreta dois pares como números
+complexos e os multiplica:
+
+$$
+(x+yi)(a+bi) = ax + (bx)i + (ay)i + (by)i^2 = (ax - by) + (bx+ay)i
+$$
+
+Do ponto de vista de multiplicação de vetor por matriz, o que ocorre é
+a seguinte multiplicação:
+
+$$\left[x\; y\; z\; 1\right]\left[{{a \atop -b}\atop {0\atop
+      0}}{{b \atop a}\atop {0 \atop 0}}{{0\atop 0}\atop{1 \atop
+      0}}{{0 \atop 0}\atop{0\atop 1}}\right]=\left[ax-by \;\; bx+ay\;\;
+      z\;\; 1\right]
+$$
+
+Podemos então realizar a multiplicação de matrizes usando o código
+abaixo:
+
+\iniciocodigo
+@<Secundário de Caneta: Z-Escala@>=
+struct pair_variable p;
+float temp_matrix[16];
+if(!eval_pair_primary(mf, cx, last_transformer -> next, end_expression, &p))
+  return false;
+memcpy(temp_matrix, pen.gl_matrix, 16 * sizeof(float));
+pen.gl_matrix[0] = temp_matrix[0] * p.x - temp_matrix[1] * p.y;
+pen.gl_matrix[1] = temp_matrix[0] * p.y + temp_matrix[1] * p.x;
+pen.gl_matrix[4] = temp_matrix[4] * p.x - temp_matrix[5] * p.y;
+pen.gl_matrix[5] = temp_matrix[4] * p.y + temp_matrix[5] * p.x;
+pen.gl_matrix[8] = temp_matrix[8] * p.x - temp_matrix[9] * p.y;
+pen.gl_matrix[9] = temp_matrix[8] * p.y + temp_matrix[9] * p.x;
+pen.gl_matrix[12] = temp_matrix[12] * p.x - temp_matrix[13] * p.y;
+pen.gl_matrix[13] = temp_matrix[12] * p.y + temp_matrix[13] * p.x;
+if(!pen.straight){ // Requer retriangular a caneta:
+  if(pen.referenced != NULL){
+    recursive_copy_points(temporary_alloc, &(pen.format),
+                          pen.referenced -> format, true);
+    pen.referenced = NULL;
+  }
+  else if(pen.gl_vbo != 0)
+    glDeleteBuffers(1, &(pen.gl_vbo));  
+  pen.gl_vbo = 0;
+}
+@
+\fimcodigo
 
 \secao{Referências}
 

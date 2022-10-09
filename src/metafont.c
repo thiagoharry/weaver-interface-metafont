@@ -5141,12 +5141,88 @@ pen.gl_vbo= 0;
 
 }
 else if(last_transformer->type==TYPE_XSCALED){
+/*301:*/
+#line 7871 "weaver-interface-metafont_en.tex"
+
+struct numeric_variable a;
+float temp_matrix[16];
+if(!eval_numeric_primary(mf,cx,last_transformer->next,end_expression,&a))
+return false;
+memcpy(temp_matrix,pen.gl_matrix,16*sizeof(float));
+pen.gl_matrix[0]= temp_matrix[0]*a.value;
+pen.gl_matrix[4]= temp_matrix[4]*a.value;
+pen.gl_matrix[8]= temp_matrix[8]*a.value;
+pen.gl_matrix[12]= temp_matrix[12]*a.value;
+if(!pen.straight&&a.value!=1.0){
+if(pen.referenced!=NULL){
+recursive_copy_points(temporary_alloc,&(pen.format),
+pen.referenced->format,true);
+pen.referenced= NULL;
+}
+else if(pen.gl_vbo!=0)
+glDeleteBuffers(1,&(pen.gl_vbo));
+pen.gl_vbo= 0;
+}
+/*:301*/
+#line 7685 "weaver-interface-metafont_en.tex"
 
 }
 else if(last_transformer->type==TYPE_YSCALED){
+/*302:*/
+#line 7906 "weaver-interface-metafont_en.tex"
+
+struct numeric_variable a;
+float temp_matrix[16];
+if(!eval_numeric_primary(mf,cx,last_transformer->next,end_expression,&a))
+return false;
+memcpy(temp_matrix,pen.gl_matrix,16*sizeof(float));
+pen.gl_matrix[1]= temp_matrix[1]*a.value;
+pen.gl_matrix[5]= temp_matrix[5]*a.value;
+pen.gl_matrix[9]= temp_matrix[9]*a.value;
+pen.gl_matrix[13]= temp_matrix[13]*a.value;
+if(!pen.straight&&a.value!=1.0){
+if(pen.referenced!=NULL){
+recursive_copy_points(temporary_alloc,&(pen.format),
+pen.referenced->format,true);
+pen.referenced= NULL;
+}
+else if(pen.gl_vbo!=0)
+glDeleteBuffers(1,&(pen.gl_vbo));
+pen.gl_vbo= 0;
+}
+/*:302*/
+#line 7688 "weaver-interface-metafont_en.tex"
 
 }
 else if(last_transformer->type==TYPE_ZSCALED){
+/*303:*/
+#line 7948 "weaver-interface-metafont_en.tex"
+
+struct pair_variable p;
+float temp_matrix[16];
+if(!eval_pair_primary(mf,cx,last_transformer->next,end_expression,&p))
+return false;
+memcpy(temp_matrix,pen.gl_matrix,16*sizeof(float));
+pen.gl_matrix[0]= temp_matrix[0]*p.x-temp_matrix[1]*p.y;
+pen.gl_matrix[1]= temp_matrix[0]*p.y+temp_matrix[1]*p.x;
+pen.gl_matrix[4]= temp_matrix[4]*p.x-temp_matrix[5]*p.y;
+pen.gl_matrix[5]= temp_matrix[4]*p.y+temp_matrix[5]*p.x;
+pen.gl_matrix[8]= temp_matrix[8]*p.x-temp_matrix[9]*p.y;
+pen.gl_matrix[9]= temp_matrix[8]*p.y+temp_matrix[9]*p.x;
+pen.gl_matrix[12]= temp_matrix[12]*p.x-temp_matrix[13]*p.y;
+pen.gl_matrix[13]= temp_matrix[12]*p.y+temp_matrix[13]*p.x;
+if(!pen.straight){
+if(pen.referenced!=NULL){
+recursive_copy_points(temporary_alloc,&(pen.format),
+pen.referenced->format,true);
+pen.referenced= NULL;
+}
+else if(pen.gl_vbo!=0)
+glDeleteBuffers(1,&(pen.gl_vbo));
+pen.gl_vbo= 0;
+}
+/*:303*/
+#line 7691 "weaver-interface-metafont_en.tex"
 
 }
 #if defined(W_DEBUG_METAFONT)
