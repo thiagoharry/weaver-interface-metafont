@@ -2143,6 +2143,7 @@ if(type == TYPE_T_PEN){
   ((struct pen_variable *) var) -> format = NULL;
   ((struct pen_variable *) var) -> gl_vbo = 0;
   ((struct pen_variable *) var) -> circular = false;
+  ((struct pen_variable *) var) -> referenced = NULL;
 }
 @
 \fimcodigo
@@ -2212,6 +2213,7 @@ if(mf -> internal_pen_variables == NULL){
     disalloc(mf);
 }
 mf -> internal_pen_variables[0].format = NULL; // The pen 'currentpen'
+mf -> internal_pen_variables[0].type = TYPE_T_PEN;
 mf -> internal_pen_variables[0].convex = true;
 mf -> internal_pen_variables[0].straight = false;
 mf -> internal_pen_variables[0].circular = true;
@@ -2219,6 +2221,7 @@ mf -> internal_pen_variables[0].referenced = NULL;
 mf -> internal_pen_variables[0].gl_vbo = 0;
 mf -> internal_pen_variables[0].number_of_vertices = 0;
 mf -> internal_pen_variables[1].convex = true; // The pen 'pensquare'
+mf -> internal_pen_variables[1].type = TYPE_T_PEN;
 mf -> internal_pen_variables[1].straight = true;
 mf -> internal_pen_variables[1].circular = false;
 mf -> internal_pen_variables[1].referenced = NULL;
@@ -2260,13 +2263,19 @@ mf -> internal_pen_variables[1].format -> length = 5;
 mf -> internal_pen_variables[1].format -> total_length = 5;
 mf -> internal_pen_variables[1].format -> points[0].x = -0.5;
 mf -> internal_pen_variables[1].format -> points[0].y = -0.5;
-mf -> internal_pen_variables[1].format -> points[0].x = 0.5;
-mf -> internal_pen_variables[1].format -> points[0].y = -0.5;
-mf -> internal_pen_variables[1].format -> points[0].x = 0.5;
-mf -> internal_pen_variables[1].format -> points[0].y = 0.5;
-mf -> internal_pen_variables[1].format -> points[0].x = -0.5;
-mf -> internal_pen_variables[1].format -> points[0].y = 0.5;
 mf -> internal_pen_variables[1].format -> points[0].subpath = NULL;
+mf -> internal_pen_variables[1].format -> points[1].x = 0.5;
+mf -> internal_pen_variables[1].format -> points[1].y = -0.5;
+mf -> internal_pen_variables[1].format -> points[1].subpath = NULL;
+mf -> internal_pen_variables[1].format -> points[2].x = 0.5;
+mf -> internal_pen_variables[1].format -> points[2].y = 0.5;
+mf -> internal_pen_variables[1].format -> points[2].subpath = NULL;
+mf -> internal_pen_variables[1].format -> points[3].x = -0.5;
+mf -> internal_pen_variables[1].format -> points[3].y = 0.5;
+mf -> internal_pen_variables[1].format -> points[3].subpath = NULL;
+mf -> internal_pen_variables[1].format -> points[4].x = -0.5;
+mf -> internal_pen_variables[1].format -> points[4].y = -0.5;
+mf -> internal_pen_variables[1].format -> points[4].subpath = NULL;
 @
 \fimcodigo
 
@@ -7523,6 +7532,8 @@ else if(type == TYPE_T_PEN){
   if(temporary_free != NULL && result.format !=  NULL &&
      result.referenced == NULL)
     path_recursive_free(temporary_free, result.format, true);
+  if(result.gl_vbo != 0 && result.referenced == NULL)
+    glDeleteBuffers(1, &(result.gl_vbo));
 }
 @
 \fimcodigo
@@ -7561,7 +7572,11 @@ void assign_pen_variable(struct metafont *mf,
       glDeleteBuffers(1, &(target -> gl_vbo));
   }
   memcpy(target, source, sizeof(struct pen_variable));
-  recursive_copy_points(alloc, &(target -> format), source -> format, true);
+  if(! source -> circular)
+    recursive_copy_points(alloc, &(target -> format), source -> format, true);
+  target -> number_of_vertices = 0;
+  target -> gl_vbo = 0;
+  target -> referenced = NULL;
 }
 @
 \fimcodigo
@@ -7663,8 +7678,7 @@ bool eval_pen_secondary(struct metafont *mf, struct context *cx,
       p = NULL;
   }while(p != NULL);
   if(last_transformer == NULL)
-    //return eval_pen_primary(mf, cx, begin_expression, end_expression, result);
-    return false;
+    return eval_pen_primary(mf, cx, begin_expression, end_expression, result);
   else{
     struct pen_variable pen;
     if(!eval_pen_secondary(mf, cx, begin_expression, before_last_transformer, &pen))
@@ -7969,6 +7983,105 @@ if(!pen.straight){ // Requer retriangular a caneta:
     glDeleteBuffers(1, &(pen.gl_vbo));  
   pen.gl_vbo = 0;
 }
+@
+\fimcodigo
+
+\subsubsecao{8.4.3. Pen Primary Expressions}
+
+The grammar for pen primary expressions are defined as:
+
+\alinhaverbatim
+<Primário de Caneta> -> <Variável de Caneta> |
+                        nullpen | ( <Expressão de Caneta> ) |
+                        pencircle | makepen <Primário de Caminho>
+\alinhanormal
+
+This requires three new reserved words:
+
+\iniciocodigo
+@<METAFONT: Symbolic Token Definition@>+=
+#define TYPE_NULLPEN        65 // The symbolic token 'nullpen'
+#define TYPE_PENCIRCLE      66 // The symbolic token 'pencircle'
+#define TYPE_MAKEPEN        67 // The symbolic token 'makepen'
+@
+\fimcodigo
+
+And we add a string with their names in the list of reserved keywords:
+
+\iniciocodigo
+@<List of Keywords@>+=
+"nullpen", "pencircle", "makepen",
+@
+\fimcodigo
+
+The function that will interpret the primary pen expressions:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+bool eval_pen_primary(struct metafont *mf, struct context *cx,
+                      struct generic_token *begin_expression,
+                      struct generic_token *end_expression,
+                      struct pen_variable *result);
+@
+\fimcodigo
+
+And its implementation:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+bool eval_pen_primary(struct metafont *mf, struct context *cx,
+                      struct generic_token *begin_expression,
+                      struct generic_token *end_expression,
+                      struct pen_variable *result){
+  if(begin_expression == end_expression){
+    if(begin_expression -> type == TYPE_SYMBOLIC){
+      @<Pen Primary: Variable@>
+    }
+    else if(begin_expression -> type == TYPE_NULLPEN){
+      //@<Pen Primary: Null Pen@>
+    }
+    else if(begin_expression -> type == TYPE_PENCIRCLE){
+      //@<Pen Primary: Circle Pen@>
+    }
+  }
+  else{
+    if(begin_expression -> type == TYPE_OPEN_PARENTHESIS &&
+      end_expression -> type == TYPE_CLOSE_PARENTHESIS){
+      //@<Pen Primary: Parenthesis@>
+    }
+    else if(begin_expression -> type == TYPE_MAKEPEN){
+      //@<Pen Primary: Custom Format@>
+    }
+  }
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognized pen expression.\n",
+          mf -> file, begin_expression -> line);
+#endif
+  return false;
+}
+@
+\fimcodigo
+
+If the expression evaluates to a variable, we need to copy the
+variable content to the result of the evaluation. But we do not need
+to create new vertices or allocate a new path yet. The result of the
+evaluation will for now store a reference to these already stored
+values:
+
+\iniciocodigo
+@<Pen Primary: Variable@>=
+struct symbolic_token *v = (struct symbolic_token *) begin_expression;
+struct pen_variable *content = v -> var;
+if(content -> type != TYPE_T_PEN){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Got non-pen variable in pen expression.\n",
+          mf -> file, begin_expression -> line);
+#endif
+  return false;
+}
+memcpy(result, content, sizeof(struct pen_variable));
+result -> referenced = content;
+return true;
 @
 \fimcodigo
 

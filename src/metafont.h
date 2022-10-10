@@ -51,11 +51,11 @@ void*global_variables;
 
 void*internal_numeric_variables;
 /*:80*//*97:*/
-#line 2196 "weaver-interface-metafont_en.tex"
+#line 2197 "weaver-interface-metafont_en.tex"
 
 struct pen_variable*internal_pen_variables;
 /*:97*//*144:*/
-#line 3427 "weaver-interface-metafont_en.tex"
+#line 3436 "weaver-interface-metafont_en.tex"
 
 bool have_stored_normaldeviate;
 float normaldeviate;

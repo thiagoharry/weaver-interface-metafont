@@ -3,5 +3,6 @@
 
 pen p1;
 
+p1 = pensquare;
 
 end
