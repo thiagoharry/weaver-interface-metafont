@@ -2069,7 +2069,7 @@ struct pen_variable{
   int nesting_level;
   void *next;
   struct path_variable *format; // The format as a cyclic path
-  bool convex, straight, circular; // About the path
+  int flags;
   struct pen_variable *referenced;
   GLuint gl_vbo; // The OpenGL vertices after triangulation
   int number_of_vertices; // How many vertices we have
@@ -2097,13 +2097,25 @@ the specified format.
 
 It does not matter how complex is the pen format, to draw it in the
 screen, we need to convert it to a set of triangles in a process
-called triangulation.
+called triangulation. Details about how to triangulate or if we need
+to triangulate at all, will be stored in the
+variable \monoespaco{flags}. Some of the possible flags are:
 
-The variable \monoespaco{convex} stores if our pen is convex. If so,
+\iniciocodigo
+@<Local Macros (metafont.c)@>+=
+#define FLAG_CONVEX   1
+#define FLAG_STRAIGHT 2
+#define FLAG_CIRCULAR 4
+#define FLAG_SQUARE   8
+#define FLAG_NULL    16
+@
+\fimcodigo
+
+The flag \monoespaco{FLAG\_CONVEX} stores if our pen is convex. If so,
 we can use very simple triangulation algorithms that will perform the
 computations in O(n).
 
-The variable \monoespaco{straight} stores if the pen format is
+The flag \monoespaco{FLAG\_STRAIGHT} stores if the pen format is
 composed only by straight lines. If so, we can represent it exactly by
 triangulation, the result is perfect, not just approximated. This
 means that we do not need to redo the triangulation if the pen changes
@@ -2111,9 +2123,17 @@ its size, for example. Conversely, if our pen has non-straight curves,
 then the triangulation needs to be redone to show more details if the
 pen size is increased. 
 
-The variable \monoespaco{circular} stores if we know that the pen has
+The flag \monoespaco{FLAG\_CIRCULAR} stores if we know that the pen has
 a circular format. In this case, we can generate the triangulation
 without looking at the path variable format.
+
+The flag \monoespaco{FLAG\_SQUARE} stores if this is a square pen. If
+so, we also do not need points from the path variable and probably we
+can use a premade triangulation.
+
+The flag \monoespaco{FLAG\_NULL} stores if this is a null pen. If so,
+it never will need to be triangulated, as it represents a point
+without height nor width.
 
 The variable \monoespaco{referenced} will be non-NULL if we are
 dealing with a temporary pen which is not stored in a variable and if
@@ -2142,7 +2162,7 @@ not yet triangulated, its vertex ID will be zero:
 if(type == TYPE_T_PEN){
   ((struct pen_variable *) var) -> format = NULL;
   ((struct pen_variable *) var) -> gl_vbo = 0;
-  ((struct pen_variable *) var) -> circular = false;
+  ((struct pen_variable *) var) -> flags = false;
   ((struct pen_variable *) var) -> referenced = NULL;
 }
 @
@@ -2214,20 +2234,18 @@ if(mf -> internal_pen_variables == NULL){
 }
 mf -> internal_pen_variables[0].format = NULL; // The pen 'currentpen'
 mf -> internal_pen_variables[0].type = TYPE_T_PEN;
-mf -> internal_pen_variables[0].convex = true;
-mf -> internal_pen_variables[0].straight = false;
-mf -> internal_pen_variables[0].circular = true;
+mf -> internal_pen_variables[0].flags = FLAG_CONVEX | FLAG_CIRCULAR;
 mf -> internal_pen_variables[0].referenced = NULL;
 mf -> internal_pen_variables[0].gl_vbo = 0;
 mf -> internal_pen_variables[0].number_of_vertices = 0;
-mf -> internal_pen_variables[1].convex = true; // The pen 'pensquare'
+mf -> internal_pen_variables[1].format = NULL; // A caneta 'pensquare'
 mf -> internal_pen_variables[1].type = TYPE_T_PEN;
-mf -> internal_pen_variables[1].straight = true;
-mf -> internal_pen_variables[1].circular = false;
+mf -> internal_pen_variables[1].flags = FLAG_CONVEX | FLAG_STRAIGHT |
+                                        FLAG_SQUARE;
 mf -> internal_pen_variables[1].referenced = NULL;
 mf -> internal_pen_variables[1].gl_vbo = 0;
 mf -> internal_pen_variables[1].number_of_vertices = 0;
-{ // Initializating both transformation matrices
+{ // Inicializando a matriz de transformação de ambas
   int i, j;
   for(j = 0; j < 2; j ++)
     for(i = 0; i < 9; i++)
@@ -2236,46 +2254,6 @@ mf -> internal_pen_variables[1].number_of_vertices = 0;
       else
         mf -> internal_pen_variables[j].gl_matrix[i] = 0.0;
 }
-mf -> internal_pen_variables[1].format =
-    (struct path_variable *) mf -> alloc(sizeof(struct path_variable));
-if(mf -> internal_pen_variables[1].format == NULL){
-  if(disalloc != NULL){
-    disalloc(mf -> internal_pen_variables);
-    disalloc(mf);
-  }
-  return NULL;
-} // Allocated above the format for the square pen
-mf -> internal_pen_variables[1].format -> points =
-    (struct path_points *) mf -> alloc(sizeof(struct path_points) * 5);
-if(mf -> internal_pen_variables[1].format -> points == NULL){
-  if(disalloc != NULL){
-    disalloc(mf -> internal_pen_variables[1].format);
-    disalloc(mf -> internal_pen_variables);
-    disalloc(mf);
-  }
-  return NULL;
-}
-// We fill below the coordinates for points in the 'pensquare'.
-// We do not need to fill the control points, just the extremity points.
-// As we declared it as having straight format, control points are ignored.
-mf -> internal_pen_variables[1].format -> cyclic = true;
-mf -> internal_pen_variables[1].format -> length = 5;
-mf -> internal_pen_variables[1].format -> total_length = 5;
-mf -> internal_pen_variables[1].format -> points[0].x = -0.5;
-mf -> internal_pen_variables[1].format -> points[0].y = -0.5;
-mf -> internal_pen_variables[1].format -> points[0].subpath = NULL;
-mf -> internal_pen_variables[1].format -> points[1].x = 0.5;
-mf -> internal_pen_variables[1].format -> points[1].y = -0.5;
-mf -> internal_pen_variables[1].format -> points[1].subpath = NULL;
-mf -> internal_pen_variables[1].format -> points[2].x = 0.5;
-mf -> internal_pen_variables[1].format -> points[2].y = 0.5;
-mf -> internal_pen_variables[1].format -> points[2].subpath = NULL;
-mf -> internal_pen_variables[1].format -> points[3].x = -0.5;
-mf -> internal_pen_variables[1].format -> points[3].y = 0.5;
-mf -> internal_pen_variables[1].format -> points[3].subpath = NULL;
-mf -> internal_pen_variables[1].format -> points[4].x = -0.5;
-mf -> internal_pen_variables[1].format -> points[4].y = -0.5;
-mf -> internal_pen_variables[1].format -> points[4].subpath = NULL;
 @
 \fimcodigo
 
@@ -2294,8 +2272,10 @@ internal variables:
 
 \iniciocodigo
 @<Finalization (struct metafont)@>+=
-mf -> free(mf -> internal_pen_variables[1].format -> points);
-mf -> free(mf -> internal_pen_variables[1].format);
+if(mf -> internal_pen_variables[1].format != NULL){
+  mf -> free(mf -> internal_pen_variables[1].format -> points);
+  mf -> free(mf -> internal_pen_variables[1].format);
+}
 mf -> free(mf -> internal_pen_variables);
 @
 \fimcodigo
@@ -7572,7 +7552,7 @@ void assign_pen_variable(struct metafont *mf,
       glDeleteBuffers(1, &(target -> gl_vbo));
   }
   memcpy(target, source, sizeof(struct pen_variable));
-  if(! source -> circular)
+  if(! (source -> flags & (FLAG_CIRCULAR | FLAG_SQUARE | FLAG_NULL)))
     recursive_copy_points(alloc, &(target -> format), source -> format, true);
   target -> number_of_vertices = 0;
   target -> gl_vbo = 0;
@@ -7786,7 +7766,8 @@ pen.gl_matrix[8] = temp_matrix[8] * a.value;
 pen.gl_matrix[9] = temp_matrix[9] * a.value;
 pen.gl_matrix[12] = temp_matrix[12] * a.value;
 pen.gl_matrix[13] = temp_matrix[13] * a.value;
-if(!pen.straight && a.value != 1.0){ // Requires to retriangulate the pen:
+// Requires to retriangulate the pen:
+if(!(pen.flags & (FLAG_STRAIGHT | FLAG_NULL)) && a.value != 1.0){
   if(pen.referenced != NULL){
     recursive_copy_points(temporary_alloc, &(pen.format),
                           pen.referenced -> format, true);
@@ -7855,7 +7836,8 @@ pen.gl_matrix[0] = temp_matrix[0] + a.value * temp_matrix[1];
 pen.gl_matrix[4] = temp_matrix[4] + a.value * temp_matrix[5];
 pen.gl_matrix[8] = temp_matrix[8] + a.value * temp_matrix[9];
 pen.gl_matrix[12] = temp_matrix[12] + a.value  * temp_matrix[13];
-if(!pen.straight && a.value != 0.0){// Requires to retriangulate the pen:
+// Requires to retriangulate the pen:
+if(!(pen.flags & (FLAG_STRAIGHT | FLAG_NULL)) && a.value != 0.0){
   if(pen.referenced != NULL){
     recursive_copy_points(temporary_alloc, &(pen.format),
                           pen.referenced -> format, true);
@@ -7892,7 +7874,8 @@ pen.gl_matrix[0] = temp_matrix[0] * a.value;
 pen.gl_matrix[4] = temp_matrix[4] * a.value;
 pen.gl_matrix[8] = temp_matrix[8] * a.value;
 pen.gl_matrix[12] = temp_matrix[12] * a.value;
-if(!pen.straight && a.value != 1.0){ // Requires to retriangulate the pen:
+// Requires to retriangulate the pen:
+if(!(pen.flags & (FLAG_STRAIGHT | FLAG_NULL)) && a.value != 1.0){
   if(pen.referenced != NULL){
     recursive_copy_points(temporary_alloc, &(pen.format),
                           pen.referenced -> format, true);
@@ -7927,7 +7910,8 @@ pen.gl_matrix[1] = temp_matrix[1] * a.value;
 pen.gl_matrix[5] = temp_matrix[5] * a.value;
 pen.gl_matrix[9] = temp_matrix[9] * a.value;
 pen.gl_matrix[13] = temp_matrix[13] * a.value;
-if(!pen.straight && a.value != 1.0){ // Requires to retriangulate the pen:
+// Requires to retriangulate the pen:
+if(!(pen.flags & (FLAG_STRAIGHT | FLAG_NULL)) && a.value != 1.0){
   if(pen.referenced != NULL){
     recursive_copy_points(temporary_alloc, &(pen.format),
                           pen.referenced -> format, true);
@@ -7973,7 +7957,7 @@ pen.gl_matrix[8] = temp_matrix[8] * p.x - temp_matrix[9] * p.y;
 pen.gl_matrix[9] = temp_matrix[8] * p.y + temp_matrix[9] * p.x;
 pen.gl_matrix[12] = temp_matrix[12] * p.x - temp_matrix[13] * p.y;
 pen.gl_matrix[13] = temp_matrix[12] * p.y + temp_matrix[13] * p.x;
-if(!pen.straight){ // Requer retriangular a caneta:
+if(!(pen.flags & (FLAG_STRAIGHT | FLAG_NULL))){ // Requer retriangular a caneta:
   if(pen.referenced != NULL){
     recursive_copy_points(temporary_alloc, &(pen.format),
                           pen.referenced -> format, true);
@@ -8038,7 +8022,7 @@ bool eval_pen_primary(struct metafont *mf, struct context *cx,
       @<Pen Primary: Variable@>
     }
     else if(begin_expression -> type == TYPE_NULLPEN){
-      //@<Pen Primary: Null Pen@>
+      @<Pen Primary: Null Pen@>
     }
     else if(begin_expression -> type == TYPE_PENCIRCLE){
       //@<Pen Primary: Circle Pen@>
@@ -8085,6 +8069,19 @@ return true;
 @
 \fimcodigo
 
+If the expression evaluates to a null pen, we should just create a new
+pen with the flag \monoespaco{FLAG\_NULL} active. This pen never will
+be triangulated and never will produce any drawing:
+
+\iniciocodigo
+@<Pen Primary: Null Pen@>=
+result -> format = NULL;
+result -> flags = FLAG_NULL;
+result -> referenced = false;
+result -> gl_vbo = 0;
+return true;
+@
+\fimcodigo
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

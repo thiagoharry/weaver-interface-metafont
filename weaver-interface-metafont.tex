@@ -2105,7 +2105,7 @@ struct pen_variable{
   int nesting_level;
   void *next;
   struct path_variable *format; // O formato como caminho cíclico
-  bool convex, straight, circular; // Sobre o caminho
+  int flags;
   struct pen_variable *referenced;
   GLuint gl_vbo; // Os vértices OpenGL após triangulação
   int number_of_vertices; // Quantos vértices são
@@ -2133,14 +2133,28 @@ garantir que as canetas gerem o resultado esperado.
 
 Não importa o quão complexo seja o formato da caneta, para que ele
 possa ser desenhado na tela via OpenGL, ele deve ser convertido para
-um conjunto de triângulos em um processo chamado de triangulação.
+um conjunto de triângulos em um processo chamado de
+triangulação. Detalhes sobre como triangular, ou mesmo se precisamos
+triangular serão definidos pela variável \monoespaco{flags}. As flags
+possíveis são:
 
-A variável \monoespaco{convex} armazena se estamos diante de um
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#define FLAG_CONVEX   1
+#define FLAG_STRAIGHT 2
+#define FLAG_CIRCULAR 4
+#define FLAG_SQUARE   8
+#define FLAG_NULL    16
+@
+\fimcodigo
+
+
+A flag \monoespaco{FLAG\_CONVEX} armazena se estamos diante de um
 formato convexo. Se esse for o caso, fazer a triangulação será um
 processo muito simples. Poderemos usar um algoritmo muito mais simples
 e rápido que fará tudo em O(n) quando precisarmos.
 
-A variável \monoespaco{straight} armazena se o formato de nossa caneta
+A flag \monoespaco{FLAG\_STRAIGHT} armazena se o formato de nossa caneta
 é formado apenas por linhas retas, sem curvas. Se isso for verdade,
 então quer dizer que uma vez que ele seja triangulado, nunca mais
 precisaremos fazer isso novamente, mesmo que a caneta depois seja
@@ -2150,10 +2164,19 @@ estamos usando nenhum tipo de aproximação. Por isso, não precisamos
 gerar a triangulação novamente para poder mostrar mais detalhes
 quando, por exempolo, a caneta se torna maior.
 
-A variável \monoespaco{circular} armazena se nós sabemos que a caneta
+A flag \monoespaco{FLAG\_CIRCULAR} armazena se nós sabemos que a caneta
 tem um formato circular. Neste caso, seremos capazes de fazer a
 triangulação sem olhar para os pontos da variável de caminho
 representando o formato.
+
+A flag \monoespaco{FLAG\_SQUARE} armazena se a caneta é uma caneta
+quadrada. Neste caso também não precisamos dos pontos da variável de
+caminho e podemos usar uma triangulação já feita antes sem precisar
+triangular novamente.
+
+A flag \monoespaco{FLAG\_NULL} armazena se esta é uma caneta
+nula. Neste caso ela nunca precisa ser triangulada, pois ela
+representa um único ponto sem largura nem altura.
 
 A variável \monoespaco{referenced} será não-nula quando estamos
 lidando com uma caneta temporária que não está armazenada em uma
@@ -2185,7 +2208,7 @@ foi triangulada, terá seu ID de vértices OpenGL igual a zero.
 if(type == TYPE_T_PEN){
   ((struct pen_variable *) var) -> format = NULL;
   ((struct pen_variable *) var) -> gl_vbo = 0;
-  ((struct pen_variable *) var) -> circular = false;
+  ((struct pen_variable *) var) -> flags = false;
   ((struct pen_variable *) var) -> referenced = NULL;
 }
 @
@@ -2226,7 +2249,7 @@ if(v -> type == TYPE_T_PEN){
 @
 \fimcodigo
 
-Além das variáveis de caneta defiidas pelo usuário, iremos suportar a
+Além das variáveis de caneta definidas pelo usuário, iremos suportar a
 existência de duas outras variáveis interna de caneta. Uma delas será
 chamada de \monoespaco{currentpen} e irá representar a caneta atual
 com a qual iremos escrever e desenhar. A outra será uma caneta de
@@ -2256,16 +2279,14 @@ if(mf -> internal_pen_variables == NULL){
 }
 mf -> internal_pen_variables[0].format = NULL; // A caneta 'currentpen'
 mf -> internal_pen_variables[0].type = TYPE_T_PEN;
-mf -> internal_pen_variables[0].convex = true;
-mf -> internal_pen_variables[0].straight = false;
-mf -> internal_pen_variables[0].circular = true;
+mf -> internal_pen_variables[0].flags = FLAG_CONVEX | FLAG_CIRCULAR;
 mf -> internal_pen_variables[0].referenced = NULL;
 mf -> internal_pen_variables[0].gl_vbo = 0;
 mf -> internal_pen_variables[0].number_of_vertices = 0;
-mf -> internal_pen_variables[1].convex = true; // A caneta 'pensquare'
+mf -> internal_pen_variables[1].format = NULL; // A caneta 'pensquare'
 mf -> internal_pen_variables[1].type = TYPE_T_PEN;
-mf -> internal_pen_variables[1].straight = true;
-mf -> internal_pen_variables[1].circular = false;
+mf -> internal_pen_variables[1].flags = FLAG_CONVEX | FLAG_STRAIGHT |
+                                        FLAG_SQUARE;
 mf -> internal_pen_variables[1].referenced = NULL;
 mf -> internal_pen_variables[1].gl_vbo = 0;
 mf -> internal_pen_variables[1].number_of_vertices = 0;
@@ -2278,46 +2299,6 @@ mf -> internal_pen_variables[1].number_of_vertices = 0;
       else
         mf -> internal_pen_variables[j].gl_matrix[i] = 0.0;
 }
-mf -> internal_pen_variables[1].format =
-    (struct path_variable *) mf -> alloc(sizeof(struct path_variable));
-if(mf -> internal_pen_variables[1].format == NULL){
-  if(disalloc != NULL){
-    disalloc(mf -> internal_pen_variables);
-    disalloc(mf);
-  }
-  return NULL;
-} // Alocado o formato da caneta quadrada
-mf -> internal_pen_variables[1].format -> points =
-    (struct path_points *) mf -> alloc(sizeof(struct path_points) * 5);
-if(mf -> internal_pen_variables[1].format -> points == NULL){
-  if(disalloc != NULL){
-    disalloc(mf -> internal_pen_variables[1].format);
-    disalloc(mf -> internal_pen_variables);
-    disalloc(mf);
-  }
-  return NULL;
-}
-// Preenchendo abaixo as coordenadas dos vértices de 'pensquare'.
-// Não precisamos preencher pontos de controle, como a marcamos como tendo
-// formato reto, os pontos de controle serão ignorados.
-mf -> internal_pen_variables[1].format -> cyclic = true;
-mf -> internal_pen_variables[1].format -> length = 5;
-mf -> internal_pen_variables[1].format -> total_length = 5;
-mf -> internal_pen_variables[1].format -> points[0].x = -0.5;
-mf -> internal_pen_variables[1].format -> points[0].y = -0.5;
-mf -> internal_pen_variables[1].format -> points[0].subpath = NULL;
-mf -> internal_pen_variables[1].format -> points[1].x = 0.5;
-mf -> internal_pen_variables[1].format -> points[1].y = -0.5;
-mf -> internal_pen_variables[1].format -> points[1].subpath = NULL;
-mf -> internal_pen_variables[1].format -> points[2].x = 0.5;
-mf -> internal_pen_variables[1].format -> points[2].y = 0.5;
-mf -> internal_pen_variables[1].format -> points[2].subpath = NULL;
-mf -> internal_pen_variables[1].format -> points[3].x = -0.5;
-mf -> internal_pen_variables[1].format -> points[3].y = 0.5;
-mf -> internal_pen_variables[1].format -> points[3].subpath = NULL;
-mf -> internal_pen_variables[1].format -> points[4].x = -0.5;
-mf -> internal_pen_variables[1].format -> points[4].y = -0.5;
-mf -> internal_pen_variables[1].format -> points[4].subpath = NULL;
 @
 \fimcodigo
 
@@ -2336,8 +2317,10 @@ internas:
 
 \iniciocodigo
 @<Finalização (struct metafont)@>+=
-mf -> free(mf -> internal_pen_variables[1].format -> points);
-mf -> free(mf -> internal_pen_variables[1].format);
+if(mf -> internal_pen_variables[1].format != NULL){
+  mf -> free(mf -> internal_pen_variables[1].format -> points);
+  mf -> free(mf -> internal_pen_variables[1].format);
+}
 mf -> free(mf -> internal_pen_variables);
 @
 \fimcodigo
@@ -7667,7 +7650,7 @@ void assign_pen_variable(struct metafont *mf,
       glDeleteBuffers(1, &(target -> gl_vbo));
   }
   memcpy(target, source, sizeof(struct pen_variable));
-  if(! source -> circular)
+  if(! (source -> flags & (FLAG_CIRCULAR | FLAG_SQUARE | FLAG_NULL)))
     recursive_copy_points(alloc, &(target -> format), source -> format, true);
   target -> number_of_vertices = 0;
   target -> gl_vbo = 0;
@@ -7885,7 +7868,8 @@ pen.gl_matrix[8] = temp_matrix[8] * a.value;
 pen.gl_matrix[9] = temp_matrix[9] * a.value;
 pen.gl_matrix[12] = temp_matrix[12] * a.value;
 pen.gl_matrix[13] = temp_matrix[13] * a.value;
-if(!pen.straight && a.value != 1.0){ // Requer retriangular a caneta:
+// Requer retriangular a caneta:
+if(!(pen.flags & (FLAG_STRAIGHT | FLAG_NULL)) && a.value != 1.0){
   if(pen.referenced != NULL){
     recursive_copy_points(temporary_alloc, &(pen.format),
                           pen.referenced -> format, true);
@@ -7955,7 +7939,8 @@ pen.gl_matrix[0] = temp_matrix[0] + a.value * temp_matrix[1];
 pen.gl_matrix[4] = temp_matrix[4] + a.value * temp_matrix[5];
 pen.gl_matrix[8] = temp_matrix[8] + a.value * temp_matrix[9];
 pen.gl_matrix[12] = temp_matrix[12] + a.value  * temp_matrix[13];
-if(!pen.straight && a.value != 0.0){ // Requer retriangular a caneta:
+// Requer retriangular a caneta:
+if(!(pen.flags & (FLAG_STRAIGHT | FLAG_NULL)) && a.value != 0.0){
   if(pen.referenced != NULL){
     recursive_copy_points(temporary_alloc, &(pen.format),
                           pen.referenced -> format, true);
@@ -7993,7 +7978,8 @@ pen.gl_matrix[0] = temp_matrix[0] * a.value;
 pen.gl_matrix[4] = temp_matrix[4] * a.value;
 pen.gl_matrix[8] = temp_matrix[8] * a.value;
 pen.gl_matrix[12] = temp_matrix[12] * a.value;
-if(!pen.straight && a.value != 1.0){ // Requer retriangular a caneta:
+// Requer retriangular a caneta:
+if(!(pen.flags & (FLAG_STRAIGHT | FLAG_NULL)) && a.value != 1.0){
   if(pen.referenced != NULL){
     recursive_copy_points(temporary_alloc, &(pen.format),
                           pen.referenced -> format, true);
@@ -8028,7 +8014,8 @@ pen.gl_matrix[1] = temp_matrix[1] * a.value;
 pen.gl_matrix[5] = temp_matrix[5] * a.value;
 pen.gl_matrix[9] = temp_matrix[9] * a.value;
 pen.gl_matrix[13] = temp_matrix[13] * a.value;
-if(!pen.straight && a.value != 1.0){ // Requer retriangular a caneta:
+// Requer retriangular a caneta:
+if(!(pen.flags & (FLAG_STRAIGHT | FLAG_NULL)) && a.value != 1.0){
   if(pen.referenced != NULL){
     recursive_copy_points(temporary_alloc, &(pen.format),
                           pen.referenced -> format, true);
@@ -8075,7 +8062,7 @@ pen.gl_matrix[8] = temp_matrix[8] * p.x - temp_matrix[9] * p.y;
 pen.gl_matrix[9] = temp_matrix[8] * p.y + temp_matrix[9] * p.x;
 pen.gl_matrix[12] = temp_matrix[12] * p.x - temp_matrix[13] * p.y;
 pen.gl_matrix[13] = temp_matrix[12] * p.y + temp_matrix[13] * p.x;
-if(!pen.straight){ // Requer retriangular a caneta:
+if(!(pen.flags & (FLAG_STRAIGHT | FLAG_NULL))){ // Requer retriangular a caneta:
   if(pen.referenced != NULL){
     recursive_copy_points(temporary_alloc, &(pen.format),
                           pen.referenced -> format, true);
@@ -8142,7 +8129,7 @@ bool eval_pen_primary(struct metafont *mf, struct context *cx,
       @<Caneta Primária: Variável@>
     }
     else if(begin_expression -> type == TYPE_NULLPEN){
-      //@<Caneta Primária: Caneta Nula@>
+      @<Caneta Primária: Caneta Nula@>
     }
     else if(begin_expression -> type == TYPE_PENCIRCLE){
       //@<Caneta Primária: Caneta Circular@>
@@ -8189,6 +8176,19 @@ return true;
 @
 \fimcodigo
 
+Se a expressão avaliar para uma caneta nula, devemos apenas gerar uma
+nova caneta com a flag de \monoespaco{FLAG\_NULL} ativa. Esta caneta
+nunca será triangulada e nunca produzirá qualquer desenho:
+
+\iniciocodigo
+@<Caneta Primária: Caneta Nula@>=
+result -> format = NULL;
+result -> flags = FLAG_NULL;
+result -> referenced = false;
+result -> gl_vbo = 0;
+return true;
+@
+\fimcodigo
 
 \secao{Referências}
 

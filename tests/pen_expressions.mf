@@ -1,8 +1,9 @@
 % To test pen expressions
 % This program should work and be accepted.
 
-pen p1;
+pen p1, p2;
 
 p1 = pensquare;
+p2 = nullpen;
 
 end
