@@ -945,16 +945,18 @@ void test_pen_expressions(void){
   struct metafont *mf;
   struct context *cx;
   bool ret;
-  struct named_variable *p1, *p2;
-  struct pen_variable *pen_p1, *pen_p2;
+  struct named_variable *p1, *p2, *p3;
+  struct pen_variable *pen_p1, *pen_p2, *pen_p3;
   mf = init_metafont(malloc, free, "tests/pen_expressions.mf");
   cx = init_context();
   void *p = lexer(mf, malloc, free, "tests/pen_expressions.mf");
   ret = eval_program(mf, cx, p);
   p1 = (struct named_variable *) mf -> named_variables;
   p2 = p1 -> next;
+  p3 = p2 -> next;
   pen_p1 = (struct pen_variable *) p1 -> var;
   pen_p2 = (struct pen_variable *) p2 -> var;
+  pen_p3 = (struct pen_variable *) p3 -> var;
   assert("Interpreting program with pen expressions", ret);
   assert("Assigning pen variable",
 	 pen_p1 -> format == NULL &&
@@ -964,8 +966,13 @@ void test_pen_expressions(void){
   assert("Assigning nullpen",
 	 pen_p2 -> format == NULL &&
 	 pen_p2 -> flags == FLAG_NULL &&
-	 pen_p1 -> referenced == NULL &&
-	 pen_p1 -> number_of_vertices == 0);
+	 pen_p2 -> referenced == NULL &&
+	 pen_p2 -> number_of_vertices == 0);
+  assert("Assigning pencircle",
+	 pen_p3 -> format == NULL &&
+	 pen_p3 -> flags == (FLAG_CONVEX | FLAG_CIRCULAR) &&
+	 pen_p3 -> referenced == NULL &&
+	 pen_p3 -> number_of_vertices == 0);
   free_token_list(free, p);
   destroy_metafont(mf);
   destroy_context(cx);

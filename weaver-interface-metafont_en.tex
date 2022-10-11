@@ -7552,6 +7552,7 @@ void assign_pen_variable(struct metafont *mf,
       glDeleteBuffers(1, &(target -> gl_vbo));
   }
   memcpy(target, source, sizeof(struct pen_variable));
+  target -> type = TYPE_T_PEN;
   if(! (source -> flags & (FLAG_CIRCULAR | FLAG_SQUARE | FLAG_NULL)))
     recursive_copy_points(alloc, &(target -> format), source -> format, true);
   target -> number_of_vertices = 0;
@@ -8025,7 +8026,7 @@ bool eval_pen_primary(struct metafont *mf, struct context *cx,
       @<Pen Primary: Null Pen@>
     }
     else if(begin_expression -> type == TYPE_PENCIRCLE){
-      //@<Pen Primary: Circle Pen@>
+      @<Pen Primary: Circle Pen@>
     }
   }
   else{
@@ -8056,10 +8057,17 @@ values:
 @<Pen Primary: Variable@>=
 struct symbolic_token *v = (struct symbolic_token *) begin_expression;
 struct pen_variable *content = v -> var;
+if(content == NULL){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Using unknown variable '%s'.\n",
+          mf -> file, begin_expression -> line, v -> name);
+#endif
+  return false;
+}
 if(content -> type != TYPE_T_PEN){
 #if defined(W_DEBUG_METAFONT)
   fprintf(stderr, "METAFONT: Error: %s:%d: Got non-pen variable in pen expression.\n",
-          mf -> file, begin_expression -> line);
+          mf -> file, begin_expression -> line, content -> type);
 #endif
   return false;
 }
@@ -8079,6 +8087,29 @@ result -> format = NULL;
 result -> flags = FLAG_NULL;
 result -> referenced = false;
 result -> gl_vbo = 0;
+return true;
+@
+\fimcodigo
+
+If the expression evaluates to a circular pen, we generate a new pen
+with circular and convex flags. We also initialize the transform
+matrix as an identity matrix:
+
+\iniciocodigo
+@<Pen Primary: Circle Pen@>=
+result -> format = NULL;
+result -> flags = FLAG_CONVEX | FLAG_CIRCULAR;
+result -> referenced = false;
+result -> gl_vbo = 0;
+result -> number_of_vertices = 0;
+result -> gl_matrix[0] = result -> gl_matrix[5] = result -> gl_matrix[10] =
+                         result -> gl_matrix[15] = 1.0; 
+result -> gl_matrix[1] = result -> gl_matrix[2] = result -> gl_matrix[3] = 
+                         result -> gl_matrix[4] = result -> gl_matrix[6] =
+                         result -> gl_matrix[7] = result -> gl_matrix[8] = 
+                         result -> gl_matrix[9] = result -> gl_matrix[11] =
+                         result -> gl_matrix[12] = result -> gl_matrix[13] =
+                         result -> gl_matrix[14] = 0.0;
 return true;
 @
 \fimcodigo
