@@ -7509,9 +7509,9 @@ else if(type == TYPE_T_PEN){
     var = (struct symbolic_token *) (var -> next);
     var = (struct symbolic_token *) (var -> next);
   }
-  if(temporary_free != NULL && result.format !=  NULL &&
-     result.referenced == NULL)
-    path_recursive_free(temporary_free, result.format, true);
+  //if(temporary_free != NULL && result.format !=  NULL &&
+  //   result.referenced == NULL)
+  //  path_recursive_free(temporary_free, result.format, true);
   if(result.gl_vbo != 0 && result.referenced == NULL)
     glDeleteBuffers(1, &(result.gl_vbo));
 }
@@ -7638,7 +7638,7 @@ retriangulation of that pen.
 bool eval_pen_secondary(struct metafont *mf, struct context *cx,
                         struct generic_token *begin_expression,
                         struct generic_token *end_expression,
-                        struct pen_variable *result){
+                        struct pen_variable *pen){
   DECLARE_NESTING_CONTROL();
   struct generic_token *p, *prev = NULL, *last_transformer = NULL,
                        *before_last_transformer = begin_expression;
@@ -7659,10 +7659,9 @@ bool eval_pen_secondary(struct metafont *mf, struct context *cx,
       p = NULL;
   }while(p != NULL);
   if(last_transformer == NULL)
-    return eval_pen_primary(mf, cx, begin_expression, end_expression, result);
+    return eval_pen_primary(mf, cx, begin_expression, end_expression, pen);
   else{
-    struct pen_variable pen;
-    if(!eval_pen_secondary(mf, cx, begin_expression, before_last_transformer, &pen))
+    if(!eval_pen_secondary(mf, cx, begin_expression, before_last_transformer, pen))
       return false;
     if(last_transformer -> type == TYPE_ROTATED){
       @<Pen Secondary: Rotation@>
@@ -7723,15 +7722,16 @@ if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &r))
 rotation = 0.0174533 * r.value;
 sin_theta = sin(rotation);
 cos_theta = cos(rotation);
-memcpy(temp_matrix, pen.gl_matrix, 16 * sizeof(float));
-pen.gl_matrix[0] = temp_matrix[0] * cos_theta - temp_matrix[1] * sin_theta;
-pen.gl_matrix[1] = temp_matrix[0] * sin_theta + temp_matrix[1] * cos_theta;
-pen.gl_matrix[4] = temp_matrix[4] * cos_theta - temp_matrix[5] * sin_theta;
-pen.gl_matrix[5] = temp_matrix[4] * sin_theta + temp_matrix[5] * cos_theta;
-pen.gl_matrix[8] = temp_matrix[8] * cos_theta - temp_matrix[9] * sin_theta;
-pen.gl_matrix[9] = temp_matrix[8] * sin_theta + temp_matrix[9] * cos_theta;
-pen.gl_matrix[12] = temp_matrix[12] * cos_theta - temp_matrix[13] * sin_theta;
-pen.gl_matrix[13] = temp_matrix[12] * sin_theta + temp_matrix[13] * cos_theta;
+memcpy(temp_matrix, pen -> gl_matrix, 16 * sizeof(float));
+pen -> gl_matrix[0] = temp_matrix[0] * cos_theta - temp_matrix[1] * sin_theta;
+pen -> gl_matrix[1] = temp_matrix[0] * sin_theta + temp_matrix[1] * cos_theta;
+pen -> gl_matrix[4] = temp_matrix[4] * cos_theta - temp_matrix[5] * sin_theta;
+pen -> gl_matrix[5] = temp_matrix[4] * sin_theta + temp_matrix[5] * cos_theta;
+pen -> gl_matrix[8] = temp_matrix[8] * cos_theta - temp_matrix[9] * sin_theta;
+pen -> gl_matrix[9] = temp_matrix[8] * sin_theta + temp_matrix[9] * cos_theta;
+pen -> gl_matrix[12] = temp_matrix[12] * cos_theta - temp_matrix[13] * sin_theta;
+pen -> gl_matrix[13] = temp_matrix[12] * sin_theta + temp_matrix[13] * cos_theta;
+return true;
 @
 \fimcodigo
 
@@ -7758,26 +7758,27 @@ struct numeric_variable a;
 float temp_matrix[16];
 if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &a))
   return false;
-memcpy(temp_matrix, pen.gl_matrix, 16 * sizeof(float));
-pen.gl_matrix[0] = temp_matrix[0] * a.value;
-pen.gl_matrix[1] = temp_matrix[1] * a.value;
-pen.gl_matrix[4] = temp_matrix[4] * a.value;
-pen.gl_matrix[5] = temp_matrix[5] * a.value;
-pen.gl_matrix[8] = temp_matrix[8] * a.value;
-pen.gl_matrix[9] = temp_matrix[9] * a.value;
-pen.gl_matrix[12] = temp_matrix[12] * a.value;
-pen.gl_matrix[13] = temp_matrix[13] * a.value;
+memcpy(temp_matrix, pen -> gl_matrix, 16 * sizeof(float));
+pen -> gl_matrix[0] = temp_matrix[0] * a.value;
+pen -> gl_matrix[1] = temp_matrix[1] * a.value;
+pen -> gl_matrix[4] = temp_matrix[4] * a.value;
+pen -> gl_matrix[5] = temp_matrix[5] * a.value;
+pen -> gl_matrix[8] = temp_matrix[8] * a.value;
+pen -> gl_matrix[9] = temp_matrix[9] * a.value;
+pen -> gl_matrix[12] = temp_matrix[12] * a.value;
+pen -> gl_matrix[13] = temp_matrix[13] * a.value;
 // Requires to retriangulate the pen:
-if(!(pen.flags & (FLAG_STRAIGHT | FLAG_NULL)) && a.value != 1.0){
-  if(pen.referenced != NULL){
-    recursive_copy_points(temporary_alloc, &(pen.format),
-                          pen.referenced -> format, true);
-    pen.referenced = NULL;
+if(!(pen -> flags & (FLAG_STRAIGHT | FLAG_NULL)) && a.value != 1.0){
+  if(pen -> referenced != NULL){
+    recursive_copy_points(temporary_alloc, &(pen -> format),
+                          pen -> referenced -> format, true);
+    pen -> referenced = NULL;
   }
-  else if(pen.gl_vbo != 0)
-    glDeleteBuffers(1, &(pen.gl_vbo));  
-  pen.gl_vbo = 0;
+  else if(pen -> gl_vbo != 0)
+    glDeleteBuffers(1, &(pen -> gl_vbo));  
+  pen -> gl_vbo = 0;
 }
+return true;
 @
 \fimcodigo
 
@@ -7800,15 +7801,16 @@ struct pair_variable p;
 float temp_matrix[16];
 if(!eval_pair_primary(mf, cx, last_transformer -> next, end_expression, &p))
   return false;
-memcpy(temp_matrix, pen.gl_matrix, 16 * sizeof(float));
-pen.gl_matrix[0] = temp_matrix[0] + temp_matrix[3] * p.x;
-pen.gl_matrix[1] = temp_matrix[1] + temp_matrix[3] * p.y;
-pen.gl_matrix[4] = temp_matrix[4] + temp_matrix[7] * p.x;
-pen.gl_matrix[5] = temp_matrix[5] + temp_matrix[7] * p.y;
-pen.gl_matrix[8] = temp_matrix[8] + temp_matrix[11] * p.x;
-pen.gl_matrix[9] = temp_matrix[8] + temp_matrix[11] * p.y;
-pen.gl_matrix[12] = temp_matrix[12] + temp_matrix[15] * p.x;
-pen.gl_matrix[13] = temp_matrix[12] + temp_matrix[15] * p.y;
+memcpy(temp_matrix, pen -> gl_matrix, 16 * sizeof(float));
+pen -> gl_matrix[0] = temp_matrix[0] + temp_matrix[3] * p.x;
+pen -> gl_matrix[1] = temp_matrix[1] + temp_matrix[3] * p.y;
+pen -> gl_matrix[4] = temp_matrix[4] + temp_matrix[7] * p.x;
+pen -> gl_matrix[5] = temp_matrix[5] + temp_matrix[7] * p.y;
+pen -> gl_matrix[8] = temp_matrix[8] + temp_matrix[11] * p.x;
+pen -> gl_matrix[9] = temp_matrix[8] + temp_matrix[11] * p.y;
+pen -> gl_matrix[12] = temp_matrix[12] + temp_matrix[15] * p.x;
+pen -> gl_matrix[13] = temp_matrix[12] + temp_matrix[15] * p.y;
+return true;
 @
 \fimcodigo
 
@@ -7832,22 +7834,23 @@ struct numeric_variable a;
 float temp_matrix[16];
 if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &a))
   return false;
-memcpy(temp_matrix, pen.gl_matrix, 16 * sizeof(float));
-pen.gl_matrix[0] = temp_matrix[0] + a.value * temp_matrix[1];
-pen.gl_matrix[4] = temp_matrix[4] + a.value * temp_matrix[5];
-pen.gl_matrix[8] = temp_matrix[8] + a.value * temp_matrix[9];
-pen.gl_matrix[12] = temp_matrix[12] + a.value  * temp_matrix[13];
+memcpy(temp_matrix, pen -> gl_matrix, 16 * sizeof(float));
+pen -> gl_matrix[0] = temp_matrix[0] + a.value * temp_matrix[1];
+pen -> gl_matrix[4] = temp_matrix[4] + a.value * temp_matrix[5];
+pen -> gl_matrix[8] = temp_matrix[8] + a.value * temp_matrix[9];
+pen -> gl_matrix[12] = temp_matrix[12] + a.value  * temp_matrix[13];
 // Requires to retriangulate the pen:
-if(!(pen.flags & (FLAG_STRAIGHT | FLAG_NULL)) && a.value != 0.0){
-  if(pen.referenced != NULL){
-    recursive_copy_points(temporary_alloc, &(pen.format),
-                          pen.referenced -> format, true);
-    pen.referenced = NULL;
+if(!(pen -> flags & (FLAG_STRAIGHT | FLAG_NULL)) && a.value != 0.0){
+  if(pen -> referenced != NULL){
+    recursive_copy_points(temporary_alloc, &(pen -> format),
+                          pen -> referenced -> format, true);
+    pen -> referenced = NULL;
   }
-  else if(pen.gl_vbo != 0)
-    glDeleteBuffers(1, &(pen.gl_vbo));  
-  pen.gl_vbo = 0;
+  else if(pen -> gl_vbo != 0)
+    glDeleteBuffers(1, &(pen -> gl_vbo));  
+  pen -> gl_vbo = 0;
 }
+return true;
 @
 \fimcodigo
 
@@ -7870,22 +7873,23 @@ struct numeric_variable a;
 float temp_matrix[16];
 if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &a))
   return false;
-memcpy(temp_matrix, pen.gl_matrix, 16 * sizeof(float));
-pen.gl_matrix[0] = temp_matrix[0] * a.value;
-pen.gl_matrix[4] = temp_matrix[4] * a.value;
-pen.gl_matrix[8] = temp_matrix[8] * a.value;
-pen.gl_matrix[12] = temp_matrix[12] * a.value;
+memcpy(temp_matrix, pen -> gl_matrix, 16 * sizeof(float));
+pen -> gl_matrix[0] = temp_matrix[0] * a.value;
+pen -> gl_matrix[4] = temp_matrix[4] * a.value;
+pen -> gl_matrix[8] = temp_matrix[8] * a.value;
+pen -> gl_matrix[12] = temp_matrix[12] * a.value;
 // Requires to retriangulate the pen:
-if(!(pen.flags & (FLAG_STRAIGHT | FLAG_NULL)) && a.value != 1.0){
-  if(pen.referenced != NULL){
-    recursive_copy_points(temporary_alloc, &(pen.format),
-                          pen.referenced -> format, true);
-    pen.referenced = NULL;
+if(!(pen -> flags & (FLAG_STRAIGHT | FLAG_NULL)) && a.value != 1.0){
+  if(pen -> referenced != NULL){
+    recursive_copy_points(temporary_alloc, &(pen -> format),
+                          pen -> referenced -> format, true);
+    pen -> referenced = NULL;
   }
-  else if(pen.gl_vbo != 0)
-    glDeleteBuffers(1, &(pen.gl_vbo));  
-  pen.gl_vbo = 0;
+  else if(pen -> gl_vbo != 0)
+    glDeleteBuffers(1, &(pen -> gl_vbo));  
+  pen -> gl_vbo = 0;
 }
+return true;
 @
 \fimcodigo
 
@@ -7906,22 +7910,23 @@ struct numeric_variable a;
 float temp_matrix[16];
 if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &a))
   return false;
-memcpy(temp_matrix, pen.gl_matrix, 16 * sizeof(float));
-pen.gl_matrix[1] = temp_matrix[1] * a.value;
-pen.gl_matrix[5] = temp_matrix[5] * a.value;
-pen.gl_matrix[9] = temp_matrix[9] * a.value;
-pen.gl_matrix[13] = temp_matrix[13] * a.value;
+memcpy(temp_matrix, pen -> gl_matrix, 16 * sizeof(float));
+pen -> gl_matrix[1] = temp_matrix[1] * a.value;
+pen -> gl_matrix[5] = temp_matrix[5] * a.value;
+pen -> gl_matrix[9] = temp_matrix[9] * a.value;
+pen -> gl_matrix[13] = temp_matrix[13] * a.value;
 // Requires to retriangulate the pen:
-if(!(pen.flags & (FLAG_STRAIGHT | FLAG_NULL)) && a.value != 1.0){
-  if(pen.referenced != NULL){
-    recursive_copy_points(temporary_alloc, &(pen.format),
-                          pen.referenced -> format, true);
-    pen.referenced = NULL;
+if(!(pen -> flags & (FLAG_STRAIGHT | FLAG_NULL)) && a.value != 1.0){
+  if(pen -> referenced != NULL){
+    recursive_copy_points(temporary_alloc, &(pen -> format),
+                          pen -> referenced -> format, true);
+    pen -> referenced = NULL;
   }
-  else if(pen.gl_vbo != 0)
-    glDeleteBuffers(1, &(pen.gl_vbo));  
-  pen.gl_vbo = 0;
+  else if(pen -> gl_vbo != 0)
+    glDeleteBuffers(1, &(pen -> gl_vbo));  
+  pen -> gl_vbo = 0;
 }
+return true;
 @
 \fimcodigo
 
@@ -7949,25 +7954,26 @@ struct pair_variable p;
 float temp_matrix[16];
 if(!eval_pair_primary(mf, cx, last_transformer -> next, end_expression, &p))
   return false;
-memcpy(temp_matrix, pen.gl_matrix, 16 * sizeof(float));
-pen.gl_matrix[0] = temp_matrix[0] * p.x - temp_matrix[1] * p.y;
-pen.gl_matrix[1] = temp_matrix[0] * p.y + temp_matrix[1] * p.x;
-pen.gl_matrix[4] = temp_matrix[4] * p.x - temp_matrix[5] * p.y;
-pen.gl_matrix[5] = temp_matrix[4] * p.y + temp_matrix[5] * p.x;
-pen.gl_matrix[8] = temp_matrix[8] * p.x - temp_matrix[9] * p.y;
-pen.gl_matrix[9] = temp_matrix[8] * p.y + temp_matrix[9] * p.x;
-pen.gl_matrix[12] = temp_matrix[12] * p.x - temp_matrix[13] * p.y;
-pen.gl_matrix[13] = temp_matrix[12] * p.y + temp_matrix[13] * p.x;
-if(!(pen.flags & (FLAG_STRAIGHT | FLAG_NULL))){ // Requer retriangular a caneta:
-  if(pen.referenced != NULL){
-    recursive_copy_points(temporary_alloc, &(pen.format),
-                          pen.referenced -> format, true);
-    pen.referenced = NULL;
+memcpy(temp_matrix, pen -> gl_matrix, 16 * sizeof(float));
+pen -> gl_matrix[0] = temp_matrix[0] * p.x - temp_matrix[1] * p.y;
+pen -> gl_matrix[1] = temp_matrix[0] * p.y + temp_matrix[1] * p.x;
+pen -> gl_matrix[4] = temp_matrix[4] * p.x - temp_matrix[5] * p.y;
+pen -> gl_matrix[5] = temp_matrix[4] * p.y + temp_matrix[5] * p.x;
+pen -> gl_matrix[8] = temp_matrix[8] * p.x - temp_matrix[9] * p.y;
+pen -> gl_matrix[9] = temp_matrix[8] * p.y + temp_matrix[9] * p.x;
+pen -> gl_matrix[12] = temp_matrix[12] * p.x - temp_matrix[13] * p.y;
+pen -> gl_matrix[13] = temp_matrix[12] * p.y + temp_matrix[13] * p.x;
+if(!(pen -> flags & (FLAG_STRAIGHT | FLAG_NULL))){ // Requer retriangular a caneta:
+  if(pen -> referenced != NULL){
+    recursive_copy_points(temporary_alloc, &(pen -> format),
+                          pen -> referenced -> format, true);
+    pen -> referenced = NULL;
   }
-  else if(pen.gl_vbo != 0)
-    glDeleteBuffers(1, &(pen.gl_vbo));  
-  pen.gl_vbo = 0;
+  else if(pen -> gl_vbo != 0)
+    glDeleteBuffers(1, &(pen -> gl_vbo));  
+  pen -> gl_vbo = 0;
 }
+return true;
 @
 \fimcodigo
 
@@ -8032,10 +8038,10 @@ bool eval_pen_primary(struct metafont *mf, struct context *cx,
   else{
     if(begin_expression -> type == TYPE_OPEN_PARENTHESIS &&
       end_expression -> type == TYPE_CLOSE_PARENTHESIS){
-      //@<Pen Primary: Parenthesis@>
+      @<Pen Primary: Parenthesis@>
     }
     else if(begin_expression -> type == TYPE_MAKEPEN){
-      //@<Pen Primary: Custom Format@>
+      @<Pen Primary: Custom Format@>
     }
   }
 #if defined(W_DEBUG_METAFONT)
@@ -8060,14 +8066,14 @@ struct pen_variable *content = v -> var;
 if(content == NULL){
 #if defined(W_DEBUG_METAFONT)
   fprintf(stderr, "METAFONT: Error: %s:%d: Using unknown variable '%s'.\n",
-          mf -> file, begin_expression -> line, v -> name);
+          mf -> file, begin_expression -> line, v -> value);
 #endif
   return false;
 }
 if(content -> type != TYPE_T_PEN){
 #if defined(W_DEBUG_METAFONT)
   fprintf(stderr, "METAFONT: Error: %s:%d: Got non-pen variable in pen expression.\n",
-          mf -> file, begin_expression -> line, content -> type);
+          mf -> file, begin_expression -> line);
 #endif
   return false;
 }
@@ -8113,6 +8119,117 @@ result -> gl_matrix[1] = result -> gl_matrix[2] = result -> gl_matrix[3] =
 return true;
 @
 \fimcodigo
+
+Evaluate parenthesis requires to evaluate as a pen expression every
+token after the open parenthesis until the position before the closing
+of the parenthesis:
+
+\iniciocodigo
+@<Pen Primary: Parenthesis@>=
+struct generic_token *t = begin_expression -> next;
+DECLARE_NESTING_CONTROL();
+if(begin_expression -> next == end_expression){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Empty parenthesis.\n",
+          mf -> file, begin_expression -> line);
+#endif
+  return false;
+}
+while(t != NULL && t -> next != end_expression){
+  COUNT_NESTING(t);
+  t = t -> next;
+}
+return eval_pen_expression(mf, cx, begin_expression -> next, t, result);
+@
+\fimcodigo
+
+The last case of pen expression is when the user chooses a custom
+format for the pen. In this case, we should evaluate the path
+expression and create a new pen with that given format:
+
+\iniciocodigo
+@<Pen Primary: Custom Format@>=
+struct generic_token *p = begin_expression -> next;
+result -> format =
+        (struct path_variable *) temporary_alloc(sizeof(struct path_variable));
+if(result -> format == NULL){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Not enough memory.\n",
+          mf -> file, begin_expression -> line);
+#endif
+  return false;
+}
+if(!eval_path_primary(mf, cx, p, end_expression, result -> format))
+  return false;
+if(!(result -> format -> cyclic)){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr,
+          "METAFONT: Error: %s:%d: Using 'makepen' with non-cyclic path.\n",
+          mf -> file, begin_expression -> line);
+#endif
+  return false;
+}
+result -> flags = read_flags(result -> format); // To be implemented
+result -> referenced = NULL;
+result -> gl_vbo = 0;
+result -> number_of_vertices = 0;
+result -> gl_matrix[0] = result -> gl_matrix[5] = result -> gl_matrix[10] =
+                         result -> gl_matrix[15] = 1.0; 
+result -> gl_matrix[1] = result -> gl_matrix[2] = result -> gl_matrix[3] = 
+                         result -> gl_matrix[4] = result -> gl_matrix[6] =
+                         result -> gl_matrix[7] = result -> gl_matrix[8] = 
+                         result -> gl_matrix[9] = result -> gl_matrix[11] =
+                         result -> gl_matrix[12] = result -> gl_matrix[13] =
+                         result -> gl_matrix[14] = 0.0;
+return true;
+@
+\fimcodigo
+
+To the functioon above work correctly, we need a function that walks
+over the points in a path and return the flags that a pen with that
+format would have:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+int read_flags(struct path_variable *path);
+@
+\fimcodigo
+
+We already know that the pen never will be circular, as perfect
+circles cannot be expressed using Beziér curves. We will verify only
+if the pen is straight or convex:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+int read_flags(struct path_variable *path){
+  int i;
+  int flag = FLAG_CONVEX | FLAG_STRAIGHT;
+  for(i = 0; i < path -> total_length - 1; i ++){
+    struct path_points *current, *next;
+    current = get_point(path, i);
+    next = get_point(path, i + 1);
+    if(flag & FLAG_STRAIGHT){
+      // It is straight if the auxiliary and control points are colinear.
+      // They are colinear if they form a triangle with area zero (or
+      // sufficiently next to zero):
+      int area =  current -> x * (current -> u_y - next -> y) +
+                  current -> u_x * (next -> y - current -> y) +
+                  next -> x * (current -> y - current -> u_y);
+      if(area < 0.00002)
+        flag -= FLAG_STRAIGHT;
+      area =  current -> x * (current -> v_y - next -> y) +
+              current -> v_x * (next -> y - current -> y) +
+              next -> x * (current -> y - current -> v_y);
+      if(area < 0.00002)
+        flag -= FLAG_STRAIGHT;        
+    }
+  }
+  return flag;
+}
+@
+\fimcodigo
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

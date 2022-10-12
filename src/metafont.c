@@ -246,7 +246,7 @@ char*value;
 #define TYPE_PRECONTROL        63 
 #define TYPE_POSTCONTROL       64 
 /*:284*//*305:*/
-#line 8093 "weaver-interface-metafont.tex"
+#line 8099 "weaver-interface-metafont.tex"
 
 #define TYPE_NULLPEN        65 
 #define TYPE_PENCIRCLE      66 
@@ -397,7 +397,7 @@ static char*list_of_keywords[]= {
 
 "point","precontrol","postcontrol",
 /*:285*//*306:*/
-#line 8104 "weaver-interface-metafont.tex"
+#line 8110 "weaver-interface-metafont.tex"
 
 "nullpen","pencircle","makepen",
 /*:306*/
@@ -651,13 +651,17 @@ struct generic_token*begin_expression,
 struct generic_token*end_token_list,
 struct pen_variable*result);
 /*:296*//*307:*/
-#line 8112 "weaver-interface-metafont.tex"
+#line 8118 "weaver-interface-metafont.tex"
 
 bool eval_pen_primary(struct metafont*mf,struct context*cx,
 struct generic_token*begin_expression,
 struct generic_token*end_expression,
 struct pen_variable*result);
-/*:307*/
+/*:307*//*314:*/
+#line 8301 "weaver-interface-metafont.tex"
+
+int read_flags(struct path_variable*path);
+/*:314*/
 #line 221 "weaver-interface-metafont.tex"
 
 /*13:*/
@@ -1710,9 +1714,9 @@ assign_pen_variable(mf,(struct pen_variable*)var->var,
 var= (struct symbolic_token*)(var->next);
 var= (struct symbolic_token*)(var->next);
 }
-if(temporary_free!=NULL&&result.format!=NULL&&
-result.referenced==NULL)
-path_recursive_free(temporary_free,result.format,true);
+
+
+
 if(result.gl_vbo!=0&&result.referenced==NULL)
 glDeleteBuffers(1,&(result.gl_vbo));
 }
@@ -5019,7 +5023,7 @@ return eval_pen_secondary(mf,cx,begin_expression,end_token_list,result);
 bool eval_pen_secondary(struct metafont*mf,struct context*cx,
 struct generic_token*begin_expression,
 struct generic_token*end_expression,
-struct pen_variable*result){
+struct pen_variable*pen){
 DECLARE_NESTING_CONTROL();
 struct generic_token*p,*prev= NULL,*last_transformer= NULL,
 *before_last_transformer= begin_expression;
@@ -5040,14 +5044,13 @@ else
 p= NULL;
 }while(p!=NULL);
 if(last_transformer==NULL)
-return eval_pen_primary(mf,cx,begin_expression,end_expression,result);
+return eval_pen_primary(mf,cx,begin_expression,end_expression,pen);
 else{
-struct pen_variable pen;
-if(!eval_pen_secondary(mf,cx,begin_expression,before_last_transformer,&pen))
+if(!eval_pen_secondary(mf,cx,begin_expression,before_last_transformer,pen))
 return false;
 if(last_transformer->type==TYPE_ROTATED){
 /*298:*/
-#line 7819 "weaver-interface-metafont.tex"
+#line 7818 "weaver-interface-metafont.tex"
 
 struct numeric_variable r;
 float temp_matrix[16];
@@ -5057,17 +5060,18 @@ return false;
 rotation= 0.0174533*r.value;
 sin_theta= sin(rotation);
 cos_theta= cos(rotation);
-memcpy(temp_matrix,pen.gl_matrix,16*sizeof(float));
-pen.gl_matrix[0]= temp_matrix[0]*cos_theta-temp_matrix[1]*sin_theta;
-pen.gl_matrix[1]= temp_matrix[0]*sin_theta+temp_matrix[1]*cos_theta;
-pen.gl_matrix[4]= temp_matrix[4]*cos_theta-temp_matrix[5]*sin_theta;
-pen.gl_matrix[5]= temp_matrix[4]*sin_theta+temp_matrix[5]*cos_theta;
-pen.gl_matrix[8]= temp_matrix[8]*cos_theta-temp_matrix[9]*sin_theta;
-pen.gl_matrix[9]= temp_matrix[8]*sin_theta+temp_matrix[9]*cos_theta;
-pen.gl_matrix[12]= temp_matrix[12]*cos_theta-temp_matrix[13]*sin_theta;
-pen.gl_matrix[13]= temp_matrix[12]*sin_theta+temp_matrix[13]*cos_theta;
+memcpy(temp_matrix,pen->gl_matrix,16*sizeof(float));
+pen->gl_matrix[0]= temp_matrix[0]*cos_theta-temp_matrix[1]*sin_theta;
+pen->gl_matrix[1]= temp_matrix[0]*sin_theta+temp_matrix[1]*cos_theta;
+pen->gl_matrix[4]= temp_matrix[4]*cos_theta-temp_matrix[5]*sin_theta;
+pen->gl_matrix[5]= temp_matrix[4]*sin_theta+temp_matrix[5]*cos_theta;
+pen->gl_matrix[8]= temp_matrix[8]*cos_theta-temp_matrix[9]*sin_theta;
+pen->gl_matrix[9]= temp_matrix[8]*sin_theta+temp_matrix[9]*cos_theta;
+pen->gl_matrix[12]= temp_matrix[12]*cos_theta-temp_matrix[13]*sin_theta;
+pen->gl_matrix[13]= temp_matrix[12]*sin_theta+temp_matrix[13]*cos_theta;
+return true;
 /*:298*/
-#line 7766 "weaver-interface-metafont.tex"
+#line 7765 "weaver-interface-metafont.tex"
 
 }
 else if(last_transformer->type==TYPE_SCALED){
@@ -5078,164 +5082,170 @@ struct numeric_variable a;
 float temp_matrix[16];
 if(!eval_numeric_primary(mf,cx,last_transformer->next,end_expression,&a))
 return false;
-memcpy(temp_matrix,pen.gl_matrix,16*sizeof(float));
-pen.gl_matrix[0]= temp_matrix[0]*a.value;
-pen.gl_matrix[1]= temp_matrix[1]*a.value;
-pen.gl_matrix[4]= temp_matrix[4]*a.value;
-pen.gl_matrix[5]= temp_matrix[5]*a.value;
-pen.gl_matrix[8]= temp_matrix[8]*a.value;
-pen.gl_matrix[9]= temp_matrix[9]*a.value;
-pen.gl_matrix[12]= temp_matrix[12]*a.value;
-pen.gl_matrix[13]= temp_matrix[13]*a.value;
+memcpy(temp_matrix,pen->gl_matrix,16*sizeof(float));
+pen->gl_matrix[0]= temp_matrix[0]*a.value;
+pen->gl_matrix[1]= temp_matrix[1]*a.value;
+pen->gl_matrix[4]= temp_matrix[4]*a.value;
+pen->gl_matrix[5]= temp_matrix[5]*a.value;
+pen->gl_matrix[8]= temp_matrix[8]*a.value;
+pen->gl_matrix[9]= temp_matrix[9]*a.value;
+pen->gl_matrix[12]= temp_matrix[12]*a.value;
+pen->gl_matrix[13]= temp_matrix[13]*a.value;
 
-if(!(pen.flags&(FLAG_STRAIGHT|FLAG_NULL))&&a.value!=1.0){
-if(pen.referenced!=NULL){
-recursive_copy_points(temporary_alloc,&(pen.format),
-pen.referenced->format,true);
-pen.referenced= NULL;
+if(!(pen->flags&(FLAG_STRAIGHT|FLAG_NULL))&&a.value!=1.0){
+if(pen->referenced!=NULL){
+recursive_copy_points(temporary_alloc,&(pen->format),
+pen->referenced->format,true);
+pen->referenced= NULL;
 }
-else if(pen.gl_vbo!=0)
-glDeleteBuffers(1,&(pen.gl_vbo));
-pen.gl_vbo= 0;
+else if(pen->gl_vbo!=0)
+glDeleteBuffers(1,&(pen->gl_vbo));
+pen->gl_vbo= 0;
 }
+return true;
 /*:299*/
-#line 7769 "weaver-interface-metafont.tex"
+#line 7768 "weaver-interface-metafont.tex"
 
 }
 else if(last_transformer->type==TYPE_SHIFTED){
 /*300:*/
-#line 7901 "weaver-interface-metafont.tex"
+#line 7902 "weaver-interface-metafont.tex"
 
 struct pair_variable p;
 float temp_matrix[16];
 if(!eval_pair_primary(mf,cx,last_transformer->next,end_expression,&p))
 return false;
-memcpy(temp_matrix,pen.gl_matrix,16*sizeof(float));
-pen.gl_matrix[0]= temp_matrix[0]+temp_matrix[3]*p.x;
-pen.gl_matrix[1]= temp_matrix[1]+temp_matrix[3]*p.y;
-pen.gl_matrix[4]= temp_matrix[4]+temp_matrix[7]*p.x;
-pen.gl_matrix[5]= temp_matrix[5]+temp_matrix[7]*p.y;
-pen.gl_matrix[8]= temp_matrix[8]+temp_matrix[11]*p.x;
-pen.gl_matrix[9]= temp_matrix[8]+temp_matrix[11]*p.y;
-pen.gl_matrix[12]= temp_matrix[12]+temp_matrix[15]*p.x;
-pen.gl_matrix[13]= temp_matrix[12]+temp_matrix[15]*p.y;
+memcpy(temp_matrix,pen->gl_matrix,16*sizeof(float));
+pen->gl_matrix[0]= temp_matrix[0]+temp_matrix[3]*p.x;
+pen->gl_matrix[1]= temp_matrix[1]+temp_matrix[3]*p.y;
+pen->gl_matrix[4]= temp_matrix[4]+temp_matrix[7]*p.x;
+pen->gl_matrix[5]= temp_matrix[5]+temp_matrix[7]*p.y;
+pen->gl_matrix[8]= temp_matrix[8]+temp_matrix[11]*p.x;
+pen->gl_matrix[9]= temp_matrix[8]+temp_matrix[11]*p.y;
+pen->gl_matrix[12]= temp_matrix[12]+temp_matrix[15]*p.x;
+pen->gl_matrix[13]= temp_matrix[12]+temp_matrix[15]*p.y;
+return true;
 /*:300*/
-#line 7772 "weaver-interface-metafont.tex"
+#line 7771 "weaver-interface-metafont.tex"
 
 }
 else if(last_transformer->type==TYPE_SLANTED){
 /*301:*/
-#line 7933 "weaver-interface-metafont.tex"
+#line 7935 "weaver-interface-metafont.tex"
 
 struct numeric_variable a;
 float temp_matrix[16];
 if(!eval_numeric_primary(mf,cx,last_transformer->next,end_expression,&a))
 return false;
-memcpy(temp_matrix,pen.gl_matrix,16*sizeof(float));
-pen.gl_matrix[0]= temp_matrix[0]+a.value*temp_matrix[1];
-pen.gl_matrix[4]= temp_matrix[4]+a.value*temp_matrix[5];
-pen.gl_matrix[8]= temp_matrix[8]+a.value*temp_matrix[9];
-pen.gl_matrix[12]= temp_matrix[12]+a.value*temp_matrix[13];
+memcpy(temp_matrix,pen->gl_matrix,16*sizeof(float));
+pen->gl_matrix[0]= temp_matrix[0]+a.value*temp_matrix[1];
+pen->gl_matrix[4]= temp_matrix[4]+a.value*temp_matrix[5];
+pen->gl_matrix[8]= temp_matrix[8]+a.value*temp_matrix[9];
+pen->gl_matrix[12]= temp_matrix[12]+a.value*temp_matrix[13];
 
-if(!(pen.flags&(FLAG_STRAIGHT|FLAG_NULL))&&a.value!=0.0){
-if(pen.referenced!=NULL){
-recursive_copy_points(temporary_alloc,&(pen.format),
-pen.referenced->format,true);
-pen.referenced= NULL;
+if(!(pen->flags&(FLAG_STRAIGHT|FLAG_NULL))&&a.value!=0.0){
+if(pen->referenced!=NULL){
+recursive_copy_points(temporary_alloc,&(pen->format),
+pen->referenced->format,true);
+pen->referenced= NULL;
 }
-else if(pen.gl_vbo!=0)
-glDeleteBuffers(1,&(pen.gl_vbo));
-pen.gl_vbo= 0;
+else if(pen->gl_vbo!=0)
+glDeleteBuffers(1,&(pen->gl_vbo));
+pen->gl_vbo= 0;
 }
+return true;
 /*:301*/
-#line 7775 "weaver-interface-metafont.tex"
+#line 7774 "weaver-interface-metafont.tex"
 
 }
 else if(last_transformer->type==TYPE_XSCALED){
 /*302:*/
-#line 7972 "weaver-interface-metafont.tex"
+#line 7975 "weaver-interface-metafont.tex"
 
 struct numeric_variable a;
 float temp_matrix[16];
 if(!eval_numeric_primary(mf,cx,last_transformer->next,end_expression,&a))
 return false;
-memcpy(temp_matrix,pen.gl_matrix,16*sizeof(float));
-pen.gl_matrix[0]= temp_matrix[0]*a.value;
-pen.gl_matrix[4]= temp_matrix[4]*a.value;
-pen.gl_matrix[8]= temp_matrix[8]*a.value;
-pen.gl_matrix[12]= temp_matrix[12]*a.value;
+memcpy(temp_matrix,pen->gl_matrix,16*sizeof(float));
+pen->gl_matrix[0]= temp_matrix[0]*a.value;
+pen->gl_matrix[4]= temp_matrix[4]*a.value;
+pen->gl_matrix[8]= temp_matrix[8]*a.value;
+pen->gl_matrix[12]= temp_matrix[12]*a.value;
 
-if(!(pen.flags&(FLAG_STRAIGHT|FLAG_NULL))&&a.value!=1.0){
-if(pen.referenced!=NULL){
-recursive_copy_points(temporary_alloc,&(pen.format),
-pen.referenced->format,true);
-pen.referenced= NULL;
+if(!(pen->flags&(FLAG_STRAIGHT|FLAG_NULL))&&a.value!=1.0){
+if(pen->referenced!=NULL){
+recursive_copy_points(temporary_alloc,&(pen->format),
+pen->referenced->format,true);
+pen->referenced= NULL;
 }
-else if(pen.gl_vbo!=0)
-glDeleteBuffers(1,&(pen.gl_vbo));
-pen.gl_vbo= 0;
+else if(pen->gl_vbo!=0)
+glDeleteBuffers(1,&(pen->gl_vbo));
+pen->gl_vbo= 0;
 }
+return true;
 /*:302*/
-#line 7778 "weaver-interface-metafont.tex"
+#line 7777 "weaver-interface-metafont.tex"
 
 }
 else if(last_transformer->type==TYPE_YSCALED){
 /*303:*/
-#line 8008 "weaver-interface-metafont.tex"
+#line 8012 "weaver-interface-metafont.tex"
 
 struct numeric_variable a;
 float temp_matrix[16];
 if(!eval_numeric_primary(mf,cx,last_transformer->next,end_expression,&a))
 return false;
-memcpy(temp_matrix,pen.gl_matrix,16*sizeof(float));
-pen.gl_matrix[1]= temp_matrix[1]*a.value;
-pen.gl_matrix[5]= temp_matrix[5]*a.value;
-pen.gl_matrix[9]= temp_matrix[9]*a.value;
-pen.gl_matrix[13]= temp_matrix[13]*a.value;
+memcpy(temp_matrix,pen->gl_matrix,16*sizeof(float));
+pen->gl_matrix[1]= temp_matrix[1]*a.value;
+pen->gl_matrix[5]= temp_matrix[5]*a.value;
+pen->gl_matrix[9]= temp_matrix[9]*a.value;
+pen->gl_matrix[13]= temp_matrix[13]*a.value;
 
-if(!(pen.flags&(FLAG_STRAIGHT|FLAG_NULL))&&a.value!=1.0){
-if(pen.referenced!=NULL){
-recursive_copy_points(temporary_alloc,&(pen.format),
-pen.referenced->format,true);
-pen.referenced= NULL;
+if(!(pen->flags&(FLAG_STRAIGHT|FLAG_NULL))&&a.value!=1.0){
+if(pen->referenced!=NULL){
+recursive_copy_points(temporary_alloc,&(pen->format),
+pen->referenced->format,true);
+pen->referenced= NULL;
 }
-else if(pen.gl_vbo!=0)
-glDeleteBuffers(1,&(pen.gl_vbo));
-pen.gl_vbo= 0;
+else if(pen->gl_vbo!=0)
+glDeleteBuffers(1,&(pen->gl_vbo));
+pen->gl_vbo= 0;
 }
+return true;
 /*:303*/
-#line 7781 "weaver-interface-metafont.tex"
+#line 7780 "weaver-interface-metafont.tex"
 
 }
 else if(last_transformer->type==TYPE_ZSCALED){
 /*304:*/
-#line 8052 "weaver-interface-metafont.tex"
+#line 8057 "weaver-interface-metafont.tex"
 
 struct pair_variable p;
 float temp_matrix[16];
 if(!eval_pair_primary(mf,cx,last_transformer->next,end_expression,&p))
 return false;
-memcpy(temp_matrix,pen.gl_matrix,16*sizeof(float));
-pen.gl_matrix[0]= temp_matrix[0]*p.x-temp_matrix[1]*p.y;
-pen.gl_matrix[1]= temp_matrix[0]*p.y+temp_matrix[1]*p.x;
-pen.gl_matrix[4]= temp_matrix[4]*p.x-temp_matrix[5]*p.y;
-pen.gl_matrix[5]= temp_matrix[4]*p.y+temp_matrix[5]*p.x;
-pen.gl_matrix[8]= temp_matrix[8]*p.x-temp_matrix[9]*p.y;
-pen.gl_matrix[9]= temp_matrix[8]*p.y+temp_matrix[9]*p.x;
-pen.gl_matrix[12]= temp_matrix[12]*p.x-temp_matrix[13]*p.y;
-pen.gl_matrix[13]= temp_matrix[12]*p.y+temp_matrix[13]*p.x;
-if(!(pen.flags&(FLAG_STRAIGHT|FLAG_NULL))){
-if(pen.referenced!=NULL){
-recursive_copy_points(temporary_alloc,&(pen.format),
-pen.referenced->format,true);
-pen.referenced= NULL;
+memcpy(temp_matrix,pen->gl_matrix,16*sizeof(float));
+pen->gl_matrix[0]= temp_matrix[0]*p.x-temp_matrix[1]*p.y;
+pen->gl_matrix[1]= temp_matrix[0]*p.y+temp_matrix[1]*p.x;
+pen->gl_matrix[4]= temp_matrix[4]*p.x-temp_matrix[5]*p.y;
+pen->gl_matrix[5]= temp_matrix[4]*p.y+temp_matrix[5]*p.x;
+pen->gl_matrix[8]= temp_matrix[8]*p.x-temp_matrix[9]*p.y;
+pen->gl_matrix[9]= temp_matrix[8]*p.y+temp_matrix[9]*p.x;
+pen->gl_matrix[12]= temp_matrix[12]*p.x-temp_matrix[13]*p.y;
+pen->gl_matrix[13]= temp_matrix[12]*p.y+temp_matrix[13]*p.x;
+if(!(pen->flags&(FLAG_STRAIGHT|FLAG_NULL))){
+if(pen->referenced!=NULL){
+recursive_copy_points(temporary_alloc,&(pen->format),
+pen->referenced->format,true);
+pen->referenced= NULL;
 }
-else if(pen.gl_vbo!=0)
-glDeleteBuffers(1,&(pen.gl_vbo));
-pen.gl_vbo= 0;
+else if(pen->gl_vbo!=0)
+glDeleteBuffers(1,&(pen->gl_vbo));
+pen->gl_vbo= 0;
 }
+return true;
 /*:304*/
-#line 7784 "weaver-interface-metafont.tex"
+#line 7783 "weaver-interface-metafont.tex"
 
 }
 #if defined(W_DEBUG_METAFONT)
@@ -5246,7 +5256,7 @@ return false;
 }
 }
 /*:297*//*308:*/
-#line 8123 "weaver-interface-metafont.tex"
+#line 8129 "weaver-interface-metafont.tex"
 
 bool eval_pen_primary(struct metafont*mf,struct context*cx,
 struct generic_token*begin_expression,
@@ -5255,14 +5265,14 @@ struct pen_variable*result){
 if(begin_expression==end_expression){
 if(begin_expression->type==TYPE_SYMBOLIC){
 /*309:*/
-#line 8164 "weaver-interface-metafont.tex"
+#line 8170 "weaver-interface-metafont.tex"
 
 struct symbolic_token*v= (struct symbolic_token*)begin_expression;
 struct pen_variable*content= v->var;
 if(content==NULL){
 #if defined(W_DEBUG_METAFONT)
 fprintf(stderr,"METAFONT: Error: %s:%d: Using unknown variable '%s'.\n",
-mf->file,begin_expression->line,v->name);
+mf->file,begin_expression->line,v->value);
 #endif
 return false;
 }
@@ -5277,12 +5287,12 @@ memcpy(result,content,sizeof(struct pen_variable));
 result->referenced= content;
 return true;
 /*:309*/
-#line 8130 "weaver-interface-metafont.tex"
+#line 8136 "weaver-interface-metafont.tex"
 
 }
 else if(begin_expression->type==TYPE_NULLPEN){
 /*310:*/
-#line 8192 "weaver-interface-metafont.tex"
+#line 8198 "weaver-interface-metafont.tex"
 
 result->format= NULL;
 result->flags= FLAG_NULL;
@@ -5290,12 +5300,12 @@ result->referenced= false;
 result->gl_vbo= 0;
 return true;
 /*:310*/
-#line 8133 "weaver-interface-metafont.tex"
+#line 8139 "weaver-interface-metafont.tex"
 
 }
 else if(begin_expression->type==TYPE_PENCIRCLE){
 /*311:*/
-#line 8206 "weaver-interface-metafont.tex"
+#line 8212 "weaver-interface-metafont.tex"
 
 result->format= NULL;
 result->flags= FLAG_CONVEX|FLAG_CIRCULAR;
@@ -5312,16 +5322,73 @@ result->gl_matrix[12]= result->gl_matrix[13]=
 result->gl_matrix[14]= 0.0;
 return true;
 /*:311*/
-#line 8136 "weaver-interface-metafont.tex"
+#line 8142 "weaver-interface-metafont.tex"
 
 }
 }
 else{
 if(begin_expression->type==TYPE_OPEN_PARENTHESIS&&
 end_expression->type==TYPE_CLOSE_PARENTHESIS){
+/*312:*/
+#line 8235 "weaver-interface-metafont.tex"
+
+struct generic_token*t= begin_expression->next;
+DECLARE_NESTING_CONTROL();
+if(begin_expression->next==end_expression){
+#if defined(W_DEBUG_METAFONT)
+fprintf(stderr,"METAFONT: Error: %s:%d: Empty parenthesis.\n",
+mf->file,begin_expression->line);
+#endif
+return false;
+}
+while(t!=NULL&&t->next!=end_expression){
+COUNT_NESTING(t);
+t= t->next;
+}
+return eval_pen_expression(mf,cx,begin_expression->next,t,result);
+/*:312*/
+#line 8148 "weaver-interface-metafont.tex"
 
 }
 else if(begin_expression->type==TYPE_MAKEPEN){
+/*313:*/
+#line 8259 "weaver-interface-metafont.tex"
+
+struct generic_token*p= begin_expression->next;
+result->format= 
+(struct path_variable*)temporary_alloc(sizeof(struct path_variable));
+if(result->format==NULL){
+#if defined(W_DEBUG_METAFONT)
+fprintf(stderr,"METAFONT: Error: %s:%d: Not enough memory.\n",
+mf->file,begin_expression->line);
+#endif
+return false;
+}
+if(!eval_path_primary(mf,cx,p,end_expression,result->format))
+return false;
+if(!(result->format->cyclic)){
+#if defined(W_DEBUG_METAFONT)
+fprintf(stderr,
+"METAFONT: Error: %s:%d: Using 'makepen' with non-cyclic path.\n",
+mf->file,begin_expression->line);
+#endif
+return false;
+}
+result->flags= read_flags(result->format);
+result->referenced= NULL;
+result->gl_vbo= 0;
+result->number_of_vertices= 0;
+result->gl_matrix[0]= result->gl_matrix[5]= result->gl_matrix[10]= 
+result->gl_matrix[15]= 1.0;
+result->gl_matrix[1]= result->gl_matrix[2]= result->gl_matrix[3]= 
+result->gl_matrix[4]= result->gl_matrix[6]= 
+result->gl_matrix[7]= result->gl_matrix[8]= 
+result->gl_matrix[9]= result->gl_matrix[11]= 
+result->gl_matrix[12]= result->gl_matrix[13]= 
+result->gl_matrix[14]= 0.0;
+return true;
+/*:313*/
+#line 8151 "weaver-interface-metafont.tex"
 
 }
 }
@@ -5331,7 +5398,35 @@ mf->file,begin_expression->line);
 #endif
 return false;
 }
-/*:308*/
+/*:308*//*315:*/
+#line 8311 "weaver-interface-metafont.tex"
+
+int read_flags(struct path_variable*path){
+int i;
+int flag= FLAG_CONVEX|FLAG_STRAIGHT;
+for(i= 0;i<path->total_length-1;i++){
+struct path_points*current,*next;
+current= get_point(path,i);
+next= get_point(path,i+1);
+if(flag&FLAG_STRAIGHT){
+
+
+
+int area= current->x*(current->u_y-next->y)+
+current->u_x*(next->y-current->y)+
+next->x*(current->y-current->u_y);
+if(area<0.00002)
+flag-= FLAG_STRAIGHT;
+area= current->x*(current->v_y-next->y)+
+current->v_x*(next->y-current->y)+
+next->x*(current->y-current->v_y);
+if(area<0.00002)
+flag-= FLAG_STRAIGHT;
+}
+}
+return flag;
+}
+/*:315*/
 #line 222 "weaver-interface-metafont.tex"
 
 /*8:*/

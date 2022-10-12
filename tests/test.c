@@ -945,8 +945,8 @@ void test_pen_expressions(void){
   struct metafont *mf;
   struct context *cx;
   bool ret;
-  struct named_variable *p1, *p2, *p3;
-  struct pen_variable *pen_p1, *pen_p2, *pen_p3;
+  struct named_variable *p1, *p2, *p3, *p4;
+  struct pen_variable *pen_p1, *pen_p2, *pen_p3, *pen_p4;
   mf = init_metafont(malloc, free, "tests/pen_expressions.mf");
   cx = init_context();
   void *p = lexer(mf, malloc, free, "tests/pen_expressions.mf");
@@ -954,9 +954,11 @@ void test_pen_expressions(void){
   p1 = (struct named_variable *) mf -> named_variables;
   p2 = p1 -> next;
   p3 = p2 -> next;
+  p4 = p3 -> next;
   pen_p1 = (struct pen_variable *) p1 -> var;
   pen_p2 = (struct pen_variable *) p2 -> var;
   pen_p3 = (struct pen_variable *) p3 -> var;
+  pen_p4 = (struct pen_variable *) p4 -> var;
   assert("Interpreting program with pen expressions", ret);
   assert("Assigning pen variable",
 	 pen_p1 -> format == NULL &&
@@ -973,6 +975,27 @@ void test_pen_expressions(void){
 	 pen_p3 -> flags == (FLAG_CONVEX | FLAG_CIRCULAR) &&
 	 pen_p3 -> referenced == NULL &&
 	 pen_p3 -> number_of_vertices == 0);
+  assert("Pen expression with parenthesis",
+	 pen_p4 -> format == NULL &&
+	 pen_p4 -> flags == (FLAG_CONVEX | FLAG_CIRCULAR) &&
+	 pen_p4 -> referenced == NULL &&
+	 pen_p4 -> number_of_vertices == 0 &&
+	 ALMOST_EQUAL(pen_p4 -> gl_matrix[0], 1.0) &&
+	 ALMOST_EQUAL(pen_p4 -> gl_matrix[1], 0.0) &&
+	 ALMOST_EQUAL(pen_p4 -> gl_matrix[2], 0.0) &&
+	 ALMOST_EQUAL(pen_p4 -> gl_matrix[3], 0.0) &&
+	 ALMOST_EQUAL(pen_p4 -> gl_matrix[4], 0.0) &&
+	 ALMOST_EQUAL(pen_p4 -> gl_matrix[5], 1.0) &&
+	 ALMOST_EQUAL(pen_p4 -> gl_matrix[6], 0.0) &&
+	 ALMOST_EQUAL(pen_p4 -> gl_matrix[7], 0.0) &&
+	 ALMOST_EQUAL(pen_p4 -> gl_matrix[8], 0.0) &&
+	 ALMOST_EQUAL(pen_p4 -> gl_matrix[9], 0.0) &&
+	 ALMOST_EQUAL(pen_p4 -> gl_matrix[10], 1.0) &&
+	 ALMOST_EQUAL(pen_p4 -> gl_matrix[11], 0.0) &&
+	 ALMOST_EQUAL(pen_p4 -> gl_matrix[12], 0.0) &&
+	 ALMOST_EQUAL(pen_p4 -> gl_matrix[13], 0.0) &&
+	 ALMOST_EQUAL(pen_p4 -> gl_matrix[14], 0.0) &&
+	 ALMOST_EQUAL(pen_p4 -> gl_matrix[15], 1.0));
   free_token_list(free, p);
   destroy_metafont(mf);
   destroy_context(cx);

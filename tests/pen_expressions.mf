@@ -1,10 +1,13 @@
 % To test pen expressions
 % This program should work and be accepted.
 
-pen p1, p2, p3;
+pen p1, p2, p3, p4;
+pen penrazor;
 
 p1 = pensquare;
 p2 = nullpen;
 p3 = pencircle;
+p4 = (p3 rotated 180) rotated 180;
+penrazor = makepen ((-.5,0)--(.5,0)--cycle);
 
 end
