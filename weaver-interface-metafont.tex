@@ -8311,7 +8311,7 @@ ela é reta ou convexa percorrendo os seus pontos:
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
 int read_flags(struct path_variable *path){
-  int i;
+  int i, positive_cross_product = -1;
   int flag = FLAG_CONVEX | FLAG_STRAIGHT;
   for(i = 0; i < path -> total_length - 1; i ++){
     struct path_points *current, *next;
@@ -8330,7 +8330,47 @@ int read_flags(struct path_variable *path){
               current -> v_x * (next -> y - current -> y) +
               next -> x * (current -> y - current -> v_y);
       if(area < 0.00002)
-        flag -= FLAG_STRAIGHT;        
+        flag -= FLAG_STRAIGHT;
+    }
+    if(flag & FLAG_CONVEX){
+      // Ela é convexa somente se o componente z do produto vetorial dos
+      // vetores formados pelos pontos de extremidade e controle na ordem
+      // de desenho são todos ou não-positivos ou não-negativos.
+      int j;
+      double d1_x, d1_y, d2_x, d2_y, z_cross_product;
+      double p1_x, p1_y, p2_x, p2_y, p3_x, p3_y; // Pontos
+      for(j = 0; j < 3; j ++){
+        switch(j){
+          case 0:
+            p1_x = current -> x; p1_y = current -> y;
+            p2_x = current -> u_x; p2_y = current -> u_y;
+            p3_x = current -> v_x; p3_y = current -> v_y;
+            break;
+          case 1:
+            p1_x = p2_x; p1_y = p2_y;
+            p2_x = p3_x; p2_y = p3_y;
+            p3_x = next -> x; p3_y = next -> y;
+            break;
+          default:
+            p1_x = p2_x; p1_y = p2_y;
+            p2_x = p3_x; p2_y = p3_y;
+            p3_x = next -> u_x; p3_y = next -> u_y;
+            break;
+        }
+        d1_x = p2_x - p1_x;
+        d1_y = p2_y - p1_y;
+        d2_x = p3_x - p2_x;
+        d2_y = p3_y - p2_y;
+        z_cross_product = d1_x * d2_y - d1_y * d2_x;
+        if(z_cross_product > 0.00002 || z_cross_product < -0.00002){
+          if(positive_cross_product == -1)
+            positive_cross_product = (z_cross_product > 0);
+          else if((z_cross_product > 0) != positive_cross_product){
+            flag -= FLAG_CONVEX;
+            break;
+          }
+        }
+      }
     }
   }
   return flag;

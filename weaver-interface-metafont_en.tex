@@ -8202,7 +8202,7 @@ if the pen is straight or convex:
 \iniciocodigo
 @<Auxiliary Local Functions (metafont.c)@>+=
 int read_flags(struct path_variable *path){
-  int i;
+  int i, positive_cross_product = -1;
   int flag = FLAG_CONVEX | FLAG_STRAIGHT;
   for(i = 0; i < path -> total_length - 1; i ++){
     struct path_points *current, *next;
@@ -8222,6 +8222,46 @@ int read_flags(struct path_variable *path){
               next -> x * (current -> y - current -> v_y);
       if(area < 0.00002)
         flag -= FLAG_STRAIGHT;        
+    }
+    if(flag & FLAG_CONVEX){
+      // It is convex only if the z component of the cross product of vectors
+      // composed by the extremity and control points in the drawing order
+      // is always non-negative or always non-positive
+      int j;
+      double d1_x, d1_y, d2_x, d2_y, z_cross_product;
+      double p1_x, p1_y, p2_x, p2_y, p3_x, p3_y; // Pontos
+      for(j = 0; j < 3; j ++){
+        switch(j){
+          case 0:
+            p1_x = current -> x; p1_y = current -> y;
+            p2_x = current -> u_x; p2_y = current -> u_y;
+            p3_x = current -> v_x; p3_y = current -> v_y;
+            break;
+          case 1:
+            p1_x = p2_x; p1_y = p2_y;
+            p2_x = p3_x; p2_y = p3_y;
+            p3_x = next -> x; p3_y = next -> y;
+            break;
+          default:
+            p1_x = p2_x; p1_y = p2_y;
+            p2_x = p3_x; p2_y = p3_y;
+            p3_x = next -> u_x; p3_y = next -> u_y;
+            break;
+        }
+        d1_x = p2_x - p1_x;
+        d1_y = p2_y - p1_y;
+        d2_x = p3_x - p2_x;
+        d2_y = p3_y - p2_y;
+        z_cross_product = d1_x * d2_y - d1_y * d2_x;
+        if(z_cross_product > 0.00002 || z_cross_product < -0.00002){
+          if(positive_cross_product == -1)
+            positive_cross_product = (z_cross_product > 0);
+          else if((z_cross_product > 0) != positive_cross_product){
+            flag -= FLAG_CONVEX;
+            break;
+          }
+        }
+      }
     }
   }
   return flag;

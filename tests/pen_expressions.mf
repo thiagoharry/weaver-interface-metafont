@@ -3,11 +3,13 @@
 
 pen p1, p2, p3, p4;
 pen penrazor;
+pen p5;
 
 p1 = pensquare;
 p2 = nullpen;
 p3 = pencircle;
 p4 = (p3 rotated 180) rotated 180;
 penrazor = makepen ((-.5,0)--(.5,0)--cycle);
+p5 = makepen ((-1, 1)--(-1, -1)--(0,0)--(1, -1)--(1, 1)--cycle);
 
 end
