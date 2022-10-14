@@ -8321,15 +8321,15 @@ int read_flags(struct path_variable *path){
       // Ela não é reta se os pontos de extremidade e de controle não estão
       // na mesma reta. Eles estão na mesma reta se a área de seu triângulo
       // é igual a zero (ou suficientemente próxima):
-      int area =  current -> x * (current -> u_y - next -> y) +
-                  current -> u_x * (next -> y - current -> y) +
-                  next -> x * (current -> y - current -> u_y);
-      if(area < 0.00002)
+      double area =  current -> x * (current -> u_y - next -> y) +
+                     current -> u_x * (next -> y - current -> y) +
+                     next -> x * (current -> y - current -> u_y);
+      if(area > 0.00002)
         flag -= FLAG_STRAIGHT;
       area =  current -> x * (current -> v_y - next -> y) +
               current -> v_x * (next -> y - current -> y) +
               next -> x * (current -> y - current -> v_y);
-      if(area < 0.00002)
+      if((flag & FLAG_STRAIGHT) && area > 0.00002)
         flag -= FLAG_STRAIGHT;
     }
     if(flag & FLAG_CONVEX){

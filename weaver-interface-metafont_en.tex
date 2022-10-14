@@ -8212,15 +8212,15 @@ int read_flags(struct path_variable *path){
       // It is straight if the auxiliary and control points are colinear.
       // They are colinear if they form a triangle with area zero (or
       // sufficiently next to zero):
-      int area =  current -> x * (current -> u_y - next -> y) +
-                  current -> u_x * (next -> y - current -> y) +
-                  next -> x * (current -> y - current -> u_y);
-      if(area < 0.00002)
+      double area =  current -> x * (current -> u_y - next -> y) +
+                     current -> u_x * (next -> y - current -> y) +
+                     next -> x * (current -> y - current -> u_y);
+      if(area > 0.00002)
         flag -= FLAG_STRAIGHT;
       area =  current -> x * (current -> v_y - next -> y) +
               current -> v_x * (next -> y - current -> y) +
               next -> x * (current -> y - current -> v_y);
-      if(area < 0.00002)
+      if((flag & FLAG_STRAIGHT) && area > 0.00002)
         flag -= FLAG_STRAIGHT;        
     }
     if(flag & FLAG_CONVEX){
