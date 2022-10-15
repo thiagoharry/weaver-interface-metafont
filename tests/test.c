@@ -14,7 +14,7 @@
 
 #include <string.h>
 
-#define ALMOST_EQUAL(a, b) (fabs(a - b) < 0.00004)
+#define ALMOST_EQUAL(a, b) (fabs((a) - (b)) < 0.00005)
 
 int numero_de_testes = 0, acertos = 0, falhas = 0;
 void imprime_resultado(void){
@@ -945,9 +945,9 @@ void test_pen_expressions(void){
   struct metafont *mf;
   struct context *cx;
   bool ret;
-  struct named_variable *p1, *p2, *p3, *p4, *penrazor, *p5, *p6, *p7;
+  struct named_variable *p1, *p2, *p3, *p4, *penrazor, *p5, *p6, *p7, *p8;
   struct pen_variable *pen_p1, *pen_p2, *pen_p3, *pen_p4, *pen_penrazor,
-    *pen_p5, *pen_p6, *pen_p7;
+    *pen_p5, *pen_p6, *pen_p7, *pen_p8;
   mf = init_metafont(malloc, free, "tests/pen_expressions.mf");
   cx = init_context();
   void *p = lexer(mf, malloc, free, "tests/pen_expressions.mf");
@@ -960,6 +960,7 @@ void test_pen_expressions(void){
   p5 = penrazor -> next;
   p6 = p5 -> next;
   p7 = p6 -> next;
+  p8 = p7 -> next;
   pen_p1 = (struct pen_variable *) p1 -> var;
   pen_p2 = (struct pen_variable *) p2 -> var;
   pen_p3 = (struct pen_variable *) p3 -> var;
@@ -968,6 +969,7 @@ void test_pen_expressions(void){
   pen_p5 = (struct pen_variable *) p5 -> var;
   pen_p6 = (struct pen_variable *) p6 -> var;
   pen_p7 = (struct pen_variable *) p7 -> var;
+  pen_p8 = (struct pen_variable *) p8 -> var;
   assert("Interpreting program with pen expressions", ret);
   assert("Assigning pen variable",
 	 pen_p1 -> format == NULL &&
@@ -1068,7 +1070,7 @@ void test_pen_expressions(void){
 	 ALMOST_EQUAL(pen_p6 -> gl_matrix[13], 0.0) &&
 	 ALMOST_EQUAL(pen_p6 -> gl_matrix[14], 0.0) &&
 	 ALMOST_EQUAL(pen_p6 -> gl_matrix[15], 1.0));
-    assert("Creating curved and concave pen",
+  assert("Creating curved and concave pen",
 	 pen_p7 -> format != NULL &&
 	 pen_p7 -> format -> total_length == 7 &&
 	 !(pen_p7 -> flags & FLAG_STRAIGHT) &&
@@ -1089,7 +1091,17 @@ void test_pen_expressions(void){
 	 ALMOST_EQUAL(pen_p7 -> gl_matrix[13], 0.0) &&
 	 ALMOST_EQUAL(pen_p7 -> gl_matrix[14], 0.0) &&
 	 ALMOST_EQUAL(pen_p7 -> gl_matrix[15], 1.0));
-
+  assert("Pen transformations",
+	 pen_p8 -> format == NULL &&
+	 (pen_p8 -> flags & FLAG_STRAIGHT) &&
+	 (pen_p8 -> flags & FLAG_CONVEX) &&
+	 (pen_p8 -> flags & FLAG_SQUARE) &&
+	 ALMOST_EQUAL(-8.78473, 0.5 * pen_p8 -> gl_matrix[0] +
+	 	      -0.5 * pen_p8 -> gl_matrix[4] +
+	 	      1.0 * pen_p8 -> gl_matrix[12]) &&
+	 ALMOST_EQUAL(0.58345, 0.5 * pen_p8 -> gl_matrix[1] +
+	 	      -0.5 * pen_p8 -> gl_matrix[5] +
+	 	      1.0 * pen_p8 -> gl_matrix[13]));
   free_token_list(free, p);
   destroy_metafont(mf);
   destroy_context(cx);

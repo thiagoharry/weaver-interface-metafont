@@ -1228,8 +1228,8 @@ mf->internal_pen_variables[1].number_of_vertices= 0;
 {
 int i,j;
 for(j= 0;j<2;j++)
-for(i= 0;i<9;i++)
-if(i%3==0)
+for(i= 0;i<16;i++)
+if(i%5==0)
 mf->internal_pen_variables[j].gl_matrix[i]= 1.0;
 else
 mf->internal_pen_variables[j].gl_matrix[i]= 0.0;
