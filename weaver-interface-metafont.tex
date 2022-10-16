@@ -6834,7 +6834,8 @@ A gramática para expressões primárias de caminho é:
 <Primário de Caminho> -> <Primário de Par> | <Variável de Caminho> |
                        ( <Expressão de Caminho> ) |
                        reverse <Primário de Caminho> |
-                       subpath <Expressão de Par> of <Primário de Caminho>
+                       subpath <Expressão de Par> of <Primário de Caminho> |
+                       ...
 \alinhanormal
 
 Isso significa que devemos registrar tokens
@@ -6898,6 +6899,7 @@ bool eval_path_primary(struct metafont *mf, struct context *cx,
           end_expression -> type == TYPE_CLOSE_PARENTHESIS){
     @<Caminho Primário: Parênteses@>
   }
+  @<Caminho Primário: Outras Expressões@>
   { // Se ainda não retornou, é um par primário
     @<Caminho Primário: Par Primário@>
   }
@@ -7607,10 +7609,9 @@ else if(type == TYPE_T_PEN){
     var = (struct symbolic_token *) (var -> next);
     var = (struct symbolic_token *) (var -> next);
   }
-  // TODO: Check if the free should not be here
-  //if(temporary_free != NULL && result.format !=  NULL &&
-  //   result.referenced == NULL)
-  //  path_recursive_free(temporary_free, result.format, true);
+  if(temporary_free != NULL && result.format !=  NULL &&
+     result.referenced == NULL)
+    path_recursive_free(temporary_free, result.format, true);
   if(result.gl_vbo != 0 && result.referenced == NULL)
     glDeleteBuffers(1, &(result.gl_vbo));
 }
@@ -8378,6 +8379,222 @@ int read_flags(struct path_variable *path){
 @
 \fimcodigo
 
+\subsubsecao{8.4.4. Canetas em Expressões de Caminho}
+
+Expressões primárias de caneta podem aparecer também quando avaliamos
+uma expressão primária de caminho. Isso permite que possamos extrair
+um caminho à partir do formato de uma caneta. A gramática de tal
+operação é:
+
+\alinhaverbatim
+<Primário de Caminho> -> makepath <Primário de Caneta>
+\alinhanormal
+
+Temos que registrar um novo token para o ``makepath'':
+
+\iniciocodigo
+@<METAFONT: Definição de Token Simbólico@>+=
+#define TYPE_MAKEPATH       68 // O token simbólico 'makepath'
+@
+\fimcodigo
+
+E adicionamos a string com seu nome à lista de palavras reservadas:
+
+\iniciocodigo
+@<Lista de Palavras Reservadas@>+=
+"makepath",
+@
+\fimcodigo
+
+O operador ``makepath'' deve avaliar tudo o que vem depois dele como
+sendo uma expressão primária da caneta. Em seguida, o resultado da
+avaliação é um caminho com o formato da caneta. Contudo, devemos
+lembrar que nem sempre armazenamos o formato de uma caneta
+explicitamente. Caso tenhamos uma \monoespaco{nullpen},
+um \monoespaco{circlepen} ou se estivermos diante de um quadrado,
+então precisamos gerar um caminho novo, já que não temos caminho nenhum:
+
+\iniciocodigo
+@<Caminho Primário: Outras Expressões@>=
+else if(begin_expression -> type == TYPE_MAKEPATH){
+  struct pen_variable tmp;
+  if(begin_expression -> next == NULL ||
+     begin_expression == end_expression){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
+            "expression.\n",  mf -> file, begin_expression -> line);
+#endif
+    return false;
+  }
+  if(!eval_pen_primary(mf, cx, begin_expression -> next, end_expression,
+                       &tmp))
+    return false;
+  if(tmp.flags & FLAG_NULL){ // nullpen: Avalia para ponto único (0, 0)
+    @<'makepath': 'nullpen'@>
+  }
+  else if(tmp.flags & FLAG_CIRCULAR){ // circlepen: Cria aproximação de círculo
+    @<'makepath': 'pencircle'@>
+  }
+  else if(tmp.flags & FLAG_SQUARE){ // Caneta quadrada
+    @<'makepath': 'pensquare'@>
+  }
+  else{ // Caneta com formato personalizado
+    @<'makepath': Formato Personalizado@>
+  }
+  @<'makepath': Realiza Transformação Linear@>
+  return true;
+}
+@
+\fimcodigo
+
+Assim como na linguagem METAFONT original, o \monoespaco{nullpen}
+significa um único ponto na posição $(0, 0)$ que nunca é desenhado:
+
+\iniciocodigo
+@<'makepath': 'nullpen'@>=
+result -> length = 1;
+result -> total_length = 1;
+result -> points =
+  (struct path_points *) temporary_alloc(sizeof(struct path_points));
+result -> points[0].x = result -> points[0].y = 0.0;
+result -> points[0].u_x = result -> points[0].u_y = 0.0;
+result -> points[0].v_x = result -> points[0].v_y = 0.0;
+result -> points[0].subpath = NULL;
+@
+\fimcodigo
+
+Caso estejamos diante de um caminho circular, usaremos como
+representação do caminho os mesmos valores que o METAFONT original usa
+para representar o caminho na macro \monoespaco{fullcircle}. O
+resultado será algo próximo a um círculo.
+
+\iniciocodigo
+@<'makepath': 'pencircle'@>=
+result -> length = 9;
+result -> total_length = 9;
+result -> points =
+   (struct path_points *) temporary_alloc(sizeof(struct path_points) * 9);
+result -> points[0].subpath = NULL;
+result -> points[0].x = 0.5; result -> points[0].y = 0.0;
+result -> points[0].u_x = 0.5; result -> points[0].u_y = 0.13261;
+result -> points[0].v_x = 0.44733; result -> points[0].v_y = 0.2598;
+result -> points[1].subpath = NULL;
+result -> points[1].x = 0.35356; result -> points[1].y = 0.35356;
+result -> points[1].u_x = 0.2598; result -> points[1].u_y = 0.44733;
+result -> points[1].v_x = 0.13261; result -> points[1].v_y = 0.5;
+result -> points[2].subpath = NULL;
+result -> points[2].x = 0.0; result -> points[2].y = 0.5;
+result -> points[2].u_x = -0.13261; result -> points[2].u_y = 0.5;
+result -> points[2].v_x = -0.2598; result -> points[2].v_y = 0.44733;
+result -> points[3].subpath = NULL;
+result -> points[3].x = -0.35356; result -> points[3].y = 0.35356;
+result -> points[3].u_x = -0.44733; result -> points[3].u_y = 0.2598;
+result -> points[3].v_x = -0.5; result -> points[3].v_y = 0.13261;
+result -> points[4].subpath = NULL;
+result -> points[4].x = -0.5; result -> points[4].y = 0.0;
+result -> points[4].u_x = -0.5; result -> points[4].u_y = -0.13261;
+result -> points[4].v_x = -0.44733; result -> points[4].v_y = -0.2598;
+result -> points[5].subpath = NULL;
+result -> points[5].x = -0.35356; result -> points[5].y = -0.35356;
+result -> points[5].u_x = -0.2598; result -> points[5].u_y = -0.44733;
+result -> points[5].v_x = -0.13261; result -> points[5].v_y = -0.5;
+result -> points[6].subpath = NULL;
+result -> points[6].x = 0.0; result -> points[6].y = -0.5;
+result -> points[6].u_x = 0.13261; result -> points[6].u_y = -0.5;
+result -> points[6].v_x = 0.2598; result -> points[6].v_y = -0.44733;
+result -> points[7].subpath = NULL;
+result -> points[7].x = 0.35356; result -> points[7].y = -0.35356;
+result -> points[7].u_x = 0.44733; result -> points[7].u_y = -0.2598;
+result -> points[7].v_x = 0.5; result -> points[7].v_y = -0.13261;
+result -> points[8].subpath = NULL;
+result -> points[8].x = 0.5; result -> points[8].y = 0.0;
+result -> points[8].u_x = 0.5; result -> points[8].u_y = 0.13261;
+result -> points[8].v_x = 0.44733; result -> points[8].v_y = 0.2598;
+result -> cyclic = true;
+@
+\fimcodigo
+
+Se acaneta for quadrada, geramos seu formato verdadeiro preenchendo
+manualmente seus pontos de extremidade e de controle:
+
+\iniciocodigo
+@<'makepath': 'pensquare'@>=
+result -> length = 5;
+result -> total_length = 5;
+result -> points =
+   (struct path_points *) temporary_alloc(sizeof(struct path_points) * 5);
+result -> points[0].subpath = NULL;
+result -> points[0].x = -0.5; result -> points[0].y = -0.5;
+result -> points[0].u_x = (-0.5+(1.0/3.0)); result -> points[0].u_y = -0.5;
+result -> points[0].v_x = (-0.5+(2.0/3.0)); result -> points[0].v_y = -0.5;
+result -> points[1].subpath = NULL;
+result -> points[1].x = 0.5; result -> points[1].y = -0.5;
+result -> points[1].u_x = 0.5; result -> points[1].u_y = (-0.5+(1.0/3.0));
+result -> points[1].v_x = 0.5; result -> points[1].v_y = (-0.5+(2.0/3.0));
+result -> points[2].subpath = NULL;
+result -> points[2].x = 0.5; result -> points[2].y = 0.5;
+result -> points[2].u_x = (0.5-(1.0/3.0)); result -> points[2].u_y = 0.5;
+result -> points[2].v_x = (0.5-(2.0/3.0)); result -> points[2].v_y = 0.5;
+result -> points[3].subpath = NULL;
+result -> points[3].x = -0.5; result -> points[3].y = 0.5;
+result -> points[3].u_x = -0.5; result -> points[3].u_y = (0.5-(1.0/3.0));
+result -> points[3].v_x = -0.5; result -> points[3].v_y = (0.5-(2.0/3.0));
+result -> points[4].subpath = NULL;
+result -> points[4].x = -0.5; result -> points[4].y = -0.5;
+result -> points[4].u_x = (-0.5+(1.0/3.0)); result -> points[4].u_y = -0.5;
+result -> points[4].v_x = (-0.5+(2.0/3.0)); result -> points[4].v_y = -0.5;
+result -> cyclic = true;
+@
+\fimcodigo
+
+Por fim, se estivermos diante de uma caneta com formato personalizado,
+então nós já temos uma representação de seu formato na forma de um
+caminho e nós só temos que copiá-la:
+
+
+\iniciocodigo
+@<'makepath': Formato Personalizado@>=
+if(tmp.referenced == NULL)
+  recursive_copy_points(temporary_alloc, &result, tmp.format, false);
+else
+  recursive_copy_points(temporary_alloc, &result, tmp.referenced -> format,
+                        false);
+if(temporary_free != NULL)
+  temporary_free(tmp.format);
+@
+\fimcodigo
+
+E finalmente, uma vez que tenhamos o nosso caminho, devemos aplicar
+todas as transformações de rotação, translação e demais transformações
+lineares que estiverem registradas na matriz de transformação OpenGL:
+
+\iniciocodigo
+@<'makepath': Realiza Transformação Linear@>=
+{
+  int i;
+  for(i = 0; i < result -> length; i ++){
+    result -> points[i].x = result -> points[i].x * tmp.gl_matrix[0] +
+                            result -> points[i].y * tmp.gl_matrix[4] +
+                            tmp.gl_matrix[12];
+    result -> points[i].y = result -> points[i].x * tmp.gl_matrix[1] +
+                            result -> points[i].y * tmp.gl_matrix[5] +
+                            tmp.gl_matrix[13];
+    result -> points[i].u_x = result -> points[i].u_x * tmp.gl_matrix[0] +
+                              result -> points[i].u_y * tmp.gl_matrix[4] +
+                              tmp.gl_matrix[12];
+    result -> points[i].u_y = result -> points[i].u_x * tmp.gl_matrix[1] +
+                              result -> points[i].u_y * tmp.gl_matrix[5] +
+                              tmp.gl_matrix[13];
+    result -> points[i].v_x = result -> points[i].v_x * tmp.gl_matrix[0] +
+                              result -> points[i].v_y * tmp.gl_matrix[4] +
+                              tmp.gl_matrix[12];
+    result -> points[i].v_y = result -> points[i].v_x * tmp.gl_matrix[1] +
+                              result -> points[i].v_y * tmp.gl_matrix[5] +
+                              tmp.gl_matrix[13];
+  }
+}
+@
+\fimcodigo
 
 \secao{Referências}
 
