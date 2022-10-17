@@ -8095,6 +8095,14 @@ result -> format = NULL;
 result -> flags = FLAG_NULL;
 result -> referenced = false;
 result -> gl_vbo = 0;
+result -> gl_matrix[0] = result -> gl_matrix[5] = result -> gl_matrix[10] =
+                         result -> gl_matrix[15] = 1.0; 
+result -> gl_matrix[1] = result -> gl_matrix[2] = result -> gl_matrix[3] = 
+                         result -> gl_matrix[4] = result -> gl_matrix[6] =
+                         result -> gl_matrix[7] = result -> gl_matrix[8] = 
+                         result -> gl_matrix[9] = result -> gl_matrix[11] =
+                         result -> gl_matrix[12] = result -> gl_matrix[13] =
+                         result -> gl_matrix[14] = 0.0;
 return true;
 @
 \fimcodigo
@@ -8465,22 +8473,25 @@ shifting, slanting, scaling or other transformations stored there:
 {
   int i;
   for(i = 0; i < result -> length; i ++){
+    float old_x = result -> points[i].x;
     result -> points[i].x = result -> points[i].x * tmp.gl_matrix[0] +
                             result -> points[i].y * tmp.gl_matrix[4] +
                             tmp.gl_matrix[12];
-    result -> points[i].y = result -> points[i].x * tmp.gl_matrix[1] +
+    result -> points[i].y = old_x * tmp.gl_matrix[1] +
                             result -> points[i].y * tmp.gl_matrix[5] +
                             tmp.gl_matrix[13];
+    old_x = result -> points[i].u_x;
     result -> points[i].u_x = result -> points[i].u_x * tmp.gl_matrix[0] +
                               result -> points[i].u_y * tmp.gl_matrix[4] +
                               tmp.gl_matrix[12];
-    result -> points[i].u_y = result -> points[i].u_x * tmp.gl_matrix[1] +
+    result -> points[i].u_y = old_x * tmp.gl_matrix[1] +
                               result -> points[i].u_y * tmp.gl_matrix[5] +
                               tmp.gl_matrix[13];
+    old_x = result -> points[i].v_x;
     result -> points[i].v_x = result -> points[i].v_x * tmp.gl_matrix[0] +
                               result -> points[i].v_y * tmp.gl_matrix[4] +
                               tmp.gl_matrix[12];
-    result -> points[i].v_y = result -> points[i].v_x * tmp.gl_matrix[1] +
+    result -> points[i].v_y = old_x * tmp.gl_matrix[1] +
                               result -> points[i].v_y * tmp.gl_matrix[5] +
                               tmp.gl_matrix[13];
   }

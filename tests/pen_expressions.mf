@@ -4,7 +4,7 @@
 pen p1, p2, p3, p4;
 pen penrazor;
 pen p5, p6, p7, p8;
-path p9;
+path p9, p10, p11;
 
 p1 = pensquare;
 p2 = nullpen;
@@ -26,9 +26,10 @@ p7 = makepen((0.5, 0)
   (-0.35356, 0.35356)
   .. controls (-0.44733, 0.2598) and (-0.5, 0.13261) ..
   (-0.5, 0.0) -- (0, 0.1) -- cycle);
-%p8 = p1 zscaled (-1, 2);
 p8 = p1 shifted (1, 2) scaled 0.5 xscaled 3 yscaled 4 slanted 0.1
   rotated 10 zscaled (-1, 2);
-p9 = makepath p1;
+p9 = makepath p2; % ERRO AQUI
+p10 = makepath p4;
+p11 = makepath p8;
 
 end

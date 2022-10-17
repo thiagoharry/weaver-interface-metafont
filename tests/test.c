@@ -945,9 +945,11 @@ void test_pen_expressions(void){
   struct metafont *mf;
   struct context *cx;
   bool ret;
-  struct named_variable *p1, *p2, *p3, *p4, *penrazor, *p5, *p6, *p7, *p8;
+  struct named_variable *p1, *p2, *p3, *p4, *penrazor, *p5, *p6, *p7, *p8, *p9,
+    *p10, *p11;
   struct pen_variable *pen_p1, *pen_p2, *pen_p3, *pen_p4, *pen_penrazor,
     *pen_p5, *pen_p6, *pen_p7, *pen_p8;
+  struct path_variable *path_p9, *path_p10, *path_p11;
   mf = init_metafont(malloc, free, "tests/pen_expressions.mf");
   cx = init_context();
   void *p = lexer(mf, malloc, free, "tests/pen_expressions.mf");
@@ -961,6 +963,9 @@ void test_pen_expressions(void){
   p6 = p5 -> next;
   p7 = p6 -> next;
   p8 = p7 -> next;
+  p9 = p8 -> next;
+  p10 = p9 -> next;
+  p11 = p10 -> next;
   pen_p1 = (struct pen_variable *) p1 -> var;
   pen_p2 = (struct pen_variable *) p2 -> var;
   pen_p3 = (struct pen_variable *) p3 -> var;
@@ -970,6 +975,9 @@ void test_pen_expressions(void){
   pen_p6 = (struct pen_variable *) p6 -> var;
   pen_p7 = (struct pen_variable *) p7 -> var;
   pen_p8 = (struct pen_variable *) p8 -> var;
+  path_p9 = (struct path_variable *) p9 -> var;
+  path_p10 = (struct path_variable *) p10 -> var;
+  path_p11 = (struct path_variable *) p11 -> var;
   assert("Interpreting program with pen expressions", ret);
   assert("Assigning pen variable",
 	 pen_p1 -> format == NULL &&
@@ -1102,6 +1110,79 @@ void test_pen_expressions(void){
 	 ALMOST_EQUAL(0.58345, 0.5 * pen_p8 -> gl_matrix[1] +
 	 	      -0.5 * pen_p8 -> gl_matrix[5] +
 	 	      1.0 * pen_p8 -> gl_matrix[13]));
+  assert("Extracting path from 'nullpen'",
+	 path_p9 -> length == 1 &&
+	 path_p9 -> total_length == 1 &&
+	 path_p9 -> points[0].x == 0.0 &&
+	 path_p9 -> points[0].y == 0.0 &&
+	 path_p9 -> points[0].u_x == 0.0 &&
+	 path_p9 -> points[0].u_y == 0.0 &&
+	 path_p9 -> points[0].v_x == 0.0 &&
+	 path_p9 -> points[0].v_y == 0.0 &&
+	 path_p9 -> cyclic == false);
+  assert("Extracting path from 'pencircle'",
+	 path_p10 -> total_length == 9 &&
+	 ALMOST_EQUAL(get_point(path_p10, 0) -> x, 0.5) &&
+	 ALMOST_EQUAL(get_point(path_p10, 0) -> y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_p10, 0) -> u_x, 0.5) &&
+	 ALMOST_EQUAL(get_point(path_p10, 0) -> u_y, 0.13261) &&
+	 ALMOST_EQUAL(get_point(path_p10, 0) -> v_x, 0.44733) &&
+	 ALMOST_EQUAL(get_point(path_p10, 0) -> v_y, 0.2598) &&
+	 ALMOST_EQUAL(get_point(path_p10, 1) -> x, 0.35356) &&
+	 ALMOST_EQUAL(get_point(path_p10, 1) -> y, 0.35356) &&
+	 ALMOST_EQUAL(get_point(path_p10, 1) -> u_x, 0.2598) &&
+	 ALMOST_EQUAL(get_point(path_p10, 1) -> u_y, 0.44733) &&
+	 ALMOST_EQUAL(get_point(path_p10, 1) -> v_x, 0.13261) &&
+	 ALMOST_EQUAL(get_point(path_p10, 1) -> v_y, 0.5) &&
+	 ALMOST_EQUAL(get_point(path_p10, 2) -> x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_p10, 2) -> y, 0.5) &&
+	 ALMOST_EQUAL(get_point(path_p10, 2) -> u_x, -0.13261) &&
+	 ALMOST_EQUAL(get_point(path_p10, 2) -> u_y, 0.5) &&
+	 ALMOST_EQUAL(get_point(path_p10, 2) -> v_x, -0.2598) &&
+	 ALMOST_EQUAL(get_point(path_p10, 2) -> v_y, 0.44733) &&
+	 ALMOST_EQUAL(get_point(path_p10, 3) -> x, -0.35356) &&
+	 ALMOST_EQUAL(get_point(path_p10, 3) -> y, 0.35356) &&
+	 ALMOST_EQUAL(get_point(path_p10, 3) -> u_x, -0.44733) &&
+	 ALMOST_EQUAL(get_point(path_p10, 3) -> u_y, 0.2598) &&
+	 ALMOST_EQUAL(get_point(path_p10, 3) -> v_x, -0.5) &&
+	 ALMOST_EQUAL(get_point(path_p10, 3) -> v_y, 0.13261) &&
+	 ALMOST_EQUAL(get_point(path_p10, 4) -> x, -0.5) &&
+	 ALMOST_EQUAL(get_point(path_p10, 4) -> y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_p10, 4) -> u_x, -0.5) &&
+	 ALMOST_EQUAL(get_point(path_p10, 4) -> u_y, -0.13261) &&
+	 ALMOST_EQUAL(get_point(path_p10, 4) -> v_x, -0.44733) &&
+	 ALMOST_EQUAL(get_point(path_p10, 4) -> v_y, -0.2598) &&
+	 ALMOST_EQUAL(get_point(path_p10, 5) -> x, -0.35356) &&
+	 ALMOST_EQUAL(get_point(path_p10, 5) -> y, -0.35356) &&
+	 ALMOST_EQUAL(get_point(path_p10, 5) -> u_x, -0.2598) &&
+	 ALMOST_EQUAL(get_point(path_p10, 5) -> u_y, -0.44733) &&
+	 ALMOST_EQUAL(get_point(path_p10, 5) -> v_x, -0.13261) &&
+	 ALMOST_EQUAL(get_point(path_p10, 5) -> v_y, -0.5) &&
+	 ALMOST_EQUAL(get_point(path_p10, 6) -> x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_p10, 6) -> y, -0.5) &&
+	 ALMOST_EQUAL(get_point(path_p10, 6) -> u_x, 0.13261) &&
+	 ALMOST_EQUAL(get_point(path_p10, 6) -> u_y, -0.5) &&
+	 ALMOST_EQUAL(get_point(path_p10, 6) -> v_x, 0.2598) &&
+	 ALMOST_EQUAL(get_point(path_p10, 6) -> v_y, -0.44733) &&
+	 ALMOST_EQUAL(get_point(path_p10, 7) -> x, 0.35356) &&
+	 ALMOST_EQUAL(get_point(path_p10, 7) -> y, -0.35356) &&
+	 ALMOST_EQUAL(get_point(path_p10, 7) -> u_x, 0.44733) &&
+	 ALMOST_EQUAL(get_point(path_p10, 7) -> u_y, -0.2598) &&
+	 ALMOST_EQUAL(get_point(path_p10, 7) -> v_x, 0.5) &&
+	 ALMOST_EQUAL(get_point(path_p10, 7) -> v_y, -0.13261) &&
+	 ALMOST_EQUAL(get_point(path_p10, 8) -> x, 0.5) &&
+	 ALMOST_EQUAL(get_point(path_p10, 8) -> y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_p10, 8) -> u_x, 0.5) &&
+	 ALMOST_EQUAL(get_point(path_p10, 8) -> u_y, 0.13261) &&
+	 ALMOST_EQUAL(get_point(path_p10, 8) -> v_x, 0.44733) &&
+	 ALMOST_EQUAL(get_point(path_p10, 8) -> v_y, 0.2598) &&
+	 path_p10 -> cyclic == true);
+  printf("DEBUG: %f %f\n", path_p11 ->points[0].x, path_p11 ->points[0].y);
+  assert("Extracting path from 'pensquare'",
+	 path_p11 -> total_length == 5 &&
+	 ALMOST_EQUAL(path_p11 ->points[0].x, -8.78473) &&
+	 ALMOST_EQUAL(path_p11 ->points[0].y, 0.58345) &&       
+	 path_p11 -> cyclic == true);
   free_token_list(free, p);
   destroy_metafont(mf);
   destroy_context(cx);
