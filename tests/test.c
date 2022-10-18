@@ -14,7 +14,7 @@
 
 #include <string.h>
 
-#define ALMOST_EQUAL(a, b) (fabs((a) - (b)) < 0.00005)
+#define ALMOST_EQUAL(a, b) (fabs((a) - (b)) < 0.000112)
 
 int numero_de_testes = 0, acertos = 0, falhas = 0;
 void imprime_resultado(void){
@@ -946,10 +946,10 @@ void test_pen_expressions(void){
   struct context *cx;
   bool ret;
   struct named_variable *p1, *p2, *p3, *p4, *penrazor, *p5, *p6, *p7, *p8, *p9,
-    *p10, *p11;
+    *p10, *p11, *p12;
   struct pen_variable *pen_p1, *pen_p2, *pen_p3, *pen_p4, *pen_penrazor,
     *pen_p5, *pen_p6, *pen_p7, *pen_p8;
-  struct path_variable *path_p9, *path_p10, *path_p11;
+  struct path_variable *path_p9, *path_p10, *path_p11, *path_p12;
   mf = init_metafont(malloc, free, "tests/pen_expressions.mf");
   cx = init_context();
   void *p = lexer(mf, malloc, free, "tests/pen_expressions.mf");
@@ -966,6 +966,7 @@ void test_pen_expressions(void){
   p9 = p8 -> next;
   p10 = p9 -> next;
   p11 = p10 -> next;
+  p12 = p11 -> next;
   pen_p1 = (struct pen_variable *) p1 -> var;
   pen_p2 = (struct pen_variable *) p2 -> var;
   pen_p3 = (struct pen_variable *) p3 -> var;
@@ -978,6 +979,7 @@ void test_pen_expressions(void){
   path_p9 = (struct path_variable *) p9 -> var;
   path_p10 = (struct path_variable *) p10 -> var;
   path_p11 = (struct path_variable *) p11 -> var;
+  path_p12 = (struct path_variable *) p12 -> var;
   assert("Interpreting program with pen expressions", ret);
   assert("Assigning pen variable",
 	 pen_p1 -> format == NULL &&
@@ -1177,12 +1179,45 @@ void test_pen_expressions(void){
 	 ALMOST_EQUAL(get_point(path_p10, 8) -> v_x, 0.44733) &&
 	 ALMOST_EQUAL(get_point(path_p10, 8) -> v_y, 0.2598) &&
 	 path_p10 -> cyclic == true);
-  printf("DEBUG: %f %f\n", path_p11 ->points[0].x, path_p11 ->points[0].y);
   assert("Extracting path from 'pensquare'",
 	 path_p11 -> total_length == 5 &&
-	 ALMOST_EQUAL(path_p11 ->points[0].x, -8.78473) &&
-	 ALMOST_EQUAL(path_p11 ->points[0].y, 0.58345) &&       
+	 ALMOST_EQUAL(path_p11 ->points[0].x, -6.78659) &&
+	 ALMOST_EQUAL(path_p11 ->points[0].y, -2.11049) &&
+	 ALMOST_EQUAL(path_p11 ->points[1].x, -8.78473) &&
+	 ALMOST_EQUAL(path_p11 ->points[1].y, 0.58345) &&
+	 ALMOST_EQUAL(path_p11 ->points[2].x, -12.64308) &&
+	 ALMOST_EQUAL(path_p11 ->points[2].y, -1.72151) &&
+	 ALMOST_EQUAL(path_p11 ->points[3].x, -10.64494) &&
+	 ALMOST_EQUAL(path_p11 ->points[3].y, -4.41545) &&
 	 path_p11 -> cyclic == true);
+  assert("Extracting path from custom pen",
+	 path_p12 -> total_length == 4 &&
+	 ALMOST_EQUAL(path_p12 ->points[0].x, 0.5) &&
+	 ALMOST_EQUAL(path_p12 ->points[0].y, 0.0) &&
+	 ALMOST_EQUAL(path_p12 ->points[0].u_x, 0.5) &&
+	 ALMOST_EQUAL(path_p12 ->points[0].u_y, 0.13261) &&
+	 ALMOST_EQUAL(path_p12 ->points[0].v_x, 0.44733) &&
+	 ALMOST_EQUAL(path_p12 ->points[0].v_y, 0.2598) &&
+	 ALMOST_EQUAL(path_p12 ->points[1].x, 0.35356) &&
+	 ALMOST_EQUAL(path_p12 ->points[1].y, 0.35356) &&
+	 ALMOST_EQUAL(path_p12 ->points[1].u_x, 0.2598) &&
+	 ALMOST_EQUAL(path_p12 ->points[1].u_y, 0.44733) &&
+	 ALMOST_EQUAL(path_p12 ->points[1].v_x, 0.13261) &&
+	 ALMOST_EQUAL(path_p12 ->points[1].v_y, 0.5) &&
+	 ALMOST_EQUAL(path_p12 ->points[2].x, 0.0) &&
+	 ALMOST_EQUAL(path_p12 ->points[2].y, 0.5) &&
+	 ALMOST_EQUAL(path_p12 ->points[2].u_x, -1.60944) &&
+	 ALMOST_EQUAL(path_p12 ->points[2].u_y, 0.5) &&
+	 ALMOST_EQUAL(path_p12 ->points[2].v_x, 0.5) &&
+	 ALMOST_EQUAL(path_p12 ->points[2].v_y, -1.60944) &&
+	 ALMOST_EQUAL(path_p12 ->points[3].x, 0.5) &&
+	 ALMOST_EQUAL(path_p12 ->points[3].y, 0.0) &&
+	 ALMOST_EQUAL(path_p12 ->points[3].u_x, 0.5) &&
+	 ALMOST_EQUAL(path_p12 ->points[3].u_y, 0.13261) &&
+	 ALMOST_EQUAL(path_p12 ->points[3].v_x, 0.44733) &&
+	 ALMOST_EQUAL(path_p12 ->points[3].v_y, 0.2598) &&
+	 path_p12 -> cyclic == true);
+
   free_token_list(free, p);
   destroy_metafont(mf);
   destroy_context(cx);

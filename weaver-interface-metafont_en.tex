@@ -7718,10 +7718,10 @@ matrix shown above:
 @<Pen Secondary: Rotation@>=
 struct numeric_variable r;
 float temp_matrix[16];
-float rotation, cos_theta, sin_theta;
+double rotation, cos_theta, sin_theta;
 if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &r))
   return false;
-rotation = 0.0174533 * r.value;
+rotation = 0.017453292519943295 * r.value;
 sin_theta = sin(rotation);
 cos_theta = cos(rotation);
 memcpy(temp_matrix, pen -> gl_matrix, 16 * sizeof(float));
@@ -8355,11 +8355,15 @@ drawn:
 @<'makepath': 'nullpen'@>=
 result -> length = 1;
 result -> total_length = 1;
+result -> cyclic = false;
 result -> points =
   (struct path_points *) temporary_alloc(sizeof(struct path_points));
-result -> points[0].x = result -> points[0].y = 0.0;
-result -> points[0].u_x = result -> points[0].u_y = 0.0;
-result -> points[0].v_x = result -> points[0].v_y = 0.0;
+result -> points[0].x = 0.0;
+result -> points[0].y = 0.0;
+result -> points[0].u_x = 0.0;
+result -> points[0].u_y = 0.0;
+result -> points[0].v_x = 0.0;
+result -> points[0].v_y = 0.0;
 result -> points[0].subpath = NULL;
 @
 \fimcodigo
@@ -8459,7 +8463,7 @@ if(tmp.referenced == NULL)
 else
   recursive_copy_points(temporary_alloc, &result, tmp.referenced -> format,
                         false);
-if(temporary_free != NULL)
+if(temporary_free != NULL && tmp.referenced == NULL)
   temporary_free(tmp.format);
 @
 \fimcodigo
