@@ -1223,6 +1223,25 @@ void test_pen_expressions(void){
   destroy_context(cx);
 }
 
+void test_picture_expressions(void){
+  struct metafont *mf;
+  struct context *cx;
+  bool ret;
+  //struct named_variable *a;
+  //struct pen_variable *picture_a;
+  mf = init_metafont(malloc, free, "tests/picture_expressions.mf");
+  cx = init_context();
+  void *p = lexer(mf, malloc, free, "tests/picture_expressions.mf");
+  ret = eval_program(mf, cx, p);
+  //a = (struct named_variable *) mf -> named_variables;
+  //picture_a = (struct picture_variable *) a -> var;
+  assert("Interpreting program with picture expressions", ret);
+  free_token_list(free, p);
+  destroy_metafont(mf);
+  destroy_context(cx);
+}
+
+
 int main(int argc, char **argv){
   Winit_metafont(malloc, free, malloc, free, my_rand, 36);
   test_lexer();
@@ -1232,6 +1251,7 @@ int main(int argc, char **argv){
   test_assignments();
   test_path_expressions();
   test_pen_expressions();
+  test_picture_expressions();
   imprime_resultado();
   return 0;
 }

@@ -1,5 +1,5 @@
 /*5:*/
-#line 157 "weaver-interface-metafont_en.tex"
+#line 173 "weaver-interface-metafont.tex"
 
 #ifndef __WEAVER_METAFONT
 #define __WEAVER_METAFONT
@@ -11,63 +11,67 @@ extern"C"{
 #include <sys/param.h>  
 #endif
 /*2:*/
-#line 100 "weaver-interface-metafont_en.tex"
+#line 110 "weaver-interface-metafont.tex"
 
 #include "interface.h"
 /*:2*/
-#line 167 "weaver-interface-metafont_en.tex"
+#line 183 "weaver-interface-metafont.tex"
 
 
 /*43:*/
-#line 1009 "weaver-interface-metafont_en.tex"
+#line 1035 "weaver-interface-metafont.tex"
 
 struct context{
 /*55:*/
-#line 1249 "weaver-interface-metafont_en.tex"
+#line 1275 "weaver-interface-metafont.tex"
 
 int nesting_level;
 /*:55*//*66:*/
-#line 1486 "weaver-interface-metafont_en.tex"
+#line 1509 "weaver-interface-metafont.tex"
 
 void*variables;
 /*:66*/
-#line 1011 "weaver-interface-metafont_en.tex"
+#line 1037 "weaver-interface-metafont.tex"
 
 };
 /*:43*//*44:*/
-#line 1023 "weaver-interface-metafont_en.tex"
+#line 1048 "weaver-interface-metafont.tex"
 
 struct metafont{
 char*file;
 void*(*alloc)(size_t);
 void(*free)(void*);
 /*62:*/
-#line 1424 "weaver-interface-metafont_en.tex"
+#line 1447 "weaver-interface-metafont.tex"
 
 void*named_variables;
 void*global_variables;
 /*:62*//*80:*/
-#line 1806 "weaver-interface-metafont_en.tex"
+#line 1834 "weaver-interface-metafont.tex"
 
 void*internal_numeric_variables;
-/*:80*//*98:*/
-#line 2217 "weaver-interface-metafont_en.tex"
+/*:80*//*99:*/
+#line 2266 "weaver-interface-metafont.tex"
 
 struct pen_variable*internal_pen_variables;
-/*:98*//*145:*/
-#line 3416 "weaver-interface-metafont_en.tex"
+/*:99*//*108:*/
+#line 2413 "weaver-interface-metafont.tex"
+
+struct picture_variable*internal_picture_variables;
+/*:108*//*154:*/
+#line 3594 "weaver-interface-metafont.tex"
 
 bool have_stored_normaldeviate;
 float normaldeviate;
-/*:145*/
-#line 1028 "weaver-interface-metafont_en.tex"
+/*:154*/
+#line 1053 "weaver-interface-metafont.tex"
 
 };
 /*:44*/
-#line 169 "weaver-interface-metafont_en.tex"
+#line 185 "weaver-interface-metafont.tex"
 
 /*1:*/
-#line 85 "weaver-interface-metafont_en.tex"
+#line 95 "weaver-interface-metafont.tex"
 
 void _Wmetafont_loading(void*(*permanent_alloc)(size_t),
 void(*permanent_free)(void*),
@@ -78,11 +82,11 @@ void(*after_loading_interface)(void),
 char*source_filename,
 struct user_interface*target);
 /*:1*//*3:*/
-#line 110 "weaver-interface-metafont_en.tex"
+#line 121 "weaver-interface-metafont.tex"
 
 struct metafont*new_metafont(char*filename);
 /*:3*//*4:*/
-#line 120 "weaver-interface-metafont_en.tex"
+#line 132 "weaver-interface-metafont.tex"
 
 void Winit_metafont(void*(*temporary_alloc)(size_t),
 void(*temporary_free)(void*),
@@ -90,7 +94,7 @@ void*(*permanent_alloc)(size_t),
 void(*permanent_free)(void*),
 uint64_t(*rand)(void),int pt);
 /*:4*/
-#line 170 "weaver-interface-metafont_en.tex"
+#line 186 "weaver-interface-metafont.tex"
 
 #ifdef __cplusplus
 }

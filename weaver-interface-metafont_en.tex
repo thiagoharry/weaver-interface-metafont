@@ -1629,6 +1629,9 @@ struct variable *insert_variable(int nesting_level,
     case TYPE_T_PEN:
       var_size = sizeof(struct pen_variable);
       break;
+    case TYPE_T_PICTURE:
+      var_size = sizeof(struct picture_variable);
+      break;
     default:
       var_size = sizeof(struct variable);
   }
@@ -1852,7 +1855,8 @@ internal variables:
 
 \iniciocodigo
 @<Finalization (struct metafont)@>+=
-mf -> free(mf -> internal_numeric_variables);
+if(mf -> free != NULL)
+  mf -> free(mf -> internal_numeric_variables);
 @
 \fimcodigo
 
@@ -2056,7 +2060,7 @@ void path_recursive_free(void (*free_func)(void *),
 @
 \fimcodigo
 
-\subsecao{7.3. Pen Variables}
+\subsecao{7.4. Pen Variables}
 
 A pen variable stores the structure needed to draw lines and forms in
 METAFONT. The pens specify the diameter and format of all drawed lines
@@ -2272,11 +2276,13 @@ internal variables:
 
 \iniciocodigo
 @<Finalization (struct metafont)@>+=
-if(mf -> internal_pen_variables[1].format != NULL){
-  mf -> free(mf -> internal_pen_variables[1].format -> points);
-  mf -> free(mf -> internal_pen_variables[1].format);
+if(mf -> free != NULL){
+  if(mf -> internal_pen_variables[1].format != NULL){
+    mf -> free(mf -> internal_pen_variables[1].format -> points);
+    mf -> free(mf -> internal_pen_variables[1].format);
+  }
+  mf -> free(mf -> internal_pen_variables);
 }
-mf -> free(mf -> internal_pen_variables);
 @
 \fimcodigo
 
@@ -2294,6 +2300,130 @@ else if(!strcmp(buffer, "pensquare"))
           &(mf -> internal_pen_variables[INTERNAL_PEN_PENSQUARE]);
 @
 \fimcodigo
+
+\subsecao{7.5. Picture Variables}
+
+A picture variable will store a rendered image, possibly created using
+pens and Weaver Metafont drawing commands. Contrary to original
+METAFONT, Weaver Metafont requires all pictures to have a known width
+and height. Therefore, we need to store in this variable its size and
+also an OpenGL identifier to a texture:
+
+\iniciocodigo
+@<Local Data Structures (metafont.c)@>+=
+struct picture_variable{
+  int type; // Must be 'TYPE_T_PICTURE'
+  int nesting_level;
+  void *next;
+  int width, height;
+  GLuint texture;
+};
+@
+\fimcodigo
+
+A declared, but not initialized picture variable will have negative
+height and width. Its texture also will be zero:
+
+\iniciocodigo
+@<Initializing New Variable@>+=
+if(type == TYPE_T_PICTURE){
+  ((struct picture_variable *) var) -> width = -1;
+  ((struct picture_variable *) var) -> height = -1;
+  ((struct picture_variable *) var) -> texture = 0;
+}
+@
+\fimcodigo
+
+When removing a global variable, if it is a picture variable, we need
+to destroy its texture with OpenGL if the texture exists:
+
+\iniciocodigo
+@<Finalize Global Variable 'v'@>+=
+if(v -> type == TYPE_T_PICTURE){
+  struct picture_variable *pic = (struct picture_variable *) v;
+  if(pic -> texture != 0)
+    glDeleteTextures(1, &(pic -> texture));
+}
+@
+\fimcodigo
+
+If the variable is not global we do the same:
+
+\iniciocodigo
+@<Finalize Local Variable 'v'@>=
+if(v -> type == TYPE_T_PICTURE){
+  struct picture_variable *pic = (struct picture_variable *) v;
+  if(pic -> texture != 0)
+    glDeleteTextures(1, &(pic -> texture));
+}
+@
+\fimcodigo
+
+We will have a single internal picture variable, which we will call
+``\monoespaco{currentpicture}''. In the beginning of all program, this
+variable will be declared, but not initialized. To create a list of
+our internal picture variables, we declare it in the Metafont
+structure:
+
+\iniciocodigo
+@<Attributes (struct metafont)@>+=
+struct picture_variable *internal_picture_variables;
+@
+\fimcodigo
+
+In the initialization we let the variable as non-initialized:
+
+\iniciocodigo
+@<Initialization (struct metafont)@>+=
+mf -> internal_picture_variables = (struct picture_variable *)
+                                   mf-> alloc(sizeof(struct picture_variable));
+if(mf -> internal_picture_variables == NULL){
+  if(disalloc != NULL)
+    disalloc(mf);
+}
+// The picture 'currentpicture':
+mf -> internal_picture_variables[0].type = TYPE_T_PICTURE;
+mf -> internal_picture_variables[0].width = -1;
+mf -> internal_picture_variables[0].height = -1;
+mf -> internal_picture_variables[0].texture = 0;
+@
+\fimcodigo
+
+To keep consistency with other internal variables, we create a macro
+to reference its position in the array:
+
+\iniciocodigo
+@<Local Macros (metafont.c)@>+=
+#define INTERNAL_PICTURE_CURRENTPICTURE 0
+@
+\fimcodigo
+
+When the time to deallocate intrnal variables comes, we should
+eliminate its texture if it exists:
+
+\iniciocodigo
+@<Finalization (struct metafont)@>+=
+if(mf -> internal_picture_variables[0].texture != 0)
+  glDeleteTextures(1, &(mf -> internal_picture_variables[0].texture));
+if(mf -> free != NULL)
+  mf -> free(mf -> internal_picture_variables);
+@
+\fimcodigo
+
+And when we read a source code, we need to adjust correctly the
+variable pointers when we find reference for
+``\monoespaco{currentpicture}'':
+
+\iniciocodigo
+@<Set Pointer to Internal Variable@>+=
+else if(!strcmp(buffer, "currentpicture"))
+  new_token -> var =
+          &(mf -> internal_pen_variables[INTERNAL_PICTURE_CURRENTPICTURE]);
+@
+\fimcodigo
+
+
+
 
 \secao{8. Assignments}
 
