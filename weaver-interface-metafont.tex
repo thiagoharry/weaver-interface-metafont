@@ -2605,6 +2605,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
   @<Atribuição de Variável de Par@>
   @<Atribuição de Variável de Caminho@>
   @<Atribuição de Variável de Caneta@>
+  @<Atribuição de Variável de Imagem@>
   return true;
 }
 @
@@ -8738,6 +8739,149 @@ lineares que estiverem registradas na matriz de transformação OpenGL:
 }
 @
 \fimcodigo
+
+\subsecao{8.5. Atribuições e Expressões de Imagens}
+
+Para realizar a atribuição de imagens a variáveis do tipo certo,
+usamos o código abaixo:
+
+\iniciocodigo
+@<Atribuição de Variável de Imagem@>=
+else if(type == TYPE_T_PICTURE){
+  int i;
+  struct picture_variable result;
+  if(!eval_picture_expression(mf, cx, begin_expression,
+                              (struct generic_token *) *end_token_list,
+                              &result))
+    return false;
+  var = (struct symbolic_token *) begin_token_list;
+  for(i = 0; i < number_of_variables; i ++){
+    assign_picture_variable(mf, (struct picture_variable *) var -> var,
+                           &result);
+    var = (struct symbolic_token *) (var -> next);
+    var = (struct symbolic_token *) (var -> next);
+  }
+  if(result.texture != 0)
+    glDeleteTextures(1, &(result.texture));
+}
+@
+\fimcodigo
+
+A declaração da função que faz a atribuição:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+void assign_picture_variable(struct metafont *mf,
+                             struct picture_variable *target,
+                             struct picture_variable *source);
+@
+\fimcodigo
+
+E a sua implementação:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+void assign_picture_variable(struct metafont *mf,
+                             struct picture_variable *target,
+                             struct picture_variable *source){
+  if(target -> texture != 0)
+    glDeleteTextures(1, &(target -> texture));
+  memcpy(target, source, sizeof(struct picture_variable));
+  target -> type = TYPE_T_PICTURE;
+}
+@
+\fimcodigo
+
+\subsubsecao{8.4.1. Expressões Terciárias de Imagem: Soma e Subtração}
+
+A operação terciária de imagem é a soma e a subtração:
+
+\alinhaverbatim
+<Expressão de Imagem> -> <Terciário de Imagem>
+<Terciário de Imagem> -> <Terciário de Imagem><Mais ou Menos><Secundário de Imagem>
+<Mais ou Menos> -> + | -
+\alinhanormal
+
+Imagens então podem ser somadas ou subtraídas. O resultado de
+$p_1+p_2$ representa uma nova imagem composta por todos os pixels da
+primeira imagem mais os pixels da segunda imagem. Já $p_1-p_2$ são os
+pixels da primeira menos os pixels da segunda.  A imagem resultante
+sempre terá a largura igual ao maior valor em ambas as imagens e terá
+a altura igual ao maior valor em ambas as imagens. A soma dos seus
+pixels sempre ocorrerá com ambas as imagens centralizadas uma na
+outra.
+
+A função que avalia expressões terciárias de imagem:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+bool eval_picture_expression(struct metafont *mf, struct context *cx,
+                             struct generic_token *begin_expression,
+                             struct generic_token *end_token_list,
+                             struct picture_variable *result);
+@
+\fimcodigo
+
+A implementação da função consiste em identificar o operador $+$ ou o
+operador $-$ que estiver mais ao fim da expressão. Se ele não existe,
+então devemos avaliar tudo como uma expressão secundária. Se ele
+existe, o lado à esquerda dele será avaliado como expressão terciária
+e o lado à direita como expressão secundária. E só então fazemos a
+soma ou subtração.
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+bool eval_picture_expression(struct metafont *mf, struct context *cx,
+                             struct generic_token *begin_expression,
+                             struct generic_token *end_expression,
+                             struct picture_variable *result){
+  DECLARE_NESTING_CONTROL();
+  struct generic_token *p = begin_expression, *prev = NULL;
+  struct generic_token *last_operator = NULL, *before_last_operator = NULL;
+  while(p != end_expression){
+    COUNT_NESTING(p);
+    if(IS_NOT_NESTED() && (p -> type == TYPE_SUM ||
+                           p -> type == TYPE_SUBTRACT)){
+      last_operator = p;
+      before_last_operator = prev;
+    }
+    prev = p;
+    p = p -> next;
+  }
+  if(last_operator == NULL || before_last_operator == NULL){
+    //return eval_picture_secondary(mf, cx, begin_expression, end_expression, result);
+    return true;
+  }
+  else{
+    struct picture_variable a, b;
+    if(last_operator == end_expression){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: Incomplete picture expression "
+                      "ending with '+' or '-'.\n",
+              mf -> file, begin_expression -> line);
+#endif
+      return false;
+    }
+    if(!eval_picture_expression(mf, cx, begin_expression, before_last_operator, &a))
+      return false;
+    //if(!eval_picture_secondary(mf, cx, last_operator -> next, end_expression, &b))
+    //  return false;
+    if(last_operator -> type == TYPE_SUM){
+      //@<Expressão de Imagem: 'a' + 'b'@>
+    }
+    else{
+      //@<Expressão de Imagem: 'a' - 'b'@>
+    }
+    if(a.texture != 0)
+      glDeleteTextures(1, &(a.texture));
+    if(b.texture != 0)
+      glDeleteTextures(1, &(b.texture));
+    return true;
+  }
+}
+@
+\fimcodigo
+
 
 \secao{Referências}
 
