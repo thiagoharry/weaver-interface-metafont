@@ -1,0 +1,6 @@
+% To test picture expressions
+% This program should work and be accepted.
+
+picture a;
+
+end

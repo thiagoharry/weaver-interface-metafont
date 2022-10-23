@@ -1243,7 +1243,10 @@ void test_picture_expressions(void){
 
 
 int main(int argc, char **argv){
-  Winit_metafont(malloc, free, malloc, free, my_rand, 36);
+  if(!_Winit_metafont(malloc, free, malloc, free, my_rand, 36)){
+    fprintf(stderr, "ERROR: Test cannot be done. Initialization failed.\n");
+    exit(1);
+  }
   test_lexer();
   test_empty_programs();
   test_compound_statements();
@@ -1253,5 +1256,6 @@ int main(int argc, char **argv){
   test_pen_expressions();
   test_picture_expressions();
   imprime_resultado();
+  _Wfinish_metafont();
   return 0;
 }

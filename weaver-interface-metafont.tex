@@ -130,11 +130,11 @@ correspontem à unidade de medida de ``1pt'':
 
 \iniciocodigo
 @<Declaração de Função (metafont.h)@>+=
-void Winit_metafont(void *(*temporary_alloc)(size_t),
-                    void (*temporary_free)(void *),
-                    void *(*permanent_alloc)(size_t),
-                    void (*permanent_free)(void *),
-                    uint64_t (*rand)(void), int pt);
+bool _Winit_metafont(void *(*temporary_alloc)(size_t),
+                     void (*temporary_free)(void *),
+                     void *(*permanent_alloc)(size_t),
+                     void (*permanent_free)(void *),
+                     uint64_t (*rand)(void), int pt);
 @
 \fimcodigo
 
@@ -143,7 +143,19 @@ respectivamente uma para fazer alocações temporárias de memória, outra
 para desalocar o que foi alocado com ela (pode ser NULL), outra para
 fazer alocações mais permanentes, outra para desalocar o que foi
 alocado com ela (pode ser NULL também), uma para gerar 64 bits
-aleatórios e por fim a medida de quantos píxels correspondem a 1pt.
+aleatórios e por fim a medida de quantos píxels correspondem a 1pt. A
+função retorna verdadeiro se a inicialização foi bem-sucedida.
+
+Após terminar o uso de nossas funções, deve-se chamar a função abaixo
+que finaliza e desaloca qualquer coisa que tenha sido gerada pela
+função de inicialização:
+
+\iniciocodigo
+@<Declaração de Função (metafont.h)@>+=
+void _Wfinish_metafont(void);
+@
+\fimcodigo
+
 
 
 \subsecao{1.1. Programação Literária}
@@ -227,7 +239,7 @@ associado a este cabeçaho, o código será este:
 Todo o código que definiremos e explicaremos a seguir será posicionado
 nestes dois arquivos. Além deles, nenhum outro arquivo será criado.
 
-\secao{2. Inicialização}
+\secao{2. Inicialização e Finalização}
 
 Primeiro vamos definir a função de inicialização. O que ela fará será
 armazenar em uma série de variáveis estáticas várias das funções que
@@ -249,17 +261,31 @@ E a função de inicialização consiste em preencher tais variáveis:
 
 \iniciocodigo
 @<Definição de Funções da API (metafont.c)@>=
-void Winit_metafont(void *(*t_alloc)(size_t),
-                    void (*t_free)(void *),
-                    void *(*p_alloc)(size_t),
-                    void (*p_free)(void *),
-                    uint64_t (*random)(void), int pt_in_pixels){
+bool _Winit_metafont(void *(*t_alloc)(size_t),
+                     void (*t_free)(void *),
+                     void *(*p_alloc)(size_t),
+                     void (*p_free)(void *),
+                     uint64_t (*random)(void), int pt_in_pixels){
   temporary_alloc = t_alloc;
   temporary_free = t_free;
   permanent_alloc = p_alloc;
   permanent_free = p_free;
   random_func = random;
   pt = pt_in_pixels;
+  @<Inicialização de Weaver Metafont@>
+  return true;
+}
+@
+\fimcodigo
+
+A função de finalização também existe e à medida que adicionarmos mais
+coisas à inicialização, poderemos precisar adicionar código
+correspondente à finalização:
+
+\iniciocodigo
+@<Definição de Funções da API (metafont.c)@>=
+void _Wfinish_metafont(void){
+  @<Finalização de Weaver Metafont@>
 }
 @
 \fimcodigo
@@ -8866,12 +8892,7 @@ bool eval_picture_expression(struct metafont *mf, struct context *cx,
       return false;
     //if(!eval_picture_secondary(mf, cx, last_operator -> next, end_expression, &b))
     //  return false;
-    if(last_operator -> type == TYPE_SUM){
-      //@<Expressão de Imagem: 'a' + 'b'@>
-    }
-    else{
-      //@<Expressão de Imagem: 'a' - 'b'@>
-    }
+    @<Expressão de Imagem: Soma ou Subtração@>
     if(a.texture != 0)
       glDeleteTextures(1, &(a.texture));
     if(b.texture != 0)
@@ -8882,6 +8903,213 @@ bool eval_picture_expression(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
+Estamos em um momento no qual finalmente iremos começar a fazer as
+primeiras renderizações. Por causa disso, devemos preparar uma lista
+de vértices correspondendo a um quadrado centralizado na posição $(0,
+0)$ e cujo lado é 2. Esse é o tamanho para que nossa renderização de
+texturas feitas usando tais vértices ocupe toda a área de desenho.
+
+\iniciocodigo
+@<Variáveis Locais (metafont.c)@>+=
+const static float square[20] = {
+  -1.0, -1.0, 0.0, //Primeiro vértice
+  0.0, 0.0, // Coordenada da textura
+  1.0, -1.0, 0.0, // Segundo vértice
+  1.0, 0.0, // Textura
+  1.0, 1.0, 0.0, // Terceiro vértice
+  1.0, 1.0, // Textura
+  -1.0, 1.0, 0.0, // Quarto vértice
+  0.0, 1.0}; // Textura
+static GLuint vbo; // OpenGL Vertex Buffer Object
+@
+\fimcodigo
+
+Na inicialização do Weaver Metafont nós enviamos estess vértices para
+a placa de vídeo:
+
+\iniciocodigo
+@<Inicialização de Weaver Metafont@>=
+glGenBuffers(1, &vbo);
+glBindBuffer(GL_ARRAY_BUFFER, vbo);
+// Enviando os vértices para a placa de vídeo:
+glBufferData(GL_ARRAY_BUFFER, sizeof(square), square, GL_STATIC_DRAW);
+@
+\fimcodigo
+
+Na finalização nós removemos os vértices da placa de vídeo:
+
+\iniciocodigo
+@<Finalização de Weaver Metafont@>=
+glDeleteBuffers(1, &vbo);
+@
+\fimcodigo
+
+Somar uma imagem a outra envolve apenas renderizar ambas imagens em um
+mesmo local de destino. Para renderizar, vamos precisar também dos
+seguintes shaders de vértice e fragmento:
+
+\iniciocodigo
+@<Variáveis Locais (metafont.c)@>+=
+static const char vertex_shader[] =
+  "#version 100\n"
+  "precision highp float;\n"
+  "precision highp int;\n"
+  "attribute vec3 vertex_position;\n"
+  "uniform vec4 model_view_matrix;\n"
+  "attribute vec2 vertex_texture_coordinate;\n"
+  "void main(){\n"
+  "  gl_Position = model_view_matrix * vec4(vertex_position, 1.0);\n"
+  "  texture_coordinate = vertex_texture_coordinate;\n"
+  "}\n";
+static const char fragment_shader[] =
+  "#version 100\n"
+  "precision highp float;\n"
+  "precision highp int;\n"
+  "varying mediump vec2 texture_coordinate;\n"
+  "uniform sampler2D texture;\n"
+  "void main(){\n"
+  "  vec4 texture = texture2D(texture1, texture_coordinate);\n"
+  "  gl_FragData[0] = texture;"
+  "}\n";
+static GLuint program; // Armazenará o programa após compilar os shaders acima
+GLint uniform_matrix; // Armazenará a posição da matriz de modelo visualização acima
+GLint uniform_texture; // A posição da variável de textura no código acima
+@
+\fimcodigo
+
+Estes shaders simples precisam ser compilados na inicialização:
+
+\iniciocodigo
+@<Inicialização de Weaver Metafont@>+=
+{
+  GLuint vertex, fragment;
+  GLint status = GL_TRUE;
+  vertex = glCreateShader(GL_VERTEX_SHADER);
+  fragment = glCreateShader(GL_FRAGMENT_SHADER);
+  glShaderSource(vertex, 1, (const char **) &vertex_shader, NULL);
+  glShaderSource(fragment, 1, (const char **) &fragment_shader, NULL);
+  glCompileShader(vertex);
+  glGetShaderiv(vertex, GL_COMPILE_STATUS, &status);
+  if(status == GL_FALSE){
+    fprintf(stderr,
+            "ERROR: Weaver Metafont vertex shader compilation failed!\n");
+    return false;
+  }
+  glCompileShader(fragment);
+  glGetShaderiv(fragment, GL_COMPILE_STATUS, &status);
+  if(status == GL_FALSE){
+    fprintf(stderr,
+            "ERROR: Weaver Metafont fragment shader compilation failed!\n");
+    return false;
+  }
+  program = glCreateProgram();
+  glAttachShader(program, vertex);
+  glAttachShader(program, fragment);
+  glLinkProgram(program);
+  glGetProgramiv(program, GL_LINK_STATUS, &status);
+  if(status == GL_FALSE){
+    fprintf(stderr, "ERROR: Weaver Metafont shader linking failed!\n");
+    return false;
+  }
+  glDeleteShader(vertex);
+  glDeleteShader(fragment);
+  // Estabelecendo atributos:
+  glBindAttribLocation(program, 0, "vertex_position");
+  glBindAttribLocation(program, 1, "vertex_texture_coordinate");
+  uniform_matrix = glGetUniformLocation(program, "model_view_matrix");
+  uniform_texture = glGetUniformLocation(program, "texture");  
+}
+@
+\fimcodigo
+
+Na finalização iremos destruir o programa compilado acima:
+
+\iniciocodigo
+@<Finalização de Weaver Metafont@>+=
+glDeleteProgram(program);
+@
+\fimcodigo
+
+
+Para somar ou subtrair as imagens, devemos primeiro obter qual deve
+ser o tamanho da imagem de destino. Ela terá a maior altura e maior
+largura dentre as imagens sendo somadas. Em seguida, a criamos e a
+inicializamos como sendo uma imagem transparente. Tanto na soma como
+na subtração, desenhamos o primeiro operando no destino. Em seguida,
+dependendo se estamos realizando soma ou subtração, usamos o OpenGL
+para ajustar como as cores serão misturadas. No caso da soma, nenhuma
+mudança precisa ser feita. No caso da subtração, usamos a
+função \monoespaco{glBlendEquation} para pedir que a mistura de cores
+durante o desenho seja feita por meio da diferença de cores. Por fim,
+desenhamos as texturas no destino e finalizamos.
+
+\iniciocodigo
+@<Expressão de Imagem: Soma ou Subtração@>=
+// Alocando e declarando dados, gerando imagem vazia inicial
+void *data;
+GLuint temporary_framebuffer = 0;
+float model_view_matrix[16] = {1.0, 0.0, 0.0, 0.0,
+                               0.0, 1.0, 0.0, 0.0,
+                               0.0, 0.0, 1.0, 0.0,
+                               0.0, 0.0, 0.0, 1.0};
+int final_width = ((a.width >= b.width)?(a.width):(b.width));
+int final_height = ((a.height >= b.height)?(a.height):(b.height));
+data = temporary_alloc(final_width * final_height * 4);
+if(data == NULL){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Not enough memory!\n",
+          mf -> file, begin_expression -> line);
+#endif
+  return false;
+}
+glGenFramebuffers(1, &temporary_framebuffer);
+memset(data, 0, final_width * final_height * 4);
+glGenTextures(1, &(result -> texture)); 
+glBindTexture(GL_TEXTURE_2D, result -> texture);
+glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, final_width, final_height, 0, GL_RGBA,
+             GL_UNSIGNED_BYTE, data);
+glBindFramebuffer(GL_FRAMEBUFFER, temporary_framebuffer);
+glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                       result -> texture, 0);
+if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: OpenGL framebuffer error!\n",
+          mf -> file, begin_expression -> line);
+#endif
+  return false;
+}
+// Preparando renderização
+glViewport(0, 0, final_width, final_height);
+glBindBuffer(GL_ARRAY_BUFFER, vbo);
+glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) 0);
+glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
+                      (void *) (3 * sizeof(float)));
+glEnableVertexAttribArray(0);
+glEnableVertexAttribArray(1);
+glUseProgram(program);
+// Renderizando imagem 'a'
+model_view_matrix[0] = a.width / final_width;
+model_view_matrix[5] = a.height / final_height;
+glUniformMatrix4fv(uniform_matrix, 1, false, model_view_matrix);
+glBindTexture(GL_TEXTURE_2D, a.texture);
+glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+// Renderizando imagem 'b'
+model_view_matrix[0] = b.width / final_width;
+model_view_matrix[5] = b.height / final_height;
+glUniformMatrix4fv(uniform_matrix, 1, false, model_view_matrix);
+glBindTexture(GL_TEXTURE_2D, b.texture);
+if(last_operator -> type == TYPE_SUBTRACT){
+  glBlendEquation(GL_FUNC_SUBTRACT);
+  glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+  glBlendEquation(GL_FUNC_ADD);
+}
+else
+  glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+// Finalizando
+if(temporary_free != NULL)
+  temporary_free(data);
+@
+\fimcodigo
 
 \secao{Referências}
 
