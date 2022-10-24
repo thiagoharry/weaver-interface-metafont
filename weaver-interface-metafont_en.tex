@@ -8766,11 +8766,14 @@ bool eval_picture_expression(struct metafont *mf, struct context *cx,
     p = p -> next;
   }
   if(last_operator == NULL || before_last_operator == NULL){
-    //return eval_picture_secondary(mf, cx, begin_expression, end_expression, result);
+    struct picture_variable a;
+    struct picture_variable *sec = &a;
+    @<Picture: Evaluate Secondary Expression in 'sec'@>
     return true;
   }
   else{
     struct picture_variable a, b;
+    struct picture_variable *sec = &b;
     if(last_operator == end_expression){
 #if defined(W_DEBUG_METAFONT)
       fprintf(stderr, "METAFONT: Error: %s:%d: Incomplete picture expression "
@@ -8781,8 +8784,7 @@ bool eval_picture_expression(struct metafont *mf, struct context *cx,
     }
     if(!eval_picture_expression(mf, cx, begin_expression, before_last_operator, &a))
       return false;
-    //if(!eval_picture_secondary(mf, cx, last_operator -> next, end_expression, &b))
-    //  return false;
+    @<Picture: Evaluate Secondary Expression in 'sec'@>
     @<Image Expression: Sum or Subtract@>
     if(a.texture != 0)
       glDeleteTextures(1, &(a.texture));
@@ -9000,6 +9002,75 @@ if(temporary_free != NULL)
 @
 \fimcodigo
 
+\subsubsecao{8.4.2. Picture Secondary Expressions: Transformers}
+
+A picture secondary expression has the following syntax:
+
+\alinhaverbatim
+<Picture Seconary> -> <Picture Primary> |
+                      <Picture Secondary><Transformer>
+<Transformer> -> rotated <Numeric Primary> |
+                 scaled <Numeric Primary> |
+                 shifted <Pair Primary> |
+                 slanted <Numeric Primary> |
+                 xscaled <Numeric Primary> |
+                 yscaled <Numeric Primary> |
+                 zscaled <Pair Primary>
+\alinhanormal
+
+The same transformers that we can use in pairs, paths and pens also
+can be used in images. But how we do apply them is a little
+different. Like what we do for pens, we first store all the required
+transformations in a matrix to accumulate transformations before
+applying them. But contrary to pens, picture variables do not store
+their transform matrix.
+
+The matrix will exist only when evaluating secondary and tertiary
+picture expressions. And they will be applied only after evaluating a
+secondary expression in the tertiary expression. This way, if we had
+the following code:
+
+\alinhaverbatim
+a = img totated 45 slanted 0.2 zscaled(2, 3)
+\alinhanormal
+
+Instead of making three potentially expensive transforms, we will
+accumulate all the three transforms in a matrix. When we have no more
+transforms, which is when we return from all secondary expression
+evaluations to a tertiary evaluation, we finally apply the transforms
+stored in the matrix. This means that the function that evaluates
+picture secondary expressions will have two additional parameters: a
+matrix pre-initialized as the identity matrix and a pointer to a
+boolean variable pre-initialized to false. The boolean variable will
+became true only if the matrix is changed during secondary evaluation.
+
+\iniciocodigo
+@<Picture: Evaluate Secondary Expression in 'sec'@>=
+{
+  float matrix[16];
+  int i;
+  bool modified = false;
+  for(i = 0; i < 16; i ++)
+    if(i % 5 == 0)
+      matrix[i] = 1.0;
+    else
+      matrix[i] = 0.0;
+  //if(!eval_picture_secondary(mf, cx, begin_expression, end_expression, sec,
+  //                           matrix, &modified))
+  //  return false;
+  if(modified){
+    //apply_image_transformation(result, sec, matrix);
+    if(sec -> texture != 0)
+      glDeleteTextures(1, &(sec -> texture));
+  }
+  else{
+    result -> width = sec -> width;
+    result -> height = sec -> height;
+    result -> texture = sec -> texture;
+  }
+}
+@
+\fimcodigo
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

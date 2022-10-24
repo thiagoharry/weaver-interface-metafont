@@ -422,7 +422,7 @@ static char*list_of_keywords[]= {
 
 NULL};
 /*:37*//*340:*/
-#line 8804 "weaver-interface-metafont_en.tex"
+#line 8806 "weaver-interface-metafont_en.tex"
 
 const static float square[20]= {
 -1.0,-1.0,0.0,
@@ -435,7 +435,7 @@ const static float square[20]= {
 0.0,1.0};
 static GLuint vbo;
 /*:340*//*343:*/
-#line 8843 "weaver-interface-metafont_en.tex"
+#line 8845 "weaver-interface-metafont_en.tex"
 
 static const char vertex_shader[]= 
 "#version 100\n"
@@ -5830,11 +5830,42 @@ prev= p;
 p= p->next;
 }
 if(last_operator==NULL||before_last_operator==NULL){
+struct picture_variable a;
+struct picture_variable*sec= &a;
+/*347:*/
+#line 9048 "weaver-interface-metafont_en.tex"
+
+{
+float matrix[16];
+int i;
+bool modified= false;
+for(i= 0;i<16;i++)
+if(i%5==0)
+matrix[i]= 1.0;
+else
+matrix[i]= 0.0;
+
+
+
+if(modified){
+
+if(sec->texture!=0)
+glDeleteTextures(1,&(sec->texture));
+}
+else{
+result->width= sec->width;
+result->height= sec->height;
+result->texture= sec->texture;
+}
+}
+/*:347*/
+#line 8771 "weaver-interface-metafont_en.tex"
 
 return true;
 }
 else{
 struct picture_variable a,b;
+struct picture_variable*sec= &b;
 if(last_operator==end_expression){
 #if defined(W_DEBUG_METAFONT)
 fprintf(stderr,"METAFONT: Error: %s:%d: Incomplete picture expression "
@@ -5845,10 +5876,37 @@ return false;
 }
 if(!eval_picture_expression(mf,cx,begin_expression,before_last_operator,&a))
 return false;
+/*347:*/
+#line 9048 "weaver-interface-metafont_en.tex"
 
+{
+float matrix[16];
+int i;
+bool modified= false;
+for(i= 0;i<16;i++)
+if(i%5==0)
+matrix[i]= 1.0;
+else
+matrix[i]= 0.0;
+
+
+
+if(modified){
+
+if(sec->texture!=0)
+glDeleteTextures(1,&(sec->texture));
+}
+else{
+result->width= sec->width;
+result->height= sec->height;
+result->texture= sec->texture;
+}
+}
+/*:347*/
+#line 8787 "weaver-interface-metafont_en.tex"
 
 /*346:*/
-#line 8936 "weaver-interface-metafont_en.tex"
+#line 8938 "weaver-interface-metafont_en.tex"
 
 
 void*data;
@@ -5914,7 +5972,7 @@ glDrawArrays(GL_TRIANGLE_FAN,0,4);
 if(temporary_free!=NULL)
 temporary_free(data);
 /*:346*/
-#line 8786 "weaver-interface-metafont_en.tex"
+#line 8788 "weaver-interface-metafont_en.tex"
 
 if(a.texture!=0)
 glDeleteTextures(1,&(a.texture));
@@ -5941,14 +5999,14 @@ permanent_free= p_free;
 random_func= random;
 pt= pt_in_pixels;
 /*341:*/
-#line 8822 "weaver-interface-metafont_en.tex"
+#line 8824 "weaver-interface-metafont_en.tex"
 
 glGenBuffers(1,&vbo);
 glBindBuffer(GL_ARRAY_BUFFER,vbo);
 
 glBufferData(GL_ARRAY_BUFFER,sizeof(square),square,GL_STATIC_DRAW);
 /*:341*//*344:*/
-#line 8874 "weaver-interface-metafont_en.tex"
+#line 8876 "weaver-interface-metafont_en.tex"
 
 {
 GLuint vertex,fragment;
@@ -5998,11 +6056,11 @@ return true;
 
 void _Wfinish_metafont(void){
 /*342:*/
-#line 8833 "weaver-interface-metafont_en.tex"
+#line 8835 "weaver-interface-metafont_en.tex"
 
 glDeleteBuffers(1,&vbo);
 /*:342*//*345:*/
-#line 8919 "weaver-interface-metafont_en.tex"
+#line 8921 "weaver-interface-metafont_en.tex"
 
 glDeleteProgram(program);
 /*:345*/

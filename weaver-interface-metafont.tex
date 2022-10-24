@@ -8875,11 +8875,14 @@ bool eval_picture_expression(struct metafont *mf, struct context *cx,
     p = p -> next;
   }
   if(last_operator == NULL || before_last_operator == NULL){
-    //return eval_picture_secondary(mf, cx, begin_expression, end_expression, result);
+    struct picture_variable a;
+    struct picture_variable *sec = &a;
+    @<Imagem: Avalia Expressão Secundária em 'sec'@>
     return true;
   }
   else{
     struct picture_variable a, b;
+    struct picture_variable *sec = &b;
     if(last_operator == end_expression){
 #if defined(W_DEBUG_METAFONT)
       fprintf(stderr, "METAFONT: Error: %s:%d: Incomplete picture expression "
@@ -8890,8 +8893,7 @@ bool eval_picture_expression(struct metafont *mf, struct context *cx,
     }
     if(!eval_picture_expression(mf, cx, begin_expression, before_last_operator, &a))
       return false;
-    //if(!eval_picture_secondary(mf, cx, last_operator -> next, end_expression, &b))
-    //  return false;
+    @<Imagem: Avalia Expressão Secundária em 'sec'@>
     @<Expressão de Imagem: Soma ou Subtração@>
     if(a.texture != 0)
       glDeleteTextures(1, &(a.texture));
@@ -8958,7 +8960,7 @@ static const char vertex_shader[] =
   "uniform vec4 model_view_matrix;\n"
   "attribute vec2 vertex_texture_coordinate;\n"
   "void main(){\n"
-  "  gl_Position = model_view_matrix * vec4(vertex_position, 1.0);\n"
+  "  gl_Position = vec4(vertex_position, 1.0) * model_view_matrix;\n"
   "  texture_coordinate = vertex_texture_coordinate;\n"
   "}\n";
 static const char fragment_shader[] =
@@ -9108,6 +9110,80 @@ else
 // Finalizando
 if(temporary_free != NULL)
   temporary_free(data);
+@
+\fimcodigo
+
+\subsubsecao{8.4.2. Expressões Secundárias de Imagem: Transformadores}
+
+Uma expressão secundária de imagem tem a seguinte sintaxe:
+
+\alinhaverbatim
+<Secundário de Imagem> -> <Primário de Imagem> |
+                          <Secundário de Imagem><Transformador>
+<Transformador> -> rotated <Primário Numérico> |
+                   scaled <Primário Numérico> |
+                   shifted <Par Primário> |
+                   slanted <Numérico Primário> |
+                   xscaled <Numérico Primário> |
+                   yscaled <Numérico Primário> |
+                   zscaled <Par Primário>
+\alinhanormal
+
+Os mesmos transformadores que podem ser usados em pares, caminhos e
+canetas podem também ser usados em imagens. Mas o modo como
+transformamos as imagens é diferente. Assim como canetas, as
+transformações lineares sobre imagens são armazenadas na forma de uma
+matriz que acumula todas as transformações. Desta forma, podemos
+realizar as transformações de uma só vez somente depois que o usuário
+especificar todas as que serão necessárias. Mas ao contrário de
+canetas, as variáveis de imagem não possuem uma matriz própria
+armazenada na variável.
+
+As matrizes são recursos que irão existir somente enquanto estivermos
+avaliando expressões secundárias de imagem. E serão efetivamente
+usadas para transformar a imagem somente ao terminarmos a avaliação de
+uma expressão tercisária. Desta forma, no código abaixo:
+
+\alinhaverbatim
+a = img totated 45 slanted 0.2 zscaled(2, 3)
+\alinhanormal
+
+Ao invés de realizarmos três transformações diferentes, nós apenas
+acumularemos as transformações em uma matriz. Já quando não houver
+mais transformação e estivermos terminando de interpretar a expressão
+terciária, é quando usaremos a matriz para efetivamente transformar a
+imagem em sua forma final. Isso significa que a função que avaliará as
+expressões secundárias de imagem deverá ser diferente das demais. Ela
+irá receber dois argumentos adicionais: uma matriz pré-inicializada
+como a matriz identidade e um ponteiro para uma variável booleana
+pré-inicializada como falso. Esta variável será mudada para verdadeira
+somente se a matriz passada for modificada.
+
+\iniciocodigo
+@<Imagem: Avalia Expressão Secundária em 'sec'@>=
+{
+  float matrix[16];
+  int i;
+  bool modified = false;
+  for(i = 0; i < 16; i ++)
+    if(i % 5 == 0)
+      matrix[i] = 1.0;
+    else
+      matrix[i] = 0.0;
+  //if(!eval_picture_secondary(mf, cx, begin_expression, end_expression, sec,
+  //                           matrix, &modified))
+  //  return false;
+  if(modified){
+    //apply_image_transformation(result, sec, matrix);
+    if(sec -> texture != 0)
+      glDeleteTextures(1, &(sec -> texture));
+  }
+  else{
+    result -> width = sec -> width;
+    result -> height = sec -> height;
+    result -> texture = sec -> texture;
+  }
+}
 @
 \fimcodigo
 
