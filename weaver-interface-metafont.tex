@@ -8818,7 +8818,7 @@ void assign_picture_variable(struct metafont *mf,
 @
 \fimcodigo
 
-\subsubsecao{8.4.1. Expressões Terciárias de Imagem: Soma e Subtração}
+\subsubsecao{8.5.1. Expressões Terciárias de Imagem: Soma e Subtração}
 
 A operação terciária de imagem é a soma e a subtração:
 
@@ -9113,7 +9113,7 @@ if(temporary_free != NULL)
 @
 \fimcodigo
 
-\subsubsecao{8.4.2. Expressões Secundárias de Imagem: Transformadores}
+\subsubsecao{8.5.2. Expressões Secundárias de Imagem: Transformadores}
 
 Uma expressão secundária de imagem tem a seguinte sintaxe:
 
@@ -9170,9 +9170,9 @@ somente se a matriz passada for modificada.
       matrix[i] = 1.0;
     else
       matrix[i] = 0.0;
-  //if(!eval_picture_secondary(mf, cx, begin_expression, end_expression, sec,
-  //                           matrix, &modified))
-  //  return false;
+  if(!eval_picture_secondary(mf, cx, begin_expression, end_expression, sec,
+                             matrix, &modified))
+    return false;
   if(modified){
     //apply_image_transformation(result, sec, matrix);
     if(sec -> texture != 0)
@@ -9186,6 +9186,298 @@ somente se a matriz passada for modificada.
 }
 @
 \fimcodigo
+
+A declaração da função que avalia expressões secundárias de imagem é:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+bool eval_picture_secondary(struct metafont *mf, struct context *cx,
+                            struct generic_token *begin_expression,
+                            struct generic_token *end_token_list,
+                            struct picture_variable *result,
+                            float *matrix, bool *modified);
+@
+\fimcodigo
+
+E a sua implementação consiste primeiramente em percorrermos toda a
+expressão até achar o último token com um operador secundário de
+transformação. Se não achamos nada, é só avaliar tudo como expressão
+primária. Se achamos um, avaliamos tudo antes dele como expressão
+secundária e aplicamos a transformação:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+bool eval_picture_secondary(struct metafont *mf, struct context *cx,
+                            struct generic_token *begin_expression,
+                            struct generic_token *end_expression,
+                            struct picture_variable *result,
+                            float *matrix, bool *modified){
+  DECLARE_NESTING_CONTROL();
+  struct generic_token *p, *prev = NULL, *last_transformer = NULL,
+                       *before_last_transformer = begin_expression;
+  p = begin_expression;
+  do{
+    COUNT_NESTING(p);
+    if(IS_NOT_NESTED() && (p -> type == TYPE_ROTATED ||
+       p -> type == TYPE_SCALED || p -> type == TYPE_SHIFTED ||
+       p -> type == TYPE_SLANTED || p -> type == TYPE_XSCALED ||
+       p -> type == TYPE_YSCALED || p -> type == TYPE_ZSCALED)){
+      last_transformer = p;
+      before_last_transformer = prev;
+    }
+    prev = p;
+    if(p != end_expression)
+      p = (struct generic_token *) p -> next;
+    else
+      p = NULL;
+  }while(p != NULL);
+  if(last_transformer == NULL)
+    //return eval_picture_primary(mf, cx, begin_expression, end_expression, pen);
+    return true;
+  else{
+    if(!eval_picture_secondary(mf, cx, begin_expression,
+                               before_last_transformer, result, matrix, modified))
+      return false;
+    if(last_transformer -> type == TYPE_ROTATED){
+      @<Secundário de Imagem: Rotação@>
+    }
+    else if(last_transformer -> type == TYPE_SCALED){
+      @<Secundário de Imagem: Escala@>
+    }
+    else if(last_transformer -> type == TYPE_SHIFTED){
+      @<Secundário de Imagem: Deslocamento@>
+    }
+    else if(last_transformer -> type == TYPE_SLANTED){
+      @<Secundário de Imagem: Inclinação@>
+    }
+    else if(last_transformer -> type == TYPE_XSCALED){
+      @<Secundário de Imagem: X-Escala@>
+    }
+    else if(last_transformer -> type == TYPE_YSCALED){
+      @<Secundário de Imagem: Y-Escala@>
+    }
+    else if(last_transformer -> type == TYPE_ZSCALED){
+      @<Secundário de Imagem: Z-Escala@>
+    }
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognized picture transformer\n",
+            mf -> file, begin_expression -> line);
+#endif
+    return false;
+  }
+}
+@
+\fimcodigo
+
+Avaliar cada um dos diferentes tipoos de transformadores significa
+modificar a matriz multiplicando ela pela matriz que representa a
+transformação. Exatamente como fizemos com as canetas. Conforme visto
+na subseção 8.4.2, fazer mudança de escala fazendo a imagem ser
+ampliada multiplicando suas dimensões por $x$ é feito multiplicando
+pela matriz abaixo:
+
+$$\left[{{x \atop 0}\atop {0\atop
+      0}}{{0 \atop x}\atop {0 \atop 0}}{{0\atop 0}\atop{1 \atop
+      0}}{{0 \atop 0}\atop{0\atop 1}}\right]
+$$
+
+Que é o que o código abaixo faz com a matriz da expressão secundária:
+
+\iniciocodigo
+@<Secundário de Imagem: Escala@>=
+struct numeric_variable a;
+float temp_matrix[16];
+if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &a))
+  return false;
+memcpy(temp_matrix, matrix, 16 * sizeof(float));
+matrix[0] = temp_matrix[0] * a.value;
+matrix[1] = temp_matrix[1] * a.value;
+matrix[4] = temp_matrix[4] * a.value;
+matrix[5] = temp_matrix[5] * a.value;
+matrix[8] = temp_matrix[8] * a.value;
+matrix[9] = temp_matrix[9] * a.value;
+matrix[12] = temp_matrix[12] * a.value;
+matrix[13] = temp_matrix[13] * a.value;
+*modified = true;
+return true;
+@
+\fimcodigo
+
+Já para rotacionar uma imagem um ângulo $\theta$, multiplicamos sua
+matriz pela vista abaixo:
+
+$$\left[{{cos(\theta) \atop \sin(\theta)}\atop
+      {0\atop 0}}{{-sin(\theta) \atop cos(\theta)}\atop {0 \atop
+      0}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
+      1}}\right]
+$$
+
+Como na matriz acima o ângulo é em radianos, também devemos fazer uma
+conversão, já que para Weaver Metafont, ângulos são apresentados em
+graus. E assim obtemos o código abaixo que multiplica a matriz das
+expressões secundárias pela matriz de rotação:
+
+\iniciocodigo
+@<Secundário de Imagem: Rotação@>=
+struct numeric_variable r;
+float temp_matrix[16];
+double rotation, cos_theta, sin_theta;
+if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &r))
+  return false;
+rotation = 0.017453292519943295 * r.value;
+sin_theta = sin(rotation);
+cos_theta = cos(rotation);
+memcpy(temp_matrix, matrix, 16 * sizeof(float));
+matrix[0] = temp_matrix[0] * cos_theta - temp_matrix[1] * sin_theta;
+matrix[1] = temp_matrix[0] * sin_theta + temp_matrix[1] * cos_theta;
+matrix[4] = temp_matrix[4] * cos_theta - temp_matrix[5] * sin_theta;
+matrix[5] = temp_matrix[4] * sin_theta + temp_matrix[5] * cos_theta;
+matrix[8] = temp_matrix[8] * cos_theta - temp_matrix[9] * sin_theta;
+matrix[9] = temp_matrix[8] * sin_theta + temp_matrix[9] * cos_theta;
+matrix[12] = temp_matrix[12] * cos_theta - temp_matrix[13] * sin_theta;
+matrix[13] = temp_matrix[12] * sin_theta + temp_matrix[13] * cos_theta;
+*modified = true;
+return true;
+@
+\fimcodigo
+
+Deslocar a imagem uma coordenada $(x, y)$ é feito multiplicando pela
+matriz abaixo:
+
+$$\left[{{1 \atop 0}\atop {0\atop
+   x}}{{0 \atop 1}\atop {0 \atop y}}{{0\atop 0}\atop{1 \atop
+      0}}{{0 \atop 0}\atop{0\atop 1}}\right]
+$$
+
+Então multiplicamos a matriz de expressão secundária pela matriz acima
+com o código abaixo:
+
+\iniciocodigo
+@<Secundário de Imagem: Deslocamento@>=
+struct pair_variable p;
+float temp_matrix[16];
+if(!eval_pair_primary(mf, cx, last_transformer -> next, end_expression, &p))
+  return false;
+memcpy(temp_matrix, matrix, 16 * sizeof(float));
+matrix[0] = temp_matrix[0] + temp_matrix[3] * p.x;
+matrix[1] = temp_matrix[1] + temp_matrix[3] * p.y;
+matrix[4] = temp_matrix[4] + temp_matrix[7] * p.x;
+matrix[5] = temp_matrix[5] + temp_matrix[7] * p.y;
+matrix[8] = temp_matrix[8] + temp_matrix[11] * p.x;
+matrix[9] = temp_matrix[8] + temp_matrix[11] * p.y;
+matrix[12] = temp_matrix[12] + temp_matrix[15] * p.x;
+matrix[13] = temp_matrix[12] + temp_matrix[15] * p.y;
+*modified = true;
+return true;
+@
+\fimcodigo
+
+Inclinar a imagem com intensidade $x$ é feito multiplicando pela
+matriz:
+
+$$\left[{{1 \atop x}\atop {0\atop
+      0}}{{0 \atop 1}\atop {0 \atop 1}}{{0\atop 0}\atop{1 \atop
+      0}}{{0 \atop 0}\atop{0\atop 1}}\right]
+$$
+
+O que é obtido pelo código abaixo:
+
+\iniciocodigo
+@<Secundário de Imagem: Inclinação@>=
+struct numeric_variable a;
+float temp_matrix[16];
+if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &a))
+  return false;
+memcpy(temp_matrix, matrix, 16 * sizeof(float));
+matrix[0] = temp_matrix[0] + a.value * temp_matrix[1];
+matrix[4] = temp_matrix[4] + a.value * temp_matrix[5];
+matrix[8] = temp_matrix[8] + a.value * temp_matrix[9];
+matrix[12] = temp_matrix[12] + a.value  * temp_matrix[13];
+*modified = true;
+return true;
+@
+\fimcodigo
+
+Mudança de escala só no eixo $x$ é feito multiplicando pela matriz:
+
+$$\left[{{a \atop 0}\atop {0\atop
+      0}}{{0 \atop 1}\atop {0 \atop 0}}{{0\atop 0}\atop{1 \atop
+      0}}{{0 \atop 0}\atop{0\atop 1}}\right]
+$$
+
+E para isso usamos o código abaixo:
+
+o\iniciocodigo
+@<Secundário de Imagem: X-Escala@>=
+struct numeric_variable a;
+float temp_matrix[16];
+if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &a))
+  return false;
+memcpy(temp_matrix, matrix, 16 * sizeof(float));
+matrix[0] = temp_matrix[0] * a.value;
+matrix[4] = temp_matrix[4] * a.value;
+matrix[8] = temp_matrix[8] * a.value;
+matrix[12] = temp_matrix[12] * a.value;
+*modified = true;
+return true;
+@
+\fimcodigo
+
+Quando é só no eixo $y$, a matriz a ser multiplicada é:
+
+$$\left[{{1 \atop 0}\atop {0\atop
+      0}}{{0 \atop a}\atop {0 \atop 0}}{{0\atop 0}\atop{1 \atop
+      0}}{{0 \atop 0}\atop{0\atop 1}}\right]
+$$
+
+Como é feito no código abaixo:
+
+\iniciocodigo
+@<Secundário de Imagem: Y-Escala@>=
+struct numeric_variable a;
+float temp_matrix[16];
+if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &a))
+  return false;
+memcpy(temp_matrix, matrix, 16 * sizeof(float));
+matrix[1] = temp_matrix[1] * a.value;
+matrix[5] = temp_matrix[5] * a.value;
+matrix[9] = temp_matrix[9] * a.value;
+matrix[13] = temp_matrix[13] * a.value;
+*modified = true;
+return true;
+@
+\fimcodigo
+
+E por fim, a mudança de escala $z$ é representada pela multiplicação
+pela matriz:
+
+$$\left[{{a \atop -b}\atop {0\atop
+      0}}{{b \atop a}\atop {0 \atop 0}}{{0\atop 0}\atop{1 \atop
+      0}}{{0 \atop 0}\atop{0\atop 1}}\right]
+$$
+
+O que requer o código abaixo:
+
+\iniciocodigo
+@<Secundário de Imagem: Z-Escala@>=
+struct pair_variable p;
+float temp_matrix[16];
+if(!eval_pair_primary(mf, cx, last_transformer -> next, end_expression, &p))
+  return false;
+memcpy(temp_matrix, matrix, 16 * sizeof(float));
+matrix[0] = temp_matrix[0] * p.x - temp_matrix[1] * p.y;
+matrix[1] = temp_matrix[0] * p.y + temp_matrix[1] * p.x;
+matrix[4] = temp_matrix[4] * p.x - temp_matrix[5] * p.y;
+matrix[5] = temp_matrix[4] * p.y + temp_matrix[5] * p.x;
+matrix[8] = temp_matrix[8] * p.x - temp_matrix[9] * p.y;
+matrix[9] = temp_matrix[8] * p.y + temp_matrix[9] * p.x;
+matrix[12] = temp_matrix[12] * p.x - temp_matrix[13] * p.y;
+matrix[13] = temp_matrix[12] * p.y + temp_matrix[13] * p.x;
+*modified = true;
+return true;
+@
+\fimcodigo
+
 
 \secao{Referências}
 

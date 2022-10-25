@@ -730,7 +730,15 @@ bool eval_picture_expression(struct metafont*mf,struct context*cx,
 struct generic_token*begin_expression,
 struct generic_token*end_token_list,
 struct picture_variable*result);
-/*:338*/
+/*:338*//*348:*/
+#line 9078 "weaver-interface-metafont_en.tex"
+
+bool eval_picture_secondary(struct metafont*mf,struct context*cx,
+struct generic_token*begin_expression,
+struct generic_token*end_token_list,
+struct picture_variable*result,
+float*matrix,bool*modified);
+/*:348*/
 #line 214 "weaver-interface-metafont_en.tex"
 
 /*15:*/
@@ -5844,9 +5852,9 @@ if(i%5==0)
 matrix[i]= 1.0;
 else
 matrix[i]= 0.0;
-
-
-
+if(!eval_picture_secondary(mf,cx,begin_expression,end_expression,sec,
+matrix,&modified))
+return false;
 if(modified){
 
 if(sec->texture!=0)
@@ -5888,9 +5896,9 @@ if(i%5==0)
 matrix[i]= 1.0;
 else
 matrix[i]= 0.0;
-
-
-
+if(!eval_picture_secondary(mf,cx,begin_expression,end_expression,sec,
+matrix,&modified))
+return false;
 if(modified){
 
 if(sec->texture!=0)
@@ -5981,7 +5989,201 @@ glDeleteTextures(1,&(b.texture));
 return true;
 }
 }
-/*:339*/
+/*:339*//*349:*/
+#line 9095 "weaver-interface-metafont_en.tex"
+
+bool eval_picture_secondary(struct metafont*mf,struct context*cx,
+struct generic_token*begin_expression,
+struct generic_token*end_expression,
+struct picture_variable*result,
+float*matrix,bool*modified){
+DECLARE_NESTING_CONTROL();
+struct generic_token*p,*prev= NULL,*last_transformer= NULL,
+*before_last_transformer= begin_expression;
+p= begin_expression;
+do{
+COUNT_NESTING(p);
+if(IS_NOT_NESTED()&&(p->type==TYPE_ROTATED||
+p->type==TYPE_SCALED||p->type==TYPE_SHIFTED||
+p->type==TYPE_SLANTED||p->type==TYPE_XSCALED||
+p->type==TYPE_YSCALED||p->type==TYPE_ZSCALED)){
+last_transformer= p;
+before_last_transformer= prev;
+}
+prev= p;
+if(p!=end_expression)
+p= (struct generic_token*)p->next;
+else
+p= NULL;
+}while(p!=NULL);
+if(last_transformer==NULL)
+
+return true;
+else{
+if(!eval_picture_secondary(mf,cx,begin_expression,
+before_last_transformer,result,matrix,modified))
+return false;
+if(last_transformer->type==TYPE_ROTATED){
+/*351:*/
+#line 9204 "weaver-interface-metafont_en.tex"
+
+struct numeric_variable r;
+float temp_matrix[16];
+double rotation,cos_theta,sin_theta;
+if(!eval_numeric_primary(mf,cx,last_transformer->next,end_expression,&r))
+return false;
+rotation= 0.017453292519943295*r.value;
+sin_theta= sin(rotation);
+cos_theta= cos(rotation);
+memcpy(temp_matrix,matrix,16*sizeof(float));
+matrix[0]= temp_matrix[0]*cos_theta-temp_matrix[1]*sin_theta;
+matrix[1]= temp_matrix[0]*sin_theta+temp_matrix[1]*cos_theta;
+matrix[4]= temp_matrix[4]*cos_theta-temp_matrix[5]*sin_theta;
+matrix[5]= temp_matrix[4]*sin_theta+temp_matrix[5]*cos_theta;
+matrix[8]= temp_matrix[8]*cos_theta-temp_matrix[9]*sin_theta;
+matrix[9]= temp_matrix[8]*sin_theta+temp_matrix[9]*cos_theta;
+matrix[12]= temp_matrix[12]*cos_theta-temp_matrix[13]*sin_theta;
+matrix[13]= temp_matrix[12]*sin_theta+temp_matrix[13]*cos_theta;
+*modified= true;
+return true;
+/*:351*/
+#line 9128 "weaver-interface-metafont_en.tex"
+
+}
+else if(last_transformer->type==TYPE_SCALED){
+/*350:*/
+#line 9172 "weaver-interface-metafont_en.tex"
+
+struct numeric_variable a;
+float temp_matrix[16];
+if(!eval_numeric_primary(mf,cx,last_transformer->next,end_expression,&a))
+return false;
+memcpy(temp_matrix,matrix,16*sizeof(float));
+matrix[0]= temp_matrix[0]*a.value;
+matrix[1]= temp_matrix[1]*a.value;
+matrix[4]= temp_matrix[4]*a.value;
+matrix[5]= temp_matrix[5]*a.value;
+matrix[8]= temp_matrix[8]*a.value;
+matrix[9]= temp_matrix[9]*a.value;
+matrix[12]= temp_matrix[12]*a.value;
+matrix[13]= temp_matrix[13]*a.value;
+*modified= true;
+return true;
+/*:350*/
+#line 9131 "weaver-interface-metafont_en.tex"
+
+}
+else if(last_transformer->type==TYPE_SHIFTED){
+/*352:*/
+#line 9238 "weaver-interface-metafont_en.tex"
+
+struct pair_variable p;
+float temp_matrix[16];
+if(!eval_pair_primary(mf,cx,last_transformer->next,end_expression,&p))
+return false;
+memcpy(temp_matrix,matrix,16*sizeof(float));
+matrix[0]= temp_matrix[0]+temp_matrix[3]*p.x;
+matrix[1]= temp_matrix[1]+temp_matrix[3]*p.y;
+matrix[4]= temp_matrix[4]+temp_matrix[7]*p.x;
+matrix[5]= temp_matrix[5]+temp_matrix[7]*p.y;
+matrix[8]= temp_matrix[8]+temp_matrix[11]*p.x;
+matrix[9]= temp_matrix[8]+temp_matrix[11]*p.y;
+matrix[12]= temp_matrix[12]+temp_matrix[15]*p.x;
+matrix[13]= temp_matrix[12]+temp_matrix[15]*p.y;
+*modified= true;
+return true;
+/*:352*/
+#line 9134 "weaver-interface-metafont_en.tex"
+
+}
+else if(last_transformer->type==TYPE_SLANTED){
+/*353:*/
+#line 9269 "weaver-interface-metafont_en.tex"
+
+struct numeric_variable a;
+float temp_matrix[16];
+if(!eval_numeric_primary(mf,cx,last_transformer->next,end_expression,&a))
+return false;
+memcpy(temp_matrix,matrix,16*sizeof(float));
+matrix[0]= temp_matrix[0]+a.value*temp_matrix[1];
+matrix[4]= temp_matrix[4]+a.value*temp_matrix[5];
+matrix[8]= temp_matrix[8]+a.value*temp_matrix[9];
+matrix[12]= temp_matrix[12]+a.value*temp_matrix[13];
+*modified= true;
+return true;
+/*:353*/
+#line 9137 "weaver-interface-metafont_en.tex"
+
+}
+else if(last_transformer->type==TYPE_XSCALED){
+/*354:*/
+#line 9294 "weaver-interface-metafont_en.tex"
+
+struct numeric_variable a;
+float temp_matrix[16];
+if(!eval_numeric_primary(mf,cx,last_transformer->next,end_expression,&a))
+return false;
+memcpy(temp_matrix,matrix,16*sizeof(float));
+matrix[0]= temp_matrix[0]*a.value;
+matrix[4]= temp_matrix[4]*a.value;
+matrix[8]= temp_matrix[8]*a.value;
+matrix[12]= temp_matrix[12]*a.value;
+*modified= true;
+return true;
+/*:354*/
+#line 9140 "weaver-interface-metafont_en.tex"
+
+}
+else if(last_transformer->type==TYPE_YSCALED){
+/*355:*/
+#line 9319 "weaver-interface-metafont_en.tex"
+
+struct numeric_variable a;
+float temp_matrix[16];
+if(!eval_numeric_primary(mf,cx,last_transformer->next,end_expression,&a))
+return false;
+memcpy(temp_matrix,matrix,16*sizeof(float));
+matrix[1]= temp_matrix[1]*a.value;
+matrix[5]= temp_matrix[5]*a.value;
+matrix[9]= temp_matrix[9]*a.value;
+matrix[13]= temp_matrix[13]*a.value;
+*modified= true;
+return true;
+/*:355*/
+#line 9143 "weaver-interface-metafont_en.tex"
+
+}
+else if(last_transformer->type==TYPE_ZSCALED){
+/*356:*/
+#line 9345 "weaver-interface-metafont_en.tex"
+
+struct pair_variable p;
+float temp_matrix[16];
+if(!eval_pair_primary(mf,cx,last_transformer->next,end_expression,&p))
+return false;
+memcpy(temp_matrix,matrix,16*sizeof(float));
+matrix[0]= temp_matrix[0]*p.x-temp_matrix[1]*p.y;
+matrix[1]= temp_matrix[0]*p.y+temp_matrix[1]*p.x;
+matrix[4]= temp_matrix[4]*p.x-temp_matrix[5]*p.y;
+matrix[5]= temp_matrix[4]*p.y+temp_matrix[5]*p.x;
+matrix[8]= temp_matrix[8]*p.x-temp_matrix[9]*p.y;
+matrix[9]= temp_matrix[8]*p.y+temp_matrix[9]*p.x;
+matrix[12]= temp_matrix[12]*p.x-temp_matrix[13]*p.y;
+matrix[13]= temp_matrix[12]*p.y+temp_matrix[13]*p.x;
+*modified= true;
+return true;
+/*:356*/
+#line 9146 "weaver-interface-metafont_en.tex"
+
+}
+#if defined(W_DEBUG_METAFONT)
+fprintf(stderr,"METAFONT: Error: %s:%d: Unrecognized picture transformer\n",
+mf->file,begin_expression->line);
+#endif
+return false;
+}
+}
+/*:349*/
 #line 215 "weaver-interface-metafont_en.tex"
 
 /*9:*/
