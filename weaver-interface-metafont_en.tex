@@ -8716,8 +8716,8 @@ The tertiary picture expressions invoves sums and subtractions:
 
 \alinhaverbatim
 <Picture Expression> -> <Picture Tertiary>
-<Picture Tertiary> -> <Picture Tertiary><Plus os Minus><Picture Secondary>
-<Plus or Minus> -> + | -
+<Picture Tertiary> -> <Picture Tertiary><'+' or '-'> <Picture Secondary>
+<'+' or '-'> -> + | -
 \alinhanormal
 
 Pictures can be added or subtracted. The result of $p_1+p_2$
@@ -8997,6 +8997,7 @@ if(last_operator -> type == TYPE_SUBTRACT){
 else
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 // Finalization
+glDeleteFramebuffers(1, &temporary_framebuffer);
 if(temporary_free != NULL)
   temporary_free(data);
 @
@@ -9059,7 +9060,8 @@ became true only if the matrix is changed during secondary evaluation.
                              matrix, &modified))
     return false;
   if(modified){
-    //apply_image_transformation(result, sec, matrix);
+    if(!apply_image_transformation(mf, result, sec, matrix))
+      return false;
     if(sec -> texture != 0)
       glDeleteTextures(1, &(sec -> texture));
   }
@@ -9361,6 +9363,90 @@ return true;
 @
 \fimcodigo
 
+Now we just need to define how do we apply the linear transformation
+over an image given the transform matrix, the origin picture variable
+and the destiny picture variable. This is done with the help of the
+following auxiliary function:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+bool apply_image_transformation(struct metafont *mf,
+                                struct picture_variable *dst,
+                                struct picture_variable *org,
+                                float *matrix);
+@
+\fimcodigo
+
+The function implementation will first compute the resulting image
+size, will create an empty transparent texture to initialize the
+destiny with that size and next will draw the origin texture in the
+destiny passing the matrix to the shader program.
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+bool apply_image_transformation(struct metafont *mf,
+                                struct picture_variable *dst,
+                                struct picture_variable *org,
+                                float *matrix){
+  void *data;
+  GLuint temporary_framebuffer = 0;
+  // These variables will help to compute the final size
+  float offset_x, offset_y, end_x, end_y;
+  offset_x = matrix[12];
+  offset_y = matrix[13];
+  end_x = ((float) dst -> width) * matrix[0] +
+          ((float) dst -> height) * matrix[4] + matrix[12];
+  end_y = ((float) dst -> width) * matrix[1] +
+          ((float) dst -> height) * matrix[5] + matrix[13];
+  dst -> width = (int) (end_x - offset_x);
+  dst -> height = (int) (end_y - offset_y);
+  // We know the final size, allocating the new image:
+  data = temporary_alloc(dst -> width * dst -> height * 4);
+  if(data == NULL){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s: Not enough memory!\n",
+            mf -> file);
+#endif
+    return false;
+  }
+  // Generating final texture and framebuffer
+  glGenFramebuffers(1, &temporary_framebuffer);
+  memset(data, 0, dst -> width * dst -> height * 4);
+  glGenTextures(1, &(dst -> texture)); 
+  glBindTexture(GL_TEXTURE_2D, dst -> texture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, dst -> width, dst -> height, 0, GL_RGBA,
+               GL_UNSIGNED_BYTE, data);
+  glBindFramebuffer(GL_FRAMEBUFFER, temporary_framebuffer);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         dst -> texture, 0);
+  if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s: OpenGL framebuffer error!\n",
+            mf -> file);
+#endif
+    return false;
+  }
+  // Preparring the rendering
+  glViewport(0, 0, dst -> width, dst -> height);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) 0);
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
+                        (void *) (3 * sizeof(float)));
+  glEnableVertexAttribArray(0);
+  glEnableVertexAttribArray(1);
+  glUseProgram(program);
+  glUniformMatrix4fv(uniform_matrix, 1, false, matrix);
+  glBindTexture(GL_TEXTURE_2D, org -> texture);
+  // Rendering:
+  glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+  // Finalization
+  glDeleteFramebuffers(1, &temporary_framebuffer);
+  if(temporary_free != NULL)
+    temporary_free(data);
+  return true;
+}
+@
+\fimcodigo
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
