@@ -1144,6 +1144,41 @@ void destroy_context(struct context *cx){
 @
 \fimcodigo
 
+O quão rápido executa o nosso código de inicialização e finalização
+comparado ao METAFONT original? Para responder isso, foi feito um
+``benchmark'' comparando a execução de um programa vazio formado só
+pela palavra ``end'' ao ser interpretado pelo programa METAFONT
+original e pela nossa implementação do Weaver Metafont. O teste foi
+feito em um Ubuntu 20.04.4 rodando em um Intel(R) Core(TM) i5-3210M
+CPU @ 2.50GHz com 4GB de RAM. O resultado é apresentado abaixo:
+
+
+\vbox{%A forma mais geral de remover espaçamento entre linhas:
+\baselineskip-1000pt\lineskip0pt\lineskiplimit16383.99999pt\tabskip0pt
+\def\linha{\noalign{\hrule}}
+\def\hidewidth{\hskip-1000pt plus 1fill}
+\def\col{\hbox{\vrule height12pt depth3.5pt width0pt}}
+\halign to15cm{\col#& \vrule#\tabskip=1em plus2em&
+\hfil#& \vrule#& \hfil#\hfil& \vrule#&
+\hfil#& \vrule#&\hfil#& \vrule#\tabskip=0pt\cr\linha
+&&\omit\hidewidth Versão\hidewidth&&\omit\hidewidth
+Tempo (s)\hidewidth&&
+\omit\hidewidth Versão\hidewidth&&Tempo (s)&\cr\linha
+&&METAFONT&&0,121&&Weaver Metafont&&0.001&\cr\linha}}
+
+A diferença de valores se dá provavelmente devido ao fato do METAFONT
+original necessariamente imprimir mensagens na tela e ter uma lista
+muito maior de variáveis internas que precisam ser inicializadas. Além
+disso, o programa original foi feito em uma versão primitiva de Pascal
+onde não havia uma maneira padronizada de se lidar com strings,
+números em ponto flutuante, etc. Tudo isso exigiu do METAFONT original
+uma burocracia muito maior na inicialização e finalização para
+preparar rotinas que lidam com tais tarefas básicas. Nada disso é
+necessário em nossa implementação que já conta com um ambiente padrão
+mais rico e com mais capacidades. Tudo o que temos que fazer é apenas
+alocar memória necessária e realizar algumas inicializações mais
+básicas.
+
 \secao{5. Listas de Declarações}
 
 Uma lista de declarações é uma série de declarações (potencialmente
@@ -9620,7 +9655,7 @@ bool eval_picture_primary(struct metafont *mf, struct context *cx,
   else{
     if(begin_expression -> type == TYPE_OPEN_PARENTHESIS &&
       end_expression -> type == TYPE_CLOSE_PARENTHESIS){
-      //@<Imagem Primária: Parênteses@>
+      @<Imagem Primária: Parênteses@>
     }
     else if(begin_expression -> type == TYPE_NULLPICTURE){
       //@<Imagem Primária: Imagem em Branco@>
@@ -9713,6 +9748,29 @@ return true;
 @
 \fimcodigo
 
+Lidar com os parênteses envolve percorrer os tokens até encontrar o
+último token antes do fechar de parênteses. E avaliar como uma nova
+expressão de imagem tudo aquilo que estiver entre o parênteses inicial
+e o final:
+
+\iniciocodigo
+@<Imagem Primária: Parênteses@>=
+struct generic_token *t = begin_expression -> next;
+DECLARE_NESTING_CONTROL();
+if(begin_expression -> next == end_expression){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Empty parenthesis.\n",
+          mf -> file, begin_expression -> line);
+#endif
+  return false;
+}
+while(t != NULL && t -> next != end_expression){
+  COUNT_NESTING(t);
+  t = t -> next;
+}
+return eval_picture_expression(mf, cx, begin_expression -> next, t, result);
+@
+\fimcodigo
 
 
 \secao{Referências}

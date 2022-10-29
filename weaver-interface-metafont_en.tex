@@ -1119,6 +1119,37 @@ void destroy_context(struct context *cx){
 @
 \fimcodigo
 
+How fast do we execute our initialization and finalization compared to
+the original METAFONT program? To give an answer, we created a
+benchmark comparing the execution of i=an empty program composed just
+by the string ``end''. It was interpreted by the original METAFONT and
+by our Weaver Metafont implementation. The test was done in a machine
+with Ubuntu 20.04.4 running in a  Intel(R) Core(TM) i5-3210M CPU @
+2.50GHz with 4GB RAM. The result is given below:
+
+\vbox{%A forma mais geral de remover espaçamento entre linhas:
+\baselineskip-1000pt\lineskip0pt\lineskiplimit16383.99999pt\tabskip0pt
+\def\linha{\noalign{\hrule}}
+\def\hidewidth{\hskip-1000pt plus 1fill}
+\def\col{\hbox{\vrule height12pt depth3.5pt width0pt}}
+\halign to15cm{\col#& \vrule#\tabskip=1em plus2em&
+\hfil#& \vrule#& \hfil#\hfil& \vrule#&
+\hfil#& \vrule#&\hfil#& \vrule#\tabskip=0pt\cr\linha
+&&\omit\hidewidth Versão\hidewidth&&\omit\hidewidth
+Time (s)\hidewidth&&
+\omit\hidewidth Versão\hidewidth&&Time (s)&\cr\linha
+&&METAFONT&&0,121&&Weaver Metafont&&0.001&\cr\linha}}
+
+This huge difference probably is because the original METAFONT always
+write messages in the screen and has a bigger list of variables to be
+initialized. Besides this, it was written in a primitive Pascal that
+had no portable way to deal with strings, and had no floating point
+implementation. All this required that the original METAFONT had to
+prepare routines to do a lot of basic tasks, which required much more
+bureaucracy in the initialization. This is not necessary in our
+implementation that runs in a richer environment with more
+capabilities. All we need to do is memory allocation and more basic
+initialization.
 
 \secao{5. List of Statements}
 
@@ -9502,7 +9533,7 @@ bool eval_picture_primary(struct metafont *mf, struct context *cx,
   else{
     if(begin_expression -> type == TYPE_OPEN_PARENTHESIS &&
       end_expression -> type == TYPE_CLOSE_PARENTHESIS){
-      //@<Primary Picture: Parenthesis@>
+      @<Primary Picture: Parenthesis@>
     }
     else if(begin_expression -> type == TYPE_NULLPICTURE){
       //@<Primary Picture: Null Picture@>
@@ -9595,6 +9626,29 @@ return true;
 @
 \fimcodigo
 
+Dealing with parenthesis is exactly like what we did in other
+expressions. We walk over the token list until we find the last token
+before the closing parenthesis. The tokens between the two parenthesis
+are evaluated as a new picture expression:
+
+\iniciocodigo
+@<Primary Picture: Parenthesis@>=
+struct generic_token *t = begin_expression -> next;
+DECLARE_NESTING_CONTROL();
+if(begin_expression -> next == end_expression){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Empty parenthesis.\n",
+          mf -> file, begin_expression -> line);
+#endif
+  return false;
+}
+while(t != NULL && t -> next != end_expression){
+  COUNT_NESTING(t);
+  t = t -> next;
+}
+return eval_picture_expression(mf, cx, begin_expression -> next, t, result);
+@
+\fimcodigo
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
