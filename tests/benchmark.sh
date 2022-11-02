@@ -2,6 +2,7 @@
 
 clear
 
+# Executing empty program
 echo -e "Evaluating empty METAFONT program..."
 echo "end" > .tmp.mf
 var=$( { time mf .tmp.mf; } 2>&1 )
@@ -11,3 +12,4 @@ var=$( { time ./benchmark_mf .tmp.mf; } 2>&1 )
 out=$(echo ${var} | egrep -o "real [^ ]*m[^ ]*s")
 echo -e "Weaver Metafont:\t"${out}
 rm .tmp.mf
+

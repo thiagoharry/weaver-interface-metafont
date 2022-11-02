@@ -9650,6 +9650,50 @@ return eval_picture_expression(mf, cx, begin_expression -> next, t, result);
 @
 \fimcodigo
 
+The next picture primary expression is creating an empty picture with
+a given size. We first evaluate the tokens
+after \monoespaco{nullpicture} token as a primary pair
+expression. Then, we obtain the picture size from the pair and create
+the texture:
+
+\iniciocodigo
+@<Imagem Primária: Imagem em Branco@>=
+struct generic_token *begin_pair_expression, *end_pair_expression;
+struct pair_variable p;
+void *data;
+begin_pair_expression = begin_expression -> next;
+end_pair_expression = end_expression;
+if(begin_expression == end_expression){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Missing pair expression.\n",
+          mf -> file, begin_expression -> line);
+#endif
+  return false;
+}
+if(!eval_pair_primary(mf, cx, begin_pair_expression, end_pair_expression, &p))
+  return false;
+result -> width = p.x;
+result -> height = p.y;
+data = temporary_alloc(p.x * p.y * 4);
+if(data == NULL){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: Not enough memory.\n",
+          mf -> file, begin_expression -> line);
+#endif
+  return false;
+}
+memset(data, 0, result -> width * result -> height * 4);
+glGenTextures(1, &(result -> texture));
+glBindTexture(GL_TEXTURE_2D, result -> texture);
+glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, result -> width, result -> height, 0,
+             GL_RGBA, GL_UNSIGNED_BYTE, data);
+if(temporary_free != NULL)
+  temporary_free(data);
+return true;
+@
+\fimcodigo
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 

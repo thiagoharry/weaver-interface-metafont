@@ -9658,7 +9658,7 @@ bool eval_picture_primary(struct metafont *mf, struct context *cx,
       @<Imagem Primária: Parênteses@>
     }
     else if(begin_expression -> type == TYPE_NULLPICTURE){
-      //@<Imagem Primária: Imagem em Branco@>
+      @<Imagem Primária: Imagem em Branco@>
     }
     else if(begin_expression -> type == TYPE_SUM ||
             begin_expression -> type == TYPE_SUBTRACT){
@@ -9714,6 +9714,7 @@ if(data == NULL){
 #endif
     return false;
 }
+memset(data, 0, result -> width * result -> height * 4);
 glGenTextures(1, &(result -> texture)); 
 glGenFramebuffers(1, &temporary_framebuffer);
 glBindTexture(GL_TEXTURE_2D, result -> texture);
@@ -9772,6 +9773,48 @@ return eval_picture_expression(mf, cx, begin_expression -> next, t, result);
 @
 \fimcodigo
 
+A próxima expressão primária é a criação de uma imagem em branco com
+um dado tamanho. Isso ocorre quando lemos um
+token \monoespaco{nullpicture} seguido de um par primário. Criar a
+imagem vazia envolve primeiro interpretar o par primário que contém o
+seu tamanho e em seguida criar uma textura vazia com tal tamanho.
+
+\iniciocodigo
+@<Imagem Primária: Imagem em Branco@>=
+struct generic_token *begin_pair_expression, *end_pair_expression;
+struct pair_variable p;
+void *data;
+begin_pair_expression = begin_expression -> next;
+end_pair_expression = end_expression;
+if(begin_expression == end_expression){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Missing pair expression.\n",
+          mf -> file, begin_expression -> line);
+#endif
+  return false;
+}
+if(!eval_pair_primary(mf, cx, begin_pair_expression, end_pair_expression, &p))
+  return false;
+result -> width = p.x;
+result -> height = p.y;
+data = temporary_alloc(p.x * p.y * 4);
+if(data == NULL){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: Not enough memory.\n",
+          mf -> file, begin_expression -> line);
+#endif
+  return false;
+}
+memset(data, 0, result -> width * result -> height * 4);
+glGenTextures(1, &(result -> texture));
+glBindTexture(GL_TEXTURE_2D, result -> texture);
+glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, result -> width, result -> height, 0,
+             GL_RGBA, GL_UNSIGNED_BYTE, data);
+if(temporary_free != NULL)
+  temporary_free(data);
+return true;
+@
+\fimcodigo
 
 \secao{Referências}
 
