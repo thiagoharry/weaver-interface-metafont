@@ -469,7 +469,23 @@ static const char fragment_shader[]=
 static GLuint program;
 GLint uniform_matrix;
 GLint uniform_texture;
-/*:344*/
+/*:344*//*368:*/
+#line 9719 "weaver-interface-metafont_en.tex"
+
+static const char fragment_shader_inv[]= 
+"#version 100\n"
+"precision highp float;\n"
+"precision highp int;\n"
+"varying mediump vec2 texture_coordinate;\n"
+"uniform sampler2D texture;\n"
+"void main(){\n"
+"  vec4 texture = texture2D(texture1, texture_coordinate);\n"
+"  gl_FragData[0] = vac4(1.0, 1.0, 1.0, 1.0) - texture;"
+"}\n";
+static GLuint inverse_program;
+GLint uniform_inverse_matrix;
+GLint uniform_inverse_texture;
+/*:368*/
 #line 213 "weaver-interface-metafont_en.tex"
 
 /*47:*/
@@ -6281,7 +6297,7 @@ struct picture_variable*result){
 if(begin_expression==end_expression){
 if(begin_expression->type==TYPE_SYMBOLIC){
 /*364:*/
-#line 9560 "weaver-interface-metafont_en.tex"
+#line 9559 "weaver-interface-metafont_en.tex"
 
 void*data;
 GLuint temporary_framebuffer= 0;
@@ -6357,7 +6373,7 @@ else{
 if(begin_expression->type==TYPE_OPEN_PARENTHESIS&&
 end_expression->type==TYPE_CLOSE_PARENTHESIS){
 /*365:*/
-#line 9635 "weaver-interface-metafont_en.tex"
+#line 9634 "weaver-interface-metafont_en.tex"
 
 struct generic_token*t= begin_expression->next;
 DECLARE_NESTING_CONTROL();
@@ -6377,11 +6393,89 @@ return eval_picture_expression(mf,cx,begin_expression->next,t,result);
 #line 9536 "weaver-interface-metafont_en.tex"
 
 }
-else if(begin_expression->type==TYPE_NULLPICTURE){
+else if(begin_expression->type==TYPE_SUM){
+/*367:*/
+#line 9701 "weaver-interface-metafont_en.tex"
+
+struct generic_token*p= begin_expression->next;
+if(begin_expression==end_expression){
+#if defined(W_DEBUG_METAFONT)
+fprintf(stderr,"METAFONT: Error: %s:%d: Missing image expression "
+"after '+'.\n",mf->file,begin_expression->line);
+#endif
+return false;
+}
+return eval_picture_primary(mf,cx,p,end_expression,result);
+/*:367*/
+#line 9539 "weaver-interface-metafont_en.tex"
 
 }
-else if(begin_expression->type==TYPE_SUM||
-begin_expression->type==TYPE_SUBTRACT){
+else if(begin_expression->type==TYPE_SUBTRACT){
+/*371:*/
+#line 9795 "weaver-interface-metafont_en.tex"
+
+struct picture_variable p;
+void*data;
+GLuint temporary_framebuffer= 0;
+float identity_matrix[16]= {1.0,0.0,0.0,0.0,
+0.0,1.0,0.0,0.0,
+0.0,0.0,1.0,0.0,
+0.0,0.0,0.0,1.0};
+if(begin_expression==end_expression){
+#if defined(W_DEBUG_METAFONT)
+fprintf(stderr,"METAFONT: Error: %s:%d: Missing picture expression after "
+"'-'.\n",mf->file,begin_expression->line);
+#endif
+return false;
+}
+if(!eval_picture_primary(mf,cx,begin_expression->next,end_expression,&p))
+return false;
+
+result->width= p.width;
+result->height= p.height;
+data= temporary_alloc(result->width*result->height*4);
+if(data==NULL){
+#if defined(W_DEBUG_METAFONT)
+fprintf(stderr,"METAFONT: Error: %s: Not enough memory!\n",
+mf->file);
+#endif
+return false;
+}
+memset(data,0,result->width*result->height*4);
+glGenTextures(1,&(result->texture));
+glGenFramebuffers(1,&temporary_framebuffer);
+glBindTexture(GL_TEXTURE_2D,result->texture);
+glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,result->width,result->height,0,
+GL_RGBA,GL_UNSIGNED_BYTE,data);
+glBindFramebuffer(GL_FRAMEBUFFER,temporary_framebuffer);
+glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D,
+result->texture,0);
+if(glCheckFramebufferStatus(GL_FRAMEBUFFER)!=GL_FRAMEBUFFER_COMPLETE){
+#if defined(W_DEBUG_METAFONT)
+fprintf(stderr,"METAFONT: Error: %s:%d: OpenGL framebuffer error!\n",
+mf->file,begin_expression->line);
+#endif
+}
+
+glViewport(0,0,result->width,result->height);
+glBindBuffer(GL_ARRAY_BUFFER,vbo);
+glVertexAttribPointer(0,3,GL_FLOAT,GL_FALSE,5*sizeof(float),(void*)0);
+glVertexAttribPointer(1,2,GL_FLOAT,GL_FALSE,5*sizeof(float),
+(void*)(3*sizeof(float)));
+glEnableVertexAttribArray(0);
+glEnableVertexAttribArray(1);
+glUseProgram(inverse_program);
+glUniformMatrix4fv(uniform_inverse_matrix,1,false,identity_matrix);
+glBindTexture(GL_TEXTURE_2D,p.texture);
+
+glDrawArrays(GL_TRIANGLE_FAN,0,4);
+
+if(temporary_free!=NULL)
+temporary_free(data);
+glDeleteTextures(1,&(p.texture));
+return true;
+/*:371*/
+#line 9542 "weaver-interface-metafont_en.tex"
 
 }
 }
@@ -6456,7 +6550,49 @@ glBindAttribLocation(program,1,"vertex_texture_coordinate");
 uniform_matrix= glGetUniformLocation(program,"model_view_matrix");
 uniform_texture= glGetUniformLocation(program,"texture");
 }
-/*:345*/
+/*:345*//*369:*/
+#line 9739 "weaver-interface-metafont_en.tex"
+
+{
+GLuint vertex,fragment;
+GLint status= GL_TRUE;
+vertex= glCreateShader(GL_VERTEX_SHADER);
+fragment= glCreateShader(GL_FRAGMENT_SHADER);
+glShaderSource(vertex,1,(const char**)&vertex_shader,NULL);
+glShaderSource(fragment,1,(const char**)&fragment_shader_inv,NULL);
+glCompileShader(vertex);
+glGetShaderiv(vertex,GL_COMPILE_STATUS,&status);
+if(status==GL_FALSE){
+fprintf(stderr,
+"ERROR: Weaver Metafont vertex shader compilation failed!\n");
+return false;
+}
+glCompileShader(fragment);
+glGetShaderiv(fragment,GL_COMPILE_STATUS,&status);
+if(status==GL_FALSE){
+fprintf(stderr,
+"ERROR: Weaver Metafont inverse fragment shader compilation "
+"failed!\n");
+return false;
+}
+inverse_program= glCreateProgram();
+glAttachShader(inverse_program,vertex);
+glAttachShader(inverse_program,fragment);
+glLinkProgram(inverse_program);
+glGetProgramiv(inverse_program,GL_LINK_STATUS,&status);
+if(status==GL_FALSE){
+fprintf(stderr,"ERROR: Weaver Metafont shader linking failed!\n");
+return false;
+}
+glDeleteShader(vertex);
+glDeleteShader(fragment);
+
+glBindAttribLocation(inverse_program,0,"vertex_position");
+glBindAttribLocation(inverse_program,1,"vertex_texture_coordinate");
+uniform_inverse_matrix= glGetUniformLocation(inverse_program,"model_view_matrix");
+uniform_inverse_texture= glGetUniformLocation(inverse_program,"texture");
+}
+/*:369*/
 #line 256 "weaver-interface-metafont_en.tex"
 
 return true;
@@ -6473,7 +6609,11 @@ glDeleteBuffers(1,&vbo);
 #line 8952 "weaver-interface-metafont_en.tex"
 
 glDeleteProgram(program);
-/*:346*/
+/*:346*//*370:*/
+#line 9785 "weaver-interface-metafont_en.tex"
+
+glDeleteProgram(inverse_program);
+/*:370*/
 #line 269 "weaver-interface-metafont_en.tex"
 
 }

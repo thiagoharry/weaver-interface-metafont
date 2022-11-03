@@ -9535,12 +9535,11 @@ bool eval_picture_primary(struct metafont *mf, struct context *cx,
       end_expression -> type == TYPE_CLOSE_PARENTHESIS){
       @<Primary Picture: Parenthesis@>
     }
-    else if(begin_expression -> type == TYPE_NULLPICTURE){
-      //@<Primary Picture: Null Picture@>
+    else if(begin_expression -> type == TYPE_SUM){
+      @<Primary Picture: Identity@>
     }
-    else if(begin_expression -> type == TYPE_SUM ||
-            begin_expression -> type == TYPE_SUBTRACT){
-      //@<Primary Picture: Identity or Inverse@>
+    else if(begin_expression -> type == TYPE_SUBTRACT){
+      @<Primary Picture: Inverse@>
     }
   }
 #if defined(W_DEBUG_METAFONT)
@@ -9692,6 +9691,171 @@ if(temporary_free != NULL)
 return true;
 @
 \fimcodigo
+
+Now the penultimate case: when we have a token \monoespaco{+} before
+the picture. In this case the operator is not doing anything. It is an
+identity operator. So we just ignore it and evaluate the next tokens
+as the resulting picture:
+
+\iniciocodigo
+@<Primary Picture: Identity@>=
+struct generic_token *p = begin_expression -> next;
+if(begin_expression == end_expression){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Missing image expression "
+                  "after '+'.\n", mf -> file, begin_expression -> line);
+#endif
+  return false;
+}
+return eval_picture_primary(mf, cx, p, end_expression, result);
+@
+\fimcodigo
+
+For the operator \monoespaco{-}, which reverse the colors and the
+transparency in a picture, we will need a new shader program using
+another fragment shader:
+
+\iniciocodigo
+@<Local Variables (metafont.c)@>+=
+static const char fragment_shader_inv[] =
+  "#version 100\n"
+  "precision highp float;\n"
+  "precision highp int;\n"
+  "varying mediump vec2 texture_coordinate;\n"
+  "uniform sampler2D texture;\n"
+  "void main(){\n"
+  "  vec4 texture = texture2D(texture1, texture_coordinate);\n"
+  "  gl_FragData[0] = vac4(1.0, 1.0, 1.0, 1.0) - texture;"
+  "}\n";
+static GLuint inverse_program;
+GLint uniform_inverse_matrix; // Matrix position in the program above
+GLint uniform_inverse_texture; // Texture position in the program above
+@
+\fimcodigo
+
+This shader also is compiled during initialization:
+
+\iniciocodigo
+@<Weaver Metafont Initialization@>+=
+{
+  GLuint vertex, fragment;
+  GLint status = GL_TRUE;
+  vertex = glCreateShader(GL_VERTEX_SHADER);
+  fragment = glCreateShader(GL_FRAGMENT_SHADER);
+  glShaderSource(vertex, 1, (const char **) &vertex_shader, NULL);
+  glShaderSource(fragment, 1, (const char **) &fragment_shader_inv, NULL);
+  glCompileShader(vertex);
+  glGetShaderiv(vertex, GL_COMPILE_STATUS, &status);
+  if(status == GL_FALSE){
+    fprintf(stderr,
+            "ERROR: Weaver Metafont vertex shader compilation failed!\n");
+    return false;
+  }
+  glCompileShader(fragment);
+  glGetShaderiv(fragment, GL_COMPILE_STATUS, &status);
+  if(status == GL_FALSE){
+    fprintf(stderr,
+            "ERROR: Weaver Metafont inverse fragment shader compilation "
+            "failed!\n");
+    return false;
+  }
+  inverse_program = glCreateProgram();
+  glAttachShader(inverse_program, vertex);
+  glAttachShader(inverse_program, fragment);
+  glLinkProgram(inverse_program);
+  glGetProgramiv(inverse_program, GL_LINK_STATUS, &status);
+  if(status == GL_FALSE){
+    fprintf(stderr, "ERROR: Weaver Metafont shader linking failed!\n");
+    return false;
+  }
+  glDeleteShader(vertex);
+  glDeleteShader(fragment);
+  // Getting attributes:
+  glBindAttribLocation(inverse_program, 0, "vertex_position");
+  glBindAttribLocation(inverse_program, 1, "vertex_texture_coordinate");
+  uniform_inverse_matrix = glGetUniformLocation(inverse_program, "model_view_matrix");
+  uniform_inverse_texture = glGetUniformLocation(inverse_program, "texture");  
+}
+@
+\fimcodigo
+
+In the finalization we destroy the program:
+
+\iniciocodigo
+@<Weaver Metafont Finalization@>+=
+glDeleteProgram(inverse_program);
+@
+\fimcodigo
+
+Now that we have a shader program that reverses the color of a given
+picture and its transparency, we use it to render an image and compute
+the \monoespaco{-} operator for pictures:
+
+\iniciocodigo
+@<Primary Picture: Inverse@>=
+struct picture_variable p;
+void *data;
+GLuint temporary_framebuffer = 0;
+float identity_matrix[16] = {1.0, 0.0, 0.0, 0.0,
+                             0.0, 1.0, 0.0, 0.0,
+                             0.0, 0.0, 1.0, 0.0,
+                             0.0, 0.0, 0.0, 1.0};
+if(begin_expression == end_expression){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Missing picture expression after "
+                  "'-'.\n", mf -> file, begin_expression -> line);
+#endif
+  return false;
+}
+if(!eval_picture_primary(mf, cx, begin_expression -> next, end_expression, &p))
+  return false;
+// Preparing to render:
+result -> width = p.width;
+result -> height = p.height;
+data = temporary_alloc(result -> width * result -> height * 4);
+if(data == NULL){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s: Not enough memory!\n",
+          mf -> file);
+#endif
+    return false;
+}
+memset(data, 0, result -> width * result -> height * 4);
+glGenTextures(1, &(result -> texture)); 
+glGenFramebuffers(1, &temporary_framebuffer);
+glBindTexture(GL_TEXTURE_2D, result -> texture);
+glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, result -> width, result -> height, 0,
+             GL_RGBA, GL_UNSIGNED_BYTE, data);
+glBindFramebuffer(GL_FRAMEBUFFER, temporary_framebuffer);
+glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                       result -> texture, 0);
+if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: OpenGL framebuffer error!\n",
+          mf -> file, begin_expression -> line);
+#endif
+}
+// Preparing shader data:
+glViewport(0, 0, result -> width, result -> height);
+glBindBuffer(GL_ARRAY_BUFFER, vbo);
+glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) 0);
+glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
+                      (void *) (3 * sizeof(float)));
+glEnableVertexAttribArray(0);
+glEnableVertexAttribArray(1);
+glUseProgram(inverse_program);
+glUniformMatrix4fv(uniform_inverse_matrix, 1, false, identity_matrix);
+glBindTexture(GL_TEXTURE_2D, p.texture);
+// Rendering:
+glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+// Ending:
+if(temporary_free != NULL)
+  temporary_free(data);
+glDeleteTextures(1, &(p.texture));
+return true;
+@
+\fimcodigo
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
