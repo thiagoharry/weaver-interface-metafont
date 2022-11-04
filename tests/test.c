@@ -13,6 +13,10 @@
 #endif
 
 #include <string.h>
+#include "window.h"
+
+static struct _Wkeyboard keyboard;
+static struct _Wmouse mouse;
 
 #define ALMOST_EQUAL(a, b) (fabs((a) - (b)) < 0.000112)
 
@@ -1243,6 +1247,7 @@ void test_picture_expressions(void){
 
 
 int main(int argc, char **argv){
+  _Wcreate_window(&keyboard, &mouse);
   if(!_Winit_metafont(malloc, free, malloc, free, my_rand, 36)){
     fprintf(stderr, "ERROR: Test cannot be done. Initialization failed.\n");
     exit(1);
@@ -1257,5 +1262,6 @@ int main(int argc, char **argv){
   test_picture_expressions();
   imprime_resultado();
   _Wfinish_metafont();
+  _Wdestroy_window();
   return 0;
 }

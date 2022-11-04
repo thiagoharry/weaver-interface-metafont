@@ -8994,6 +8994,7 @@ static const char vertex_shader[] =
   "attribute vec3 vertex_position;\n"
   "uniform vec4 model_view_matrix;\n"
   "attribute vec2 vertex_texture_coordinate;\n"
+  "varying mediump vec2 texture_coordinate;\n"
   "void main(){\n"
   "  gl_Position = vec4(vertex_position, 1.0) * model_view_matrix;\n"
   "  texture_coordinate = vertex_texture_coordinate;\n"
@@ -9003,7 +9004,7 @@ static const char fragment_shader[] =
   "precision highp float;\n"
   "precision highp int;\n"
   "varying mediump vec2 texture_coordinate;\n"
-  "uniform sampler2D texture;\n"
+  "uniform sampler2D texture1;\n"
   "void main(){\n"
   "  vec4 texture = texture2D(texture1, texture_coordinate);\n"
   "  gl_FragData[0] = texture;"
@@ -9021,10 +9022,13 @@ Estes shaders simples precisam ser compilados na inicialização:
 {
   GLuint vertex, fragment;
   GLint status = GL_TRUE;
+  const char *source_code[1];
   vertex = glCreateShader(GL_VERTEX_SHADER);
   fragment = glCreateShader(GL_FRAGMENT_SHADER);
-  glShaderSource(vertex, 1, (const char **) &vertex_shader, NULL);
-  glShaderSource(fragment, 1, (const char **) &fragment_shader, NULL);
+  source_code[0] = vertex_shader;
+  glShaderSource(vertex, 1, source_code, NULL);
+  source_code[0] = fragment_shader;
+  glShaderSource(fragment, 1, source_code, NULL);
   glCompileShader(vertex);
   glGetShaderiv(vertex, GL_COMPILE_STATUS, &status);
   if(status == GL_FALSE){
@@ -9809,6 +9813,7 @@ if(data == NULL){
   return false;
 }
 memset(data, 0, result -> width * result -> height * 4);
+result -> texture = 0;
 glGenTextures(1, &(result -> texture));
 glBindTexture(GL_TEXTURE_2D, result -> texture);
 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, result -> width, result -> height, 0,
@@ -9849,10 +9854,10 @@ static const char fragment_shader_inv[] =
   "precision highp float;\n"
   "precision highp int;\n"
   "varying mediump vec2 texture_coordinate;\n"
-  "uniform sampler2D texture;\n"
+  "uniform sampler2D texture1;\n"
   "void main(){\n"
   "  vec4 texture = texture2D(texture1, texture_coordinate);\n"
-  "  gl_FragData[0] = vac4(1.0, 1.0, 1.0, 1.0) - texture;"
+  "  gl_FragData[0] = vec4(1.0, 1.0, 1.0, 1.0) - texture;"
   "}\n";
 static GLuint inverse_program;
 GLint uniform_inverse_matrix; // Posição da matriz de modelo visualização do programa
@@ -9867,10 +9872,13 @@ Compilaremos esse shader na inicialização:
 {
   GLuint vertex, fragment;
   GLint status = GL_TRUE;
+  const char *source_code[1];
   vertex = glCreateShader(GL_VERTEX_SHADER);
   fragment = glCreateShader(GL_FRAGMENT_SHADER);
-  glShaderSource(vertex, 1, (const char **) &vertex_shader, NULL);
-  glShaderSource(fragment, 1, (const char **) &fragment_shader_inv, NULL);
+  source_code[0] = vertex_shader;
+  glShaderSource(vertex, 1, source_code, NULL);
+  source_code[0] = fragment_shader_inv;
+  glShaderSource(fragment, 1, source_code, NULL);
   glCompileShader(vertex);
   glGetShaderiv(vertex, GL_COMPILE_STATUS, &status);
   if(status == GL_FALSE){
@@ -9881,6 +9889,12 @@ Compilaremos esse shader na inicialização:
   glCompileShader(fragment);
   glGetShaderiv(fragment, GL_COMPILE_STATUS, &status);
   if(status == GL_FALSE){
+  int info_log_length;
+    char *error_msg;
+    glGetShaderiv(fragment, GL_INFO_LOG_LENGTH, &info_log_length);
+    error_msg = (char *) temporary_alloc(info_log_length);
+    glGetShaderInfoLog(fragment, info_log_length, &info_log_length, error_msg);
+    fprintf(stderr, "Shader Error: %s\n", error_msg);
     fprintf(stderr,
             "ERROR: Weaver Metafont inverse fragment shader compilation "
             "failed!\n");

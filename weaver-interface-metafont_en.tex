@@ -8881,8 +8881,9 @@ static const char vertex_shader[] =
   "attribute vec3 vertex_position;\n"
   "uniform vec4 model_view_matrix;\n"
   "attribute vec2 vertex_texture_coordinate;\n"
+  "varying mediump vec2 texture_coordinate;\n"
   "void main(){\n"
-  "  gl_Position = model_view_matrix * vec4(vertex_position, 1.0);\n"
+  "  gl_Position = vec4(vertex_position, 1.0) * model_view_matrix;\n"
   "  texture_coordinate = vertex_texture_coordinate;\n"
   "}\n";
 static const char fragment_shader[] =
@@ -8890,14 +8891,14 @@ static const char fragment_shader[] =
   "precision highp float;\n"
   "precision highp int;\n"
   "varying mediump vec2 texture_coordinate;\n"
-  "uniform sampler2D texture;\n"
+  "uniform sampler2D texture1;\n"
   "void main(){\n"
   "  vec4 texture = texture2D(texture1, texture_coordinate);\n"
   "  gl_FragData[0] = texture;"
   "}\n";
-static GLuint program; // Stores the shader program above after compilatoion
-GLint uniform_matrix; // Model-view matrix position in the program above
-GLint uniform_texture; // Texture position in the program above
+static GLuint program; // Armazenará o programa após compilar os shaders acima
+GLint uniform_matrix; // Armazenará a posição da matriz de modelo visualização acima
+GLint uniform_texture; // A posição da variável de textura no código acima
 @
 \fimcodigo
 
@@ -8907,11 +8908,14 @@ These simple shaders must be compiled during initialization:
 @<Weaver Metafont Initialization@>+=
 {
   GLuint vertex, fragment;
-  GLint status = GL_TRUE;;
+  GLint status = GL_TRUE;
+  const char *source_code[1];
   vertex = glCreateShader(GL_VERTEX_SHADER);
   fragment = glCreateShader(GL_FRAGMENT_SHADER);
-  glShaderSource(vertex, 1, (const char **) &vertex_shader, NULL);
-  glShaderSource(fragment, 1, (const char **) &fragment_shader, NULL);
+  source_code[0] = vertex_shader;
+  glShaderSource(vertex, 1, source_code, NULL);
+  source_code[0] = fragment_shader;
+  glShaderSource(fragment, 1, source_code, NULL);
   glCompileShader(vertex);
   glGetShaderiv(vertex, GL_COMPILE_STATUS, &status);
   if(status == GL_FALSE){
@@ -9535,6 +9539,9 @@ bool eval_picture_primary(struct metafont *mf, struct context *cx,
       end_expression -> type == TYPE_CLOSE_PARENTHESIS){
       @<Primary Picture: Parenthesis@>
     }
+    else if(begin_expression -> type == TYPE_NULLPICTURE){
+      @<Primary Picture: 'nullpicture'@>
+    }
     else if(begin_expression -> type == TYPE_SUM){
       @<Primary Picture: Identity@>
     }
@@ -9657,7 +9664,7 @@ expression. Then, we obtain the picture size from the pair and create
 the texture:
 
 \iniciocodigo
-@<Imagem Primária: Imagem em Branco@>=
+@<Primary Picture: 'nullpicture'@>=
 struct generic_token *begin_pair_expression, *end_pair_expression;
 struct pair_variable p;
 void *data;
@@ -9677,8 +9684,7 @@ result -> height = p.y;
 data = temporary_alloc(p.x * p.y * 4);
 if(data == NULL){
 #if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: Not enough memory.\n",
-          mf -> file, begin_expression -> line);
+  fprintf(stderr, "METAFONT: Error: Not enough memory.\n");
 #endif
   return false;
 }
@@ -9723,10 +9729,10 @@ static const char fragment_shader_inv[] =
   "precision highp float;\n"
   "precision highp int;\n"
   "varying mediump vec2 texture_coordinate;\n"
-  "uniform sampler2D texture;\n"
+  "uniform sampler2D texture1;\n"
   "void main(){\n"
   "  vec4 texture = texture2D(texture1, texture_coordinate);\n"
-  "  gl_FragData[0] = vac4(1.0, 1.0, 1.0, 1.0) - texture;"
+  "  gl_FragData[0] = vec4(1.0, 1.0, 1.0, 1.0) - texture;"
   "}\n";
 static GLuint inverse_program;
 GLint uniform_inverse_matrix; // Matrix position in the program above
@@ -9741,10 +9747,13 @@ This shader also is compiled during initialization:
 {
   GLuint vertex, fragment;
   GLint status = GL_TRUE;
+  const char *source_code[1];
   vertex = glCreateShader(GL_VERTEX_SHADER);
   fragment = glCreateShader(GL_FRAGMENT_SHADER);
-  glShaderSource(vertex, 1, (const char **) &vertex_shader, NULL);
-  glShaderSource(fragment, 1, (const char **) &fragment_shader_inv, NULL);
+  source_code[0] = vertex_shader;
+  glShaderSource(vertex, 1, source_code, NULL);
+  source_code[0] = fragment_shader_inv;
+  glShaderSource(fragment, 1, source_code, NULL);
   glCompileShader(vertex);
   glGetShaderiv(vertex, GL_COMPILE_STATUS, &status);
   if(status == GL_FALSE){
