@@ -2525,7 +2525,7 @@ variável interna:
 @<Preenche Ponteiro para Variável Interna@>=
 else if(!strcmp(buffer, "currentpicture"))
   new_token -> var =
-          &(mf -> internal_pen_variables[INTERNAL_PICTURE_CURRENTPICTURE]);
+          &(mf -> internal_picture_variables[INTERNAL_PICTURE_CURRENTPICTURE]);
 @
 \fimcodigo
 
@@ -9616,7 +9616,7 @@ Isso requer registrar ``nullpicture'' como um token:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_NULLPICTURE        68 // O token simbólico 'nullpicture'
+#define TYPE_NULLPICTURE        69 // O token simbólico 'nullpicture'
 @
 \fimcodigo
 
@@ -9730,6 +9730,7 @@ if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
   fprintf(stderr, "METAFONT: Error: %s:%d: OpenGL framebuffer error!\n",
           mf -> file, begin_expression -> line);
 #endif
+  return false;
 }
 // Preparar dados para shader:
 glViewport(0, 0, result -> width, result -> height);
@@ -9803,8 +9804,7 @@ result -> height = p.y;
 data = temporary_alloc(p.x * p.y * 4);
 if(data == NULL){
 #if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: Not enough memory.\n",
-          mf -> file, begin_expression -> line);
+  fprintf(stderr, "METAFONT: Error: Not enough memory.\n");
 #endif
   return false;
 }
@@ -9962,6 +9962,7 @@ if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
   fprintf(stderr, "METAFONT: Error: %s:%d: OpenGL framebuffer error!\n",
           mf -> file, begin_expression -> line);
 #endif
+  return false;
 }
 // Preparar dados para shader:
 glViewport(0, 0, result -> width, result -> height);
@@ -10005,7 +10006,7 @@ Primeiro vamos adicionar um novo tipo de token para esse operador:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_TOTALWEIGHT        69 // O token simbólico 'totalweight'
+#define TYPE_TOTALWEIGHT        70 // O token simbólico 'totalweight'
 @
 \fimcodigo
 
@@ -10064,6 +10065,7 @@ else if(begin_expression -> type == TYPE_TOTALWEIGHT){
     fprintf(stderr, "METAFONT: Error: %s:%d: OpenGL framebuffer error!\n",
             mf -> file, begin_expression -> line);
 #endif
+    return false;
   }
   // Preparar dados para shader:
   glViewport(0, 0, p.width, p.height);

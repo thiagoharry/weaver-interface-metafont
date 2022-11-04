@@ -2,5 +2,9 @@
 % This program should work and be accepted.
 
 picture a;
+numeric w_a;
+
+a = nullpicture (10, 10);
+w_a = totalweight a;
 
 end

@@ -262,11 +262,11 @@ char*value;
 /*:328*//*360:*/
 #line 9618 "weaver-interface-metafont.tex"
 
-#define TYPE_NULLPICTURE        68 
+#define TYPE_NULLPICTURE        69 
 /*:360*//*372:*/
-#line 10007 "weaver-interface-metafont.tex"
+#line 10008 "weaver-interface-metafont.tex"
 
-#define TYPE_TOTALWEIGHT        69 
+#define TYPE_TOTALWEIGHT        70 
 /*:372*/
 #line 385 "weaver-interface-metafont.tex"
 
@@ -435,7 +435,7 @@ static char*list_of_keywords[]= {
 
 "nullpicture",
 /*:361*//*373:*/
-#line 10015 "weaver-interface-metafont.tex"
+#line 10016 "weaver-interface-metafont.tex"
 
 "totalweight",
 /*:373*/
@@ -1247,7 +1247,7 @@ new_token->var=
 
 else if(!strcmp(buffer,"currentpicture"))
 new_token->var= 
-&(mf->internal_pen_variables[INTERNAL_PICTURE_CURRENTPICTURE]);
+&(mf->internal_picture_variables[INTERNAL_PICTURE_CURRENTPICTURE]);
 /*:115*/
 #line 949 "weaver-interface-metafont.tex"
 
@@ -2503,7 +2503,7 @@ result->value*= 57.2958;
 return true;
 }
 /*:192*//*374:*/
-#line 10025 "weaver-interface-metafont.tex"
+#line 10026 "weaver-interface-metafont.tex"
 
 else if(begin_expression->type==TYPE_TOTALWEIGHT){
 struct picture_variable p;
@@ -2546,6 +2546,7 @@ if(glCheckFramebufferStatus(GL_FRAMEBUFFER)!=GL_FRAMEBUFFER_COMPLETE){
 fprintf(stderr,"METAFONT: Error: %s:%d: OpenGL framebuffer error!\n",
 mf->file,begin_expression->line);
 #endif
+return false;
 }
 
 glViewport(0,0,p.width,p.height);
@@ -6440,6 +6441,7 @@ if(glCheckFramebufferStatus(GL_FRAMEBUFFER)!=GL_FRAMEBUFFER_COMPLETE){
 fprintf(stderr,"METAFONT: Error: %s:%d: OpenGL framebuffer error!\n",
 mf->file,begin_expression->line);
 #endif
+return false;
 }
 
 glViewport(0,0,result->width,result->height);
@@ -6468,7 +6470,7 @@ else{
 if(begin_expression->type==TYPE_OPEN_PARENTHESIS&&
 end_expression->type==TYPE_CLOSE_PARENTHESIS){
 /*365:*/
-#line 9761 "weaver-interface-metafont.tex"
+#line 9762 "weaver-interface-metafont.tex"
 
 struct generic_token*t= begin_expression->next;
 DECLARE_NESTING_CONTROL();
@@ -6490,7 +6492,7 @@ return eval_picture_expression(mf,cx,begin_expression->next,t,result);
 }
 else if(begin_expression->type==TYPE_NULLPICTURE){
 /*366:*/
-#line 9786 "weaver-interface-metafont.tex"
+#line 9787 "weaver-interface-metafont.tex"
 
 struct generic_token*begin_pair_expression,*end_pair_expression;
 struct pair_variable p;
@@ -6511,8 +6513,7 @@ result->height= p.y;
 data= temporary_alloc(p.x*p.y*4);
 if(data==NULL){
 #if defined(W_DEBUG_METAFONT)
-fprintf(stderr,"METAFONT: Error: Not enough memory.\n",
-mf->file,begin_expression->line);
+fprintf(stderr,"METAFONT: Error: Not enough memory.\n");
 #endif
 return false;
 }
@@ -6590,6 +6591,7 @@ if(glCheckFramebufferStatus(GL_FRAMEBUFFER)!=GL_FRAMEBUFFER_COMPLETE){
 fprintf(stderr,"METAFONT: Error: %s:%d: OpenGL framebuffer error!\n",
 mf->file,begin_expression->line);
 #endif
+return false;
 }
 
 glViewport(0,0,result->width,result->height);

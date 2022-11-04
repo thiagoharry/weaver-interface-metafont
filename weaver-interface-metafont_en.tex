@@ -2474,7 +2474,7 @@ variable pointers when we find reference for
 @<Set Pointer to Internal Variable@>+=
 else if(!strcmp(buffer, "currentpicture"))
   new_token -> var =
-          &(mf -> internal_pen_variables[INTERNAL_PICTURE_CURRENTPICTURE]);
+          &(mf -> internal_picture_variables[INTERNAL_PICTURE_CURRENTPICTURE]);
 @
 \fimcodigo
 
@@ -9493,7 +9493,7 @@ This means that we need to register a new token for ``nullpicture'':
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_NULLPICTURE        68 // O token simbólico 'nullpicture'
+#define TYPE_NULLPICTURE        69 // O token simbólico 'nullpicture'
 @
 \fimcodigo
 
@@ -9604,6 +9604,7 @@ if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
   fprintf(stderr, "METAFONT: Error: %s:%d: OpenGL framebuffer error!\n",
           mf -> file, begin_expression -> line);
 #endif
+  return false;
 }
 // Preparing data to the shader
 glViewport(0, 0, result -> width, result -> height);
@@ -9834,6 +9835,7 @@ if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
   fprintf(stderr, "METAFONT: Error: %s:%d: OpenGL framebuffer error!\n",
           mf -> file, begin_expression -> line);
 #endif
+  return false;
 }
 // Preparing shader data:
 glViewport(0, 0, result -> width, result -> height);
@@ -9876,7 +9878,7 @@ First we need a new token type for the operator:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_TOTALWEIGHT        69 // Symbolic token 'totalweight'
+#define TYPE_TOTALWEIGHT        70 // Symbolic token 'totalweight'
 @
 \fimcodigo
 
@@ -9935,6 +9937,7 @@ else if(begin_expression -> type == TYPE_TOTALWEIGHT){
     fprintf(stderr, "METAFONT: Error: %s:%d: OpenGL framebuffer error!\n",
             mf -> file, begin_expression -> line);
 #endif
+    return false;
   }
   // Preparing data for the shader
   glViewport(0, 0, p.width, p.height);
