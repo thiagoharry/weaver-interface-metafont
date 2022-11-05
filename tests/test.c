@@ -1231,15 +1231,29 @@ void test_picture_expressions(void){
   struct metafont *mf;
   struct context *cx;
   bool ret;
-  //struct named_variable *a;
-  //struct pen_variable *picture_a;
+  struct named_variable *a, *wa, *b, *wb;
+  struct picture_variable *picture_a, *picture_b;
+  struct numeric_variable *numeric_wa, *numeric_wb;
   mf = init_metafont(malloc, free, "tests/picture_expressions.mf");
   cx = init_context();
   void *p = lexer(mf, malloc, free, "tests/picture_expressions.mf");
   ret = eval_program(mf, cx, p);
-  //a = (struct named_variable *) mf -> named_variables;
-  //picture_a = (struct picture_variable *) a -> var;
+  a = (struct named_variable *) mf -> named_variables;
+  b = a -> next;
+  wa = b -> next;
+  wb = wa -> next;
+  picture_a = (struct picture_variable *) a -> var;
+  picture_b = (struct picture_variable *) b -> var;
+  numeric_wa = (struct numeric_variable *) wa -> var;
+  numeric_wb = (struct numeric_variable *) wb -> var;
   assert("Interpreting program with picture expressions", ret);
+  assert("Generating nullpicture with correct size and weight",
+	 picture_a -> width == 10 && picture_a -> height == 10 &&
+	 numeric_wa -> value == 0.0);
+  printf("DEBUG: %f\n", numeric_wb -> value);
+  assert("Computing the inverse of a picture",
+	 picture_b -> width == 10 && picture_b -> height == 10 &&
+	 numeric_wb -> value == 100.0);
   free_token_list(free, p);
   destroy_metafont(mf);
   destroy_context(cx);

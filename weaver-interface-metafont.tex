@@ -8992,7 +8992,7 @@ static const char vertex_shader[] =
   "precision highp float;\n"
   "precision highp int;\n"
   "attribute vec3 vertex_position;\n"
-  "uniform vec4 model_view_matrix;\n"
+  "uniform mat4 model_view_matrix;\n"
   "attribute vec2 vertex_texture_coordinate;\n"
   "varying mediump vec2 texture_coordinate;\n"
   "void main(){\n"
@@ -9058,6 +9058,7 @@ Estes shaders simples precisam ser compilados na inicialização:
   glBindAttribLocation(program, 0, "vertex_position");
   glBindAttribLocation(program, 1, "vertex_texture_coordinate");
   uniform_matrix = glGetUniformLocation(program, "model_view_matrix");
+  printf("uniform matrix: %d\n", uniform_matrix);
   uniform_texture = glGetUniformLocation(program, "texture");  
 }
 @
@@ -9753,6 +9754,7 @@ glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 if(temporary_free != NULL)
   temporary_free(data);
 glDeleteFramebuffers(1, &temporary_framebuffer);
+
 return true;
 @
 \fimcodigo
@@ -10039,6 +10041,7 @@ usando \monoespaco{glReadPixels} para obter o conteúdo do framebuffer:
 \iniciocodigo
 @<Primário Numérico: Operadores Adicionais@>+=
 else if(begin_expression -> type == TYPE_TOTALWEIGHT){
+
   struct picture_variable p;
   char *data;
   GLuint temporary_framebuffer = 0;
@@ -10100,8 +10103,10 @@ else if(begin_expression -> type == TYPE_TOTALWEIGHT){
     int i, size = p.width * p.height * 4;
     double sum = 0.0;
     for(i = 0; i < size; i += 4){
-      double v = (data[i] + data[i+1] + data[i+2]) / 765.0;
-      sum += v * (data[i+3] / 255.0);
+      //printf("(%hu %hu %hu %hu)\n", (unsigned char) data[i], (unsigned char) data[i+1], (unsigned char) data[i+2], (unsigned char) data[i+3]);
+      double v = ((unsigned char) data[i] + (unsigned char) data[i+1] +
+                  (unsigned char) data[i+2]) / 765.0;
+      sum += v * ((unsigned char )data[i+3] / 255.0);
     }
     result -> value = sum;
   }
