@@ -8949,13 +8949,13 @@ texturas feitas usando tais vértices ocupe toda a área de desenho.
 \iniciocodigo
 @<Variáveis Locais (metafont.c)@>+=
 const static float square[20] = {
-  -1.0, -1.0, 0.0, //Primeiro vértice
+  -1.0, -1.0, //Primeiro vértice
   0.0, 0.0, // Coordenada da textura
-  1.0, -1.0, 0.0, // Segundo vértice
+  1.0, -1.0, // Segundo vértice
   1.0, 0.0, // Textura
-  1.0, 1.0, 0.0, // Terceiro vértice
+  1.0, 1.0, // Terceiro vértice
   1.0, 1.0, // Textura
-  -1.0, 1.0, 0.0, // Quarto vértice
+  -1.0, 1.0, // Quarto vértice
   0.0, 1.0}; // Textura
 static GLuint vbo; // OpenGL Vertex Buffer Object
 @
@@ -8982,27 +8982,38 @@ glDeleteBuffers(1, &vbo);
 \fimcodigo
 
 Somar uma imagem a outra envolve apenas renderizar ambas imagens em um
-mesmo local de destino. Para renderizar, vamos precisar também dos
-seguintes shaders de vértice e fragmento:
+mesmo local de destino. Para renderizar, vamos precisar também de um
+shader de vértice:
 
 \iniciocodigo
 @<Variáveis Locais (metafont.c)@>+=
 static const char vertex_shader[] =
   "#version 100\n"
-  "precision highp float;\n"
-  "precision highp int;\n"
-  "attribute vec3 vertex_position;\n"
+  "attribute vec4 vertex_data;\n"
   "uniform mat4 model_view_matrix;\n"
-  "attribute vec2 vertex_texture_coordinate;\n"
   "varying mediump vec2 texture_coordinate;\n"
   "void main(){\n"
-  "  gl_Position = vec4(vertex_position, 1.0) * model_view_matrix;\n"
-  "  texture_coordinate = vertex_texture_coordinate;\n"
+  "  gl_Position = vec4(vertex_data.xy, 0.0, 1.0) * model_view_matrix;\n"
+  "  texture_coordinate = vertex_data.zw;\n"
   "}\n";
+@
+\fimcodigo
+
+Este shader de vértice recebe como argumento informações sobre o
+vértice (que contém empacotada uma coordenada $(x, y)$ em duas
+dimensões e uma coordenada $(t, s)$ representando a coordenada da
+textura). E também uma matriz que aplicará transformação linear sobre
+cada vértice. A sua saída será a nova posição de cada vértice após a
+transformação linear (desta vez como uma coordenada de 4 dimensões
+como se espera) e também o valor da coordenada da textura.
+
+Já o código do shader de fragmento:
+
+\iniciocodigo
+@<Variáveis Locais (metafont.c)@>+=
 static const char fragment_shader[] =
   "#version 100\n"
-  "precision highp float;\n"
-  "precision highp int;\n"
+  "precision mediump float;\n"
   "varying mediump vec2 texture_coordinate;\n"
   "uniform sampler2D texture1;\n"
   "void main(){\n"
@@ -9046,6 +9057,7 @@ Estes shaders simples precisam ser compilados na inicialização:
   program = glCreateProgram();
   glAttachShader(program, vertex);
   glAttachShader(program, fragment);
+  glBindAttribLocation(program, 0, "vertex_data");
   glLinkProgram(program);
   glGetProgramiv(program, GL_LINK_STATUS, &status);
   if(status == GL_FALSE){
@@ -9055,10 +9067,7 @@ Estes shaders simples precisam ser compilados na inicialização:
   glDeleteShader(vertex);
   glDeleteShader(fragment);
   // Estabelecendo atributos:
-  glBindAttribLocation(program, 0, "vertex_position");
-  glBindAttribLocation(program, 1, "vertex_texture_coordinate");
   uniform_matrix = glGetUniformLocation(program, "model_view_matrix");
-  printf("uniform matrix: %d\n", uniform_matrix);
   uniform_texture = glGetUniformLocation(program, "texture");  
 }
 @
@@ -9123,11 +9132,8 @@ if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
 // Preparando renderização
 glViewport(0, 0, final_width, final_height);
 glBindBuffer(GL_ARRAY_BUFFER, vbo);
-glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) 0);
-glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
-                      (void *) (3 * sizeof(float)));
+glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *) 0);
 glEnableVertexAttribArray(0);
-glEnableVertexAttribArray(1);
 glUseProgram(program);
 // Renderizando imagem 'a'
 model_view_matrix[0] = a.width / final_width;
@@ -9586,11 +9592,8 @@ bool apply_image_transformation(struct metafont *mf,
   // Preparando renderização
   glViewport(0, 0, dst -> width, dst -> height);
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) 0);
-  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
-                        (void *) (3 * sizeof(float)));
+  glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *) 0);
   glEnableVertexAttribArray(0);
-  glEnableVertexAttribArray(1);
   glUseProgram(program);
   glUniformMatrix4fv(uniform_matrix, 1, false, matrix);
   glBindTexture(GL_TEXTURE_2D, org -> texture);
@@ -9740,11 +9743,8 @@ if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
 // Preparar dados para shader:
 glViewport(0, 0, result -> width, result -> height);
 glBindBuffer(GL_ARRAY_BUFFER, vbo);
-glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) 0);
-glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
-                      (void *) (3 * sizeof(float)));
+glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *) 0);
 glEnableVertexAttribArray(0);
-glEnableVertexAttribArray(1);
 glUseProgram(program);
 glUniformMatrix4fv(uniform_matrix, 1, false, identity_matrix);
 glBindTexture(GL_TEXTURE_2D, content -> texture);
@@ -9853,8 +9853,7 @@ irá usá-lo:
 @<Variáveis Locais (metafont.c)@>+=
 static const char fragment_shader_inv[] =
   "#version 100\n"
-  "precision highp float;\n"
-  "precision highp int;\n"
+  "precision mediump float;\n"
   "varying mediump vec2 texture_coordinate;\n"
   "uniform sampler2D texture1;\n"
   "void main(){\n"
@@ -9905,6 +9904,7 @@ Compilaremos esse shader na inicialização:
   inverse_program = glCreateProgram();
   glAttachShader(inverse_program, vertex);
   glAttachShader(inverse_program, fragment);
+  glBindAttribLocation(program, 0, "vertex_data");
   glLinkProgram(inverse_program);
   glGetProgramiv(inverse_program, GL_LINK_STATUS, &status);
   if(status == GL_FALSE){
@@ -9914,8 +9914,6 @@ Compilaremos esse shader na inicialização:
   glDeleteShader(vertex);
   glDeleteShader(fragment);
   // Estabelecendo atributos:
-  glBindAttribLocation(inverse_program, 0, "vertex_position");
-  glBindAttribLocation(inverse_program, 1, "vertex_texture_coordinate");
   uniform_inverse_matrix = glGetUniformLocation(inverse_program, "model_view_matrix");
   uniform_inverse_texture = glGetUniformLocation(inverse_program, "texture");  
 }
@@ -9983,11 +9981,8 @@ if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
 // Preparar dados para shader:
 glViewport(0, 0, result -> width, result -> height);
 glBindBuffer(GL_ARRAY_BUFFER, vbo);
-glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) 0);
-glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
-                      (void *) (3 * sizeof(float)));
+glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *) 0);
 glEnableVertexAttribArray(0);
-glEnableVertexAttribArray(1);
 glUseProgram(inverse_program);
 glUniformMatrix4fv(uniform_inverse_matrix, 1, false, identity_matrix);
 glBindTexture(GL_TEXTURE_2D, p.texture);
@@ -10087,21 +10082,21 @@ else if(begin_expression -> type == TYPE_TOTALWEIGHT){
   // Preparar dados para shader:
   glViewport(0, 0, p.width, p.height);
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) 0);
-  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
-                        (void *) (3 * sizeof(float)));
+  glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *) 0);
   glEnableVertexAttribArray(0);
-  glEnableVertexAttribArray(1);
   glUseProgram(program);
   glUniformMatrix4fv(uniform_matrix, 1, false, identity_matrix);
   glBindTexture(GL_TEXTURE_2D, p.texture);
   // Renderiza:
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+  //glClearColor(1.0, 1.0, 1.0, 1.0);
+  //glClear(GL_COLOR_BUFFER_BIT);
   // Ler dados do framebuffer:
   glReadPixels(0, 0, p.width, p.height, GL_RGBA, GL_UNSIGNED_BYTE, data);
   {
     int i, size = p.width * p.height * 4;
     double sum = 0.0;
+    //printf("-----------\n");
     for(i = 0; i < size; i += 4){
       //printf("(%hu %hu %hu %hu)\n", (unsigned char) data[i], (unsigned char) data[i+1], (unsigned char) data[i+2], (unsigned char) data[i+3]);
       double v = ((unsigned char) data[i] + (unsigned char) data[i+1] +

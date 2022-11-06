@@ -1259,6 +1259,9 @@ void test_picture_expressions(void){
   destroy_context(cx);
 }
 
+void test_opengl(void){
+  assert("No errors in OpenGL", glGetError() == GL_NO_ERROR);
+}
 
 int main(int argc, char **argv){
   _Wcreate_window(&keyboard, &mouse);
@@ -1274,6 +1277,7 @@ int main(int argc, char **argv){
   test_path_expressions();
   test_pen_expressions();
   test_picture_expressions();
+  test_opengl();
   imprime_resultado();
   _Wfinish_metafont();
   _Wdestroy_window();
