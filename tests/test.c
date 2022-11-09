@@ -1250,10 +1250,40 @@ void test_picture_expressions(void){
   assert("Generating nullpicture with correct size and weight",
 	 picture_a -> width == 10 && picture_a -> height == 10 &&
 	 numeric_wa -> value == 0.0);
-  printf("DEBUG: %f\n", numeric_wb -> value);
   assert("Computing the inverse of a picture",
-	 picture_b -> width == 10 && picture_b -> height == 10 &&
-	 numeric_wb -> value == 100.0);
+  	 picture_b -> width == 10 && picture_b -> height == 10 &&
+  	 numeric_wb -> value == 100.0);
+  /*{ //DEBUG XXX
+    float identity_matrix[16] = {1.0, 0.0, 0.0, 0.0,
+				 0.0, 1.0, 0.0, 0.0,
+				 0.0, 0.0, 1.0, 0.0,
+				 0.0, 0.0, 0.0, 1.0};
+    int i;
+    unsigned char data[16] = {255, 0, 0, 255,      255, 0, 0, 255,
+			      0, 0, 255, 255,      255, 0, 0, 255};
+    GLuint texture;
+    struct picture_variable p;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 2, 2, 0,
+		 GL_RGBA, GL_UNSIGNED_BYTE, data);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+    p.texture = texture;
+    p.width = 2;
+    p.height = 2;
+    //printf("DEBUG: %d\n", picture_a -> texture);
+    for(i = 0; i < 100; i ++){
+      render_picture(picture_a, identity_matrix, 1000, 1000);
+      _Wrender_window();
+      glFinish();
+      glBindTexture(GL_TEXTURE_2D, 0);
+    }
+    }*/
   free_token_list(free, p);
   destroy_metafont(mf);
   destroy_context(cx);
@@ -1269,6 +1299,12 @@ int main(int argc, char **argv){
     fprintf(stderr, "ERROR: Test cannot be done. Initialization failed.\n");
     exit(1);
   }
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  //glPixelStorei(GL_PACK_ALIGNMENT, 1);
+  //glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
   test_lexer();
   test_empty_programs();
   test_compound_statements();

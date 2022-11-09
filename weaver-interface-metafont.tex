@@ -8804,7 +8804,15 @@ lineares que estiverem registradas na matriz de transformação OpenGL:
 \subsecao{8.5. Atribuições e Expressões de Imagens}
 
 Para realizar a atribuição de imagens a variáveis do tipo certo,
-usamos o código abaixo:
+usamos o código abaixo. O que ele faz é avaliar uma expressão de
+imagem e coletar o resultado. Em seguida, ele precisa fazer com que
+todas as variáveis da atribuição recebam uma cópia da imagem
+avaliada. Se existe somente uma variável a ser atribuída, nós apenas
+copiamos o identificador textura já obtida e desenhada na
+avaliação. Se houver mais de uma variável, a primeira delas recebe uma
+cópia direta do identificador da imagem já obtida. Para as demais,
+precisaremos usar comandos OpenGL para copiar a textura avaliada para
+o destino.
 
 \iniciocodigo
 @<Atribuição de Variável de Imagem@>=
@@ -8817,18 +8825,253 @@ else if(type == TYPE_T_PICTURE){
     return false;
   var = (struct symbolic_token *) begin_token_list;
   for(i = 0; i < number_of_variables; i ++){
-    assign_picture_variable(mf, (struct picture_variable *) var -> var,
-                           &result);
+    if(i == 0){
+      struct picture_variable *pic = (struct picture_variable *) var -> var;
+      if(pic -> texture != 0)
+        glDeleteTextures(1, &(pic -> texture));
+      memcpy(pic, &result, sizeof(struct picture_variable));
+      pic -> type = TYPE_T_PICTURE;
+    }
+    else 
+      assign_picture_variable(mf, (struct picture_variable *) var -> var,
+                              &result);
     var = (struct symbolic_token *) (var -> next);
     var = (struct symbolic_token *) (var -> next);
   }
-  if(result.texture != 0)
-    glDeleteTextures(1, &(result.texture));
 }
 @
 \fimcodigo
 
-A declaração da função que faz a atribuição:
+A função \monoespaco{assign\_picture\_variable} acima precisa gerar
+uma nova textura na variável de destino (apagando a textura já
+existente se for o caso) e copiar o conteúdo da textura de origem no
+destino. Isso significa que nós precisaremos renderizar o conteúdo de
+uma textura na outra.
+
+Para renderizar algo, primeiro precisaremos de vértices. Como tudo que
+vamos renderizar são sempre imagens e texturas retangulares, os únicos
+vértices que precisaremos renderizar são:
+
+\iniciocodigo
+@<Variáveis Locais (metafont.c)@>+=
+const static float square[20] = {
+  -1.0, -1.0, //Primeiro vértice
+  0.0, 0.0, // Coordenada da textura
+  1.0, -1.0, // Segundo vértice
+  1.0, 0.0, // Textura
+  1.0, 1.0, // Terceiro vértice
+  1.0, 1.0, // Textura
+  -1.0, 1.0, // Quarto vértice
+  0.0, 1.0}; // Textura
+static GLuint vbo; // OpenGL Vertex Buffer Object
+@
+\fimcodigo
+
+Associamos acima a cada vértice uma coordenada de textura. Desta forma
+conseguiremos enviar para a placa de vídeo ambas as informações de uma
+só vez. Note que o que definimos acima é um quadrado de lado 2
+centralizado na origem. Este é o tamanho padrão para que ele seja
+renderizado em todo o espaço disponível nas convenções OpenGL. Nós
+também definimos o quadrado definindo seus vértices no sentido
+anti-horário, o que faz com que por convenção ele seja renderizado de
+frente para a câmera. Isso é necessário para que o quadrado sempre
+seja renderizado, mesmo que otimizações estejam ativas fazendo com que
+o lado de trás dos polígonos não sejam desenhados.
+
+Na inicialização do Weaver Metafont nós enviamos estes vértices para
+a placa de vídeo:
+
+\iniciocodigo
+@<Inicialização de Weaver Metafont@>=
+glGenBuffers(1, &vbo);
+glBindBuffer(GL_ARRAY_BUFFER, vbo);
+// Enviando os vértices para a placa de vídeo:
+glBufferData(GL_ARRAY_BUFFER, sizeof(square), square, GL_STATIC_DRAW);
+@
+\fimcodigo
+
+Na finalização nós removemos os vértices da placa de vídeo:
+
+\iniciocodigo
+@<Finalização de Weaver Metafont@>=
+glDeleteBuffers(1, &vbo);
+@
+\fimcodigo
+
+Além de vértices, precisamos de um shader de vértice que nos indique
+como renderizar tais vértices. O programa deve ser versátil o bastante
+para receber como argumento uma matriz com transformações lineares a
+serem aplicadas a cada vértice. Os atributos do programa são a
+coordenada do vértice e da textura. O valor uniforme recebido é a
+matriz para transformação linear. E o valor de retorno a ser passado
+para o shader de fragmento é a posição final da coordenada depois da
+transformação, além da coordenada de textura:
+
+\iniciocodigo
+@<Variáveis Locais (metafont.c)@>+=
+static const char vertex_shader[] =
+  "#version 100\n"
+  "attribute vec4 vertex_data;\n"
+  "uniform mat4 model_view_matrix;\n"
+  "varying mediump vec2 texture_coordinate;\n"
+  "void main(){\n"
+  "  gl_Position = vec4(vertex_data.xy, 0.0, 1.0) * model_view_matrix;\n"
+  "  texture_coordinate = vertex_data.zw;\n"
+  "}\n";
+@
+\fimcodigo
+
+Já o código do shader de fragmento recebe a saída do shader de vértice
+acima além de uma textura:
+
+\iniciocodigo
+@<Variáveis Locais (metafont.c)@>+=
+static const char fragment_shader[] =
+  "#version 100\n"
+  "precision mediump float;\n"
+  "varying mediump vec2 texture_coordinate;\n"
+  "uniform sampler2D texture1;\n"
+  "void main(){\n"
+  "  gl_FragColor = texture2D(texture1, texture_coordinate);"
+  "}\n";
+static GLuint program; // Armazenará o programa após compilar os shaders acima
+GLint uniform_matrix; // Armazenará a posição da matriz de modelo visualização acima
+GLint uniform_texture; // A posição da variável de textura no código acima
+@
+\fimcodigo
+
+Estes shaders simples precisam ser compilados na inicialização:
+
+\iniciocodigo
+@<Inicialização de Weaver Metafont@>+=
+{
+  GLuint vertex, fragment;
+  GLint status = GL_TRUE;
+  const char *source_code[1];
+  vertex = glCreateShader(GL_VERTEX_SHADER);
+  fragment = glCreateShader(GL_FRAGMENT_SHADER);
+  source_code[0] = vertex_shader;
+  glShaderSource(vertex, 1, source_code, NULL);
+  source_code[0] = fragment_shader;
+  glShaderSource(fragment, 1, source_code, NULL);
+  glCompileShader(vertex);
+  glGetShaderiv(vertex, GL_COMPILE_STATUS, &status);
+  if(status == GL_FALSE){
+    fprintf(stderr,
+            "ERROR: Weaver Metafont vertex shader compilation failed!\n");
+    return false;
+  }
+  glCompileShader(fragment);
+  glGetShaderiv(fragment, GL_COMPILE_STATUS, &status);
+  if(status == GL_FALSE){
+    fprintf(stderr,
+            "ERROR: Weaver Metafont fragment shader compilation failed!\n");
+    return false;
+  }
+  program = glCreateProgram();
+  glAttachShader(program, vertex);
+  glAttachShader(program, fragment);
+  glBindAttribLocation(program, 0, "vertex_data");
+  glLinkProgram(program);
+  glGetProgramiv(program, GL_LINK_STATUS, &status);
+  if(status == GL_FALSE){
+    fprintf(stderr, "ERROR: Weaver Metafont shader linking failed!\n");
+    return false;
+  }
+  glDeleteShader(vertex);
+  glDeleteShader(fragment);
+  // Estabelecendo atributos:
+  uniform_matrix = glGetUniformLocation(program, "model_view_matrix");
+  uniform_texture = glGetUniformLocation(program, "texture1");
+}
+@
+\fimcodigo
+
+Na finalização iremos destruir o programa compilado acima:
+
+\iniciocodigo
+@<Finalização de Weaver Metafont@>+=
+glDeleteProgram(program);
+@
+\fimcodigo
+
+Para a parte de renderizar o conteúdo de uma textura para dentro de
+outra, devemos criar um framebuffer com uma nova textura associada a
+ele. A função abaixo cria tanto um novo framebuffer como uma nova
+textura, deixando-os ligados e ativos. Tudo o que for renderizado em
+seguida será renderizado na nova textura, e não na tela.
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+bool get_new_framebuffer(GLuint *new_framebuffer, GLuint *new_texture,
+                         int width, int height);
+@
+\fimcodigo
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+bool get_new_framebuffer(GLuint *new_framebuffer, GLuint *new_texture,
+                         int width, int height){
+  glGenFramebuffers(1, new_framebuffer);
+  glGenTextures(1, new_texture);
+  glBindTexture(GL_TEXTURE_2D, *new_texture);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
+               GL_UNSIGNED_BYTE, NULL);
+  glBindFramebuffer(GL_FRAMEBUFFER, *new_framebuffer);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         *new_texture, 0);
+  if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: OpenGL cannot create framebuffer!\n");
+#endif
+    return false;
+  }
+  glBindTexture(GL_TEXTURE_2D, 0);
+  return true;
+}
+@
+\fimcodigo
+
+Outro código que vamos usar muito e por isso é importante isolar em
+uma função é para renderizar uma imagem usando o framebuffer atual e o
+programa de shader padrão que fizemos:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+void render_picture(struct picture_variable *pic, float *matrix, int dst_width,
+                    int dst_height);
+@
+\fimcodigo
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+void render_picture(struct picture_variable *pic, float *matrix, int dst_width,
+                    int dst_height){
+  glColorMask(true, true, true, true);
+  glViewport(0, 0, dst_width, dst_height);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo);
+  glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *) 0);
+  glEnableVertexAttribArray(0);
+  glUseProgram(program);
+  glUniformMatrix4fv(uniform_matrix, 1, false, matrix);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, pic -> texture);
+  glUniform1i(uniform_texture, 0);
+  glClearColor(0.0, 0.0, 0.0, 0.0);
+  glClear(GL_COLOR_BUFFER_BIT);
+  glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+  glBindTexture(GL_TEXTURE_2D, 0);
+}
+@
+\fimcodigo
+
+Agora vamos declarar a função que atribui o conteúdo de uma variável
+de imagem à outra, gerando uma nova textura e copiando o conteúdo das
+texturas:
 
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
@@ -8845,10 +9088,20 @@ E a sua implementação:
 void assign_picture_variable(struct metafont *mf,
                              struct picture_variable *target,
                              struct picture_variable *source){
+  GLuint temporary_framebuffer;
+  float model_view_matrix[16] = {1.0, 0.0, 0.0, 0.0,
+                               0.0, 1.0, 0.0, 0.0,
+                               0.0, 0.0, 1.0, 0.0,
+                               0.0, 0.0, 0.0, 1.0};
   if(target -> texture != 0)
     glDeleteTextures(1, &(target -> texture));
-  memcpy(target, source, sizeof(struct picture_variable));
-  target -> type = TYPE_T_PICTURE;
+  get_new_framebuffer(&temporary_framebuffer, &(target -> texture),
+                      source -> width, source -> height);
+  render_picture(source, model_view_matrix, source -> width, source -> height);
+  // Finalizando
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glBindTexture(GL_TEXTURE_2D, 0);
+  glDeleteFramebuffers(1, &temporary_framebuffer);
 }
 @
 \fimcodigo
@@ -8901,8 +9154,9 @@ bool eval_picture_expression(struct metafont *mf, struct context *cx,
   struct generic_token *last_operator = NULL, *before_last_operator = NULL;
   while(p != end_expression){
     COUNT_NESTING(p);
-    if(IS_NOT_NESTED() && (p -> type == TYPE_SUM ||
-                           p -> type == TYPE_SUBTRACT)){
+    if(IS_NOT_NESTED() && p != begin_expression &&
+       (p -> type == TYPE_SUM || p -> type == TYPE_SUBTRACT) &&
+       prev -> type != TYPE_SUM && prev -> type != TYPE_SUBTRACT){
       last_operator = p;
       before_last_operator = prev;
     }
@@ -8940,148 +9194,6 @@ bool eval_picture_expression(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
-Estamos em um momento no qual finalmente iremos começar a fazer as
-primeiras renderizações. Por causa disso, devemos preparar uma lista
-de vértices correspondendo a um quadrado centralizado na posição $(0,
-0)$ e cujo lado é 2. Esse é o tamanho para que nossa renderização de
-texturas feitas usando tais vértices ocupe toda a área de desenho.
-
-\iniciocodigo
-@<Variáveis Locais (metafont.c)@>+=
-const static float square[20] = {
-  -1.0, -1.0, //Primeiro vértice
-  0.0, 0.0, // Coordenada da textura
-  1.0, -1.0, // Segundo vértice
-  1.0, 0.0, // Textura
-  1.0, 1.0, // Terceiro vértice
-  1.0, 1.0, // Textura
-  -1.0, 1.0, // Quarto vértice
-  0.0, 1.0}; // Textura
-static GLuint vbo; // OpenGL Vertex Buffer Object
-@
-\fimcodigo
-
-Na inicialização do Weaver Metafont nós enviamos estess vértices para
-a placa de vídeo:
-
-\iniciocodigo
-@<Inicialização de Weaver Metafont@>=
-glGenBuffers(1, &vbo);
-glBindBuffer(GL_ARRAY_BUFFER, vbo);
-// Enviando os vértices para a placa de vídeo:
-glBufferData(GL_ARRAY_BUFFER, sizeof(square), square, GL_STATIC_DRAW);
-@
-\fimcodigo
-
-Na finalização nós removemos os vértices da placa de vídeo:
-
-\iniciocodigo
-@<Finalização de Weaver Metafont@>=
-glDeleteBuffers(1, &vbo);
-@
-\fimcodigo
-
-Somar uma imagem a outra envolve apenas renderizar ambas imagens em um
-mesmo local de destino. Para renderizar, vamos precisar também de um
-shader de vértice:
-
-\iniciocodigo
-@<Variáveis Locais (metafont.c)@>+=
-static const char vertex_shader[] =
-  "#version 100\n"
-  "attribute vec4 vertex_data;\n"
-  "uniform mat4 model_view_matrix;\n"
-  "varying mediump vec2 texture_coordinate;\n"
-  "void main(){\n"
-  "  gl_Position = vec4(vertex_data.xy, 0.0, 1.0) * model_view_matrix;\n"
-  "  texture_coordinate = vertex_data.zw;\n"
-  "}\n";
-@
-\fimcodigo
-
-Este shader de vértice recebe como argumento informações sobre o
-vértice (que contém empacotada uma coordenada $(x, y)$ em duas
-dimensões e uma coordenada $(t, s)$ representando a coordenada da
-textura). E também uma matriz que aplicará transformação linear sobre
-cada vértice. A sua saída será a nova posição de cada vértice após a
-transformação linear (desta vez como uma coordenada de 4 dimensões
-como se espera) e também o valor da coordenada da textura.
-
-Já o código do shader de fragmento:
-
-\iniciocodigo
-@<Variáveis Locais (metafont.c)@>+=
-static const char fragment_shader[] =
-  "#version 100\n"
-  "precision mediump float;\n"
-  "varying mediump vec2 texture_coordinate;\n"
-  "uniform sampler2D texture1;\n"
-  "void main(){\n"
-  "  vec4 texture = texture2D(texture1, texture_coordinate);\n"
-  "  gl_FragData[0] = texture;"
-  "}\n";
-static GLuint program; // Armazenará o programa após compilar os shaders acima
-GLint uniform_matrix; // Armazenará a posição da matriz de modelo visualização acima
-GLint uniform_texture; // A posição da variável de textura no código acima
-@
-\fimcodigo
-
-Estes shaders simples precisam ser compilados na inicialização:
-
-\iniciocodigo
-@<Inicialização de Weaver Metafont@>+=
-{
-  GLuint vertex, fragment;
-  GLint status = GL_TRUE;
-  const char *source_code[1];
-  vertex = glCreateShader(GL_VERTEX_SHADER);
-  fragment = glCreateShader(GL_FRAGMENT_SHADER);
-  source_code[0] = vertex_shader;
-  glShaderSource(vertex, 1, source_code, NULL);
-  source_code[0] = fragment_shader;
-  glShaderSource(fragment, 1, source_code, NULL);
-  glCompileShader(vertex);
-  glGetShaderiv(vertex, GL_COMPILE_STATUS, &status);
-  if(status == GL_FALSE){
-    fprintf(stderr,
-            "ERROR: Weaver Metafont vertex shader compilation failed!\n");
-    return false;
-  }
-  glCompileShader(fragment);
-  glGetShaderiv(fragment, GL_COMPILE_STATUS, &status);
-  if(status == GL_FALSE){
-    fprintf(stderr,
-            "ERROR: Weaver Metafont fragment shader compilation failed!\n");
-    return false;
-  }
-  program = glCreateProgram();
-  glAttachShader(program, vertex);
-  glAttachShader(program, fragment);
-  glBindAttribLocation(program, 0, "vertex_data");
-  glLinkProgram(program);
-  glGetProgramiv(program, GL_LINK_STATUS, &status);
-  if(status == GL_FALSE){
-    fprintf(stderr, "ERROR: Weaver Metafont shader linking failed!\n");
-    return false;
-  }
-  glDeleteShader(vertex);
-  glDeleteShader(fragment);
-  // Estabelecendo atributos:
-  uniform_matrix = glGetUniformLocation(program, "model_view_matrix");
-  uniform_texture = glGetUniformLocation(program, "texture");  
-}
-@
-\fimcodigo
-
-Na finalização iremos destruir o programa compilado acima:
-
-\iniciocodigo
-@<Finalização de Weaver Metafont@>+=
-glDeleteProgram(program);
-@
-\fimcodigo
-
-
 Para somar ou subtrair as imagens, devemos primeiro obter qual deve
 ser o tamanho da imagem de destino. Ela terá a maior altura e maior
 largura dentre as imagens sendo somadas. Em seguida, a criamos e a
@@ -9097,7 +9209,6 @@ desenhamos as texturas no destino e finalizamos.
 \iniciocodigo
 @<Expressão de Imagem: Soma ou Subtração@>=
 // Alocando e declarando dados, gerando imagem vazia inicial
-void *data;
 GLuint temporary_framebuffer = 0;
 float model_view_matrix[16] = {1.0, 0.0, 0.0, 0.0,
                                0.0, 1.0, 0.0, 0.0,
@@ -9105,42 +9216,12 @@ float model_view_matrix[16] = {1.0, 0.0, 0.0, 0.0,
                                0.0, 0.0, 0.0, 1.0};
 int final_width = ((a.width >= b.width)?(a.width):(b.width));
 int final_height = ((a.height >= b.height)?(a.height):(b.height));
-data = temporary_alloc(final_width * final_height * 4);
-if(data == NULL){
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s:%d: Not enough memory!\n",
-          mf -> file, begin_expression -> line);
-#endif
-  return false;
-}
-glGenFramebuffers(1, &temporary_framebuffer);
-memset(data, 0, final_width * final_height * 4);
-glGenTextures(1, &(result -> texture)); 
-glBindTexture(GL_TEXTURE_2D, result -> texture);
-glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, final_width, final_height, 0, GL_RGBA,
-             GL_UNSIGNED_BYTE, data);
-glBindFramebuffer(GL_FRAMEBUFFER, temporary_framebuffer);
-glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                       result -> texture, 0);
-if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s:%d: OpenGL framebuffer error!\n",
-          mf -> file, begin_expression -> line);
-#endif
-  return false;
-}
-// Preparando renderização
-glViewport(0, 0, final_width, final_height);
-glBindBuffer(GL_ARRAY_BUFFER, vbo);
-glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *) 0);
-glEnableVertexAttribArray(0);
-glUseProgram(program);
+get_new_framebuffer(&temporary_framebuffer, &(result -> texture), final_width,
+                    final_height);
 // Renderizando imagem 'a'
 model_view_matrix[0] = a.width / final_width;
 model_view_matrix[5] = a.height / final_height;
-glUniformMatrix4fv(uniform_matrix, 1, false, model_view_matrix);
-glBindTexture(GL_TEXTURE_2D, a.texture);
-glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+render_picture(&a, model_view_matrix, final_width, final_height);
 // Renderizando imagem 'b'
 model_view_matrix[0] = b.width / final_width;
 model_view_matrix[5] = b.height / final_height;
@@ -9154,9 +9235,9 @@ if(last_operator -> type == TYPE_SUBTRACT){
 else
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 // Finalizando
+glBindFramebuffer(GL_FRAMEBUFFER, 0);
+glBindTexture(GL_TEXTURE_2D, 0);
 glDeleteFramebuffers(1, &temporary_framebuffer);
-if(temporary_free != NULL)
-  temporary_free(data);
 @
 \fimcodigo
 
@@ -9551,7 +9632,6 @@ bool apply_image_transformation(struct metafont *mf,
                                 struct picture_variable *dst,
                                 struct picture_variable *org,
                                 float *matrix){
-  void *data;
   GLuint temporary_framebuffer = 0;
   // Essas variáveis vão ajudar a calcular o tamanho final da imagem
   float offset_x, offset_y, end_x, end_y;
@@ -9563,46 +9643,14 @@ bool apply_image_transformation(struct metafont *mf,
           ((float) dst -> height) * matrix[5] + matrix[13];
   dst -> width = (int) (end_x - offset_x);
   dst -> height = (int) (end_y - offset_y);
-  // Tamanho final conhecido, alocando a imagem
-  data = temporary_alloc(dst -> width * dst -> height * 4);
-  if(data == NULL){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s: Not enough memory!\n",
-            mf -> file);
-#endif
-    return false;
-  }
   // Gerando textura inicial, framebuffer
-  glGenFramebuffers(1, &temporary_framebuffer);
-  memset(data, 0, dst -> width * dst -> height * 4);
-  glGenTextures(1, &(dst -> texture)); 
-  glBindTexture(GL_TEXTURE_2D, dst -> texture);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, dst -> width, dst -> height, 0, GL_RGBA,
-               GL_UNSIGNED_BYTE, data);
-  glBindFramebuffer(GL_FRAMEBUFFER, temporary_framebuffer);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         dst -> texture, 0);
-  if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s: OpenGL framebuffer error!\n",
-            mf -> file);
-#endif
-    return false;
-  }
-  // Preparando renderização
-  glViewport(0, 0, dst -> width, dst -> height);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *) 0);
-  glEnableVertexAttribArray(0);
-  glUseProgram(program);
-  glUniformMatrix4fv(uniform_matrix, 1, false, matrix);
-  glBindTexture(GL_TEXTURE_2D, org -> texture);
-  // Renderiza:
-  glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+  get_new_framebuffer(&temporary_framebuffer, &(dst -> texture), dst -> width,
+                    dst -> height);
+  // Renderizando:
+  render_picture(org, matrix, dst -> width, dst -> height);
   // Finalização
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
   glDeleteFramebuffers(1, &temporary_framebuffer);
-  if(temporary_free != NULL)
-    temporary_free(data);
   return true;
 }
 @
@@ -9690,7 +9738,6 @@ resultado da avaliação.
 
 \iniciocodigo
 @<Imagem Primária: Variável@>=
-void *data;
 GLuint temporary_framebuffer = 0;
 float identity_matrix[16] = {1.0, 0.0, 0.0, 0.0,
                              0.0, 1.0, 0.0, 0.0,
@@ -9716,45 +9763,13 @@ if(content -> type != TYPE_T_PICTURE){
 // Preparar renderização:
 result -> width = content -> width;
 result -> height = content -> height;
-data = temporary_alloc(result -> width * result -> height * 4);
-if(data == NULL){
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s: Not enough memory!\n",
-          mf -> file);
-#endif
-    return false;
-}
-memset(data, 0, result -> width * result -> height * 4);
-glGenTextures(1, &(result -> texture)); 
-glGenFramebuffers(1, &temporary_framebuffer);
-glBindTexture(GL_TEXTURE_2D, result -> texture);
-glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, result -> width, result -> height, 0,
-             GL_RGBA, GL_UNSIGNED_BYTE, data);
-glBindFramebuffer(GL_FRAMEBUFFER, temporary_framebuffer);
-glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                       result -> texture, 0);
-if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s:%d: OpenGL framebuffer error!\n",
-          mf -> file, begin_expression -> line);
-#endif
-  return false;
-}
-// Preparar dados para shader:
-glViewport(0, 0, result -> width, result -> height);
-glBindBuffer(GL_ARRAY_BUFFER, vbo);
-glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *) 0);
-glEnableVertexAttribArray(0);
-glUseProgram(program);
-glUniformMatrix4fv(uniform_matrix, 1, false, identity_matrix);
-glBindTexture(GL_TEXTURE_2D, content -> texture);
+get_new_framebuffer(&temporary_framebuffer, &(result -> texture),
+                    result -> width, result -> height);
 // Renderiza:
-glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+render_picture(content, identity_matrix, result -> width, result -> height);
 // Finaliza:
-if(temporary_free != NULL)
-  temporary_free(data);
+glBindFramebuffer(GL_FRAMEBUFFER, 0);
 glDeleteFramebuffers(1, &temporary_framebuffer);
-
 return true;
 @
 \fimcodigo
@@ -9793,7 +9808,7 @@ seu tamanho e em seguida criar uma textura vazia com tal tamanho.
 @<Imagem Primária: Imagem em Branco@>=
 struct generic_token *begin_pair_expression, *end_pair_expression;
 struct pair_variable p;
-void *data;
+unsigned char *data;
 begin_pair_expression = begin_expression -> next;
 end_pair_expression = end_expression;
 if(begin_expression == end_expression){
@@ -9815,11 +9830,15 @@ if(data == NULL){
   return false;
 }
 memset(data, 0, result -> width * result -> height * 4);
-result -> texture = 0;
 glGenTextures(1, &(result -> texture));
 glBindTexture(GL_TEXTURE_2D, result -> texture);
-glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, result -> width, result -> height, 0,
+glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 2, 2, 0,
              GL_RGBA, GL_UNSIGNED_BYTE, data);
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+glBindTexture(GL_TEXTURE_2D, 0);
 if(temporary_free != NULL)
   temporary_free(data);
 return true;
@@ -9858,7 +9877,7 @@ static const char fragment_shader_inv[] =
   "uniform sampler2D texture1;\n"
   "void main(){\n"
   "  vec4 texture = texture2D(texture1, texture_coordinate);\n"
-  "  gl_FragData[0] = vec4(1.0, 1.0, 1.0, 1.0) - texture;"
+  "  gl_FragColor = vec4(1.0) - texture;"
   "}\n";
 static GLuint inverse_program;
 GLint uniform_inverse_matrix; // Posição da matriz de modelo visualização do programa
@@ -9915,7 +9934,7 @@ Compilaremos esse shader na inicialização:
   glDeleteShader(fragment);
   // Estabelecendo atributos:
   uniform_inverse_matrix = glGetUniformLocation(inverse_program, "model_view_matrix");
-  uniform_inverse_texture = glGetUniformLocation(inverse_program, "texture");  
+  uniform_inverse_texture = glGetUniformLocation(inverse_program, "texture1");
 }
 @
 \fimcodigo
@@ -9928,6 +9947,38 @@ glDeleteProgram(inverse_program);
 @
 \fimcodigo
 
+Vamos criar uma nova função para renderizar usando este programa:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+void render_inverse_picture(struct picture_variable *pic, float *matrix,
+                            int dst_width, int dst_height);
+@
+\fimcodigo
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+void render_inverse_picture(struct picture_variable *pic, float *matrix,
+                           int dst_width, int dst_height){
+  glColorMask(true, true, true, true);
+  glViewport(0, 0, dst_width, dst_height);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo);
+  glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *) 0);
+  glEnableVertexAttribArray(0);
+  glUseProgram(inverse_program);
+  glUniformMatrix4fv(uniform_inverse_matrix, 1, false, matrix);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, pic -> texture);
+  glUniform1i(uniform_inverse_texture, 0);
+  glClearColor(0.0, 0.0, 0.0, 0.0);
+  glClear(GL_COLOR_BUFFER_BIT);
+  glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+  glBindTexture(GL_TEXTURE_2D, 0);
+}
+@
+\fimcodigo
+
+
 Agora que temos o programa em shader que inverte as cores de uma
 imagem e sua transparência também, usamos ele para obter a
 renderização inversa de uma imagem implementando assim o
@@ -9936,7 +9987,6 @@ operador \monoespaco{-} para imagens:
 \iniciocodigo
 @<Imagem Primária: Inverso@>=
 struct picture_variable p;
-void *data;
 GLuint temporary_framebuffer = 0;
 float identity_matrix[16] = {1.0, 0.0, 0.0, 0.0,
                              0.0, 1.0, 0.0, 0.0,
@@ -9954,44 +10004,13 @@ if(!eval_picture_primary(mf, cx, begin_expression -> next, end_expression, &p))
 // Preparar renderização:
 result -> width = p.width;
 result -> height = p.height;
-data = temporary_alloc(result -> width * result -> height * 4);
-if(data == NULL){
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s: Not enough memory!\n",
-          mf -> file);
-#endif
-    return false;
-}
-memset(data, 0, result -> width * result -> height * 4);
-glGenTextures(1, &(result -> texture)); 
-glGenFramebuffers(1, &temporary_framebuffer);
-glBindTexture(GL_TEXTURE_2D, result -> texture);
-glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, result -> width, result -> height, 0,
-             GL_RGBA, GL_UNSIGNED_BYTE, data);
-glBindFramebuffer(GL_FRAMEBUFFER, temporary_framebuffer);
-glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                       result -> texture, 0);
-if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s:%d: OpenGL framebuffer error!\n",
-          mf -> file, begin_expression -> line);
-#endif
-  return false;
-}
-// Preparar dados para shader:
-glViewport(0, 0, result -> width, result -> height);
-glBindBuffer(GL_ARRAY_BUFFER, vbo);
-glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *) 0);
-glEnableVertexAttribArray(0);
-glUseProgram(inverse_program);
-glUniformMatrix4fv(uniform_inverse_matrix, 1, false, identity_matrix);
-glBindTexture(GL_TEXTURE_2D, p.texture);
+get_new_framebuffer(&temporary_framebuffer, &(result -> texture),
+                    result -> width, result -> height);
 // Renderiza:
-glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+render_inverse_picture(&p, identity_matrix, result -> width, result -> height);
 // Finaliza:
-if(temporary_free != NULL)
-  temporary_free(data);
 glDeleteTextures(1, &(p.texture));
+glBindFramebuffer(GL_FRAMEBUFFER, 0);
 glDeleteFramebuffers(1, &temporary_framebuffer);
 return true;
 @
@@ -10036,7 +10055,6 @@ usando \monoespaco{glReadPixels} para obter o conteúdo do framebuffer:
 \iniciocodigo
 @<Primário Numérico: Operadores Adicionais@>+=
 else if(begin_expression -> type == TYPE_TOTALWEIGHT){
-
   struct picture_variable p;
   char *data;
   GLuint temporary_framebuffer = 0;
@@ -10063,42 +10081,16 @@ else if(begin_expression -> type == TYPE_TOTALWEIGHT){
 #endif
     return false;
   }
-  memset(data, 0, p.width * p.height * 4);
-  glGenTextures(1, &temporary_texture); 
-  glGenFramebuffers(1, &temporary_framebuffer);
-  glBindTexture(GL_TEXTURE_2D, temporary_texture);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, p.width, p.height, 0,
-               GL_RGBA, GL_UNSIGNED_BYTE, data);
-  glBindFramebuffer(GL_FRAMEBUFFER, temporary_framebuffer);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         temporary_texture, 0);
-  if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s:%d: OpenGL framebuffer error!\n",
-            mf -> file, begin_expression -> line);
-#endif
-    return false;
-  }
-  // Preparar dados para shader:
-  glViewport(0, 0, p.width, p.height);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *) 0);
-  glEnableVertexAttribArray(0);
-  glUseProgram(program);
-  glUniformMatrix4fv(uniform_matrix, 1, false, identity_matrix);
-  glBindTexture(GL_TEXTURE_2D, p.texture);
+  get_new_framebuffer(&temporary_framebuffer, &(temporary_texture),
+                    p.width, p.height);
   // Renderiza:
-  glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-  //glClearColor(1.0, 1.0, 1.0, 1.0);
-  //glClear(GL_COLOR_BUFFER_BIT);
+  render_picture(&p, identity_matrix, p.width, p.height);
   // Ler dados do framebuffer:
   glReadPixels(0, 0, p.width, p.height, GL_RGBA, GL_UNSIGNED_BYTE, data);
   {
     int i, size = p.width * p.height * 4;
     double sum = 0.0;
-    //printf("-----------\n");
     for(i = 0; i < size; i += 4){
-      //printf("(%hu %hu %hu %hu)\n", (unsigned char) data[i], (unsigned char) data[i+1], (unsigned char) data[i+2], (unsigned char) data[i+3]);
       double v = ((unsigned char) data[i] + (unsigned char) data[i+1] +
                   (unsigned char) data[i+2]) / 765.0;
       sum += v * ((unsigned char )data[i+3] / 255.0);
@@ -10109,6 +10101,8 @@ else if(begin_expression -> type == TYPE_TOTALWEIGHT){
   if(temporary_free != NULL)
     temporary_free(data);
   glDeleteTextures(1, &temporary_texture);
+  glDeleteTextures(1, &(p.texture));
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
   glDeleteFramebuffers(1, &temporary_framebuffer);
   return true;
 }
@@ -10127,3 +10121,18 @@ else if(begin_expression -> type == TYPE_TOTALWEIGHT){
 
 
 \fim
+
+
+
+
+  // Ler dados do framebuffer:
+  glReadPixels(0, 0, result -> width, result -> height, GL_RGBA, GL_UNSIGNED_BYTE, data);
+  {
+    int i;
+    printf("-----------\n");
+    for(i = 0; i < result -> width * result -> height * 4; i += 4){
+      printf("(%hu %hu %hu %hu)\n", (unsigned char) data[i], (unsigned char) data[i+1], (unsigned char) data[i+2], (unsigned char) data[i+3]);
+    }
+  }
+
+
