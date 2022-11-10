@@ -9085,8 +9085,12 @@ area. It will have the biggest width and height from the combined
 images. After this, we create and initialize it as a transparent
 image. Both in the sum as in the subtraction we begin drawing the
 first operand to the destination. After this, in the case of a sum, we
-just draw the second image after the first.
+just draw the second image blending with the initial image by
+multiplying the new color $(y_R, y_G, y_B, y_A)$ by its alpha value
+and adding with the previous color $(x_R, x_G, x_B, x_A)$ multiplied
+by the complement of the alpha component of the new color:
 
+$(1-y_A)(x_R, x_G, x_B, x_A) + y_A(y_R, y_G, y_B, y_A)$
 
 The subtraction case is more complex and to understand it, we need to
 understand the rules about how the textures are represented and how
@@ -9148,8 +9152,12 @@ if(last_operator -> type == TYPE_SUBTRACT){
   glBlendEquation(GL_FUNC_ADD);
   glDisable(GL_BLEND);
 }
-else
+else{ // Sum:
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+  glDisable(GL_BLEND);
+}
 // Finalization
 glBindFramebuffer(GL_FRAMEBUFFER, 0);
 glBindTexture(GL_TEXTURE_2D, 0);

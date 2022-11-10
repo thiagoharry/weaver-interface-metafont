@@ -9201,8 +9201,13 @@ largura dentre as imagens sendo somadas. Em seguida, a criamos e a
 inicializamos como sendo uma imagem transparente. Tanto na soma como
 na subtração, desenhamos o primeiro operando no destino. Em seguida,
 dependendo se estamos realizando soma ou subtração, usamos o OpenGL
-para ajustar como as cores serão misturadas. No caso da soma, nenhuma
-mudança precisa ser feita.
+para ajustar como as cores serão misturadas. No caso da soma,
+ajustamos para que seja feita uma mistura de cores de modo que a nova
+cor $(y_R, y_G, y_B, y_A)$ seja multiplicada pelo seu valor alfa e
+somada à cor de destino $(x_R, x_G, x_B, x_A)$ multiplicada pelo
+complemento do alfa da nova cor:
+
+$$(1-y_A)(x_R, x_G, x_B, x_A) + y_A(y_R, y_G, y_B, y_A)$$
 
 O caso da subtração é mais complexo e para entendê-la, devemos
 entender as regras de como representamos nossas texturas com
@@ -9264,8 +9269,12 @@ if(last_operator -> type == TYPE_SUBTRACT){
   glBlendEquation(GL_FUNC_ADD);
   glDisable(GL_BLEND);
 }
-else
+else{ // Soma
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+  glDisable(GL_BLEND);
+}
 // Finalizando
 glBindFramebuffer(GL_FRAMEBUFFER, 0);
 glBindTexture(GL_TEXTURE_2D, 0);

@@ -6,7 +6,7 @@ numeric wa, wb;
 
 a = nullpicture (10, 10);
 wa = totalweight a;
-b = -a;
+b = +(- (+ a));
 wb = totalweight b;
 
 end
