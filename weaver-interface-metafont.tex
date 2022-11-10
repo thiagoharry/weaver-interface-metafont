@@ -9201,10 +9201,36 @@ inicializamos como sendo uma imagem transparente. Tanto na soma como
 na subtração, desenhamos o primeiro operando no destino. Em seguida,
 dependendo se estamos realizando soma ou subtração, usamos o OpenGL
 para ajustar como as cores serão misturadas. No caso da soma, nenhuma
-mudança precisa ser feita. No caso da subtração, usamos a
-função \monoespaco{glBlendEquation} para pedir que a mistura de cores
-durante o desenho seja feita por meio da diferença de cores. Por fim,
-desenhamos as texturas no destino e finalizamos.
+mudança precisa ser feita.
+
+O caso da subtração é mais complexo e para entendê-la, devemos
+entender as regras de como representamos nossas texturas com
+imagens. Por padrão, assumimos que uma imagem inicializada vazia com
+um dado tamanho é toda preenchida por uma cor branca totalmente
+transparente (representada pelo vetor RGBA $(1, 1, 1, 0)$). Já quando
+escrevemos algo em uma imagem usando canetas ou outro método, usamos
+uma tinta preta totalmente opaca (representada pelo vetor RGBA $(0, 0,
+0, 1)$). Para nós a cor branca é o zero, a ausência de tinta e a cor
+preta é a presença de tinta. O branco é o elemento neutro da
+subtração, remover o branco não deve mudar nada. Já remover o preto
+remove toda a tinta. Isso é o oposto da representação do branco como 1
+e o preto como 0 usada no OpenGL. Por causa disso, a equação de quando
+subtraímos uma cor existente $(x_R, x_G, x_B, x_A)$ por uma nova cor
+$(y_R, y_G, y_B, y_A)$ é:
+
+$$
+(x_R+(1-y_R), (x_G+(1-y_G), (x_B+(1-y_B), x_A-y_A)
+$$
+
+O resultado acima é depois limitado para um valor entre 0 e 1.
+
+Isso pode ser obtido ativando a opção de mistura de cores OpenGL
+(GL\_BLEND) e configurando o fator da cor existente para 1 (GL\_ONE) e
+para o da nova cor para 1 menos seu valor
+(GL\_ONE\_MINUS\_SRC\_COLOR). Já no caso da transparência, os fatores
+serão 1 para ambos, mas mudamos a equação de mistura de cores para
+usar a subtração (GL\_FUNC\_SUBTRACT) ao invés da soma
+(GL\_FUNC\_ADD).
 
 \iniciocodigo
 @<Expressão de Imagem: Soma ou Subtração@>=
@@ -9228,9 +9254,14 @@ model_view_matrix[5] = b.height / final_height;
 glUniformMatrix4fv(uniform_matrix, 1, false, model_view_matrix);
 glBindTexture(GL_TEXTURE_2D, b.texture);
 if(last_operator -> type == TYPE_SUBTRACT){
-  glBlendEquation(GL_FUNC_SUBTRACT);
+  glEnable(GL_BLEND);
+  // Os fatores a serem usados na mistura
+  glBlendFuncSeparate(GL_ONE_MINUS_SRC_COLOR, GL_ONE, GL_ONE, GL_ONE);
+  // Soma para RGB e subtração para o canal alfa:
+  glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_SUBTRACT);
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
   glBlendEquation(GL_FUNC_ADD);
+  glDisable(GL_BLEND);
 }
 else
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);

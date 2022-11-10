@@ -9084,11 +9084,36 @@ area. It will have the biggest width and height from the combined
 images. After this, we create and initialize it as a transparent
 image. Both in the sum as in the subtraction we begin drawing the
 first operand to the destination. After this, in the case of a sum, we
-draw the second image. And in the case of subtraction, we also draw
-it, but before we use the function \monoespaco{glBlendEquation} to
-change how the colors are
-blend. Choosing \monoespaco{GL\_FUNC\_SUBTRACT}, we subtract the
-colors from both images as intended.
+just draw the second image after the first.
+
+
+The subtraction case is more complex and to understand it, we need to
+understand the rules about how the textures are represented and how
+Weaver Metafont deals with them. Weaver Metafont assumes that an empty
+initialized picture of a given size has a fully transparent white
+color (represented by $(1, 1, 1 ,0)$ following OpenGL convention). If
+we put ink in a image, we are putting a fully opaque black color
+(represented by $(0, 0, 0, 1)$ following OpenGL conventions). To
+Weaver Metafont, white transparent is the neutral operator in a
+subtraction: removing transparent white from a picture changes
+nothing. And removint opaque black removes all the color. These rules
+contrast with white being represented by 1 and black being represented
+by 0 in OpenGL. Because of this, our blending equation to combine an
+existing color $(x_R, x_G, x_B, x_A)$ with a new color $(y_R, y_G,
+y_B, y_A)$ is:
+
+$$
+(x_R+(1-y_R), (x_G+(1-y_G), (x_B+(1-y_B), x_A-y_A)
+$$
+
+The above components are clamped to a value between 0 and 1.
+
+This can be achieved activating the blending option in OpenGL and
+configuring the previous color factor to 1 (GL\_ONE) and the new color
+factor to 1 less its value (GL\_ONE\_MINUS\_SRC\_COLOR). In the
+transparency case, both factors will be 1, but we will change the
+equation to use a subtraction (GL\_FUNC\_SUBTRACT) instead of a sum
+(GL\_FUNC\_SUM).
 
 \iniciocodigo
 @<Image Expression: Sum or Subtract@>=
@@ -9113,9 +9138,14 @@ glUniformMatrix4fv(uniform_matrix, 1, false, model_view_matrix);
 glBindTexture(GL_TEXTURE_2D, b.texture);
 glUniform1i(uniform_texture, 0);
 if(last_operator -> type == TYPE_SUBTRACT){
-  glBlendEquation(GL_FUNC_SUBTRACT);
+  glEnable(GL_BLEND);
+  // The factors in the blending equation
+  glBlendFuncSeparate(GL_ONE_MINUS_SRC_COLOR, GL_ONE, GL_ONE, GL_ONE);
+  // Sum for RGB and subtraction for A:
+  glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_SUBTRACT);
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
   glBlendEquation(GL_FUNC_ADD);
+  glDisable(GL_BLEND);
 }
 else
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
