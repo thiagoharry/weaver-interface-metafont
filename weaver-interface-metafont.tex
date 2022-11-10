@@ -9061,7 +9061,8 @@ void render_picture(struct picture_variable *pic, float *matrix, int dst_width,
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, pic -> texture);
   glUniform1i(uniform_texture, 0);
-  glClearColor(0.0, 0.0, 0.0, 0.0);
+  // Limpando o destino para branco transparente antes de renderizar:
+  glClearColor(1.0, 1.0, 1.0, 0.0);
   glClear(GL_COLOR_BUFFER_BIT);
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
   glBindTexture(GL_TEXTURE_2D, 0);
@@ -9860,7 +9861,13 @@ if(data == NULL){
 #endif
   return false;
 }
-memset(data, 0, result -> width * result -> height * 4);
+// Pintando a nova textura de branco
+memset(data, 255, result -> width * result -> height * 4);
+{ // E deixando ela totalmente transparente:
+  int i, size = result -> width * result -> height * 4;
+  for(i = 3; i < size; i += 4)
+    data[i] = 0;
+}
 glGenTextures(1, &(result -> texture));
 glBindTexture(GL_TEXTURE_2D, result -> texture);
 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 2, 2, 0,
@@ -9896,124 +9903,12 @@ return eval_picture_primary(mf, cx, p, end_expression, result);
 \fimcodigo
 
 Para o operador \monoespaco{-} que é usado para inverter uma imagem,
-nós precisaremos de um novo shader de fragmento e um novo programa que
-irá usá-lo:
+nós iremos novamente renderizar ativando a equação de mistura de
+cores, mas fazendo com que a nova cor seja obtida usando $(1, 1, 1,
+1)$ como a cor atural e subtraindo disso a nova cor. Isso é obtido
+tratando os fatores de mistura como 1 (GL\_ONE) e usando a subtração
+como operador (GL\_FUNC\_SUBTRACT):
 
-\iniciocodigo
-@<Variáveis Locais (metafont.c)@>+=
-static const char fragment_shader_inv[] =
-  "#version 100\n"
-  "precision mediump float;\n"
-  "varying mediump vec2 texture_coordinate;\n"
-  "uniform sampler2D texture1;\n"
-  "void main(){\n"
-  "  vec4 texture = texture2D(texture1, texture_coordinate);\n"
-  "  gl_FragColor = vec4(1.0) - texture;"
-  "}\n";
-static GLuint inverse_program;
-GLint uniform_inverse_matrix; // Posição da matriz de modelo visualização do programa
-GLint uniform_inverse_texture; // Posição da textura no programa acima
-@
-\fimcodigo
-
-Compilaremos esse shader na inicialização:
-
-\iniciocodigo
-@<Inicialização de Weaver Metafont@>+=
-{
-  GLuint vertex, fragment;
-  GLint status = GL_TRUE;
-  const char *source_code[1];
-  vertex = glCreateShader(GL_VERTEX_SHADER);
-  fragment = glCreateShader(GL_FRAGMENT_SHADER);
-  source_code[0] = vertex_shader;
-  glShaderSource(vertex, 1, source_code, NULL);
-  source_code[0] = fragment_shader_inv;
-  glShaderSource(fragment, 1, source_code, NULL);
-  glCompileShader(vertex);
-  glGetShaderiv(vertex, GL_COMPILE_STATUS, &status);
-  if(status == GL_FALSE){
-    fprintf(stderr,
-            "ERROR: Weaver Metafont vertex shader compilation failed!\n");
-    return false;
-  }
-  glCompileShader(fragment);
-  glGetShaderiv(fragment, GL_COMPILE_STATUS, &status);
-  if(status == GL_FALSE){
-  int info_log_length;
-    char *error_msg;
-    glGetShaderiv(fragment, GL_INFO_LOG_LENGTH, &info_log_length);
-    error_msg = (char *) temporary_alloc(info_log_length);
-    glGetShaderInfoLog(fragment, info_log_length, &info_log_length, error_msg);
-    fprintf(stderr, "Shader Error: %s\n", error_msg);
-    fprintf(stderr,
-            "ERROR: Weaver Metafont inverse fragment shader compilation "
-            "failed!\n");
-    return false;
-  }
-  inverse_program = glCreateProgram();
-  glAttachShader(inverse_program, vertex);
-  glAttachShader(inverse_program, fragment);
-  glBindAttribLocation(program, 0, "vertex_data");
-  glLinkProgram(inverse_program);
-  glGetProgramiv(inverse_program, GL_LINK_STATUS, &status);
-  if(status == GL_FALSE){
-    fprintf(stderr, "ERROR: Weaver Metafont shader linking failed!\n");
-    return false;
-  }
-  glDeleteShader(vertex);
-  glDeleteShader(fragment);
-  // Estabelecendo atributos:
-  uniform_inverse_matrix = glGetUniformLocation(inverse_program, "model_view_matrix");
-  uniform_inverse_texture = glGetUniformLocation(inverse_program, "texture1");
-}
-@
-\fimcodigo
-
-Na finalização iremos destruir o programa compilado acima:
-
-\iniciocodigo
-@<Finalização de Weaver Metafont@>+=
-glDeleteProgram(inverse_program);
-@
-\fimcodigo
-
-Vamos criar uma nova função para renderizar usando este programa:
-
-\iniciocodigo
-@<Declaração de Função Local (metafont.c)@>+=
-void render_inverse_picture(struct picture_variable *pic, float *matrix,
-                            int dst_width, int dst_height);
-@
-\fimcodigo
-
-\iniciocodigo
-@<Funções Auxiliares Locais (metafont.c)@>+=
-void render_inverse_picture(struct picture_variable *pic, float *matrix,
-                           int dst_width, int dst_height){
-  glColorMask(true, true, true, true);
-  glViewport(0, 0, dst_width, dst_height);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *) 0);
-  glEnableVertexAttribArray(0);
-  glUseProgram(inverse_program);
-  glUniformMatrix4fv(uniform_inverse_matrix, 1, false, matrix);
-  glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D, pic -> texture);
-  glUniform1i(uniform_inverse_texture, 0);
-  glClearColor(0.0, 0.0, 0.0, 0.0);
-  glClear(GL_COLOR_BUFFER_BIT);
-  glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-  glBindTexture(GL_TEXTURE_2D, 0);
-}
-@
-\fimcodigo
-
-
-Agora que temos o programa em shader que inverte as cores de uma
-imagem e sua transparência também, usamos ele para obter a
-renderização inversa de uma imagem implementando assim o
-operador \monoespaco{-} para imagens:
 
 \iniciocodigo
 @<Imagem Primária: Inverso@>=
@@ -10037,9 +9932,17 @@ result -> width = p.width;
 result -> height = p.height;
 get_new_framebuffer(&temporary_framebuffer, &(result -> texture),
                     result -> width, result -> height);
+// Inicializar nova textura com branco opaco (1, 1, 1, 1)
+glClearColor(1.0, 1.0, 1.0, 1.0);
+glClear(GL_COLOR_BUFFER_BIT);
+// Ajustar equação de mistura pra subtrair ela do branco opaco:
+glEnable(GL_BLEND);
+glBlendFunc(GL_ONE, GL_ONE);
+glBlendEquation(GL_FUNC_SUBTRACT);
 // Renderiza:
-render_inverse_picture(&p, identity_matrix, result -> width, result -> height);
+render_picture(&p, identity_matrix, result -> width, result -> height);
 // Finaliza:
+glDisable(GL_BLEND);
 glDeleteTextures(1, &(p.texture));
 glBindFramebuffer(GL_FRAMEBUFFER, 0);
 glDeleteFramebuffers(1, &temporary_framebuffer);
@@ -10049,7 +9952,7 @@ return true;
 
 \subsubsecao{8.5.4. Imagens em Expressões Numéricas}
 
-Há um caso no qual precisamos avaliar uma expressaõ de imagem dentro
+Há um caso no qual precisamos avaliar uma expressão de imagem dentro
 de uma expressão numérica. Há uma expressão primária numérica
 adicional:
 
@@ -10058,10 +9961,11 @@ adicional:
 \alinhanormal
 
 O que o operador \monoespaco{totalweight} faz é avaliar uma expressão
-de imagem, ler a imagem obtida e retornar a soma de seus valores em
-pixel. O modo como representaremos cada valor em pixel será a média de
-seus valores em vermelho, azul e verde, multiplicado pela
-transparência. O resultado será um valor entre 0 e 1 para cada pixel.
+de imagem, ler a imagem obtida e retornar a soma do ``peso'' de cada
+pixel. Definimos o peso de um pixel calculando a sua distância
+euclideana de seus componentes RGB da cor branca e depois normalizando
+o resultado dividindo por $\sqrt{3}$. Desta forma, o peso do branco é
+0 e do preto é 1. O valor obtido é então multiplicado pelo valor alfa.
 
 Primeiro vamos adicionar um novo tipo de token para esse operador:
 
@@ -10122,9 +10026,12 @@ else if(begin_expression -> type == TYPE_TOTALWEIGHT){
     int i, size = p.width * p.height * 4;
     double sum = 0.0;
     for(i = 0; i < size; i += 4){
-      double v = ((unsigned char) data[i] + (unsigned char) data[i+1] +
-                  (unsigned char) data[i+2]) / 765.0;
-      sum += v * ((unsigned char )data[i+3] / 255.0);
+      double r = (255 - (unsigned char) data[i]) / 255.0,
+             g = (255 - (unsigned char) data[i+1]) / 255.0,
+             b = (255 - (unsigned char) data[i+2]) / 255.0,
+             a = (255 - (unsigned char) data[i+3]) / 255.0;
+      double v = sqrt(r*r + g*g + b*b) / sqrt(3.0);
+      sum += (v * a);
     }
     result -> value = sum;
   }
