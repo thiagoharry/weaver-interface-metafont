@@ -9090,7 +9090,7 @@ multiplying the new color $(y_R, y_G, y_B, y_A)$ by its alpha value
 and adding with the previous color $(x_R, x_G, x_B, x_A)$ multiplied
 by the complement of the alpha component of the new color:
 
-$(1-y_A)(x_R, x_G, x_B, x_A) + y_A(y_R, y_G, y_B, y_A)$
+$$(1-y_A)(x_R, x_G, x_B, x_A) + y_A(y_R, y_G, y_B, y_A)$$
 
 The subtraction case is more complex and to understand it, we need to
 understand the rules about how the textures are represented and how
@@ -9218,8 +9218,13 @@ became true only if the matrix is changed during secondary evaluation.
       matrix[i] = 1.0;
     else
       matrix[i] = 0.0;
-  if(!eval_picture_secondary(mf, cx, begin_expression, end_expression, sec,
+  if(last_operator == NULL){
+     if(!eval_picture_secondary(mf, cx, begin_expression, end_expression, sec,
                              matrix, &modified))
+      return false;
+  }
+  else if(!eval_picture_secondary(mf, cx, last_operator -> next,
+                                  end_expression, sec, matrix, &modified))
     return false;
   if(modified){
     if(!apply_image_transformation(mf, result, sec, matrix))

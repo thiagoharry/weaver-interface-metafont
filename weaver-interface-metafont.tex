@@ -9339,8 +9339,13 @@ somente se a matriz passada for modificada.
       matrix[i] = 1.0;
     else
       matrix[i] = 0.0;//)
-  if(!eval_picture_secondary(mf, cx, begin_expression, end_expression, sec,
+  if(last_operator == NULL){
+     if(!eval_picture_secondary(mf, cx, begin_expression, end_expression, sec,
                              matrix, &modified))
+      return false;
+  }
+  else if(!eval_picture_secondary(mf, cx, last_operator -> next,
+                                  end_expression, sec, matrix, &modified))
     return false;
   if(modified){
     if(!apply_image_transformation(mf, result, sec, matrix))
