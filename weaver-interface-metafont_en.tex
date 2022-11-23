@@ -8930,14 +8930,14 @@ perform this is:
 \iniciocodigo
 @<Local Function Declaration (metafont.c)@>+=
 void render_picture(struct picture_variable *pic, float *matrix, int dst_width,
-                    int dst_height);
+                    int dst_height, bool clear_background);
 @
 \fimcodigo
 
 \iniciocodigo
 @<Auxiliary Local Functions (metafont.c)@>+=
 void render_picture(struct picture_variable *pic, float *matrix, int dst_width,
-                    int dst_height){
+                    int dst_height, bool clear_background){
   glColorMask(true, true, true, true);
   glViewport(0, 0, dst_width, dst_height);
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -8948,9 +8948,11 @@ void render_picture(struct picture_variable *pic, float *matrix, int dst_width,
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, pic -> texture);
   glUniform1i(uniform_texture, 0);
-  // Clearing the destiny to transparent white before drawing
-  glClearColor(1.0, 1.0, 1.0, 0.0);
-  glClear(GL_COLOR_BUFFER_BIT);
+  if(clear_background){
+    // Clearing the destiny to transparent white before drawing
+    glClearColor(1.0, 1.0, 1.0, 0.0);
+    glClear(GL_COLOR_BUFFER_BIT);
+  }
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 }
 @
@@ -8984,7 +8986,7 @@ void assign_picture_variable(struct metafont *mf,
     glDeleteTextures(1, &(target -> texture));
   get_new_framebuffer(&temporary_framebuffer, &(target -> texture),
                       source -> width, source -> height);
-  render_picture(source, model_view_matrix, source -> width, source -> height);
+  render_picture(source, model_view_matrix, source -> width, source -> height, true);
   // Finalization:
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
   glBindTexture(GL_TEXTURE_2D, 0);
@@ -9135,7 +9137,7 @@ get_new_framebuffer(&temporary_framebuffer, &(result -> texture), final_width,
 // Rendering image 'a'
 model_view_matrix[0] = a.width / final_width;
 model_view_matrix[5] = a.height / final_height;
-render_picture(&a, model_view_matrix, final_width, final_height);
+render_picture(&a, model_view_matrix, final_width, final_height, true);
 // Rendering image 'b'
 model_view_matrix[0] = b.width / final_width;
 model_view_matrix[5] = b.height / final_height;
@@ -9147,7 +9149,7 @@ if(last_operator -> type == TYPE_SUBTRACT){
   // The factors in the blending equation
   glBlendFuncSeparate(GL_ONE_MINUS_SRC_COLOR, GL_ONE, GL_ONE, GL_ONE);
   // Sum for RGB and subtraction for A:
-  glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_SUBTRACT);
+  glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_REVERSE_SUBTRACT);
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
   glBlendEquation(GL_FUNC_ADD);
   glDisable(GL_BLEND);
@@ -9569,7 +9571,7 @@ bool apply_image_transformation(struct metafont *mf,
   get_new_framebuffer(&temporary_framebuffer, &(dst -> texture), dst -> width,
                       dst -> height);
   // Rendering
-  render_picture(org, matrix, dst -> width, dst -> height);
+  render_picture(org, matrix, dst -> width, dst -> height, true);
   // Finalization
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
   glDeleteFramebuffers(1, &temporary_framebuffer);
@@ -9688,7 +9690,7 @@ result -> height = content -> height;
 get_new_framebuffer(&temporary_framebuffer, &(result -> texture),
                     result -> width, result -> height);
 // Rendering
-render_picture(content, identity_matrix, result -> width, result -> height);
+render_picture(content, identity_matrix, result -> width, result -> height, true);
 // Finalization:
 glBindFramebuffer(GL_FRAMEBUFFER, 0);
 glDeleteFramebuffers(1, &temporary_framebuffer);
@@ -9826,11 +9828,12 @@ glClearColor(1.0, 1.0, 1.0, 1.0);
 glClear(GL_COLOR_BUFFER_BIT);
 // Adjusting the blending equation to subtract the color from white opaque:
 glEnable(GL_BLEND);
-glBlendFunc(GL_ONE, GL_ONE);
-glBlendEquation(GL_FUNC_SUBTRACT);
+glBlendFuncSeparate(GL_ONE, GL_ONE, GL_ONE, GL_ONE);
+glBlendEquationSeparate(GL_FUNC_REVERSE_SUBTRACT, GL_FUNC_REVERSE_SUBTRACT);
 // Rendering:
-render_picture(&p, identity_matrix, result -> width, result -> height);
+render_picture(&p, identity_matrix, result -> width, result -> height, false);
 // Ending:
+glDisable(GL_BLEND);
 glDeleteTextures(1, &(p.texture));
 glBindFramebuffer(GL_FRAMEBUFFER, 0);
 glDeleteFramebuffers(1, &temporary_framebuffer);
@@ -9908,7 +9911,7 @@ else if(begin_expression -> type == TYPE_TOTALWEIGHT){
   get_new_framebuffer(&temporary_framebuffer, &(temporary_texture),
                     p.width, p.height);
   // Rendering:
-  render_picture(&p, identity_matrix, p.width, p.height);
+  render_picture(&p, identity_matrix, p.width, p.height, true);
   // Reading framebuffer data:
   glReadPixels(0, 0, p.width, p.height, GL_RGBA, GL_UNSIGNED_BYTE, data);
   {
@@ -9918,7 +9921,7 @@ else if(begin_expression -> type == TYPE_TOTALWEIGHT){
       double r = (255 - (unsigned char) data[i]) / 255.0,
              g = (255 - (unsigned char) data[i+1]) / 255.0,
              b = (255 - (unsigned char) data[i+2]) / 255.0,
-             a = (255 - (unsigned char) data[i+3]) / 255.0;
+             a = ((unsigned char) data[i+3]) / 255.0;
       double v = sqrt(r*r + g*g + b*b) / sqrt(3.0);
       sum += (v * a);
     }

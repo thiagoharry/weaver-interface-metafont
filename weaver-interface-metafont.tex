@@ -8835,9 +8835,12 @@ else if(type == TYPE_T_PICTURE){
     else 
       assign_picture_variable(mf, (struct picture_variable *) var -> var,
                               &result);
+    printf("Picture '%s':", var -> value);
+    print_picture((struct picture_variable *) var -> var);
     var = (struct symbolic_token *) (var -> next);
     var = (struct symbolic_token *) (var -> next);
   }
+  
 }
 @
 \fimcodigo
@@ -9043,14 +9046,16 @@ programa de shader padrão que fizemos:
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
 void render_picture(struct picture_variable *pic, float *matrix, int dst_width,
-                    int dst_height);
+                    int dst_height, bool clear_background);
+// XXX:
+void print_picture(struct picture_variable *pic);
 @
 \fimcodigo
 
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
 void render_picture(struct picture_variable *pic, float *matrix, int dst_width,
-                    int dst_height){
+                    int dst_height, bool clear_background){
   glColorMask(true, true, true, true);
   glViewport(0, 0, dst_width, dst_height);
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -9061,11 +9066,36 @@ void render_picture(struct picture_variable *pic, float *matrix, int dst_width,
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, pic -> texture);
   glUniform1i(uniform_texture, 0);
-  // Limpando o destino para branco transparente antes de renderizar:
-  glClearColor(1.0, 1.0, 1.0, 0.0);
-  glClear(GL_COLOR_BUFFER_BIT);
+  if(clear_background){
+    // Limpando o destino para branco transparente antes de renderizar:
+    glClearColor(1.0, 1.0, 1.0, 0.0);
+    glClear(GL_COLOR_BUFFER_BIT);
+  }
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
   glBindTexture(GL_TEXTURE_2D, 0);
+}
+// XXX:
+void print_picture(struct picture_variable *pic){
+  float model_view_matrix[16] = {1.0, 0.0, 0.0, 0.0,
+                               0.0, 1.0, 0.0, 0.0,
+                               0.0, 0.0, 1.0, 0.0,
+                               0.0, 0.0, 0.0, 1.0};
+  GLuint framebuffer;
+  GLuint texture;
+  unsigned char data[100000];
+  get_new_framebuffer(&framebuffer, &texture, pic -> width, pic -> height);
+  render_picture(pic, model_view_matrix, pic -> width, pic -> height, true);
+  // Ler dados do framebuffer:
+  glFinish();
+  glReadPixels(0, 0, pic -> width, pic -> height, GL_RGBA, GL_UNSIGNED_BYTE, data);
+  {
+    int i;
+    for(i = 0; i < pic -> width * pic -> height * 4; i += 4){
+      if(!(i%(4*pic -> width))) printf("\n");
+      printf("(%hu %hu %hu %hu)", (unsigned char) data[i], (unsigned char) data[i+1], (unsigned char) data[i+2], (unsigned char) data[i+3]);
+    }
+  }
+  printf("\n");
 }
 @
 \fimcodigo
@@ -9098,7 +9128,7 @@ void assign_picture_variable(struct metafont *mf,
     glDeleteTextures(1, &(target -> texture));
   get_new_framebuffer(&temporary_framebuffer, &(target -> texture),
                       source -> width, source -> height);
-  render_picture(source, model_view_matrix, source -> width, source -> height);
+  render_picture(source, model_view_matrix, source -> width, source -> height, true);
   // Finalizando
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
   glBindTexture(GL_TEXTURE_2D, 0);
@@ -9246,17 +9276,17 @@ float model_view_matrix[16] = {1.0, 0.0, 0.0, 0.0,
                                0.0, 1.0, 0.0, 0.0,
                                0.0, 0.0, 1.0, 0.0,
                                0.0, 0.0, 0.0, 1.0};
-int final_width = ((a.width >= b.width)?(a.width):(b.width));
-int final_height = ((a.height >= b.height)?(a.height):(b.height));
-get_new_framebuffer(&temporary_framebuffer, &(result -> texture), final_width,
-                    final_height);
+result -> width = ((a.width >= b.width)?(a.width):(b.width));
+result -> height = ((a.height >= b.height)?(a.height):(b.height));
+get_new_framebuffer(&temporary_framebuffer, &(result -> texture),
+                    result -> width, result -> height);
 // Renderizando imagem 'a'
-model_view_matrix[0] = a.width / final_width;
-model_view_matrix[5] = a.height / final_height;
-render_picture(&a, model_view_matrix, final_width, final_height);
+model_view_matrix[0] = a.width / result -> width;
+model_view_matrix[5] = a.height / result -> height;
+render_picture(&a, model_view_matrix, result -> width, result -> height, true);
 // Renderizando imagem 'b'
-model_view_matrix[0] = b.width / final_width;
-model_view_matrix[5] = b.height / final_height;
+model_view_matrix[0] = b.width / result -> width;
+model_view_matrix[5] = b.height / result -> height;
 glUniformMatrix4fv(uniform_matrix, 1, false, model_view_matrix);
 glBindTexture(GL_TEXTURE_2D, b.texture);
 if(last_operator -> type == TYPE_SUBTRACT){
@@ -9264,7 +9294,7 @@ if(last_operator -> type == TYPE_SUBTRACT){
   // Os fatores a serem usados na mistura
   glBlendFuncSeparate(GL_ONE_MINUS_SRC_COLOR, GL_ONE, GL_ONE, GL_ONE);
   // Soma para RGB e subtração para o canal alfa:
-  glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_SUBTRACT);
+  glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_REVERSE_SUBTRACT);
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
   glBlendEquation(GL_FUNC_ADD);
   glDisable(GL_BLEND);
@@ -9693,7 +9723,7 @@ bool apply_image_transformation(struct metafont *mf,
   get_new_framebuffer(&temporary_framebuffer, &(dst -> texture), dst -> width,
                     dst -> height);
   // Renderizando:
-  render_picture(org, matrix, dst -> width, dst -> height);
+  render_picture(org, matrix, dst -> width, dst -> height, true);
   // Finalização
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
   glDeleteFramebuffers(1, &temporary_framebuffer);
@@ -9812,7 +9842,7 @@ result -> height = content -> height;
 get_new_framebuffer(&temporary_framebuffer, &(result -> texture),
                     result -> width, result -> height);
 // Renderiza:
-render_picture(content, identity_matrix, result -> width, result -> height);
+render_picture(content, identity_matrix, result -> width, result -> height, true);
 // Finaliza:
 glBindFramebuffer(GL_FRAMEBUFFER, 0);
 glDeleteFramebuffers(1, &temporary_framebuffer);
@@ -9951,10 +9981,10 @@ glClearColor(1.0, 1.0, 1.0, 1.0);
 glClear(GL_COLOR_BUFFER_BIT);
 // Ajustar equação de mistura pra subtrair ela do branco opaco:
 glEnable(GL_BLEND);
-glBlendFunc(GL_ONE, GL_ONE);
-glBlendEquation(GL_FUNC_SUBTRACT);
+glBlendFuncSeparate(GL_ONE, GL_ONE, GL_ONE, GL_ONE);
+glBlendEquationSeparate(GL_FUNC_REVERSE_SUBTRACT, GL_FUNC_REVERSE_SUBTRACT);
 // Renderiza:
-render_picture(&p, identity_matrix, result -> width, result -> height);
+render_picture(&p, identity_matrix, result -> width, result -> height, false);
 // Finaliza:
 glDisable(GL_BLEND);
 glDeleteTextures(1, &(p.texture));
@@ -10033,17 +10063,19 @@ else if(begin_expression -> type == TYPE_TOTALWEIGHT){
   get_new_framebuffer(&temporary_framebuffer, &(temporary_texture),
                     p.width, p.height);
   // Renderiza:
-  render_picture(&p, identity_matrix, p.width, p.height);
+  render_picture(&p, identity_matrix, p.width, p.height, true);
   // Ler dados do framebuffer:
   glReadPixels(0, 0, p.width, p.height, GL_RGBA, GL_UNSIGNED_BYTE, data);
   {
+    //printf("--WEIGHT---\n");
     int i, size = p.width * p.height * 4;
     double sum = 0.0;
     for(i = 0; i < size; i += 4){
+      //printf("(%d %d %d %d)\n", (unsigned char) data[i], (unsigned char) data[i+1], (unsigned char) data[i+2], (unsigned char) data[i+3]);
       double r = (255 - (unsigned char) data[i]) / 255.0,
              g = (255 - (unsigned char) data[i+1]) / 255.0,
              b = (255 - (unsigned char) data[i+2]) / 255.0,
-             a = (255 - (unsigned char) data[i+3]) / 255.0;
+             a = ((unsigned char) data[i+3]) / 255.0;
       double v = sqrt(r*r + g*g + b*b) / sqrt(3.0);
       sum += (v * a);
     }
@@ -10077,14 +10109,5 @@ else if(begin_expression -> type == TYPE_TOTALWEIGHT){
 
 
 
-  // Ler dados do framebuffer:
-  glReadPixels(0, 0, result -> width, result -> height, GL_RGBA, GL_UNSIGNED_BYTE, data);
-  {
-    int i;
-    printf("-----------\n");
-    for(i = 0; i < result -> width * result -> height * 4; i += 4){
-      printf("(%hu %hu %hu %hu)\n", (unsigned char) data[i], (unsigned char) data[i+1], (unsigned char) data[i+2], (unsigned char) data[i+3]);
-    }
-  }
 
 
