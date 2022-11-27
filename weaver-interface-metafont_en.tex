@@ -9110,17 +9110,36 @@ existing color $(x_R, x_G, x_B, x_A)$ with a new color $(y_R, y_G,
 y_B, y_A)$ is:
 
 $$
-(x_R+(1-y_R), (x_G+(1-y_G), (x_B+(1-y_B), x_A-y_A)
+(max(x_R, 1-y_R), max(x_G, 1-y_G), max(x_B, 1-y_B), x_A-y_A)
 $$
 
-The above components are clamped to a value between 0 and 1.
+Unfortunately, it is not possible to compute the above equation using
+only OpenGL blending equations. Open GL ES 3.0 and 4 supports the
+usage of $max$ function, but when using it, the blending factors are
+ignored. This means that it is possible to compute $max(x_R, y_R)$,
+but not $max(x_R, 1- y_R)$. This inversion neeeds to be done in the
+shader. The fragment shader that invert the colors, but not the image
+alpha is:
 
-This can be achieved activating the blending option in OpenGL and
-configuring the previous color factor to 1 (GL\_ONE) and the new color
-factor to 1 less its value (GL\_ONE\_MINUS\_SRC\_COLOR). In the
-transparency case, both factors will be 1, but we will change the
-equation to use a subtraction (GL\_FUNC\_SUBTRACT) instead of a sum
-(GL\_FUNC\_SUM).
+\iniciocodigo
+@<Variáveis Locais (metafont.c)@>+=
+static const char fragment_shader_inverse[] =
+  "#version 100\n"
+  "precision mediump float;\n"
+  "varying mediump vec2 texture_coordinate;\n"
+  "uniform sampler2D texture1;\n"
+  "void main(){\n"
+  "  vec4 texture = texture2D(texture1, texture_coordinate);\n"
+  "  gl_FragColor = vec4(1.0 - texture.r, 1.0 - texture.g, 1.0 - texture.b, \n"
+  "                      texture.a);\n"
+  "}\n";
+static GLuint inv_program; // O programa acima compilado
+static GLint uniform_inv_texture1; // A posição da textura acima
+static GLint uniform_inv_matrix; // A posição da matriz do programa acima
+@
+\fimcodigo
+
+XXX
 
 \iniciocodigo
 @<Image Expression: Sum or Subtract@>=
@@ -9147,9 +9166,9 @@ glUniform1i(uniform_texture, 0);
 if(last_operator -> type == TYPE_SUBTRACT){
   glEnable(GL_BLEND);
   // The factors in the blending equation
-  glBlendFuncSeparate(GL_ONE_MINUS_SRC_COLOR, GL_ONE, GL_ONE, GL_ONE);
+  glBlendFunc(GL_ONE, GL_ONE);
   // Sum for RGB and subtraction for A:
-  glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_REVERSE_SUBTRACT);
+  glBlendEquationSeparate(GL_MAX, GL_FUNC_REVERSE_SUBTRACT);
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
   glBlendEquation(GL_FUNC_ADD);
   glDisable(GL_BLEND);

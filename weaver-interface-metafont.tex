@@ -9255,18 +9255,36 @@ subtraímos uma cor existente $(x_R, x_G, x_B, x_A)$ por uma nova cor
 $(y_R, y_G, y_B, y_A)$ é:
 
 $$
-(x_R+(1-y_R), (x_G+(1-y_G), (x_B+(1-y_B), x_A-y_A)
+(max(x_R, 1-y_R), max(x_G, 1-y_G), max(x_B, 1-y_B), x_A-y_A)
 $$
 
-O resultado acima é depois limitado para um valor entre 0 e 1.
+Infelizmente não é possível expressar a equação acima usando apenas o
+recurso de ajuste da equação de combinação de cores. O OpenGL ES 3.0 e
+OpenGL 4 suporta o uso da função $max$, mas quando a usa, ele ignora
+os fatores configurados. O que significa que é possível calcular
+$max(x_R, y_R)$, mas não $max(x_R, 1- y_R)$. Essa inversão precisa ser
+feita então a nível de shader. O shader de fragmento que inverte uma
+cor deixando o alfa intacto é:
 
-Isso pode ser obtido ativando a opção de mistura de cores OpenGL
-(GL\_BLEND) e configurando o fator da cor existente para 1 (GL\_ONE) e
-para o da nova cor para 1 menos seu valor
-(GL\_ONE\_MINUS\_SRC\_COLOR). Já no caso da transparência, os fatores
-serão 1 para ambos, mas mudamos a equação de mistura de cores para
-usar a subtração (GL\_FUNC\_SUBTRACT) ao invés da soma
-(GL\_FUNC\_ADD).
+\iniciocodigo
+@<Variáveis Locais (metafont.c)@>+=
+static const char fragment_shader_inverse[] =
+  "#version 100\n"
+  "precision mediump float;\n"
+  "varying mediump vec2 texture_coordinate;\n"
+  "uniform sampler2D texture1;\n"
+  "void main(){\n"
+  "  vec4 texture = texture2D(texture1, texture_coordinate);\n"
+  "  gl_FragColor = vec4(1.0 - texture.r, 1.0 - texture.g, 1.0 - texture.b, \n"
+  "                      texture.a);\n"
+  "}\n";
+static GLuint inv_program; // O programa acima compilado
+static GLint uniform_inv_texture; // A posição da textura acima
+static GLint uniform_inv_matrix; // A posição da matriz do programa acima
+@
+\fimcodigo
+
+XXX
 
 \iniciocodigo
 @<Expressão de Imagem: Soma ou Subtração@>=
@@ -9285,16 +9303,17 @@ model_view_matrix[0] = a.width / result -> width;
 model_view_matrix[5] = a.height / result -> height;
 render_picture(&a, model_view_matrix, result -> width, result -> height, true);
 // Renderizando imagem 'b'
-model_view_matrix[0] = b.width / result -> width;
-model_view_matrix[5] = b.height / result -> height;
-glUniformMatrix4fv(uniform_matrix, 1, false, model_view_matrix);
-glBindTexture(GL_TEXTURE_2D, b.texture);
+//model_view_matrix[0] = b.width / result -> width;
+//model_view_matrix[5] = b.height / result -> height;
+//glUniformMatrix4fv(uniform_matrix, 1, false, model_view_matrix);
+//glBindTexture(GL_TEXTURE_2D, b.texture);
 if(last_operator -> type == TYPE_SUBTRACT){
   glEnable(GL_BLEND);
   // Os fatores a serem usados na mistura
-  glBlendFuncSeparate(GL_ONE_MINUS_SRC_COLOR, GL_ONE, GL_ONE, GL_ONE);
+  glBlendFunc(GL_ONE, GL_ONE);
   // Soma para RGB e subtração para o canal alfa:
-  glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_REVERSE_SUBTRACT);
+  glBlendEquationSeparate(GL_MAX, GL_FUNC_REVERSE_SUBTRACT);
+  //render_picture(&b, model_view_matrix, result -> width, result -> height, false);
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
   glBlendEquation(GL_FUNC_ADD);
   glDisable(GL_BLEND);
@@ -9302,7 +9321,8 @@ if(last_operator -> type == TYPE_SUBTRACT){
 else{ // Soma
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-  glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+  render_picture(&b, model_view_matrix, result -> width, result -> height, false);
+  //glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
   glDisable(GL_BLEND);
 }
 // Finalizando
