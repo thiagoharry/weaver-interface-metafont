@@ -8827,49 +8827,78 @@ GLint uniform_texture; // Stores the texture position in the above code
 @
 \fimcodigo
 
-These simple shaders must be compiled during initialization:
+These simple shaders must be compiled during initialization. Let's
+create a local auxiliary function to help us with the compilation:
 
 \iniciocodigo
-@<Weaver Metafont Initialization@>+=
-{
-  GLuint vertex, fragment;
+@<Local Function Declaration (metafont.c)@>+=
+GLuint compile_shader_program(const char *vertex_shader_source,
+                              const char *fragment_shader_source);
+@
+\fimcodigo
+
+This function will return the compiled program's identifier given the
+shader source code passed as argument. In case of error, it will
+return zero.
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+GLuint compile_shader_program(const char *vertex_shader_source,
+                              const char *fragment_shader_source){
+  GLuint vertex, fragment, prog;
   GLint status = GL_TRUE;
-  const char *source_code[1];
+  // Creating vertex and fragment shader
   vertex = glCreateShader(GL_VERTEX_SHADER);
   fragment = glCreateShader(GL_FRAGMENT_SHADER);
-  source_code[0] = vertex_shader;
-  glShaderSource(vertex, 1, source_code, NULL);
-  source_code[0] = fragment_shader;
-  glShaderSource(fragment, 1, source_code, NULL);
+  // Passing their source code
+  glShaderSource(vertex, 1, &vertex_shader_source, NULL);
+  glShaderSource(fragment, 1, &fragment_shader_source, NULL);
+  // Compiling vertex shader:
   glCompileShader(vertex);
   glGetShaderiv(vertex, GL_COMPILE_STATUS, &status);
   if(status == GL_FALSE){
     fprintf(stderr,
             "ERROR: Weaver Metafont vertex shader compilation failed!\n");
-    return false;
+    return 0;
   }
+  // Compiling fragment shader:
   glCompileShader(fragment);
   glGetShaderiv(fragment, GL_COMPILE_STATUS, &status);
   if(status == GL_FALSE){
     fprintf(stderr,
             "ERROR: Weaver Metafont fragment shader compilation failed!\n");
-    return false;
+    return 0;
   }
-  program = glCreateProgram();
-  glAttachShader(program, vertex);
-  glAttachShader(program, fragment);
-  glBindAttribLocation(program, 0, "vertex_data");
-  glLinkProgram(program);
-  glGetProgramiv(program, GL_LINK_STATUS, &status);
+  // Creating the program:
+  prog = glCreateProgram();
+  // Linking the program:
+  glAttachShader(prog, vertex);
+  glAttachShader(prog, fragment);
+  glBindAttribLocation(prog, 0, "vertex_data");
+  glLinkProgram(prog);
+  glGetProgramiv(prog, GL_LINK_STATUS, &status);
   if(status == GL_FALSE){
     fprintf(stderr, "ERROR: Weaver Metafont shader linking failed!\n");
     return false;
   }
+  // Finalization:
   glDeleteShader(vertex);
   glDeleteShader(fragment);
-  // Getting attributes and uniform location:
+  return prog;
+}
+@
+\fimcodigo
+
+
+And we can use now this function to compile our default shader
+program:
+
+\iniciocodigo
+@<Weaver Metafont Initialization@>+=
+{
+  program = compile_shader_program(vertex_shader, fragment_shader);
   uniform_matrix = glGetUniformLocation(program, "model_view_matrix");
-  uniform_texture = glGetUniformLocation(program, "texture1");  
+  uniform_texture = glGetUniformLocation(program, "texture1");
 }
 @
 \fimcodigo
@@ -9122,7 +9151,7 @@ shader. The fragment shader that invert the colors, but not the image
 alpha is:
 
 \iniciocodigo
-@<Variáveis Locais (metafont.c)@>+=
+@<Local Variables (metafont.c)@>+=
 static const char fragment_shader_inverse[] =
   "#version 100\n"
   "precision mediump float;\n"
@@ -9134,12 +9163,32 @@ static const char fragment_shader_inverse[] =
   "                      texture.a);\n"
   "}\n";
 static GLuint inv_program; // O programa acima compilado
-static GLint uniform_inv_texture1; // A posição da textura acima
+static GLint uniform_inv_texture; // A posição da textura acima
 static GLint uniform_inv_matrix; // A posição da matriz do programa acima
 @
 \fimcodigo
 
-XXX
+A new shader program to render the inverse RGB must be compiled during
+initialization:
+
+\iniciocodigo
+@<Weaver Metafont Initialization@>+=
+{
+  inv_program = compile_shader_program(vertex_shader, fragment_shader_inverse);
+  uniform_inv_matrix = glGetUniformLocation(program, "model_view_matrix");
+  uniform_inv_texture = glGetUniformLocation(program, "texture1");
+}
+@
+\fimcodigo
+
+In the finalization, we destroy the program:
+
+\iniciocodigo
+@<Weaver Metafont Finalization@>+=
+glDeleteProgram(inv_program);
+@
+\fimcodigo
+
 
 \iniciocodigo
 @<Image Expression: Sum or Subtract@>=
@@ -9149,26 +9198,27 @@ float model_view_matrix[16] = {1.0, 0.0, 0.0, 0.0,
                                0.0, 1.0, 0.0, 0.0,
                                0.0, 0.0, 1.0, 0.0,
                                0.0, 0.0, 0.0, 1.0};
-int final_width = ((a.width >= b.width)?(a.width):(b.width));
-int final_height = ((a.height >= b.height)?(a.height):(b.height));
-get_new_framebuffer(&temporary_framebuffer, &(result -> texture), final_width,
-                    final_height);
+result -> width = ((a.width >= b.width)?(a.width):(b.width));
+result -> height = ((a.height >= b.height)?(a.height):(b.height));
+get_new_framebuffer(&temporary_framebuffer, &(result -> texture),
+                    result -> width, result -> height);
 // Rendering image 'a'
-model_view_matrix[0] = a.width / final_width;
-model_view_matrix[5] = a.height / final_height;
-render_picture(&a, model_view_matrix, final_width, final_height, true);
+model_view_matrix[0] = (double) a.width / (double) result -> width;
+model_view_matrix[5] = (double) a.height / (double) result -> height;
+render_picture(&a, model_view_matrix, result -> width, result -> height, true);
 // Rendering image 'b'
-model_view_matrix[0] = b.width / final_width;
-model_view_matrix[5] = b.height / final_height;
-glUniformMatrix4fv(uniform_matrix, 1, false, model_view_matrix);
-glBindTexture(GL_TEXTURE_2D, b.texture);
-glUniform1i(uniform_texture, 0);
+model_view_matrix[0] = (double) b.width / (double) result -> width;
+model_view_matrix[5] = (double) b.height / (double) result -> height;
 if(last_operator -> type == TYPE_SUBTRACT){
   glEnable(GL_BLEND);
   // The factors in the blending equation
   glBlendFunc(GL_ONE, GL_ONE);
-  // Sum for RGB and subtraction for A:
+  // Max function for RGB and subtraction for A:
   glBlendEquationSeparate(GL_MAX, GL_FUNC_REVERSE_SUBTRACT);
+  glUseProgram(inv_program);
+  glUniformMatrix4fv(uniform_inv_matrix, 1, false, model_view_matrix);
+  glUniform1i(uniform_inv_texture, 0);
+  glBindTexture(GL_TEXTURE_2D, b.texture);
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
   glBlendEquation(GL_FUNC_ADD);
   glDisable(GL_BLEND);

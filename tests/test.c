@@ -1254,11 +1254,9 @@ void test_picture_expressions(void){
   assert("Generating nullpicture with correct size and weight",
 	 picture_a -> width == 10 && picture_a -> height == 10 &&
 	 numeric_wa -> value == 0.0);
-  printf("weight b: %f\n", numeric_wb -> value);
   assert("Computing the inverse of a picture",
   	 picture_b -> width == 10 && picture_b -> height == 10 &&
   	 numeric_wb -> value == 100.0);
-  printf("DEBUG: (%dx%d) %f\n", picture_c -> width, picture_c -> height, numeric_wc -> value);
   assert("Subtracting pictures",
   	 picture_c -> width == 10 && picture_c -> height == 10 &&
   	 numeric_wc -> value == 80.0);
