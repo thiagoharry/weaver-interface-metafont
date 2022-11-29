@@ -9372,6 +9372,7 @@ if(last_operator -> type == TYPE_SUBTRACT){
 else{ // Soma
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  glBlendEquation(GL_FUNC_ADD);
   render_picture(&b, model_view_matrix, result -> width, result -> height, false);
   //glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
   glDisable(GL_BLEND);

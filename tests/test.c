@@ -1231,9 +1231,9 @@ void test_picture_expressions(void){
   struct metafont *mf;
   struct context *cx;
   bool ret;
-  struct named_variable *a, *wa, *b, *wb, *c, *wc;
-  struct picture_variable *picture_a, *picture_b, *picture_c;
-  struct numeric_variable *numeric_wa, *numeric_wb, *numeric_wc;
+  struct named_variable *a, *wa, *b, *wb, *c, *wc, *d, *wd;
+  struct picture_variable *picture_a, *picture_b, *picture_c, *picture_d;
+  struct numeric_variable *numeric_wa, *numeric_wb, *numeric_wc, *numeric_wd;
   mf = init_metafont(malloc, free, "tests/picture_expressions.mf");
   cx = init_context();
   void *p = lexer(mf, malloc, free, "tests/picture_expressions.mf");
@@ -1241,15 +1241,19 @@ void test_picture_expressions(void){
   a = (struct named_variable *) mf -> named_variables;
   b = a -> next;
   c = b -> next;
-  wa = c -> next;
+  d = c -> next;
+  wa = d -> next;
   wb = wa -> next;
   wc = wb -> next;
+  wd = wc -> next;
   picture_a = (struct picture_variable *) a -> var;
   picture_b = (struct picture_variable *) b -> var;
   picture_c = (struct picture_variable *) c -> var;
+  picture_d = (struct picture_variable *) d -> var;
   numeric_wa = (struct numeric_variable *) wa -> var;
   numeric_wb = (struct numeric_variable *) wb -> var;
   numeric_wc = (struct numeric_variable *) wc -> var;
+  numeric_wd = (struct numeric_variable *) wd -> var;
   assert("Interpreting program with picture expressions", ret);
   assert("Generating nullpicture with correct size and weight",
 	 picture_a -> width == 10 && picture_a -> height == 10 &&
@@ -1260,38 +1264,9 @@ void test_picture_expressions(void){
   assert("Subtracting pictures",
   	 picture_c -> width == 10 && picture_c -> height == 10 &&
   	 numeric_wc -> value == 80.0);
-
-  /*{ //DEBUG XXX
-    float identity_matrix[16] = {1.0, 0.0, 0.0, 0.0,
-				 0.0, 1.0, 0.0, 0.0,
-				 0.0, 0.0, 1.0, 0.0,
-				 0.0, 0.0, 0.0, 1.0};
-    int i;
-    unsigned char data[16] = {255, 0, 0, 255,      255, 0, 0, 255,
-			      0, 0, 255, 255,      255, 0, 0, 255};
-    GLuint texture;
-    struct picture_variable p;
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 2, 2, 0,
-		 GL_RGBA, GL_UNSIGNED_BYTE, data);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-    glBindTexture(GL_TEXTURE_2D, 0);
-    p.texture = texture;
-    p.width = 2;
-    p.height = 2;
-    //printf("DEBUG: %d\n", picture_a -> texture);
-    for(i = 0; i < 100; i ++){
-      render_picture(picture_a, identity_matrix, 1000, 1000);
-      _Wrender_window();
-      glFinish();
-      glBindTexture(GL_TEXTURE_2D, 0);
-    }
-    }*/
+  assert("Adding pictures",
+  	 picture_d -> width == 10 && picture_d -> height == 10 &&
+  	 numeric_wd -> value == 84.0);
   free_token_list(free, p);
   destroy_metafont(mf);
   destroy_context(cx);

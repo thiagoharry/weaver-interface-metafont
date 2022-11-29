@@ -1,14 +1,16 @@
 % To test picture expressions
 % This program should work and be accepted.
 
-picture a, b, c;
-numeric wa, wb, wc;
+picture a, b, c, d;
+numeric wa, wb, wc, wd;
 
 a = nullpicture (10, 10);
 wa = totalweight a;
 b = +(- (+ a));
 wb = totalweight b;
-c = b - -nullpicture(2, 10);
+c = b - -nullpicture(2, 10) - -nullpicture(2, 10) - nullpicture(4, 4);
 wc = totalweight c;
+d = c + -nullpicture(10, 2) + nullpicture(4, 4);
+wd = totalweight d;
 
 end
