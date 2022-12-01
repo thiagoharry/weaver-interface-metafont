@@ -9624,25 +9624,40 @@ destiny passing the matrix to the shader program.
 @<Auxiliary Local Functions (metafont.c)@>+=
 bool apply_image_transformation(struct metafont *mf,
                                 struct picture_variable *dst,
-                                struct picture_variable *org,
+                                struct picture_variable *origin,
                                 float *matrix){
+  int i;
   GLuint temporary_framebuffer = 0;
-  // These variables will help to compute the final size
-  float offset_x, offset_y, end_x, end_y;
-  offset_x = matrix[12];
-  offset_y = matrix[13];
-  end_x = ((float) dst -> width) * matrix[0] +
-          ((float) dst -> height) * matrix[4] + matrix[12];
-  end_y = ((float) dst -> width) * matrix[1] +
-          ((float) dst -> height) * matrix[5] + matrix[13];
-  dst -> width = (int) (end_x - offset_x);
-  dst -> height = (int) (end_y - offset_y);
-  // Generating final texture and framebuffer
+  // To compute the final size, we store the greatest and smallest
+  // coordinates found in the picture vertices in both axis:
+  float min_x = INFINITY, min_y = INFINITY, max_x = -INFINITY, max_y = -INFINITY;
+  float origin_coordinates[8];
+  origin_coordinates[0] = -((float) origin -> width) / 2.0;
+  origin_coordinates[1] = -((float) origin -> height) / 2.0;
+  origin_coordinates[2] = ((float) origin -> width) / 2.0;
+  origin_coordinates[3] = -((float) origin -> height) / 2.0;
+  origin_coordinates[4] = ((float) origin -> width) / 2.0;
+  origin_coordinates[5] = ((float) origin -> height) / 2.0;
+  origin_coordinates[6] = -((float) origin -> width) / 2.0;
+  origin_coordinates[7] = ((float) origin -> height) / 2.0;
+  for(i = 0; i < 8; i += 2){
+    float x = origin_coordinates[i] * matrix[0] +
+              origin_coordinates[i + 1] * matrix[4];
+    float y = origin_coordinates[i] * matrix[1] +
+              origin_coordinates[i + 1] * matrix[5];
+    if(x > max_x) max_x = x;
+    if(x < min_x) min_x = x;
+    if(y > max_y) max_y = y;
+    if(y < min_y) min_y = y;
+  }
+  dst -> width = (int) (max_x - min_x)  + (int) (2.0 * matrix[12]);
+  dst -> height = (int) (max_y - min_y) + (int) (2.0 * matrix[13]);
+  // Generating framebuffer and initial texture
   get_new_framebuffer(&temporary_framebuffer, &(dst -> texture), dst -> width,
-                      dst -> height);
-  // Rendering
-  render_picture(org, matrix, dst -> width, dst -> height, true);
-  // Finalization
+                    dst -> height);
+  // Rendering:
+  render_picture(origin, matrix, dst -> width, dst -> height, true);
+  // Finalization:
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
   glDeleteFramebuffers(1, &temporary_framebuffer);
   return true;

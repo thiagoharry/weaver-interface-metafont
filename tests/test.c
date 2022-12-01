@@ -1231,9 +1231,11 @@ void test_picture_expressions(void){
   struct metafont *mf;
   struct context *cx;
   bool ret;
-  struct named_variable *a, *wa, *b, *wb, *c, *wc, *d, *wd;
-  struct picture_variable *picture_a, *picture_b, *picture_c, *picture_d;
-  struct numeric_variable *numeric_wa, *numeric_wb, *numeric_wc, *numeric_wd;
+  struct named_variable *a, *wa, *b, *wb, *c, *wc, *d, *wd, *e, *we;
+  struct picture_variable *picture_a, *picture_b, *picture_c, *picture_d,
+    *picture_e;
+  struct numeric_variable *numeric_wa, *numeric_wb, *numeric_wc, *numeric_wd,
+    *numeric_we;
   mf = init_metafont(malloc, free, "tests/picture_expressions.mf");
   cx = init_context();
   void *p = lexer(mf, malloc, free, "tests/picture_expressions.mf");
@@ -1242,18 +1244,22 @@ void test_picture_expressions(void){
   b = a -> next;
   c = b -> next;
   d = c -> next;
-  wa = d -> next;
+  e = d -> next;
+  wa = e -> next;
   wb = wa -> next;
   wc = wb -> next;
   wd = wc -> next;
+  we = wd -> next;
   picture_a = (struct picture_variable *) a -> var;
   picture_b = (struct picture_variable *) b -> var;
   picture_c = (struct picture_variable *) c -> var;
   picture_d = (struct picture_variable *) d -> var;
+  picture_e = (struct picture_variable *) e -> var;
   numeric_wa = (struct numeric_variable *) wa -> var;
   numeric_wb = (struct numeric_variable *) wb -> var;
   numeric_wc = (struct numeric_variable *) wc -> var;
   numeric_wd = (struct numeric_variable *) wd -> var;
+  numeric_we = (struct numeric_variable *) we -> var;
   assert("Interpreting program with picture expressions", ret);
   assert("Generating nullpicture with correct size and weight",
 	 picture_a -> width == 10 && picture_a -> height == 10 &&
@@ -1267,6 +1273,9 @@ void test_picture_expressions(void){
   assert("Adding pictures",
   	 picture_d -> width == 10 && picture_d -> height == 10 &&
   	 numeric_wd -> value == 84.0);
+  assert("Rotating pictures",
+  	 picture_e -> width == 10 && picture_e -> height == 10 &&
+  	 numeric_we -> value == 80.0);
   free_token_list(free, p);
   destroy_metafont(mf);
   destroy_context(cx);
