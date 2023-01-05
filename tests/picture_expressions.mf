@@ -1,18 +1,33 @@
 % To test picture expressions
 % This program should work and be accepted.
 
-picture a, b, c, d, e;
-numeric wa, wb, wc, wd, we;
+% TODO: Adding 'f' and 'wf' make test fails. Why!?
 
+picture a, b, c, d, e, f;
+numeric wa, wb, wc, wd, we, wf;
+
+% 'a' must be a 10x10 white transparent image
 a = nullpicture (10, 10);
 wa = totalweight a;
+% 'b' must be a 10x10 black opaque image
 b = +(- (+ a));
 wb = totalweight b;
+% 'c' is 10x10 black opaque with a 2x10 white transparent part at the center
+% The expression below is equivalent to just "c = b - -nullpicture(2, 10);"
 c = b - -nullpicture(2, 10) - -nullpicture(2, 10) - nullpicture(4, 4);
 wc = totalweight c;
+% 'd' is like 'c', but with 4 more pixels black and opaque
+% The expression below is equivalent to "d = c + -nullpicture(10, 2);"
 d = c + -nullpicture(10, 2) + nullpicture(4, 4);
 wd = totalweight d;
+% 'e' must be equal 'c'. If the rotation works, the code below is equivalent
+% to "e=c;" as we are erasing from an already empty area. If the rotation
+% doesn't work, then 'e' will be different than 'c'.
 e = c - (-nullpicture(10, 2) rotated 90);
 we = totalweight e;
-
+% 'f' also must be similar to 'c' if the scaling works.
+% The diffence is because linear interpolation of pixels when scaling
+f = ((-nullpicture(5, 5)) - (-nullpicture(1, 5))) scaled 2;
+%f = c;
+wf = totalweight f;
 end

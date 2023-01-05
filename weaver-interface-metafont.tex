@@ -8906,9 +8906,9 @@ como renderizar tais vértices. O programa deve ser versátil o bastante
 para receber como argumento uma matriz com transformações lineares a
 serem aplicadas a cada vértice. Os atributos do programa são a
 coordenada do vértice e da textura. O valor uniforme recebido é a
-matriz para transformação linear. E o valor de retorno a ser passado
-para o shader de fragmento é a posição final da coordenada depois da
-transformação, além da coordenada de textura:
+matriz para transformação linear. E o valor de retorno a ser passado para o shader de
+fragmento é a posição final da coordenada depois da transformação,
+além da coordenada de textura. 
 
 \iniciocodigo
 @<Variáveis Locais (metafont.c)@>+=
@@ -8916,7 +8916,7 @@ static const char vertex_shader[] =
   "#version 100\n"
   "attribute vec4 vertex_data;\n"
   "uniform mat4 model_view_matrix;\n"
-  "varying mediump vec2 texture_coordinate;\n"
+  "varying highp vec2 texture_coordinate;\n"
   "void main(){\n"
   "  gl_Position = vec4(vertex_data.xy, 0.0, 1.0) * model_view_matrix;\n"
   "  texture_coordinate = vertex_data.zw;\n"
@@ -9320,8 +9320,8 @@ para podermos inverter os valores RGB de imagens:
 @<Inicialização de Weaver Metafont@>+=
 {
   inv_program = compile_shader_program(vertex_shader, fragment_shader_inverse);
-  uniform_inv_matrix = glGetUniformLocation(program, "model_view_matrix");
-  uniform_inv_texture = glGetUniformLocation(program, "texture1");
+  uniform_inv_matrix = glGetUniformLocation(inv_program, "model_view_matrix");
+  uniform_inv_texture = glGetUniformLocation(inv_program, "texture1");
 }
 @
 \fimcodigo
@@ -9552,6 +9552,7 @@ transformação. Exatamente como fizemos com as canetas. Conforme visto
 na subseção 8.4.2, fazer mudança de escala fazendo a imagem ser
 ampliada multiplicando suas dimensões por $x$ é feito multiplicando
 pela matriz abaixo:
+
 
 $$\left[{{x \atop 0}\atop {0\atop
       0}}{{0 \atop x}\atop {0 \atop 0}}{{0\atop 0}\atop{1 \atop
@@ -9808,6 +9809,21 @@ bool apply_image_transformation(struct metafont *mf,
   }
   dst -> width = (int) (max_x - min_x) + (int) (2.0 * matrix[12]);
   dst -> height = (int) (max_y - min_y) + (int) (2.0 * matrix[13]);
+  // Mudança de tamanho é feita renderizando em textura com resolução
+  // resolução diferente. Sendo assim, devemos compensar removendo
+  // esse tipo de transformação da matriz
+  {
+    double x_correction = ((double) origin -> width) / (double) dst -> width;
+    double y_correction = ((double) origin -> height) / (double) dst -> height;
+    matrix[0] = matrix[0] * x_correction;
+    matrix[4] = matrix[4] * x_correction;
+    matrix[8] = matrix[8] * x_correction;
+    matrix[12] = matrix[12] * x_correction;
+    matrix[1] = matrix[1] * y_correction;
+    matrix[5] = matrix[5] * y_correction;
+    matrix[9] = matrix[9] * y_correction;
+    matrix[13] = matrix[13] * y_correction;
+  }
   // Gerando textura inicial, framebuffer
   get_new_framebuffer(&temporary_framebuffer, &(dst -> texture), dst -> width,
                     dst -> height);
@@ -10095,10 +10111,14 @@ adicional:
 
 O que o operador \monoespaco{totalweight} faz é avaliar uma expressão
 de imagem, ler a imagem obtida e retornar a soma do ``peso'' de cada
-pixel. Definimos o peso de um pixel calculando a sua distância
-euclideana de seus componentes RGB da cor branca e depois normalizando
-o resultado dividindo por $\sqrt{3}$. Desta forma, o peso do branco é
-0 e do preto é 1. O valor obtido é então multiplicado pelo valor alfa.
+pixel. O peso de um pixel branco transparente deve ser zero e o de um
+pixelpreto opaco deve ser 1. Já para calcular valores intermediários,
+converteremos um pixel colorido para um tom de cinza. Para isso
+obteremos uma média ponderada entre os valores entre 0 e 1 deles,
+dando um peso maior para o verde e menor para o azul. Isso porque a
+visão humana é mais sensível ao verde que ao azul. O resultado desta
+média sera o peso do píxel colorido. Depois de obter o valor,
+multiplicamos pela transparência.
 
 Primeiro vamos adicionar um novo tipo de token para esse operador:
 
@@ -10160,15 +10180,23 @@ else if(begin_expression -> type == TYPE_TOTALWEIGHT){
     int i, size = p.width * p.height * 4;
     double sum = 0.0;
     for(i = 0; i < size; i += 4){
-      //printf("(%d %d %d %d)\n", (unsigned char) data[i], (unsigned char) data[i+1], (unsigned char) data[i+2], (unsigned char) data[i+3]);
-      double r = (255 - (unsigned char) data[i]) / 255.0,
-             g = (255 - (unsigned char) data[i+1]) / 255.0,
-             b = (255 - (unsigned char) data[i+2]) / 255.0,
-             a = ((unsigned char) data[i+3]) / 255.0;
-      double v = sqrt(r*r + g*g + b*b) / sqrt(3.0);
-      sum += (v * a);
+      //if(i%(4*p.width) == 0) printf("\n");
+      //printf("(%d %d %d %d)", (unsigned char) data[i], (unsigned char) data[i+1], (unsigned char) data[i+2], (unsigned char) data[i+3]);
+      // If the values are equal, let's avoid rounding errors:
+      if(data[i] == data[i+1] && data[i+1] == data[i+2]){
+        sum += ((255 - (unsigned char) data[i]) / 255.0) *
+               (((unsigned char) data[i+3]) / 255.0);
+      }
+      else{
+        double r = ((255 - (unsigned char) data[i]) / 255.0) * 0.2989,
+               g = ((255 - (unsigned char) data[i+1]) / 255.0) * 0.5870,
+               b = ((255 - (unsigned char) data[i+2]) / 255.0) * 0.1140,
+               a = ((unsigned char) data[i+3]) / 255.0;
+        sum += ((r+g+b) * a);
+      }
     }
     result -> value = sum;
+    //printf("\nweight: %f\n", sum);
   }
   // Finalização:
   if(temporary_free != NULL)

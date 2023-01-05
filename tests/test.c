@@ -1231,11 +1231,11 @@ void test_picture_expressions(void){
   struct metafont *mf;
   struct context *cx;
   bool ret;
-  struct named_variable *a, *wa, *b, *wb, *c, *wc, *d, *wd, *e, *we;
+  struct named_variable *a, *wa, *b, *wb, *c, *wc, *d, *wd, *e, *we, *f, *wf;
   struct picture_variable *picture_a, *picture_b, *picture_c, *picture_d,
-    *picture_e;
+    *picture_e, *picture_f;
   struct numeric_variable *numeric_wa, *numeric_wb, *numeric_wc, *numeric_wd,
-    *numeric_we;
+    *numeric_we, *numeric_wf;
   mf = init_metafont(malloc, free, "tests/picture_expressions.mf");
   cx = init_context();
   void *p = lexer(mf, malloc, free, "tests/picture_expressions.mf");
@@ -1245,28 +1245,35 @@ void test_picture_expressions(void){
   c = b -> next;
   d = c -> next;
   e = d -> next;
-  wa = e -> next;
+  f = e -> next;
+  wa = f -> next;
   wb = wa -> next;
   wc = wb -> next;
   wd = wc -> next;
   we = wd -> next;
+  wf = we -> next;
   picture_a = (struct picture_variable *) a -> var;
   picture_b = (struct picture_variable *) b -> var;
   picture_c = (struct picture_variable *) c -> var;
   picture_d = (struct picture_variable *) d -> var;
   picture_e = (struct picture_variable *) e -> var;
+  picture_f = (struct picture_variable *) f -> var;
   numeric_wa = (struct numeric_variable *) wa -> var;
   numeric_wb = (struct numeric_variable *) wb -> var;
   numeric_wc = (struct numeric_variable *) wc -> var;
   numeric_wd = (struct numeric_variable *) wd -> var;
   numeric_we = (struct numeric_variable *) we -> var;
+  numeric_wf = (struct numeric_variable *) wf -> var;
+  //printf("f: %dx%d: %f\n", picture_f -> width, picture_f -> height,
+  //	 numeric_wf -> value);
+  //print_picture(picture_f);
   assert("Interpreting program with picture expressions", ret);
   assert("Generating nullpicture with correct size and weight",
 	 picture_a -> width == 10 && picture_a -> height == 10 &&
-	 numeric_wa -> value == 0.0);
+	 ALMOST_EQUAL(numeric_wa -> value, 0.0));
   assert("Computing the inverse of a picture",
   	 picture_b -> width == 10 && picture_b -> height == 10 &&
-  	 numeric_wb -> value == 100.0);
+  	 ALMOST_EQUAL(numeric_wb -> value, 100.0));
   assert("Subtracting pictures",
   	 picture_c -> width == 10 && picture_c -> height == 10 &&
   	 numeric_wc -> value == 80.0);
@@ -1276,6 +1283,15 @@ void test_picture_expressions(void){
   assert("Rotating pictures",
   	 picture_e -> width == 10 && picture_e -> height == 10 &&
   	 numeric_we -> value == 80.0);
+  assert("Scaling pictures",
+   	 picture_f -> width == 10 && picture_f -> height == 10 &&
+  	 ALMOST_EQUAL(numeric_wf -> value, 72.480431));
+  // A testar:
+  // - shifted
+  // - slanted
+  // - xscaled
+  // - yscaled
+  // - zscaled
   free_token_list(free, p);
   destroy_metafont(mf);
   destroy_context(cx);
@@ -1295,8 +1311,6 @@ int main(int argc, char **argv){
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  //glPixelStorei(GL_PACK_ALIGNMENT, 1);
-  //glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
   test_lexer();
   test_empty_programs();
   test_compound_statements();

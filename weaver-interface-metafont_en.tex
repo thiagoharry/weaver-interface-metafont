@@ -8788,10 +8788,10 @@ glDeleteBuffers(1, &vbo);
 To render the vertices, we need a vertex shader running in the
 GPU. Our vertex shader must be versatile enough to get as argument a
 matrix with linear transformation to be done over the
-vertices. Besides the matrix, the input will be the vertex coordinate
-and the associated texture coordinate. The output that will be passed
-to the fragment shader os the final coordinate after the linear
-transformation and the texture coordinate:
+vertices. Besides the matrix, the input will be the vertex coordinate,
+and the associated texture coordinate. The output that will be passed to
+the fragment shader os the final coordinate after the linear
+transformation and the texture coordinate.
 
 \iniciocodigo
 @<Local Variables (metafont.c)@>+=
@@ -8960,6 +8960,8 @@ perform this is:
 @<Local Function Declaration (metafont.c)@>+=
 void render_picture(struct picture_variable *pic, float *matrix, int dst_width,
                     int dst_height, bool clear_background);
+// XXX:
+void print_picture(struct picture_variable *pic);
 @
 \fimcodigo
 
@@ -8983,6 +8985,29 @@ void render_picture(struct picture_variable *pic, float *matrix, int dst_width,
     glClear(GL_COLOR_BUFFER_BIT);
   }
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+}
+// XXX:
+void print_picture(struct picture_variable *pic){
+  float model_view_matrix[16] = {1.0, 0.0, 0.0, 0.0,
+                               0.0, 1.0, 0.0, 0.0,
+                               0.0, 0.0, 1.0, 0.0,
+                               0.0, 0.0, 0.0, 1.0};
+  GLuint framebuffer;
+  GLuint texture;
+  unsigned char data[100000];
+  get_new_framebuffer(&framebuffer, &texture, pic -> width, pic -> height);
+  render_picture(pic, model_view_matrix, pic -> width, pic -> height, true);
+  // Ler dados do framebuffer:
+  glFinish();
+  glReadPixels(0, 0, pic -> width, pic -> height, GL_RGBA, GL_UNSIGNED_BYTE, data);
+  {
+    int i;
+    for(i = 0; i < pic -> width * pic -> height * 4; i += 4){
+      if(!(i%(4*pic -> width))) printf("\n");
+      printf("(%hu %hu %hu %hu)", (unsigned char) data[i], (unsigned char) data[i+1], (unsigned char) data[i+2], (unsigned char) data[i+3]);
+    }
+  }
+  printf("\n");
 }
 @
 \fimcodigo
@@ -9162,9 +9187,9 @@ static const char fragment_shader_inverse[] =
   "  gl_FragColor = vec4(1.0 - texture.r, 1.0 - texture.g, 1.0 - texture.b, \n"
   "                      texture.a);\n"
   "}\n";
-static GLuint inv_program; // O programa acima compilado
-static GLint uniform_inv_texture; // A posição da textura acima
-static GLint uniform_inv_matrix; // A posição da matriz do programa acima
+static GLuint inv_program; // The compiled program whose code is above
+static GLint uniform_inv_texture; // Texture position in the program
+static GLint uniform_inv_matrix; // Matrix position in the program
 @
 \fimcodigo
 
@@ -9652,6 +9677,21 @@ bool apply_image_transformation(struct metafont *mf,
   }
   dst -> width = (int) (max_x - min_x)  + (int) (2.0 * matrix[12]);
   dst -> height = (int) (max_y - min_y) + (int) (2.0 * matrix[13]);
+  // Resizing is done changing the resolution in the render texture.
+  // Therefore, we must remove this kind of redundant change in the
+  // transform matrix:
+  {
+    double x_correction = ((double) origin -> width) / (double) dst -> width;
+    double y_correction = ((double) origin -> height) / (double) dst -> height;
+    matrix[0] = matrix[0] * x_correction;
+    matrix[4] = matrix[4] * x_correction;
+    matrix[8] = matrix[8] * x_correction;
+    matrix[12] = matrix[12] * x_correction;
+    matrix[1] = matrix[1] * y_correction;
+    matrix[5] = matrix[5] * y_correction;
+    matrix[9] = matrix[9] * y_correction;
+    matrix[13] = matrix[13] * y_correction;
+  }
   // Generating framebuffer and initial texture
   get_new_framebuffer(&temporary_framebuffer, &(dst -> texture), dst -> width,
                     dst -> height);
