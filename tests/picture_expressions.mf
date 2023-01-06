@@ -1,10 +1,8 @@
 % To test picture expressions
 % This program should work and be accepted.
 
-% TODO: Adding 'f' and 'wf' make test fails. Why!?
-
-picture a, b, c, d, e, f;
-numeric wa, wb, wc, wd, we, wf;
+picture a, b, c, d, e, f, g, h, i;
+numeric wa, wb, wc, wd, we, wf, wg, wh, wi;
 
 % 'a' must be a 10x10 white transparent image
 a = nullpicture (10, 10);
@@ -28,6 +26,19 @@ we = totalweight e;
 % 'f' also must be similar to 'c' if the scaling works.
 % The diffence is because linear interpolation of pixels when scaling
 f = ((-nullpicture(5, 5)) - (-nullpicture(1, 5))) scaled 2;
-%f = c;
 wf = totalweight f;
+% 'g' is equal 'f horizontally. But has height 5.
+g = ((-nullpicture(5, 5)) - (-nullpicture(1, 5))) xscaled 2;
+wg = totalweight g;
+% 'h' is a 5x10 picture with a single central column of transparent
+% white pixel, with other columns black and opaque
+h = ((-nullpicture(5, 5)) - (-nullpicture(1, 5))) yscaled 2;
+wh = totalweight h;
+% 'i' is when we shift a single pixel picture by (1, 1). The resulting image
+% now is 3x3 because it wants to be able to store a pixel in the
+% opposite coordinate (-1, 1). The weight does not change
+i = (-nullpicture(1, 1)) shifted (1, 1);
+wi = totalweight i;
+
+
 end

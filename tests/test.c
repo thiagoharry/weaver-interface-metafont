@@ -1231,11 +1231,12 @@ void test_picture_expressions(void){
   struct metafont *mf;
   struct context *cx;
   bool ret;
-  struct named_variable *a, *wa, *b, *wb, *c, *wc, *d, *wd, *e, *we, *f, *wf;
+  struct named_variable *a, *wa, *b, *wb, *c, *wc, *d, *wd, *e, *we, *f, *wf,
+    *g, *wg, *h, *wh, *i, *wi;
   struct picture_variable *picture_a, *picture_b, *picture_c, *picture_d,
-    *picture_e, *picture_f;
+    *picture_e, *picture_f, *picture_g, *picture_h, *picture_i;
   struct numeric_variable *numeric_wa, *numeric_wb, *numeric_wc, *numeric_wd,
-    *numeric_we, *numeric_wf;
+    *numeric_we, *numeric_wf, *numeric_wg, *numeric_wh, *numeric_wi;
   mf = init_metafont(malloc, free, "tests/picture_expressions.mf");
   cx = init_context();
   void *p = lexer(mf, malloc, free, "tests/picture_expressions.mf");
@@ -1246,27 +1247,39 @@ void test_picture_expressions(void){
   d = c -> next;
   e = d -> next;
   f = e -> next;
-  wa = f -> next;
+  g = f -> next;
+  h = g -> next;
+  i = h -> next;
+  wa = i -> next;
   wb = wa -> next;
   wc = wb -> next;
   wd = wc -> next;
   we = wd -> next;
   wf = we -> next;
+  wg = wf -> next;
+  wh = wg -> next;
+  wi = wh -> next;
   picture_a = (struct picture_variable *) a -> var;
   picture_b = (struct picture_variable *) b -> var;
   picture_c = (struct picture_variable *) c -> var;
   picture_d = (struct picture_variable *) d -> var;
   picture_e = (struct picture_variable *) e -> var;
   picture_f = (struct picture_variable *) f -> var;
+  picture_g = (struct picture_variable *) g -> var;
+  picture_h = (struct picture_variable *) h -> var;
+  picture_i = (struct picture_variable *) i -> var;
   numeric_wa = (struct numeric_variable *) wa -> var;
   numeric_wb = (struct numeric_variable *) wb -> var;
   numeric_wc = (struct numeric_variable *) wc -> var;
   numeric_wd = (struct numeric_variable *) wd -> var;
   numeric_we = (struct numeric_variable *) we -> var;
   numeric_wf = (struct numeric_variable *) wf -> var;
-  //printf("f: %dx%d: %f\n", picture_f -> width, picture_f -> height,
-  //	 numeric_wf -> value);
-  //print_picture(picture_f);
+  numeric_wg = (struct numeric_variable *) wg -> var;
+  numeric_wh = (struct numeric_variable *) wh -> var;
+  numeric_wi = (struct numeric_variable *) wi -> var;
+  //printf("i: %dx%d: %f\n", picture_i -> width, picture_i -> height,
+  //	 numeric_wi -> value);
+  //print_picture(picture_i);
   assert("Interpreting program with picture expressions", ret);
   assert("Generating nullpicture with correct size and weight",
 	 picture_a -> width == 10 && picture_a -> height == 10 &&
@@ -1286,11 +1299,17 @@ void test_picture_expressions(void){
   assert("Scaling pictures",
    	 picture_f -> width == 10 && picture_f -> height == 10 &&
   	 ALMOST_EQUAL(numeric_wf -> value, 72.480431));
+  assert("X-Scaling pictures",
+   	 picture_g -> width == 10 && picture_g -> height == 5 &&
+  	 ALMOST_EQUAL(numeric_wg -> value, 72.480431/2.0));
+  assert("Y-Scaling pictures",
+   	 picture_h -> width == 5 && picture_h -> height == 10 &&
+  	 ALMOST_EQUAL(numeric_wh -> value, 40.0));
+  assert("Shifting pictures",
+   	 picture_i -> width == 3 && picture_i -> height == 3 &&
+  	 ALMOST_EQUAL(numeric_wi -> value, 1.0));
   // A testar:
-  // - shifted
   // - slanted
-  // - xscaled
-  // - yscaled
   // - zscaled
   free_token_list(free, p);
   destroy_metafont(mf);
