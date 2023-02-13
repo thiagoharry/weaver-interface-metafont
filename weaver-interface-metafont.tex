@@ -9055,7 +9055,6 @@ bool get_new_framebuffer(GLuint *new_framebuffer, GLuint *new_texture,
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
                          *new_texture, 0);
   if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
-    printf("FRAMEBUFFER ERROR: %d\n", glCheckFramebufferStatus(GL_FRAMEBUFFER));
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr, "METAFONT: Error: OpenGL cannot create framebuffer!\n");
 #endif
@@ -9091,7 +9090,7 @@ void render_picture(struct picture_variable *pic, float *matrix, int dst_width,
   glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *) 0);
   glEnableVertexAttribArray(0);
   glUseProgram(program);
-  glUniformMatrix4fv(uniform_matrix, 1, false, matrix);
+  glUniformMatrix4fv(uniform_matrix, 1, true, matrix); // XXX
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, pic -> texture);
   glUniform1i(uniform_texture, 0);
@@ -9364,7 +9363,7 @@ if(last_operator -> type == TYPE_SUBTRACT){
   // Função 'max' para RGB e subtração para o canal alfa:
   glBlendEquationSeparate(GL_MAX, GL_FUNC_REVERSE_SUBTRACT);
   glUseProgram(inv_program);
-  glUniformMatrix4fv(uniform_inv_matrix, 1, false, model_view_matrix);
+  glUniformMatrix4fv(uniform_inv_matrix, 1, true, model_view_matrix);
   glUniform1i(uniform_inv_texture, 0);
   glBindTexture(GL_TEXTURE_2D, b.texture);
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
@@ -9546,7 +9545,7 @@ bool eval_picture_secondary(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
-Avaliar cada um dos diferentes tipoos de transformadores significa
+Avaliar cada um dos diferentes tipos de transformadores significa
 modificar a matriz multiplicando ela pela matriz que representa a
 transformação. Exatamente como fizemos com as canetas. Conforme visto
 na subseção 8.4.2, fazer mudança de escala fazendo a imagem ser
@@ -9637,6 +9636,8 @@ float temp_matrix[16];
 if(!eval_pair_primary(mf, cx, last_transformer -> next, end_expression, &p))
   return false;
 memcpy(temp_matrix, matrix, 16 * sizeof(float));
+p.x = 2.0 * (p.x / result -> width);
+p.y = 2.0 * (p.y / result -> height);
 matrix[0] = temp_matrix[0] + temp_matrix[3] * p.x;
 matrix[1] = temp_matrix[1] + temp_matrix[3] * p.y;
 matrix[4] = temp_matrix[4] + temp_matrix[7] * p.x;
@@ -9770,11 +9771,33 @@ bool apply_image_transformation(struct metafont *mf,
 @
 \fimcodigo
 
-A implementação da função consiste em determinar o tamanho da imagem
-de destino, criar uma imagem transparente vazia no destino com tal
-tamanho e em seguida desenhar um quadrado no destino usando a matriz
-para realizar a transformação linear adequada e usando a textura da
-origem no desenho.
+Aplicar a transformação da imagem envolve usar a matriz de
+transformação obtida para transformar a imagem de origem gerando assim
+a nova imagem de destino. Para isso aplicamos as seguintes etapas:
+
+1) Devemos descobrir qual deve ser o tamanho em pixels da imagem de
+destino. Para isso, multiplicamos as coordenadas da origem pela
+matriz. Mas neste caso, medidmos tais coordenadas por pixels, não
+pelas coordenadas OpenGL. Se a imagem de origem é um quadrado de 5
+pixels de lado, um de seus vértices será $(-5/2, -5/2)$ e outro será
+$(5/2, 5/2)$. O resultado da transformação serão as coordenadas dos
+vértices medidos por pixels, à partir das quais obtemos o tamanho em
+pixels. Nesta etapa, podemos ignorar a translação presente na matriz.
+
+2) Para levar em conta a translação, devemos somar o dobro da
+distância em píxels da translação ao tamanho da imagem. Lembre-se que a
+translação não muda o centro da imagem. Então, ao deslocar $(1, 1)$
+uma imagem com um píxel preto $1\times 1$, geramos nova imagem de
+$3\times 3$ com o píxel preto no canto. O centro da imagem continua
+sendo a posição em que o píxel preto estava antes do deslocamento.
+
+3) A mudança de tamanho do desenho da imagem original será obtida
+simplesmente renderizando o desenho transformado em uma imagem de
+destino ou menor. Então devemos remover da matriz de transformação a
+mudança de tamanho e escala que estiver presente. Também devemos
+ajustar levando em conta isso qualquer translação sendo feita. Isso é
+feito aplicando um valor calculado de correção para as posições $x$ e
+$y$ da matriz.
 
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
@@ -9786,7 +9809,7 @@ bool apply_image_transformation(struct metafont *mf,
   GLuint temporary_framebuffer = 0;
   // Para calcular o tamanho final da imagem, armazenaremos as maiores e
   // menores coordenadas que encontrarmos nas extremidades da imagem
-  // nos dois eixos:
+  // nos dois eixos após aplicar a matriz de transformação. (Etapa 1)
   float min_x = INFINITY, min_y = INFINITY, max_x = -INFINITY, max_y = -INFINITY;
   float origin_coordinates[8];
   origin_coordinates[0] = -((float) origin -> width) / 2.0;
@@ -9807,11 +9830,13 @@ bool apply_image_transformation(struct metafont *mf,
     if(y > max_y) max_y = y;
     if(y < min_y) min_y = y;
   }
-  dst -> width = (int) (max_x - min_x) + (int) (2.0 * matrix[12]);
-  dst -> height = (int) (max_y - min_y) + (int) (2.0 * matrix[13]);
-  // Mudança de tamanho é feita renderizando em textura com resolução
-  // resolução diferente. Sendo assim, devemos compensar removendo
-  // esse tipo de transformação da matriz
+  // Ajuste de tamanho da imagem final devido ao deslocamento (Etapa 2)
+  dst -> width = (int) (max_x - min_x) +
+                 (int) (origin -> width * matrix[12]);
+  dst -> height = (int) (max_y - min_y) +
+                  (int) (origin -> height * matrix[13]);
+  // Ajustando escala e translação da imagem final levando em conta novo tamanho
+  // do destino (Etapa 3):
   {
     double x_correction = ((double) origin -> width) / (double) dst -> width;
     double y_correction = ((double) origin -> height) / (double) dst -> height;
@@ -9822,8 +9847,13 @@ bool apply_image_transformation(struct metafont *mf,
     matrix[1] = matrix[1] * y_correction;
     matrix[5] = matrix[5] * y_correction;
     matrix[9] = matrix[9] * y_correction;
-    matrix[13] = matrix[13] * y_correction;
+    matrix[13] = matrix[13] * - y_correction;
   }
+  //printf("\nDEBUG:\n%f %f %f %f\n%f %f %f %f\n%f %f %f %f\n%f %f %f %f\n",
+  //matrix[0], matrix[1], matrix[2], matrix[3], matrix[4],
+  //matrix[5], matrix[6], matrix[7], matrix[8], matrix[9],
+  //matrix[10], matrix[11], matrix[12], matrix[13], matrix[14],
+  //matrix[15]);
   // Gerando textura inicial, framebuffer
   get_new_framebuffer(&temporary_framebuffer, &(dst -> texture), dst -> width,
                     dst -> height);
@@ -10019,7 +10049,7 @@ memset(data, 255, result -> width * result -> height * 4);
 }
 glGenTextures(1, &(result -> texture));
 glBindTexture(GL_TEXTURE_2D, result -> texture);
-glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 2, 2, 0,
+glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, result -> width, result -> height, 0,
              GL_RGBA, GL_UNSIGNED_BYTE, data);
 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);

@@ -1277,7 +1277,7 @@ void test_picture_expressions(void){
   numeric_wg = (struct numeric_variable *) wg -> var;
   numeric_wh = (struct numeric_variable *) wh -> var;
   numeric_wi = (struct numeric_variable *) wi -> var;
-  //printf("i: %dx%d: %f\n", picture_i -> width, picture_i -> height,
+  //printf("i: %dx%d: %f:", picture_i -> width, picture_i -> height,
   //	 numeric_wi -> value);
   //print_picture(picture_i);
   assert("Interpreting program with picture expressions", ret);
@@ -1306,7 +1306,7 @@ void test_picture_expressions(void){
    	 picture_h -> width == 5 && picture_h -> height == 10 &&
   	 ALMOST_EQUAL(numeric_wh -> value, 40.0));
   assert("Shifting pictures",
-   	 picture_i -> width == 3 && picture_i -> height == 3 &&
+   	 picture_i -> width == 5 && picture_i -> height == 3 &&
   	 ALMOST_EQUAL(numeric_wi -> value, 1.0));
   // A testar:
   // - slanted
@@ -1326,10 +1326,6 @@ int main(int argc, char **argv){
     fprintf(stderr, "ERROR: Test cannot be done. Initialization failed.\n");
     exit(1);
   }
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   test_lexer();
   test_empty_programs();
   test_compound_statements();

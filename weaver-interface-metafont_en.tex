@@ -8945,8 +8945,10 @@ bool get_new_framebuffer(GLuint *new_framebuffer, GLuint *new_texture,
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr, "METAFONT: Error: OpenGL cannot create framebuffer!\n");
 #endif
+    glBindTexture(GL_TEXTURE_2D, 0);
     return false;
   }
+  glBindTexture(GL_TEXTURE_2D, 0);
   return true;
 }
 @
@@ -8975,7 +8977,7 @@ void render_picture(struct picture_variable *pic, float *matrix, int dst_width,
   glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *) 0);
   glEnableVertexAttribArray(0);
   glUseProgram(program);
-  glUniformMatrix4fv(uniform_matrix, 1, false, matrix);
+  glUniformMatrix4fv(uniform_matrix, 1, true, matrix);
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, pic -> texture);
   glUniform1i(uniform_texture, 0);
@@ -8985,6 +8987,7 @@ void render_picture(struct picture_variable *pic, float *matrix, int dst_width,
     glClear(GL_COLOR_BUFFER_BIT);
   }
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+  glBindTexture(GL_TEXTURE_2D, 0);
 }
 // XXX:
 void print_picture(struct picture_variable *pic){
@@ -9241,7 +9244,7 @@ if(last_operator -> type == TYPE_SUBTRACT){
   // Max function for RGB and subtraction for A:
   glBlendEquationSeparate(GL_MAX, GL_FUNC_REVERSE_SUBTRACT);
   glUseProgram(inv_program);
-  glUniformMatrix4fv(uniform_inv_matrix, 1, false, model_view_matrix);
+  glUniformMatrix4fv(uniform_inv_matrix, 1, true, model_view_matrix);
   glUniform1i(uniform_inv_texture, 0);
   glBindTexture(GL_TEXTURE_2D, b.texture);
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
@@ -9506,6 +9509,8 @@ float temp_matrix[16];
 if(!eval_pair_primary(mf, cx, last_transformer -> next, end_expression, &p))
   return false;
 memcpy(temp_matrix, matrix, 16 * sizeof(float));
+p.x = 2.0 * (p.x / result -> width);
+p.y = 2.0 * (p.y / result -> height); 
 matrix[0] = temp_matrix[0] + temp_matrix[3] * p.x;
 matrix[1] = temp_matrix[1] + temp_matrix[3] * p.y;
 matrix[4] = temp_matrix[4] + temp_matrix[7] * p.x;
@@ -9640,10 +9645,35 @@ bool apply_image_transformation(struct metafont *mf,
 @
 \fimcodigo
 
-The function implementation will first compute the resulting image
-size, will create an empty transparent texture to initialize the
-destiny with that size and next will draw the origin texture in the
-destiny passing the matrix to the shader program.
+Apply the image transformation means using the transformation matrix
+to transform the original image to generate the new image in the
+destiny. For this, we need the following steps:
+
+1) First we need to discover the size in pixels for the final
+image. To discover the values, we multiply the coordinates in the
+origin by the transformation matrix. But in this case, we measure the
+coordinates in pixels, not using OpenGL coordinates. If our image is a
+square measuring 5, one of its vertices is $(-5/2, -5/2)$ and the
+other will be $(5/2, 5/2)$. The resulting transformation will be the
+coordinates in pixels, from which we obtain the final size in
+pixels. We can ignore the translation in this step.
+
+2) To take into account the translation, we should add twice the
+translation distance in pixels to the image size. Recall that the
+translation should not change the central pixel in the
+image. Therefore, if we shift an original image composed by a single
+black pixel by $(1, 1)$, we would obtain a new image $3 \times 3$,
+with the black pixel in the upper corner. The image center now is a
+white transparent pixel, which is the black pixel position before the
+shift.
+
+3) Changing the size and scale is done just rendering the image in a
+texture with different size. So we do not need anymore the information
+in the matrix about scaling. We remove this from tha matrix and also
+correct the shifting coordinates, so that if the original image is
+shifted a single pixel,in the final image we get it after changing a
+simple pixel. This is done applying a correction over $x$ and $y$
+positions in the matrix.
 
 \iniciocodigo
 @<Auxiliary Local Functions (metafont.c)@>+=
@@ -9654,7 +9684,8 @@ bool apply_image_transformation(struct metafont *mf,
   int i;
   GLuint temporary_framebuffer = 0;
   // To compute the final size, we store the greatest and smallest
-  // coordinates found in the picture vertices in both axis:
+  // coordinates found in the picture vertices in both axisafter
+  // the transformation. (Step 1):
   float min_x = INFINITY, min_y = INFINITY, max_x = -INFINITY, max_y = -INFINITY;
   float origin_coordinates[8];
   origin_coordinates[0] = -((float) origin -> width) / 2.0;
@@ -9675,11 +9706,13 @@ bool apply_image_transformation(struct metafont *mf,
     if(y > max_y) max_y = y;
     if(y < min_y) min_y = y;
   }
-  dst -> width = (int) (max_x - min_x)  + (int) (2.0 * matrix[12]);
-  dst -> height = (int) (max_y - min_y) + (int) (2.0 * matrix[13]);
-  // Resizing is done changing the resolution in the render texture.
-  // Therefore, we must remove this kind of redundant change in the
-  // transform matrix:
+  // Adjusting the image size according with translation (Step 2):
+  dst -> width = (int) (max_x - min_x) +
+                 (int) (origin -> width * matrix[12]);
+  dst -> height = (int) (max_y - min_y) +
+                  (int) (origin -> height * matrix[13]);
+  // Removing from the matrix scaling data and correcting the translation
+  // (Step 3):
   {
     double x_correction = ((double) origin -> width) / (double) dst -> width;
     double y_correction = ((double) origin -> height) / (double) dst -> height;
@@ -9690,7 +9723,7 @@ bool apply_image_transformation(struct metafont *mf,
     matrix[1] = matrix[1] * y_correction;
     matrix[5] = matrix[5] * y_correction;
     matrix[9] = matrix[9] * y_correction;
-    matrix[13] = matrix[13] * y_correction;
+    matrix[13] = matrix[13] * - y_correction;
   }
   // Generating framebuffer and initial texture
   get_new_framebuffer(&temporary_framebuffer, &(dst -> texture), dst -> width,
@@ -10043,12 +10076,19 @@ else if(begin_expression -> type == TYPE_TOTALWEIGHT){
     int i, size = p.width * p.height * 4;
     double sum = 0.0;
     for(i = 0; i < size; i += 4){
-      double r = (255 - (unsigned char) data[i]) / 255.0,
-             g = (255 - (unsigned char) data[i+1]) / 255.0,
-             b = (255 - (unsigned char) data[i+2]) / 255.0,
-             a = ((unsigned char) data[i+3]) / 255.0;
-      double v = sqrt(r*r + g*g + b*b) / sqrt(3.0);
-      sum += (v * a);
+      // If the values are equal, let's avoid rounding errors:
+      if(data[i] == data[i+1] && data[i+1] == data[i+2]){
+        sum += ((255 - (unsigned char) data[i]) / 255.0) *
+               (((unsigned char) data[i+3]) / 255.0);
+      }
+      else{
+        double r = (255 - (unsigned char) data[i]) / 255.0,
+               g = (255 - (unsigned char) data[i+1]) / 255.0,
+               b = (255 - (unsigned char) data[i+2]) / 255.0,
+               a = ((unsigned char) data[i+3]) / 255.0;
+        double v = sqrt(r*r + g*g + b*b) / sqrt(3.0);
+        sum += (v * a);
+      }
     }
     result -> value = sum;
   }
