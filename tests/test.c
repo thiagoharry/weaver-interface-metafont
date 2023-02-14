@@ -1277,7 +1277,7 @@ void test_picture_expressions(void){
   numeric_wg = (struct numeric_variable *) wg -> var;
   numeric_wh = (struct numeric_variable *) wh -> var;
   numeric_wi = (struct numeric_variable *) wi -> var;
-  //printf("i: %dx%d: %f:", picture_i -> width, picture_i -> height,
+  //printf("i: %dx%d: %f:\n", picture_i -> width, picture_i -> height,
   //	 numeric_wi -> value);
   //print_picture(picture_i);
   assert("Interpreting program with picture expressions", ret);

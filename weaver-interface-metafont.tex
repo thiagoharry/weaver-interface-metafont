@@ -9117,13 +9117,14 @@ void print_picture(struct picture_variable *pic){
   glFinish();
   glReadPixels(0, 0, pic -> width, pic -> height, GL_RGBA, GL_UNSIGNED_BYTE, data);
   {
-    int i;
-    for(i = 0; i < pic -> width * pic -> height * 4; i += 4){
-      if(!(i%(4*pic -> width))) printf("\n");
-      printf("(%hu %hu %hu %hu)", (unsigned char) data[i], (unsigned char) data[i+1], (unsigned char) data[i+2], (unsigned char) data[i+3]);
+    int i, j;
+    for(i = pic -> width * (pic -> height - 1) * 4;
+        i >= 0; i -= (pic -> width * 4)){
+      for(j = 0; j < (pic -> width * 4); j += 4)
+        printf("(%hu %hu %hu %hu)", (unsigned char) data[i + j], (unsigned char) data[i+j+1], (unsigned char) data[i+j+2], (unsigned char) data[i+j+3]);
+        printf("\n");
     }
   }
-  printf("\n");
 }
 @
 \fimcodigo
@@ -9847,7 +9848,7 @@ bool apply_image_transformation(struct metafont *mf,
     matrix[1] = matrix[1] * y_correction;
     matrix[5] = matrix[5] * y_correction;
     matrix[9] = matrix[9] * y_correction;
-    matrix[13] = matrix[13] * - y_correction;
+    matrix[13] = matrix[13] * y_correction;
   }
   //printf("\nDEBUG:\n%f %f %f %f\n%f %f %f %f\n%f %f %f %f\n%f %f %f %f\n",
   //matrix[0], matrix[1], matrix[2], matrix[3], matrix[4],
