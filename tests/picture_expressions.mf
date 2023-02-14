@@ -1,8 +1,8 @@
 % To test picture expressions
 % This program should work and be accepted.
 
-picture a, b, c, d, e, f, g, h, i;
-numeric wa, wb, wc, wd, we, wf, wg, wh, wi;
+picture a, b, c, d, e, f, g, h, i, j;
+numeric wa, wb, wc, wd, we, wf, wg, wh, wi, wj;
 
 % 'a' must be a 10x10 white transparent image
 a = nullpicture (10, 10);
@@ -40,6 +40,8 @@ wh = totalweight h;
 % in the opposite direction
 i = ((-nullpicture(1, 1)) shifted (1, 1)) shifted (1, 0);
 wi = totalweight i;
-
+% 'j' will allow us to test the slanting operation
+j = (-nullpicture(3, 3)) slanted 1;
+wj = totalweight j;
 
 end

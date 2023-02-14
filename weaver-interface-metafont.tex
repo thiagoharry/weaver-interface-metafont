@@ -9090,7 +9090,7 @@ void render_picture(struct picture_variable *pic, float *matrix, int dst_width,
   glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *) 0);
   glEnableVertexAttribArray(0);
   glUseProgram(program);
-  glUniformMatrix4fv(uniform_matrix, 1, true, matrix); // XXX
+  glUniformMatrix4fv(uniform_matrix, 1, true, matrix);
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, pic -> texture);
   glUniform1i(uniform_texture, 0);
