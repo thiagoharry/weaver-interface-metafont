@@ -1,8 +1,8 @@
 % To test picture expressions
 % This program should work and be accepted.
 
-picture a, b, c, d, e, f, g, h, i, j;
-numeric wa, wb, wc, wd, we, wf, wg, wh, wi, wj;
+picture a, b, c, d, e, f, g, h, i, j, k;
+numeric wa, wb, wc, wd, we, wf, wg, wh, wi, wj, wk;
 
 % 'a' must be a 10x10 white transparent image
 a = nullpicture (10, 10);
@@ -43,5 +43,8 @@ wi = totalweight i;
 % 'j' will allow us to test the slanting operation
 j = (-nullpicture(3, 3)) slanted 1;
 wj = totalweight j;
+% 'k' will allow us to test the zscaling operation
+k = (-nullpicture(1, 1)) zscaled (3, 4);
+wk = totalweight k;
 
 end
