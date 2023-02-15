@@ -1716,7 +1716,12 @@ struct variable *insert_variable(int nesting_level,
     case TYPE_T_PICTURE:
       var_size = sizeof(struct picture_variable);
       break;
-    // XXX: TODO: boolean and transformer
+    case TYPE_T_TRANSFORM:
+      var_size = sizeof(struct transform_variable);
+      break;
+    case TYPE_T_BOOLEAN:
+      var_size = sizeof(struct boolean_variable);
+      break;
     default:
       var_size = sizeof(struct variable);
   }
@@ -1991,14 +1996,57 @@ flutuante ao invés de um. Inicialmente vamos representar o primeiro
 deles como NaN, para representar uma variável não-inicializada:
 
 \iniciocodigo
-@<Initializing New Variable@>=
+@<Inicialização de Nova Variável@>+=
 if(type == TYPE_T_PAIR){
   ((struct pair_variable *) var) -> x = NAN;
 }
 @
 \fimcodigo
 
-\subsecao{7.3. Variáveis de Caminhos}
+\subsecao{7.3. Variáveis de Transformação}
+
+Se um variável de par é uma tupla de dois valores numéricos, uma
+variável de transformação é uma tupla com seis valores
+diferentes. Sejam os valores $(a, b, c, d, e, f)$, o que eles
+representam é uma transformação linear na qual o par $(x, y)$ é
+transformado em $(x', y')$ da seguinte forma:
+
+$$\left[x\; y\; 0\; 1\right]\left[{{c \atop d}\atop
+      {0\atop a}}{{e \atop f}\atop {0 \atop
+      b}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
+      1}}\right]=\left[x'\;\;
+      y'\;\; 0\;\; 1\right]
+$$
+
+A ordem em que os elementos são representados pode parecer estranha,
+mas é feito assim como compatibilidade com a linguagem METAFONT
+original criada por Knuth.
+
+Uma variável de transformação então simplesmente deve armazenar os
+seis valores diferentes:
+
+\iniciocodigo
+@<Estrutura de Dados Locais (metafont.c)@>+=
+struct transform_variable{
+  int type; // Deve ser 'TYPE_T_TRANSFORM'
+  int nesting_level;
+  void *next;
+  float value[6];
+};
+@
+\fimcodigo
+
+Uma transformação com valores não-inicializados possui seu primeiro
+valor marcado como NAN:
+
+\iniciocodigo
+@<Inicialização de Nova Variável@>+=
+if(type == TYPE_T_TRANSFORM)
+  ((struct transform_variable *) var) -> value[0] = NAN;
+@
+\fimcodigo
+
+\subsecao{7.4. Variáveis de Caminhos}
 
 Uma variável de caminho armazena uma sequência de pontos e uma
 sequência de pontos de controle formando uma sequência de Curvas de
@@ -2150,7 +2198,7 @@ void path_recursive_free(void (*free_func)(void *),
 @
 \fimcodigo
 
-\subsecao{7.4. Variáveis de Caneta}
+\subsecao{7.5. Variáveis de Caneta}
 
 Uma variável de caneta armazena a estrutura utilizada para desenhar
 formas no METAFONT. As canetas especificam o diâmetro e formato das
@@ -2406,7 +2454,7 @@ else if(!strcmp(buffer, "pensquare"))
 @
 \fimcodigo
 
-\subsecao{7.5. Variáveis de Imagens}
+\subsecao{7.6. Variáveis de Imagens}
 
 Uma variável de imagem armazena uma imagem renderizada, possivelmente
 por meio de pincéis e comandos de desenho do Weaver Metafont. Ao
@@ -2528,6 +2576,34 @@ else if(!strcmp(buffer, "currentpicture"))
           &(mf -> internal_picture_variables[INTERNAL_PICTURE_CURRENTPICTURE]);
 @
 \fimcodigo
+
+\subsecao{7.7. Variáveis Booleanas}
+
+A mais simples de todas as variáveis, uma variável booleana armazena
+somente verdadeiro ou falso. O formato de sua estrutura é:
+
+\iniciocodigo
+@<Estrutura de Dados Locais (metafont.c)@>+=
+struct boolean_variable{
+  int type; // Deve ser 'TYPE_T_BOOLEAN'
+  int nesting_level;
+  void *next;
+  short value;
+};
+@
+\fimcodigo
+
+O valor \monoespaco{value} armazenado pela variável será 0 se for
+falso ou 1 se for verdadeiro. No caso de ser uma variável
+não-inicializada, armazenaremos -1:
+
+\iniciocodigo
+@<Inicialização de Nova Variável@>+=
+if(type == TYPE_T_BOOLEAN)
+  ((struct boolean_variable *) var) -> value = -1;
+@
+\fimcodigo
+
 
 \secao{8. Atribuições}
 

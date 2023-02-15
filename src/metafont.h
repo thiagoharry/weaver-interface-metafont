@@ -47,23 +47,23 @@ void(*free)(void*);
 void*named_variables;
 void*global_variables;
 /*:65*//*83:*/
-#line 1895 "weaver-interface-metafont.tex"
+#line 1900 "weaver-interface-metafont.tex"
 
 void*internal_numeric_variables;
-/*:83*//*102:*/
-#line 2327 "weaver-interface-metafont.tex"
+/*:83*//*104:*/
+#line 2375 "weaver-interface-metafont.tex"
 
 struct pen_variable*internal_pen_variables;
-/*:102*//*111:*/
-#line 2474 "weaver-interface-metafont.tex"
+/*:104*//*113:*/
+#line 2522 "weaver-interface-metafont.tex"
 
 struct picture_variable*internal_picture_variables;
-/*:111*//*157:*/
-#line 3656 "weaver-interface-metafont.tex"
+/*:113*//*161:*/
+#line 3732 "weaver-interface-metafont.tex"
 
 bool have_stored_normaldeviate;
 float normaldeviate;
-/*:157*/
+/*:161*/
 #line 1079 "weaver-interface-metafont.tex"
 
 };

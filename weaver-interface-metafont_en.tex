@@ -1688,6 +1688,12 @@ struct variable *insert_variable(int nesting_level,
     case TYPE_T_PICTURE:
       var_size = sizeof(struct picture_variable);
       break;
+    case TYPE_T_TRANSFORM:
+      var_size = sizeof(struct transform_variable);
+      break;
+    case TYPE_T_BOOLEAN:
+      var_size = sizeof(struct boolean_variable);
+      break;
     default:
       var_size = sizeof(struct variable);
   }
@@ -1969,7 +1975,50 @@ if(type == TYPE_T_PAIR){
 @
 \fimcodigo
 
-\subsecao{7.3. Path Variables}
+\subsecao{7.3. Transform Variables}
+
+If a pair variable is a tuple with two numeric values, then a
+transform variable is a tuple with six different values. Let's assume
+that a transform variable is $(a, b, c, d, e, f)$, what it represents
+is a linear transformation in which the pair $(x, y)$ is transformed
+in $(x', y')$ by the following matrix multiplication:
+
+$$\left[x\; y\; 0\; 1\right]\left[{{c \atop d}\atop
+      {0\atop a}}{{e \atop f}\atop {0 \atop
+      b}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
+      1}}\right]=\left[x'\;\;
+      y'\;\; 0\;\; 1\right]
+$$
+
+The order in which we store and use the elements may appear strange,
+but we store them in that order for compatibility with the notation
+from original METAFONT created by Knuth.
+
+A transform variable therefore, needs to store six different numeric
+values:
+
+\iniciocodigo
+@<Local Data Structures (metafont.c)@>+=
+struct transform_variable{
+  int type; // Deve ser 'TYPE_T_TRANSFORM'
+  int nesting_level;
+  void *next;
+  float value[6];
+};
+@
+\fimcodigo
+
+A non-initialized transform variable, by default, has its first value marked
+as NAN:
+
+\iniciocodigo
+@<Initializing New Variable@>+=
+if(type == TYPE_T_TRANSFORM)
+  ((struct transform_variable *) var) -> value[0] = NAN;
+@
+\fimcodigo
+
+\subsecao{7.4. Path Variables}
 
 A path variable store a sequence of points and control
 points. Together they compose a sequence of Cubic Beziér Curves.
@@ -2116,7 +2165,7 @@ void path_recursive_free(void (*free_func)(void *),
 @
 \fimcodigo
 
-\subsecao{7.4. Pen Variables}
+\subsecao{7.5. Pen Variables}
 
 A pen variable stores the structure needed to draw lines and forms in
 METAFONT. The pens specify the diameter and format of all drawed lines
@@ -2357,7 +2406,7 @@ else if(!strcmp(buffer, "pensquare"))
 @
 \fimcodigo
 
-\subsecao{7.5. Picture Variables}
+\subsecao{7.6. Picture Variables}
 
 A picture variable will store a rendered image, possibly created using
 pens and Weaver Metafont drawing commands. Contrary to original
@@ -2478,7 +2527,31 @@ else if(!strcmp(buffer, "currentpicture"))
 @
 \fimcodigo
 
+\subsecao{7.7. Boolean Variables}
 
+The simplest variable type, a boolean variable can store only true or
+false. Its struct format is:
+
+\iniciocodigo
+@<Local Data Structures (metafont.c)@>+=
+struct boolean_variable{
+  int type; // Deve ser 'TYPE_T_BOOLEAN'
+  int nesting_level;
+  void *next;
+  short value;
+};
+@
+\fimcodigo
+
+The value stored by the variable will be 0 if false, 1 if true or -1
+if non-initialized:
+
+\iniciocodigo
+@<Initializing New Variable@>+=
+if(type == TYPE_T_BOOLEAN)
+  ((struct boolean_variable *) var) -> value = -1;
+@
+\fimcodigo
 
 
 \secao{8. Assignments}
