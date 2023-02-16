@@ -1990,6 +1990,8 @@ $$\left[x\; y\; 0\; 1\right]\left[{{c \atop d}\atop
       y'\;\; 0\;\; 1\right]
 $$
 
+Or: $(x', y') = (a+cx+dy, b+ex+fy)$.
+
 The order in which we store and use the elements may appear strange,
 but we store them in that order for compatibility with the notation
 from original METAFONT created by Knuth.
@@ -2017,6 +2019,65 @@ if(type == TYPE_T_TRANSFORM)
   ((struct transform_variable *) var) -> value[0] = NAN;
 @
 \fimcodigo
+
+There is an internal transform variable that always is presente and
+that represents no transformation at all.  A transform that do not
+change the point, that in the metrix notation represents multiplying
+by the identity matrix. This transform is represented by the tuple
+$(0, 0, 1, 0, 0, 1)$.
+
+The internal transform variables will be stored here:
+
+\iniciocodigo
+@<Attributes (struct metafont)@>+=
+struct transform_variable *internal_transform_variables;
+@
+\fimcodigo
+
+During initialization we allocate memory for the internal variables
+and initialize them:
+
+\iniciocodigo
+@<Initialization (struct metafont)@>+=
+mf -> internal_transform_variables =
+  (struct transform_variable *)
+    mf -> alloc(sizeof(struct transform_variable));
+if(mf -> internal_transform_variables == NULL){
+  if(disalloc != NULL)
+    disalloc(mf);
+  return NULL; //ERRO: Sem memória suficiente
+}
+// The transform variable 'identity':
+mf -> internal_transform_variables[0].type = TYPE_T_TRANSFORM;
+mf -> internal_transform_variables[0].value[0] = 0.0;
+mf -> internal_transform_variables[0].value[1] = 0.0;
+mf -> internal_transform_variables[0].value[2] = 1.0;
+mf -> internal_transform_variables[0].value[3] = 0.0;
+mf -> internal_transform_variables[0].value[4] = 0.0;
+mf -> internal_transform_variables[0].value[5] = 1.0;
+@
+\fimcodigo
+
+The variable \monoespaco{identity} will be stored as the first
+position in the array of internal transform variables:
+
+\iniciocodigo
+@<Local Macros (metafont.c)@>+=
+#define INTERNAL_TRANSFORM_IDENTITY 0
+@
+\fimcodigo
+
+And when reading the source code, we can set correctly the pointer
+each time we find a token referencing this internal variable:
+
+\iniciocodigo
+@<Set Pointer to Internal Variable@>+=
+else if(!strcmp(buffer, "identity"))
+  new_token -> var =
+          &(mf -> internal_transform_variables[INTERNAL_TRANSFORM_IDENTITY]);
+@
+\fimcodigo
+
 
 \subsecao{7.4. Path Variables}
 
@@ -2340,6 +2401,7 @@ mf -> internal_pen_variables = (struct pen_variable *)
 if(mf -> internal_pen_variables == NULL){
   if(disalloc != NULL)
     disalloc(mf);
+  return NULL;
 }
 mf -> internal_pen_variables[0].format = NULL; // The pen 'currentpen'
 mf -> internal_pen_variables[0].type = TYPE_T_PEN;
@@ -2485,6 +2547,7 @@ mf -> internal_picture_variables = (struct picture_variable *)
 if(mf -> internal_picture_variables == NULL){
   if(disalloc != NULL)
     disalloc(mf);
+  return NULL;
 }
 // The picture 'currentpicture':
 mf -> internal_picture_variables[0].type = TYPE_T_PICTURE;

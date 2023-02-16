@@ -2018,6 +2018,8 @@ $$\left[x\; y\; 0\; 1\right]\left[{{c \atop d}\atop
       y'\;\; 0\;\; 1\right]
 $$
 
+Ou: $(x', y') = (a+cx+dy, b+ex+fy)$.
+
 A ordem em que os elementos são representados pode parecer estranha,
 mas é feito assim como compatibilidade com a linguagem METAFONT
 original criada por Knuth.
@@ -2043,6 +2045,68 @@ valor marcado como NAN:
 @<Inicialização de Nova Variável@>+=
 if(type == TYPE_T_TRANSFORM)
   ((struct transform_variable *) var) -> value[0] = NAN;
+@
+\fimcodigo
+
+Existe uma variável de transformação interna que sempre estará
+presente sem precisar ser declarada. É a
+variável \monoespaco{identity}, que representa a ausência de uma
+transformação. É uma transformação que não irá mudar o ponto. Ela é
+representada pela tupla $(0, 0, 1, 0, 0, 1)$ e sua transformação na
+forma matricial é representada pela multiplicação por uma matriz
+identidade.
+
+As variáveis internas de transformação serão armazenadas na estrutura
+Metafont:
+
+\iniciocodigo
+@<Atributos (struct metafont)@>+=
+struct transform_variable *internal_transform_variables;
+@
+\fimcodigo
+
+Na inicialização o espaço para armazenar as variáveis internas será
+alocado e as variáveis internas são inicializadas:
+
+\iniciocodigo
+@<Inicialização (struct metafont)@>+=
+mf -> internal_transform_variables =
+  (struct transform_variable *)
+    mf -> alloc(sizeof(struct transform_variable));
+if(mf -> internal_transform_variables == NULL){
+  if(disalloc != NULL)
+    disalloc(mf);
+  return NULL; //ERRO: Sem memória suficiente
+}
+// A transformação 'identity':
+mf -> internal_transform_variables[0].type = TYPE_T_TRANSFORM;
+mf -> internal_transform_variables[0].value[0] = 0.0;
+mf -> internal_transform_variables[0].value[1] = 0.0;
+mf -> internal_transform_variables[0].value[2] = 1.0;
+mf -> internal_transform_variables[0].value[3] = 0.0;
+mf -> internal_transform_variables[0].value[4] = 0.0;
+mf -> internal_transform_variables[0].value[5] = 1.0;
+@
+\fimcodigo
+
+A variável \monoespaco{identity} deve ser registrada como tendo a
+primeira posição:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#define INTERNAL_TRANSFORM_IDENTITY 0
+@
+\fimcodigo
+
+E durante a leitura do código-fonte, podemos já ajustar corretamente
+todas as referências para esta variável colocando o valor correto de
+seu endereço nos tokens lidos:
+
+\iniciocodigo
+@<Preenche Ponteiro para Variável Interna@>=
+else if(!strcmp(buffer, "identity"))
+  new_token -> var =
+          &(mf -> internal_transform_variables[INTERNAL_TRANSFORM_IDENTITY]);
 @
 \fimcodigo
 
@@ -2389,6 +2453,7 @@ mf -> internal_pen_variables = (struct pen_variable *)
 if(mf -> internal_pen_variables == NULL){
   if(disalloc != NULL)
     disalloc(mf);
+  return NULL;
 }
 mf -> internal_pen_variables[0].format = NULL; // A caneta 'currentpen'
 mf -> internal_pen_variables[0].type = TYPE_T_PEN;
@@ -2534,6 +2599,7 @@ mf -> internal_picture_variables = (struct picture_variable *)
 if(mf -> internal_picture_variables == NULL){
   if(disalloc != NULL)
     disalloc(mf);
+  return NULL;
 }
 // A imagem 'currentpicture':
 mf -> internal_picture_variables[0].type = TYPE_T_PICTURE;
