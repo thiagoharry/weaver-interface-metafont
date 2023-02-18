@@ -1227,6 +1227,114 @@ void test_pen_expressions(void){
   destroy_context(cx);
 }
 
+void test_transform_expressions(void){
+  struct metafont *mf;
+  struct context *cx;
+  bool ret;
+  struct named_variable *a, *b, *c, *d, *e, *f, *g, *h, *i, *j;
+  struct transform_variable *transform_a, *transform_b, *transform_c,
+    *transform_d, *transform_e, *transform_f, *transform_g, *transform_h,
+    *transform_i, *transform_j;
+  mf = init_metafont(malloc, free, "tests/picture_expressions.mf");
+  cx = init_context();
+  void *p = lexer(mf, malloc, free, "tests/picture_expressions.mf");
+  ret = eval_program(mf, cx, p);
+  a = (struct named_variable *) mf -> named_variables;
+  b = a -> next;
+  c = b -> next;
+  d = c -> next;
+  e = d -> next;
+  f = e -> next;
+  g = f -> next;
+  h = g -> next;
+  i = h -> next;
+  j = i -> next;
+  transform_a = (struct transform_variable *) a -> var;
+  transform_b = (struct transform_variable *) b -> var;
+  transform_c = (struct transform_variable *) c -> var;
+  transform_d = (struct transform_variable *) d -> var;
+  transform_e = (struct transform_variable *) e -> var;
+  transform_f = (struct transform_variable *) f -> var;
+  transform_g = (struct transform_variable *) g -> var;
+  transform_h = (struct transform_variable *) h -> var;
+  transform_i = (struct transform_variable *) i -> var;
+  transform_j = (struct transform_variable *) j -> var;
+  assert("Interpreting program with transform expressions", ret);
+  assert("Evaluating transform literal",
+	 ALMOST_EQUAL(transform_a -> value[0], -1.0) &&
+	 ALMOST_EQUAL(transform_a -> value[1], 0.0) &&
+	 ALMOST_EQUAL(transform_a -> value[2], 0.2) &&
+	 ALMOST_EQUAL(transform_a -> value[3], 0.4) &&
+	 ALMOST_EQUAL(transform_a -> value[4], -0.4) &&
+	 ALMOST_EQUAL(transform_a -> value[5], 0.2));
+  assert("Evaluating identity variable as transform",
+	 ALMOST_EQUAL(transform_b -> value[0], 0.0) &&
+	 ALMOST_EQUAL(transform_b -> value[1], 0.0) &&
+	 ALMOST_EQUAL(transform_b -> value[2], 1.0) &&
+	 ALMOST_EQUAL(transform_b -> value[3], 0.0) &&
+	 ALMOST_EQUAL(transform_b -> value[4], 0.0) &&
+	 ALMOST_EQUAL(transform_b -> value[5], 1.0));
+  assert("Evaluating rotation in transform expressions",
+	 ALMOST_EQUAL(transform_c -> value[0], 0.0) &&
+	 ALMOST_EQUAL(transform_c -> value[1], 0.0) &&
+	 ALMOST_EQUAL(transform_c -> value[2], 0.86603) &&
+	 ALMOST_EQUAL(transform_c -> value[3], -0.5) &&
+	 ALMOST_EQUAL(transform_c -> value[4], 0.5) &&
+	 ALMOST_EQUAL(transform_c -> value[5], 0.86603));
+  assert("Evaluating shifting in transform expressions",
+	 ALMOST_EQUAL(transform_d -> value[0], 5.0) &&
+	 ALMOST_EQUAL(transform_d -> value[1], 8.0) &&
+	 ALMOST_EQUAL(transform_d -> value[2], 1.0) &&
+	 ALMOST_EQUAL(transform_d -> value[3], 0.0) &&
+	 ALMOST_EQUAL(transform_d -> value[4], 0.0) &&
+	 ALMOST_EQUAL(transform_d -> value[5], 1.0));
+  assert("Evaluating scaling in transform expressions",
+	 ALMOST_EQUAL(transform_e -> value[0], 0.0) &&
+	 ALMOST_EQUAL(transform_e -> value[1], 0.0) &&
+	 ALMOST_EQUAL(transform_e -> value[2], 5.0) &&
+	 ALMOST_EQUAL(transform_e -> value[3], 0.0) &&
+	 ALMOST_EQUAL(transform_e -> value[4], 0.0) &&
+	 ALMOST_EQUAL(transform_e -> value[5], 5.0));
+  assert("Evaluating slanting in transform expressions",
+	 ALMOST_EQUAL(transform_f -> value[0], 0.0) &&
+	 ALMOST_EQUAL(transform_f -> value[1], 0.0) &&
+	 ALMOST_EQUAL(transform_f -> value[2], 1.0) &&
+	 ALMOST_EQUAL(transform_f -> value[3], 5.0) &&
+	 ALMOST_EQUAL(transform_f -> value[4], 0.0) &&
+	 ALMOST_EQUAL(transform_f -> value[5], 1.0));
+  assert("Evaluating x-scaling in transform expressions",
+	 ALMOST_EQUAL(transform_g -> value[0], 0.0) &&
+	 ALMOST_EQUAL(transform_g -> value[1], 0.0) &&
+	 ALMOST_EQUAL(transform_g -> value[2], 10.0) &&
+	 ALMOST_EQUAL(transform_g -> value[3], 0.0) &&
+	 ALMOST_EQUAL(transform_g -> value[4], 0.0) &&
+	 ALMOST_EQUAL(transform_g -> value[5], 1.0));
+  assert("Evaluating y-scaling in transform expressions",
+	 ALMOST_EQUAL(transform_h -> value[0], 0.0) &&
+	 ALMOST_EQUAL(transform_h -> value[1], 0.0) &&
+	 ALMOST_EQUAL(transform_h -> value[2], 1.0) &&
+	 ALMOST_EQUAL(transform_h -> value[3], 0.0) &&
+	 ALMOST_EQUAL(transform_h -> value[4], 0.0) &&
+	 ALMOST_EQUAL(transform_h -> value[5], 3.0));
+  assert("Evaluating z-scaling in transform expressions",
+	 ALMOST_EQUAL(transform_i -> value[0], 0.0) &&
+	 ALMOST_EQUAL(transform_i -> value[1], 0.0) &&
+	 ALMOST_EQUAL(transform_i -> value[2], 8.0) &&
+	 ALMOST_EQUAL(transform_i -> value[3], -2.0) &&
+	 ALMOST_EQUAL(transform_i -> value[4], 2.0) &&
+	 ALMOST_EQUAL(transform_i -> value[5], 8.0));
+  assert("Evaluating generic transformation in transform expressions",
+	 ALMOST_EQUAL(transform_j -> value[0], -1.0) &&
+	 ALMOST_EQUAL(transform_j -> value[1], 0.0) &&
+	 ALMOST_EQUAL(transform_j -> value[2], 0.2) &&
+	 ALMOST_EQUAL(transform_j -> value[3], 0.4) &&
+	 ALMOST_EQUAL(transform_j -> value[4], -0.4) &&
+	 ALMOST_EQUAL(transform_j -> value[5], 0.2));
+  free_token_list(free, p);
+  destroy_metafont(mf);
+  destroy_context(cx);
+}
+
 void test_picture_expressions(void){
   struct metafont *mf;
   struct context *cx;
@@ -1344,6 +1452,7 @@ int main(int argc, char **argv){
   test_compound_statements();
   test_variables();
   test_assignments();
+  test_transform_expressions();
   test_path_expressions();
   test_pen_expressions();
   test_picture_expressions();

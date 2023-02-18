@@ -2749,6 +2749,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
   begin_expression = (struct generic_token *) var;
   @<Assignment for Numeric Variables@>
   @<Assignment for Pair Variables@>
+  @<Assignment for Transform Variables@>
   @<Assignment for Path Variables@>
   @<Assignment for Pen Variables@>
   @<Assignment for Picture Variables@>
@@ -3968,7 +3969,7 @@ The grammar for secondary pair expressions is:
                  slanted <Numeric Primary> |
                  xscaled <Numeric Primary> |
                  yscaled <Numeric Primary> |
-                 zscaled <Pair Primary>
+                 zscaled <Pair Primary> | (...)
 \alinhanormal
 
 Let's add the seven new keywords representing transformers:
@@ -4717,7 +4718,222 @@ else if(begin_expression -> type == TYPE_ANGLE){
 @
 \fimcodigo
 
-\subsecao{8.3. Path Assignments and Expressions}
+\subsecao{8.3. Transform Assignments and Expressions}
+
+One of the moments where we expect to eval a transform expression is
+when making assignments to transform variables. In this case, we apply
+a function to evaluate the expression and get the result. Then, we
+assign the result for each variable in the left side of the assignment
+expression:
+
+\iniciocodigo
+@<Assignment for Transform Variables@>=
+else if(type == TYPE_T_TRANSFORM){
+  int i;
+  struct transform_variable result;
+  if(!eval_transform_expression(mf, cx, begin_expression,
+                               (struct generic_token *) *end_token_list,
+                                &result))
+    return false;
+  var = (struct symbolic_token *) begin_token_list;
+  for(i = 0; i < number_of_variables; i ++){
+    memcpy(((struct transform_variable *) var -> var) -> value, result.value,
+           sizeof(float) * 6);
+    var = (struct symbolic_token *) (var -> next);
+    var = (struct symbolic_token *) (var -> next);
+  }
+}
+@
+\fimcodigo
+
+Now let's see how do we evaluate a transform expression.
+
+\subsubsecao{8.3.1. Transforming Transformers}
+
+The grammar rules to evaluate a transform expression begins with:
+
+\alinhaverbatim
+<Transform Expression> -> <Transform Tertiary>
+<Transform Tertiary> -> <Transform Secondary>
+<Transform Secondary> -> <Transform Secondary> <Transformer> |
+                         <Transform Primary>
+<Transformer> -> rotated <Numeric Primary> |
+                 scaled <Numeric Primary> |
+                 shifted <Pair Primary> |
+                 slanted <Numeric Primary> |
+                 xscaled <Numeric Primary> |
+                 yscaled <Numeric Primary> |
+                 zscaled <Pair Primary>
+                 transformed <Transform Primary>
+\alinhanormal
+
+We have here a new type of token, representing the last type of
+transformer that we ommited in the last subsection about pair
+expressions:
+
+\iniciocodigo
+@<METAFONT: Symbolic Token Definition@>+=
+#define TYPE_TRANSFORMED  50 // Symbolic token 'transformed'
+@
+\fimcodigo
+
+This token correspond to the following keyword:
+
+\iniciocodigo
+@<List of Keywords@>+=
+"transformed",
+@
+\fimcodigo
+
+
+About the grammar rules, they mean that there is no tertiary operators
+for transform expressions. Anyway, we will define a function to
+evaluate tertiary expressions just to keep our API uniform between
+different functions that evaluate expressions and also to keep a
+function ready to be modified if in the future a tertiary operator is
+added to the language:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+bool eval_transform_expression(struct metafont *mf, struct context *cx,
+                               struct generic_token *begin_expression,
+                               struct generic_token *end_expression,
+                               struct transform_variable *result);
+@
+\fimcodigo
+
+And its implementation:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+bool eval_transform_expression(struct metafont *mf, struct context *cx,
+                               struct generic_token *begin_expression,
+                               struct generic_token *end_expression,
+                               struct transform_variable *result){
+  return eval_transform_secondary(mf, cx, begin_expression, end_expression,
+                                  result);
+}
+@
+\fimcodigo
+
+The function that evaluates secondary transform expressions is this:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+bool eval_transform_secondary(struct metafont *mf, struct context *cx,
+                              struct generic_token *begin_expression,
+                              struct generic_token *end_expression,
+                              struct transform_variable *result);
+@
+\fimcodigo
+
+This function works walking over the list os tokens in the expression,
+ignoring tokens nested in parenthesis, brackets and braces. Each time
+it finds a secondary operator, it stores its position. After walking
+all tokens, if we did not find a secondary operator, we evaluate the
+entire expression as a primary transform expression. Otherwise,
+everything before the last operator is evaluated as a secondary
+expression and we apply the operator over the resulting transform that
+we find after evaluating the expression:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+bool eval_transform_secondary(struct metafont *mf, struct context *cx,
+                              struct generic_token *begin_expression,
+                              struct generic_token *end_expression,
+                              struct transform_variable *result){
+  struct generic_token *p, *last_transform = NULL, *last_token = NULL,
+                       *end_secondary = NULL;
+  struct transform_variable a;
+  DECLARE_NESTING_CONTROL();
+  p = begin_expression;
+  do{
+    COUNT_NESTING(p);
+    if(IS_NOT_NESTED() &&
+       (p -> type == TYPE_ROTATED || p -> type == TYPE_SCALED ||
+        p -> type == TYPE_SHIFTED || p -> type == TYPE_SLANTED ||
+        p -> type == TYPE_XSCALED || p -> type == TYPE_YSCALED ||
+        p -> type == TYPE_ZSCALED || p -> type == TYPE_TRANSFORMED)){
+      last_transform = p;
+      end_secondary = last_token;
+    }
+    last_token = p;
+    if(p != end_expression)
+      p = (struct generic_token *) p -> next;
+    else
+      p = NULL;
+  } while(p != NULL);
+  if(last_transform == NULL)
+    return eval_transform_primary(mf, cx, begin_expression, end_expression,
+                                  result);
+  else{
+    struct transform_variable a;
+    if(end_secondary == NULL){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: Transform expression began "
+              "with transformer.",  mf -> file, begin_expression -> line);
+#endif
+      return false;
+    }
+    if(!eval_transform_secondary(mf, cx, begin_expression, end_secondary, &a))
+      return false;
+    @<Apply Secondary Transformer over Transforms@>
+ #if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable transformer "
+            "in transform expression.",  mf -> file, begin_expression -> line);
+#endif
+    return false;
+  }
+}
+@
+\fimcodigo
+
+Now let's apply the different transformer operators over our transform
+variables and results. The first kind of transformer is the rotation,
+which is equivalent to multiply the transformer $(a, b, c, d, e, f)$
+following the rule below:
+
+$$\left[{{c \atop d}\atop
+      {0\atop a}}{{e \atop f}\atop {0 \atop
+      b}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
+      1}}\right]
+\left[{{cos(\theta) \atop \sin(\theta)}\atop
+      {0\atop 0}}{{-sin(\theta) \atop cos(\theta)}\atop {0 \atop
+      0}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
+      1}}\right]=
+\left[{{c\cdot cos(\theta) + e\cdot sin(\theta) \atop
+        d\cdot cos(\theta) + f\cdot sin(\theta)} \atop
+      {0\atop a\cdot cos(\theta) + b\cdot sin(\theta)}}
+      {{-c\cdot sin(\theta) + e\cdot cos(\theta) \atop
+      -d\cdot sin(\theta) + f\cdot cos(\theta)}\atop
+      {0 \atop -a\cdot sin(\theta) + b\cdot cos(\theta)}}{{0\atop 0}\atop{1 \atop 0}}
+      {{0 \atop 0}\atop{0\atop 1}}\right]
+$$
+
+This means that apply the rotation is done with the code below:
+
+\iniciocodigo
+@<Apply Secondary Transformer over Transforms@>=
+if(last_transform -> type == TYPE_ROTATED){
+  struct numeric_variable theta;
+  double cos_theta, sin_theta;
+  if(!eval_numeric_primary(mf, cx, last_transform -> next, end_expression,
+                           &theta))
+    return false;
+  sin_theta = sin(theta.value);
+  cos_theta = cos(theta.value);
+  result -> value[0] = a.value[0] * cos_theta + a.value[1] * sin_theta;
+  result -> value[1] = -a.value[0] * sin_theta + a.value[1] * cos_theta;
+  result -> value[2] = a.value[2] * cos_theta + a.value[4] * sin_theta;
+  result -> value[3] = a.value[3] * cos_theta + a.value[5] * sin_theta;
+  result -> value[4] = -a.value[2] * sin_theta + a.value[4] * cos_theta;
+  result -> value[5] = -a.value[3] * sin_theta + a.value[5] * cos_theta;
+  return true;
+}
+@
+\fimcodigo
+
+\subsecao{8.4. Path Assignments and Expressions}
 
 To assign a path to a variable with the right type, we use the
 following code:
@@ -4852,7 +5068,7 @@ void recursive_aux_copy(struct path_points **dst, struct path_variable *origin){
 
 Now we can examine the path expressions.
 
-\subsubsecao{8.3.1. Joining Paths}
+\subsubsecao{8.4.1. Joining Paths}
 
 The grammar for path expressions begin with:
 
@@ -4878,15 +5094,15 @@ This requires the register of these new types of tokens:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_CYCLE          50 // Symbolic token 'cycle'
-#define TYPE_AMPERSAND      51 // Symbolic token '&'
-#define TYPE_JOIN           52 // Symbolic token '..'
-#define TYPE_TENSION        53 // Symbolic token 'tension'
-#define TYPE_AND            54 // Symbolic token 'and'
-#define TYPE_ATLEAST        55 // Symbolic token 'atleast'
-#define TYPE_CONTROLS       56 // Symbolic token 'controls'
-#define TYPE_CURL           57 // Symbolic token 'curl' (still not supported)
-#define TYPE_STRAIGHT_JOIN   58 // Symbolic token '--'
+#define TYPE_CYCLE          51 // Symbolic token 'cycle'
+#define TYPE_AMPERSAND      52 // Symbolic token '&'
+#define TYPE_JOIN           53 // Symbolic token '..'
+#define TYPE_TENSION        54 // Symbolic token 'tension'
+#define TYPE_AND            55 // Symbolic token 'and'
+#define TYPE_ATLEAST        56 // Symbolic token 'atleast'
+#define TYPE_CONTROLS       57 // Symbolic token 'controls'
+#define TYPE_CURL           58 // Symbolic token 'curl' (still not supported)
+#define TYPE_STRAIGHT_JOIN  59 // Symbolic token '--'
 @
 \fimcodigo
 
@@ -6534,7 +6750,7 @@ if(result -> length >= expected_length && result -> cyclic == false){
 This finalizes how a curve should be built given its points and
 subpaths. Now we will see how we read the points and subpaths.
 
-\subsubsecao{8.3.2. Tertiary Path Expressions}
+\subsubsecao{8.4.2. Tertiary Path Expressions}
 
 The grammar for tertiary path expressions is:
 
@@ -6621,7 +6837,7 @@ bool eval_path_tertiary(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
-\subsubsecao{8.3.3. Secondary Path Expressions: Transformers}
+\subsubsecao{8.4.3. Secondary Path Expressions: Transformers}
 
 The grammar for secondary path expressions is:
 
@@ -7053,7 +7269,7 @@ void path_zscale(struct path_variable *p, float x, float y){
 @
 \fimcodigo
 
-\subsubsecao{8.3.4. Primary Path Expressions}
+\subsubsecao{8.4.4. Primary Path Expressions}
 
 The grammar for primary path expressions is:
 
@@ -7071,9 +7287,9 @@ tokens \monoespaco{reverse}, \monoespaco{subpath} and \monoespaco{of}:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_REVERSE        59 // O token simbólico 'reverse'
-#define TYPE_SUBPATH        60 // O token simbólico 'subpath'
-#define TYPE_OF             61 // O token simbólico 'of'
+#define TYPE_REVERSE        60 // O token simbólico 'reverse'
+#define TYPE_SUBPATH        61 // O token simbólico 'subpath'
+#define TYPE_OF             62 // O token simbólico 'of'
 @
 \fimcodigo
 
@@ -7587,7 +7803,7 @@ return true;
 @
 \fimcodigo
 
-\subsubsecao{8.3.5. Path in Numeric Expressions}
+\subsubsecao{8.4.5. Path in Numeric Expressions}
 
 We can nuse the numeric expression with the
 operator \monoespaco{length} to obtain the number of extremity points
@@ -7620,7 +7836,7 @@ else if(expr_type == TYPE_T_PATH){
 @
 \fimcodigo
 
-\subsubsecao{8.3.5. Path in Pair Expressions}
+\subsubsecao{8.4.6. Path in Pair Expressions}
 
 Given a path, we can extract pairs from it. The pair can be an
 extremity point or some of the control points. The syntax for this is:
@@ -7635,9 +7851,9 @@ This requires adding the following new token types:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_POINT             62 // O token simbólico 'point'
-#define TYPE_PRECONTROL        63 // O token simbólico 'precontrol'
-#define TYPE_POSTCONTROL       64 // O token simbólico 'postcontrol'
+#define TYPE_POINT             63 // O token simbólico 'point'
+#define TYPE_PRECONTROL        64 // O token simbólico 'precontrol'
+#define TYPE_POSTCONTROL       65 // O token simbólico 'postcontrol'
 @
 \fimcodigo
 
@@ -7813,7 +8029,7 @@ if(begin_expression -> type == TYPE_POINT ||
 @
 \fimcodigo
 
-\subsecao{8.4. Pen Assignments and Expressions}
+\subsecao{8.5. Pen Assignments and Expressions}
 
 To assign a pen to a variable with the right type, we use the
 following code:
@@ -7887,7 +8103,7 @@ void assign_pen_variable(struct metafont *mf,
 @
 \fimcodigo
 
-\subsubsecao{8.4.1. Pen Tertiary Expression}
+\subsubsecao{8.5.1. Pen Tertiary Expression}
 
 For now we have no tertiry operator for pen expressions:
 
@@ -7919,7 +8135,7 @@ bool eval_pen_expression(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
-\subsubsecao{8.4.2. Pen Transformers}
+\subsubsecao{8.5.2. Pen Transformers}
 
 The syntax for secondary pen expressions is:
 
@@ -8302,7 +8518,7 @@ return true;
 @
 \fimcodigo
 
-\subsubsecao{8.4.3. Pen Primary Expressions}
+\subsubsecao{8.5.3. Pen Primary Expressions}
 
 The grammar for pen primary expressions are defined as:
 
@@ -8316,9 +8532,9 @@ This requires three new reserved words:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_NULLPEN        65 // The symbolic token 'nullpen'
-#define TYPE_PENCIRCLE      66 // The symbolic token 'pencircle'
-#define TYPE_MAKEPEN        67 // The symbolic token 'makepen'
+#define TYPE_NULLPEN        66 // The symbolic token 'nullpen'
+#define TYPE_PENCIRCLE      67 // The symbolic token 'pencircle'
+#define TYPE_MAKEPEN        68 // The symbolic token 'makepen'
 @
 \fimcodigo
 
@@ -8602,7 +8818,7 @@ int read_flags(struct path_variable *path){
 @
 \fimcodigo
 
-\subsubsecao{8.4.4. Pens in Path Expressions}
+\subsubsecao{8.5.4. Pens in Path Expressions}
 
 Primary pen expressions also can appear inside path primary
 expressions. This happens when we try to extract a pen format as a
@@ -8616,7 +8832,7 @@ We need to register a new token for ``makepath'':
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_MAKEPATH       68 // O token simbólico 'makepath'
+#define TYPE_MAKEPATH       69 // O token simbólico 'makepath'
 @
 \fimcodigo
 
@@ -8826,7 +9042,7 @@ shifting, slanting, scaling or other transformations stored there:
 @
 \fimcodigo
 
-\subsecao{8.5. Picture Assignments and Expressions}
+\subsecao{8.6. Picture Assignments and Expressions}
 
 To make a picture assignment, we use the code below. It first
 evaluates a picture expression and get a picture variable as
@@ -9189,7 +9405,7 @@ void assign_picture_variable(struct metafont *mf,
 @
 \fimcodigo
 
-\subsubsecao{8.5.1. Picture Tertiary Expressions: Sum and Subtraction}
+\subsubsecao{8.6.1. Picture Tertiary Expressions: Sum and Subtraction}
 
 The tertiary picture expressions invoves sums and subtractions:
 
@@ -9402,7 +9618,7 @@ glDeleteFramebuffers(1, &temporary_framebuffer);
 @
 \fimcodigo
 
-\subsubsecao{8.5.2. Picture Secondary Expressions: Transformers}
+\subsubsecao{8.6.2. Picture Secondary Expressions: Transformers}
 
 A picture secondary expression has the following syntax:
 
@@ -9875,7 +10091,7 @@ bool apply_image_transformation(struct metafont *mf,
 @
 \fimcodigo
 
-\subsubsecao{8.5.3. Primary Picture Expressions: Inverters, Identity and Empty Images}
+\subsubsecao{8.6.3. Primary Picture Expressions: Inverters, Identity and Empty Images}
 
 The grammar for primary picture expressions is:
 
@@ -9890,7 +10106,7 @@ This means that we need to register a new token for ``nullpicture'':
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_NULLPICTURE        69 // O token simbólico 'nullpicture'
+#define TYPE_NULLPICTURE        70 // O token simbólico 'nullpicture'
 @
 \fimcodigo
 
@@ -10136,7 +10352,7 @@ return true;
 @
 \fimcodigo
 
-\subsubsecao{8.5.4. Pictures in Numeric Expressions}
+\subsubsecao{8.6.4. Pictures in Numeric Expressions}
 
 There is a single scenario where we need to evaluate a picture
 expression inside expressions of other types. We have an additional
@@ -10158,7 +10374,7 @@ First we need a new token type for the operator:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_TOTALWEIGHT        70 // Symbolic token 'totalweight'
+#define TYPE_TOTALWEIGHT        71 // Symbolic token 'totalweight'
 @
 \fimcodigo
 
@@ -10241,6 +10457,7 @@ else if(begin_expression -> type == TYPE_TOTALWEIGHT){
 @
 \fimcodigo
 
+\subsecao{8.7. Boolean Assignments and Expressions}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

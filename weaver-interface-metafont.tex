@@ -2806,6 +2806,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
   begin_expression = (struct generic_token *) var;
   @<Atribuição de Variável Numérica@>
   @<Atribuição de Variável de Par@>
+  @<Atribuição de Variável de Transformação@>
   @<Atribuição de Variável de Caminho@>
   @<Atribuição de Variável de Caneta@>
   @<Atribuição de Variável de Imagem@>
@@ -3650,7 +3651,7 @@ else{
 @
 \fimcodigo
 
-\subsubsecao{8.1.4. Números Isolados e Valores Aeeatórios Normais}
+\subsubsecao{8.1.4. Números Isolados e Valores Aleatórios Normais}
 
 As regras finais para as expressões numéricas que iremos tratar são:
 
@@ -4029,7 +4030,7 @@ A gramática para expressões de pares secundárias é:
                    slanted <Numérico Primário> |
                    xscaled <Numérico Primário> |
                    yscaled <Numérico Primário> |
-                   zscaled <Par Primário>
+                   zscaled <Par Primário> | (...)
 \alinhanormal
 
 Vamos adicionar as sete novas palavras-chave representando
@@ -4784,7 +4785,227 @@ else if(begin_expression -> type == TYPE_ANGLE){
 @
 \fimcodigo
 
-\subsecao{8.3. Atribuições e Expressões de Caminhos}
+\subsecao{8.3. Atribuições e Expressões de Transformação}
+
+Um dos momentos em que esperamos ter que avaliar uma expressão de
+transformação quando formos fazer uma atribuição para uma variável de
+transformação. Neste caso, devemos avaliar a expressão e realizar a
+atribuição para todas as variáveis que estiverem do lado esquerdo da
+expressão de atribuição:
+
+\iniciocodigo
+@<Atribuição de Variável de Transformação@>=
+else if(type == TYPE_T_TRANSFORM){
+  int i;
+  struct transform_variable result;
+  if(!eval_transform_expression(mf, cx, begin_expression,
+                               (struct generic_token *) *end_token_list,
+                                &result))
+    return false;
+  var = (struct symbolic_token *) begin_token_list;
+  for(i = 0; i < number_of_variables; i ++){
+    memcpy(((struct transform_variable *) var -> var) -> value, result.value,
+           sizeof(float) * 6);
+    var = (struct symbolic_token *) (var -> next);
+    var = (struct symbolic_token *) (var -> next);
+  }
+}
+@
+\fimcodigo
+
+Vamos agora ver como avaliar as expressões de transformação.
+
+\subsubsecao{8.3.1. Transformações sobre Transformadores}
+
+A regra gramatical para avaliar uma expressão de transformação começam
+como:
+
+\alinhaverbatim
+<Expressão de Transformação> -> <Terciário de Transformação>
+<Terciário de Transformação> -> <Secundário de Transformação>
+<Secundário de Transformação> -> <Secundário de Transformação> <Transformador> |
+                                 <Primário de Transformação>
+<Transformador> -> rotated <Primário Numérico> |
+                   scaled <Primário Numérico> |
+                   shifted <Par Primário> |
+                   slanted <Numérico Primário> |
+                   xscaled <Numérico Primário> |
+                   yscaled <Numérico Primário> |
+                   zscaled <Par Primário>
+                   transformed <Primário de Transformação>
+\alinhanormal
+
+Temos aqui um novo tipo de token, representando o último tipo de
+transformador que não havíamos definido na subseção anterior sobre
+expressões de pares:
+
+\iniciocodigo
+@<METAFONT: Definição de Token Simbólico@>+=
+#define TYPE_TRANSFORMED  50 // O token simbólico 'transformed'
+@
+\fimcodigo
+
+Ele corresponde à seguinte palavra reservada:
+
+\iniciocodigo
+@<Lista de Palavras Reservadas@>+=
+"transformed",
+@
+\fimcodigo
+
+Com relação às regras gramaticais, elas dizem que não existem no
+momento operadores terciários de transformação. De qualquer forma,
+vamos definir a função que avalia expressões, e avalia operadores
+terciários apenas como uma função que chama o avaliador de operadores
+secundários. Tanto para manter a uniformidade das funções que avaliam
+expressões como para deixar essa função pronta para ser modificada
+caso versões futuras da linguagem venham a trazer operadores
+terciários de transformação.
+
+A declaração da função:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+bool eval_transform_expression(struct metafont *mf, struct context *cx,
+                               struct generic_token *begin_expression,
+                               struct generic_token *end_expression,
+                               struct transform_variable *result);
+@
+\fimcodigo
+
+E sua implementação:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+bool eval_transform_expression(struct metafont *mf, struct context *cx,
+                               struct generic_token *begin_expression,
+                               struct generic_token *end_expression,
+                               struct transform_variable *result){
+  return eval_transform_secondary(mf, cx, begin_expression, end_expression,
+                                  result);
+}
+@
+\fimcodigo
+
+Já a função que avalia expressões secundárias de transformação é esta:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+bool eval_transform_secondary(struct metafont *mf, struct context *cx,
+                              struct generic_token *begin_expression,
+                              struct generic_token *end_expression,
+                              struct transform_variable *result);
+@
+\fimcodigo
+
+A função funciona percorrendo a lista de tokens da expressão,
+ignorando tokens dentro de parênteses, colchetes e chaves. Toda vez
+que encontra o último operador secundário, ele é armazenado em uma
+variável. Depois de percorrer todos os tokens, se não achamos um
+operador secundário, nós passamos a expressão inteira para o avaliador
+de expressões primárias. Se encontramos um, tudo que vem antes dele é
+avaliado como expressão secundária e o resultado passa pelo operador,
+que será operador transformador.
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+bool eval_transform_secondary(struct metafont *mf, struct context *cx,
+                              struct generic_token *begin_expression,
+                              struct generic_token *end_expression,
+                              struct transform_variable *result){
+  struct generic_token *p, *last_transform = NULL, *last_token = NULL,
+                       *end_secondary = NULL;
+  struct transform_variable a;
+  DECLARE_NESTING_CONTROL();
+  p = begin_expression;
+  do{
+    COUNT_NESTING(p);
+    if(IS_NOT_NESTED() &&
+       (p -> type == TYPE_ROTATED || p -> type == TYPE_SCALED ||
+        p -> type == TYPE_SHIFTED || p -> type == TYPE_SLANTED ||
+        p -> type == TYPE_XSCALED || p -> type == TYPE_YSCALED ||
+        p -> type == TYPE_ZSCALED || p -> type == TYPE_TRANSFORMED)){
+      last_transform = p;
+      end_secondary = last_token;
+    }
+    last_token = p;
+    if(p != end_expression)
+      p = (struct generic_token *) p -> next;
+    else
+      p = NULL;
+  } while(p != NULL);
+  if(last_transform == NULL)
+    return eval_transform_primary(mf, cx, begin_expression, end_expression,
+                                  result);
+  else{
+    struct transform_variable a;
+    if(end_secondary == NULL){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: Transform expression began "
+              "with transformer.",  mf -> file, begin_expression -> line);
+#endif
+      return false;
+    }
+    if(!eval_transform_secondary(mf, cx, begin_expression, end_secondary, &a))
+      return false;
+    @<Aplica Operador Secundário de Transformação@>
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable transformer "
+            "in transform expression.",  mf -> file, begin_expression -> line);
+#endif
+    return false;
+  }
+}
+@
+\fimcodigo
+
+Vamos agora aplicar os diferentes transformadores sobre as nossas
+variáveis e resultados de transformação. O primeiro tipo de
+transformador é a rotação, que é equivalente a multiplicar a
+transformação $(a, b, c, d, e, f)$ como abaixo:
+
+$$\left[{{c \atop d}\atop
+      {0\atop a}}{{e \atop f}\atop {0 \atop
+      b}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
+      1}}\right]
+\left[{{cos(\theta) \atop \sin(\theta)}\atop
+      {0\atop 0}}{{-sin(\theta) \atop cos(\theta)}\atop {0 \atop
+      0}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
+      1}}\right]=
+\left[{{c\cdot cos(\theta) + e\cdot sin(\theta) \atop
+        d\cdot cos(\theta) + f\cdot sin(\theta)} \atop
+      {0\atop a\cdot cos(\theta) + b\cdot sin(\theta)}}
+      {{-c\cdot sin(\theta) + e\cdot cos(\theta) \atop
+      -d\cdot sin(\theta) + f\cdot cos(\theta)}\atop
+      {0 \atop -a\cdot sin(\theta) + b\cdot cos(\theta)}}{{0\atop 0}\atop{1 \atop 0}}
+      {{0 \atop 0}\atop{0\atop 1}}\right]
+$$
+
+Sendo assim, aplicar a rotação sobre o transformador é feito com o
+código abaixo:
+
+\iniciocodigo
+@<Aplica Operador Secundário de Transformação@>=
+if(last_transform -> type == TYPE_ROTATED){
+  struct numeric_variable theta;
+  double cos_theta, sin_theta;
+  if(!eval_numeric_primary(mf, cx, last_transform -> next, end_expression,
+                           &theta))
+    return false;
+  sin_theta = sin(theta.value);
+  cos_theta = cos(theta.value);
+  result -> value[0] = a.value[0] * cos_theta + a.value[1] * sin_theta;
+  result -> value[1] = -a.value[0] * sin_theta + a.value[1] * cos_theta;
+  result -> value[2] = a.value[2] * cos_theta + a.value[4] * sin_theta;
+  result -> value[3] = a.value[3] * cos_theta + a.value[5] * sin_theta;
+  result -> value[4] = -a.value[2] * sin_theta + a.value[4] * cos_theta;
+  result -> value[5] = -a.value[3] * sin_theta + a.value[5] * cos_theta;
+  return true;
+}
+@
+\fimcodigo
+
+\subsecao{8.4. Atribuições e Expressões de Caminhos}
 
 Para realizar a atribuição de caminhos a variáveis do tipo certo,
 usamos o código abaixo:
@@ -4917,7 +5138,7 @@ void recursive_aux_copy(struct path_points **dst, struct path_variable *origin){
 
 Vejamos agora a expressões que existem para expressões de caminhos:
 
-\subsubsecao{8.3.1. Junção de Caminhos}
+\subsubsecao{8.4.1. Junção de Caminhos}
 
 A gramática para a expressão de caminhos começa com:
 
@@ -4945,16 +5166,16 @@ Tudo isso requer que registremos os seguintes novos tipos de tokens:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_CYCLE          50 // O token simbólico 'cycle'
-#define TYPE_AMPERSAND      51 // O token simbólico '&'
-#define TYPE_JOIN           52 // O token simbólico '..'
-#define TYPE_TENSION        53 // O token simbólico 'tension'
-#define TYPE_AND            54 // O token simbólico 'and'
-#define TYPE_ATLEAST        55 // O token simbólico 'atleast'
-#define TYPE_CONTROLS       56 // O token simbólico 'controls'
-#define TYPE_CURL           57 // O token simbólico 'curl'
+#define TYPE_CYCLE          51 // O token simbólico 'cycle'
+#define TYPE_AMPERSAND      52 // O token simbólico '&'
+#define TYPE_JOIN           53 // O token simbólico '..'
+#define TYPE_TENSION        54 // O token simbólico 'tension'
+#define TYPE_AND            55 // O token simbólico 'and'
+#define TYPE_ATLEAST        56 // O token simbólico 'atleast'
+#define TYPE_CONTROLS       57 // O token simbólico 'controls'
+#define TYPE_CURL           58 // O token simbólico 'curl'
                                // (ainda não suportado)
-#define TYPE_STRAIGHT_JOIN  58 // O token simbólico '--'
+#define TYPE_STRAIGHT_JOIN  59 // O token simbólico '--'
 @
 \fimcodigo
 
@@ -6639,7 +6860,7 @@ Isso finaliza a construção de uma curva dados seus pontos e
 subcaminhos lidos. Agora iremos estabelecer como ler os pontos e
 subcaminhos.
 
-\subsubsecao{8.3.2. Expressões Terciárias de Caminhos}
+\subsubsecao{8.4.2. Expressões Terciárias de Caminhos}
 
 A gramática para expressões de caminho terciárias é:
 
@@ -6726,7 +6947,7 @@ bool eval_path_tertiary(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
-\subsubsecao{8.3.3. Expressões Secundárias de Caminhos: Transformadores}
+\subsubsecao{8.4.3. Expressões Secundárias de Caminhos: Transformadores}
 
 A gramática para expressões secundárias de caminho é:
 
@@ -7158,7 +7379,7 @@ void path_zscale(struct path_variable *p, float x, float y){
 \fimcodigo
 
 
-\subsubsecao{8.3.4. Expressões Primárias de Caminhos}
+\subsubsecao{8.4.4. Expressões Primárias de Caminhos}
 
 A gramática para expressões primárias de caminho é:
 
@@ -7175,9 +7396,9 @@ novos: \monoespaco{reverse}, \monoespaco{subpath} e \monoespaco{of}:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_REVERSE        59 // O token simbólico 'reverse'
-#define TYPE_SUBPATH        60 // O token simbólico 'subpath'
-#define TYPE_OF             61 // O token simbólico 'of'
+#define TYPE_REVERSE        60 // O token simbólico 'reverse'
+#define TYPE_SUBPATH        61 // O token simbólico 'subpath'
+#define TYPE_OF             62 // O token simbólico 'of'
 @
 \fimcodigo
 
@@ -7693,7 +7914,7 @@ return true;
 @
 \fimcodigo
 
-\subsubsecao{8.3.5. Caminhos em Expressões Numéricas}
+\subsubsecao{8.4.5. Caminhos em Expressões Numéricas}
 
 Existe a expressão numérica primária com o
 operador \monoespaco{length} que retorna o número de pontos de
@@ -7726,7 +7947,7 @@ else if(expr_type == TYPE_T_PATH){
 @
 \fimcodigo
 
-\subsubsecao{8.3.5. Caminhos em Expressões de Pares}
+\subsubsecao{8.4.6. Caminhos em Expressões de Pares}
 
 Dado um caminho, nós podemos extrair pares dele. O par pode ser um dos
 pontos de extremidade ou algum dos pontos de controle. A sintaxe para
@@ -7742,9 +7963,9 @@ Isso requer adicionarmos os seguintes novos tipos de tokens:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_POINT             62 // O token simbólico 'point'
-#define TYPE_PRECONTROL        63 // O token simbólico 'precontrol'
-#define TYPE_POSTCONTROL       64 // O token simbólico 'postcontrol'
+#define TYPE_POINT             63 // O token simbólico 'point'
+#define TYPE_PRECONTROL        64 // O token simbólico 'precontrol'
+#define TYPE_POSTCONTROL       65 // O token simbólico 'postcontrol'
 @
 \fimcodigo
 
@@ -7920,7 +8141,7 @@ if(begin_expression -> type == TYPE_POINT ||
 @
 \fimcodigo
 
-\subsecao{8.4. Atribuições e Expressões de Caneta}
+\subsecao{8.5. Atribuições e Expressões de Caneta}
 
 Para realizar a atribuição de canetas a variáveis do tipo certo,
 usamos o código abaixo:
@@ -7994,7 +8215,7 @@ void assign_pen_variable(struct metafont *mf,
 @
 \fimcodigo
 
-\subsubsecao{8.4.1. Expressão Terciária de Caneta}
+\subsubsecao{8.5.1. Expressão Terciária de Caneta}
 
 Por enquanto não existe nenhum operador terciário de caneta:
 
@@ -8026,7 +8247,7 @@ bool eval_pen_expression(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
-\subsubsecao{8.4.2. Transformadores de Caneta}
+\subsubsecao{8.5.2. Transformadores de Caneta}
 
 A sintaxe para expressões secundárias de caneta é:
 
@@ -8416,7 +8637,7 @@ return true;
 @
 \fimcodigo
 
-\subsubsecao{8.4.3. Expressões Primárias de Caneta}
+\subsubsecao{8.5.3. Expressões Primárias de Caneta}
 
 A gramática das expressões primárias de caminho é definida como:
 
@@ -8431,9 +8652,9 @@ Isso requer registrar três novas palavras reservadas:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_NULLPEN        65 // O token simbólico 'nullpen'
-#define TYPE_PENCIRCLE      66 // O token simbólico 'pencircle'
-#define TYPE_MAKEPEN        67 // O token simbólico 'makepen'
+#define TYPE_NULLPEN        66 // O token simbólico 'nullpen'
+#define TYPE_PENCIRCLE      67 // O token simbólico 'pencircle'
+#define TYPE_MAKEPEN        68 // O token simbólico 'makepen'
 @
 \fimcodigo
 
@@ -8719,7 +8940,7 @@ int read_flags(struct path_variable *path){
 @
 \fimcodigo
 
-\subsubsecao{8.4.4. Canetas em Expressões de Caminho}
+\subsubsecao{8.5.4. Canetas em Expressões de Caminho}
 
 Expressões primárias de caneta podem aparecer também quando avaliamos
 uma expressão primária de caminho. Isso permite que possamos extrair
@@ -8734,7 +8955,7 @@ Temos que registrar um novo token para o ``makepath'':
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_MAKEPATH       68 // O token simbólico 'makepath'
+#define TYPE_MAKEPATH       69 // O token simbólico 'makepath'
 @
 \fimcodigo
 
@@ -8943,7 +9164,7 @@ lineares que estiverem registradas na matriz de transformação OpenGL:
 @
 \fimcodigo
 
-\subsecao{8.5. Atribuições e Expressões de Imagens}
+\subsecao{8.6. Atribuições e Expressões de Imagens}
 
 Para realizar a atribuição de imagens a variáveis do tipo certo,
 usamos o código abaixo. O que ele faz é avaliar uma expressão de
@@ -9308,7 +9529,7 @@ void assign_picture_variable(struct metafont *mf,
 @
 \fimcodigo
 
-\subsubsecao{8.5.1. Expressões Terciárias de Imagem: Soma e Subtração}
+\subsubsecao{8.6.1. Expressões Terciárias de Imagem: Soma e Subtração}
 
 A operação terciária de imagem é a soma e a subtração:
 
@@ -9527,7 +9748,7 @@ glDeleteFramebuffers(1, &temporary_framebuffer);
 @
 \fimcodigo
 
-\subsubsecao{8.5.2. Expressões Secundárias de Imagem: Transformadores}
+\subsubsecao{8.6.2. Expressões Secundárias de Imagem: Transformadores}
 
 Uma expressão secundária de imagem tem a seguinte sintaxe:
 
@@ -10010,7 +10231,7 @@ bool apply_image_transformation(struct metafont *mf,
 @
 \fimcodigo
 
-\subsubsecao{8.5.3. Expressões Primárias de Imagem: Inversores, Identidade e Imagens Vazias}
+\subsubsecao{8.6.3. Expressões Primárias de Imagem: Inversores, Identidade e Imagens Vazias}
 
 Segundo a gramática da linguagem, a sintaxe para expressões primárias
 de imagens é:
@@ -10026,7 +10247,7 @@ Isso requer registrar ``nullpicture'' como um token:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_NULLPICTURE        69 // O token simbólico 'nullpicture'
+#define TYPE_NULLPICTURE        70 // O token simbólico 'nullpicture'
 @
 \fimcodigo
 
@@ -10272,7 +10493,7 @@ return true;
 @
 \fimcodigo
 
-\subsubsecao{8.5.4. Imagens em Expressões Numéricas}
+\subsubsecao{8.6.4. Imagens em Expressões Numéricas}
 
 Há um caso no qual precisamos avaliar uma expressão de imagem dentro
 de uma expressão numérica. Há uma expressão primária numérica
@@ -10297,7 +10518,7 @@ Primeiro vamos adicionar um novo tipo de token para esse operador:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_TOTALWEIGHT        70 // O token simbólico 'totalweight'
+#define TYPE_TOTALWEIGHT        71 // O token simbólico 'totalweight'
 @
 \fimcodigo
 
@@ -10369,7 +10590,6 @@ else if(begin_expression -> type == TYPE_TOTALWEIGHT){
       }
     }
     result -> value = sum;
-    //printf("\nweight: %f\n", sum);
   }
   // Finalização:
   if(temporary_free != NULL)
@@ -10382,6 +10602,8 @@ else if(begin_expression -> type == TYPE_TOTALWEIGHT){
 }
 @
 \fimcodigo
+
+\subsecao{8.7. Atribuições e Expressões Booleanas}
 
 \secao{Referências}
 
