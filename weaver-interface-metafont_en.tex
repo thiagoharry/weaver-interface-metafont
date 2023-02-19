@@ -4922,16 +4922,99 @@ if(last_transform -> type == TYPE_ROTATED){
     return false;
   sin_theta = sin(theta.value);
   cos_theta = cos(theta.value);
+  // a' = a cos(t) + b sin(t)
   result -> value[0] = a.value[0] * cos_theta + a.value[1] * sin_theta;
+  // b' = -a sin(t) + b cos(t)
   result -> value[1] = -a.value[0] * sin_theta + a.value[1] * cos_theta;
+  // c' = c cos(t) + e sin(t)
   result -> value[2] = a.value[2] * cos_theta + a.value[4] * sin_theta;
+  // d' = d cos(t) + f sin(t)
   result -> value[3] = a.value[3] * cos_theta + a.value[5] * sin_theta;
+  // e' = -c sin(t) + e cos(t)
   result -> value[4] = -a.value[2] * sin_theta + a.value[4] * cos_theta;
+  // f' = -d sin(t) + f cos(t)
   result -> value[5] = -a.value[3] * sin_theta + a.value[5] * cos_theta;
   return true;
 }
 @
 \fimcodigo
+
+Changing the scale for a transform means multiply it by the following
+matrix:
+
+$$\left[{{c \atop d}\atop
+      {0\atop a}}{{e \atop f}\atop {0 \atop
+      b}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
+      1}}\right]
+\left[{{s \atop 0}\atop
+      {0\atop 0}}{{0 \atop s}\atop {0 \atop
+      0}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
+      1}}\right]=
+\left[{{cs \atop ds} \atop  {0\atop as}}
+      {{es \atop fs}\atop   {0 \atop bs}}{{0\atop 0}\atop{1 \atop 0}}
+      {{0 \atop 0}\atop{0\atop 1}}\right]
+$$
+
+Which shows that we can just multiply all values by the scale factor
+$s$:
+
+\iniciocodigo
+@<Apply Secondary Transformer over Transforms@>+=
+else if(last_transform -> type == TYPE_SCALED){
+  struct numeric_variable scale;
+  if(!eval_numeric_primary(mf, cx, last_transform -> next, end_expression,
+                           &scale))
+    return false;
+  result -> value[0] = a.value[0] * scale.value;
+  result -> value[1] = a.value[1] * scale.value;
+  result -> value[2] = a.value[2] * scale.value;
+  result -> value[3] = a.value[3] * scale.value;
+  result -> value[4] = a.value[4] * scale.value;
+  result -> value[5] = a.value[5] * scale.value;
+  return true;
+}
+@
+\fimcodigo
+
+The next transformer makes a translation, or shifting over a distance
+$(x, y)$. This is equivalent to multiply by the following matrix:
+
+$$\left[{{c \atop d}\atop {0\atop a}}
+        {{e \atop f}\atop {0 \atop b}}
+        {{0\atop 0}\atop{1 \atop 0}}
+        {{0 \atop 0}\atop{0\atop 1}}\right]
+\left[{{1 \atop 0}\atop {0\atop x}}
+      {{0 \atop 1}\atop {0 \atop y}}
+      {{0\atop 0}\atop{1 \atop 0}}
+      {{0 \atop 0}\atop{0\atop 1}}\right]
+      =
+\left[{{c \atop d}\atop {0\atop a+x}}
+        {{e \atop f}\atop {0 \atop b+y}}
+        {{0\atop 0}\atop{1 \atop 0}}
+        {{0 \atop 0}\atop{0\atop 1}}\right]
+$$
+
+THis means that we can keep almost all the values the same. We just
+add $(x, y)$ to the two first elements:
+
+\iniciocodigo
+@<Apply Secondary Transformer over Transforms@>+=
+else if(last_transform -> type == TYPE_SHIFTED){
+  struct pair_variable shift;
+  if(!eval_pair_primary(mf, cx, last_transform -> next, end_expression,
+                        &shift))
+    return false;
+  result -> value[0] = a.value[0] + shift.x;
+  result -> value[1] = a.value[1] + shift.y;
+  result -> value[2] = a.value[2];
+  result -> value[3] = a.value[3];
+  result -> value[4] = a.value[4];
+  result -> value[5] = a.value[5];
+  return true;
+}
+@
+\fimcodigo
+
 
 \subsecao{8.4. Path Assignments and Expressions}
 
