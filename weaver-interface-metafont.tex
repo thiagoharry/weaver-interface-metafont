@@ -5088,6 +5088,214 @@ else if(last_transform -> type == TYPE_SHIFTED){
 @
 \fimcodigo
 
+Agora vamos tratar o transformador que inclina a nossa transformação
+uma quantia $s$. Isso é o equivalente a multiplicar pela matriz:
+
+$$\left[{{c \atop d}\atop {0\atop a}}
+        {{e \atop f}\atop {0 \atop b}}
+        {{0\atop 0}\atop{1 \atop 0}}
+        {{0 \atop 0}\atop{0\atop 1}}\right]
+\left[{{1 \atop s}\atop {0\atop
+      0}}{{0 \atop 1}\atop {0 \atop 1}}{{0\atop 0}\atop{1 \atop
+      0}}{{0 \atop 0}\atop{0\atop 1}}\right] =
+\left[{{c+se \atop d+sf}\atop {0\atop a+sb}}
+        {{e \atop f}\atop {0 \atop b}}
+        {{0\atop 0}\atop{1 \atop 0}}
+        {{0 \atop 0}\atop{0\atop 1}}\right]
+$$
+
+Então o resultado terá metade dos valores iguais à transformação
+anterior e metade deles modificados pela inclinação:
+
+\iniciocodigo
+@<Aplica Operador Secundário de Transformação@>+=
+else if(last_transform -> type == TYPE_SLANTED){
+  struct numeric_variable slant;
+  if(!eval_numeric_primary(mf, cx, last_transform -> next, end_expression,
+                        &slant))
+    return false;
+  // a' = a + sb
+  result -> value[0] = a.value[0] + a.value[1] * slant.value;
+  result -> value[1] = a.value[1];
+  // c' = c + se
+  result -> value[2] = a.value[2] + a.value[4] * slant.value;
+  // d' = d + sf
+  result -> value[3] = a.value[3] + a.value[5] * slant.value;
+  result -> value[4] = a.value[4];
+  result -> value[5] = a.value[5];
+  return true;
+}
+@
+\fimcodigo
+
+A mudança de escala somente no eixo $x$ estica ou comprime a
+transformação neste eixo. É equivalente à seguinte multiplicação:
+
+$$\left[{{c \atop d}\atop
+      {0\atop a}}{{e \atop f}\atop {0 \atop
+      b}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
+      1}}\right]
+\left[{{s \atop 0}\atop
+      {0\atop 0}}{{0 \atop 1}\atop {0 \atop
+      0}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
+      1}}\right]=
+\left[{{cs \atop ds} \atop  {0\atop as}}
+      {{e \atop f}\atop   {0 \atop b}}{{0\atop 0}\atop{1 \atop 0}}
+      {{0 \atop 0}\atop{0\atop 1}}\right]
+$$
+
+O que é obtido pelo código abaixo:
+
+\iniciocodigo
+@<Aplica Operador Secundário de Transformação@>+=
+else if(last_transform -> type == TYPE_XSCALED){
+  struct numeric_variable scale;
+  if(!eval_numeric_primary(mf, cx, last_transform -> next, end_expression,
+                        &scale))
+    return false;
+  // a' = as
+  result -> value[0] = a.value[0] * scale.value;
+  result -> value[1] = a.value[1];
+  // c' = cs
+  result -> value[2] = a.value[2] * scale.value;
+  // d' = ds
+  result -> value[3] = a.value[3] * scale.value;
+  result -> value[4] = a.value[4];
+  result -> value[5] = a.value[5];
+  return true;
+}
+@
+\fimcodigo
+
+Podemos também fazer a mudança de escala somente no eixo $y$ usando o
+fator de mudança $s$:
+
+$$\left[{{c \atop d}\atop
+      {0\atop a}}{{e \atop f}\atop {0 \atop
+      b}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
+      1}}\right]
+\left[{{1 \atop 0}\atop
+      {0\atop 0}}{{0 \atop s}\atop {0 \atop
+      0}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
+      1}}\right]=
+\left[{{c \atop d} \atop  {0\atop a}}
+      {{es \atop fs}\atop   {0 \atop bs}}{{0\atop 0}\atop{1 \atop 0}}
+      {{0 \atop 0}\atop{0\atop 1}}\right]
+$$
+
+O que é obtido pelo código abaixo:
+
+\iniciocodigo
+@<Aplica Operador Secundário de Transformação@>+=
+else if(last_transform -> type == TYPE_YSCALED){
+  struct numeric_variable scale;
+  if(!eval_numeric_primary(mf, cx, last_transform -> next, end_expression,
+                        &scale))
+    return false;
+  result -> value[0] = a.value[0];
+  // b' = bs
+  result -> value[1] = a.value[1] * scale.value;
+  result -> value[2] = a.value[2];
+  result -> value[3] = a.value[3] * scale.value;
+  // e' = es
+  result -> value[4] = a.value[4] * scale.value;
+  // f' = fs
+  result -> value[5] = a.value[5] * scale.value;
+  return true;
+}
+@
+\fimcodigo
+
+Por fim, há a mudança de escala no plano complexo, que envolve
+multiplicar os pontos por um par $(s, t)$, interpretado como um número
+complexo. Isso obtém ao mesmo tempo tanto rotação como mudança de
+escala. É feito pela multiplicação de matriz:
+
+$$\left[{{c \atop d}\atop
+      {0\atop a}}{{e \atop f}\atop {0 \atop
+      b}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
+      1}}\right]
+\left[{{s \atop -t}\atop {0\atop
+      0}}{{t \atop s}\atop {0 \atop 0}}{{0\atop 0}\atop{1 \atop
+      0}}{{0 \atop 0}\atop{0\atop 1}}\right]
+=
+\left[{{cs-dt \atop ds-ft} \atop  {0\atop as-bt}}
+      {{ct+es \atop dt+fs}\atop   {0 \atop at+bs}}{{0\atop 0}\atop{1 \atop 0}}
+      {{0 \atop 0}\atop{0\atop 1}}\right]
+$$
+
+Esse transformador é implementado pelo código abaixo:
+
+\iniciocodigo
+@<Aplica Operador Secundário de Transformação@>+=
+else if(last_transform -> type == TYPE_ZSCALED){
+  struct pair_variable scale;
+  if(!eval_pair_primary(mf, cx, last_transform -> next, end_expression,
+                        &scale))
+    return false;
+  // a' = as - bt
+  result -> value[0] = a.value[0] * scale.x - a.value[0] * scale.y;
+  // b' = at + bs
+  result -> value[1] = a.value[0] * scale.y + a.value[0] * scale.y;
+  // c' = cs - dt
+  result -> value[2] = a.value[2] * scale.x - a.value[3] * scale.y;
+  // d' = ds - ft
+  result -> value[3] = a.value[3] * scale.x - a.value[5] * scale.y;
+  // e' = ct + es
+  result -> value[4] = a.value[2] * scale.y + a.value[4] * scale.x;
+  // f' = dt + fs
+  result -> value[5] = a.value[3] * scale.y + a.value[5] * scale.x;
+  return true;
+}
+@
+\fimcodigo
+
+Por fim, o último tipo de transformador. Quando temos duas
+transformações e as multiplicamos para combiná-las em uma só:
+
+$$\left[{{c \atop d}\atop
+      {0\atop a}}{{e \atop f}\atop {0 \atop
+      b}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
+      1}}\right]
+\left[{{c' \atop d'}\atop
+      {0\atop a'}}{{e' \atop f'}\atop {0 \atop
+      b'}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
+      1}}\right]
+=
+\left[{{cc'+ed' \atop dc'+fd'} \atop  {0\atop ac'+bd'+a'}}
+      {{ce'+ef' \atop de'+ff'}\atop   {0 \atop ae'+bf'+b'}}
+      {{0\atop 0}\atop{1 \atop 0}}
+      {{0 \atop 0}\atop{0\atop 1}}\right]
+$$
+
+Essa combinação de transformações é implementada pelo código abaixo:
+
+\iniciocodigo
+@<Aplica Operador Secundário de Transformação@>+=
+else if(last_transform -> type == TYPE_TRANSFORMED){
+  struct transform_variable b;
+  if(!eval_transform_primary(mf, cx, last_transform -> next, end_expression,
+                            &b))
+    return false;
+  // a'' = ac'-bd'+a'
+  result -> value[0] = a.value[0] * b.value[2] + a.value[1] * b.value[3] +
+                       b.value[0];
+  // b'' = ae'+bf'+b'
+  result -> value[1] = a.value[0] * b.value[4] + a.value[1] * b.value[5] +
+                       b.value[1];
+  // c'' = cc'+ed'
+  result -> value[2] = a.value[2] * b.value[2] + a.value[4] * b.value[3];
+  // d'' = dc'+fd'
+  result -> value[3] = a.value[3] * b.value[2] + a.value[5] * b.value[3];
+  // e'' = ce'+ef'
+  result -> value[4] = a.value[2] * b.value[4] + a.value[4] * b.value[5];
+  // f'' = de'+ff'
+  result -> value[5] = a.value[3] * b.value[4] + a.value[5] * b.value[5];
+  return true;
+}
+@
+\fimcodigo
+
 
 \subsecao{8.4. Atribuições e Expressões de Caminhos}
 
