@@ -2103,7 +2103,7 @@ todas as referências para esta variável colocando o valor correto de
 seu endereço nos tokens lidos:
 
 \iniciocodigo
-@<Preenche Ponteiro para Variável Interna@>=
+@<Preenche Ponteiro para Variável Interna@>+=
 else if(!strcmp(buffer, "identity"))
   new_token -> var =
           &(mf -> internal_transform_variables[INTERNAL_TRANSFORM_IDENTITY]);
@@ -2973,6 +2973,9 @@ estamos dentro de um aninhamento ou não:
                                nesting_braces --;
 #define IS_NOT_NESTED() (nesting_parenthesis == 0 && nesting_brackets == 0 && \
                          nesting_braces == 0)
+#define RESET_NESTING_COUNT() nesting_parenthesis = 0; \
+                              nesting_brackets = 0; \
+                              nesting_braces = 0;
 @
 \fimcodigo
 
@@ -4915,7 +4918,6 @@ bool eval_transform_secondary(struct metafont *mf, struct context *cx,
                               struct transform_variable *result){
   struct generic_token *p, *last_transform = NULL, *last_token = NULL,
                        *end_secondary = NULL;
-  struct transform_variable a;
   DECLARE_NESTING_CONTROL();
   p = begin_expression;
   do{
@@ -4992,8 +4994,9 @@ if(last_transform -> type == TYPE_ROTATED){
   if(!eval_numeric_primary(mf, cx, last_transform -> next, end_expression,
                            &theta))
     return false;
-  sin_theta = sin(theta.value);
-  cos_theta = cos(theta.value);
+  // 1 grau = 0,0174533 radianos
+  sin_theta = sin(theta.value * 0.0174533);
+  cos_theta = cos(theta.value * 0.0174533);
   // a' = a cos(t) + b sin(t)
   result -> value[0] = a.value[0] * cos_theta + a.value[1] * sin_theta;
   // b' = -a sin(t) + b cos(t)
@@ -5296,6 +5299,164 @@ else if(last_transform -> type == TYPE_TRANSFORMED){
 @
 \fimcodigo
 
+\subsecao{8.3.2 Expressões Terciárias de Transformação: Literais e Variáveis}
+
+Continuando a gramática das expressões de transformadores, as próximas
+regras são:
+
+\alinhaverbatim
+<Primário de Transformação> -> <Variável de Transformação> |
+                               ( <Terciário de Transformação> ) |
+                               ( <Expressão Numérica> , <Expressão Numérica> ,
+                                 <Expressão Numérica> , <Expressão Numérica> ,
+                                 <Expressão Numérica> , <Expressão Numérica> )
+\alinhanormal
+
+No primeiro caso, temos só um token simbólico com uma variável de
+transformação. Nos dois outros casos, o primeiro Token é o abrir de
+parênteses. No primeiro, há só uma expressão entre parênteses que
+avaliará para um transformador. No segundo, temos seis expressões
+numéricas que formarão os valores de nosso transformador.
+
+A função que avaliará as expressões primárias de transformação é:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+bool eval_transform_primary(struct metafont *mf, struct context *cx,
+                            struct generic_token *begin_expression,
+                            struct generic_token *end_expression,
+                            struct transform_variable *result);
+@
+\fimcodigo
+
+E a sua implementação:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+bool eval_transform_primary(struct metafont *mf, struct context *cx,
+                            struct generic_token *begin_expression,
+                            struct generic_token *end_expression,
+                            struct transform_variable *result){
+  if(begin_expression == end_expression &&
+     begin_expression -> type == TYPE_SYMBOLIC){
+    @<Transformação Primária: Variável@>
+  }
+  else if(begin_expression != end_expression &&
+          begin_expression -> type == TYPE_OPEN_PARENTHESIS &&
+          end_expression -> type == TYPE_CLOSE_PARENTHESIS &&
+          begin_expression -> next != end_expression){
+    struct generic_token *p = begin_expression -> next;
+    DECLARE_NESTING_CONTROL();
+    bool has_comma = false;
+    do{
+      COUNT_NESTING(p);
+      if(IS_NOT_NESTED() && p -> type == TYPE_COMMA){
+        RESET_NESTING_COUNT();
+        has_comma = true;
+        break;
+      }
+      if(p != end_expression)
+        p = (struct generic_token *) p -> next;
+      else
+        p = NULL;
+    } while(p != NULL && p != end_expression);
+    if(has_comma){
+      @<Transformação Primária: Literal@>
+    }
+    else{
+      @<Transformação Primária: Parênteses@>
+    }
+  }
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable transform primary "
+          "expression.\n", mf -> file, begin_expression -> line);
+#endif
+  return false;
+}
+@
+\fimcodigo
+
+O caso mais simples é quando estamos só lendo uma variável:
+
+\iniciocodigo
+@<Transformação Primária: Variável@>=
+struct symbolic_token *v = (struct symbolic_token *) begin_expression;
+struct transform_variable *content = v -> var;
+if(content == NULL){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Not allocated variable: "
+          "%s.\n", mf -> file, v -> line, v -> value);
+#endif
+  return false;
+}
+memcpy(result -> value, content -> value, sizeof(float) * 6);
+return true;
+@
+\fimcodigo
+
+O próximo caso que trataremos é quando temos uma subexpressão entre
+parênteses. Devemos apenas avaliar ela após descartar os parênteses
+delimitadores:
+
+\iniciocodigo
+@<Transformação Primária: Parênteses@>=
+struct generic_token *end_expr;
+if(begin_expression -> next == end_expression){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Empty parenthesis in transform "
+          "expression.\n", mf -> file, begin_expression -> line);
+#endif
+  return false;
+}
+for(end_expr = begin_expression -> next; end_expr -> next != end_expression;
+    end_expr = end_expr -> next);
+return eval_transform_expression(mf, cx, begin_expression -> next, end_expr,
+                                 result);
+@
+\fimcodigo
+
+E finalmente, quando temos um literal de transformação formado por
+seis expressões numéricas separadas por vírgulas:
+
+\iniciocodigo
+@<Transformação Primária: Literal@>=
+int i;
+struct generic_token *begin_numeric_expr, *end_numeric_expr;
+struct numeric_variable numeric_result;
+begin_numeric_expr = begin_expression -> next;
+end_numeric_expr = begin_numeric_expr;
+for(i = 0; i < 6; i ++){
+  p = begin_numeric_expr;
+  do{
+    if(p != end_expression){
+      COUNT_NESTING(p);
+    }
+    if(IS_NOT_NESTED() && ((i < 5 && p -> type == TYPE_COMMA) ||
+                            (i == 5 && p -> type == TYPE_CLOSE_PARENTHESIS)))
+      break;
+    end_numeric_expr = p;
+    if(p != end_expression)
+      p = (struct generic_token *) p -> next;
+    else
+      p = NULL;
+  } while(p != NULL);
+  if(p == NULL){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Invalid transform literal in "
+            "expression.\n", mf -> file, begin_expression -> line);
+#endif
+    return false;
+  }
+  if(!eval_numeric_expression(mf, cx, begin_numeric_expr, end_numeric_expr,
+                              &numeric_result))
+    return false;
+  result -> value[i] = numeric_result.value;
+  begin_numeric_expr = p -> next;
+  end_numeric_expr = begin_numeric_expr;
+}
+return true;
+@
+\fimcodigo
 
 \subsecao{8.4. Atribuições e Expressões de Caminhos}
 

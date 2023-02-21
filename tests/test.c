@@ -1235,9 +1235,9 @@ void test_transform_expressions(void){
   struct transform_variable *transform_a, *transform_b, *transform_c,
     *transform_d, *transform_e, *transform_f, *transform_g, *transform_h,
     *transform_i, *transform_j;
-  mf = init_metafont(malloc, free, "tests/picture_expressions.mf");
+  mf = init_metafont(malloc, free, "tests/transform_expressions.mf");
   cx = init_context();
-  void *p = lexer(mf, malloc, free, "tests/picture_expressions.mf");
+  void *p = lexer(mf, malloc, free, "tests/transform_expressions.mf");
   ret = eval_program(mf, cx, p);
   a = (struct named_variable *) mf -> named_variables;
   b = a -> next;
@@ -1274,6 +1274,10 @@ void test_transform_expressions(void){
 	 ALMOST_EQUAL(transform_b -> value[3], 0.0) &&
 	 ALMOST_EQUAL(transform_b -> value[4], 0.0) &&
 	 ALMOST_EQUAL(transform_b -> value[5], 1.0));
+  printf("DEBUG: %f %f %f %f %f %f\n",
+	 transform_c -> value[0], transform_c -> value[1],
+	 transform_c -> value[2], transform_c -> value[3],
+	 transform_c -> value[4], transform_c -> value[5]);
   assert("Evaluating rotation in transform expressions",
 	 ALMOST_EQUAL(transform_c -> value[0], 0.0) &&
 	 ALMOST_EQUAL(transform_c -> value[1], 0.0) &&
