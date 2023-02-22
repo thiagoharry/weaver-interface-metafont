@@ -4970,16 +4970,17 @@ $$\left[{{c \atop d}\atop
       {0\atop a}}{{e \atop f}\atop {0 \atop
       b}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
       1}}\right]
-\left[{{cos(\theta) \atop \sin(\theta)}\atop
-      {0\atop 0}}{{-sin(\theta) \atop cos(\theta)}\atop {0 \atop
+\left[{{\cos(\theta) \atop -\sin(\theta)}\atop
+      {0\atop 0}}{{\sin(\theta) \atop \cos(\theta)}\atop {0 \atop
       0}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
       1}}\right]=
-\left[{{c\cdot cos(\theta) + e\cdot sin(\theta) \atop
-        d\cdot cos(\theta) + f\cdot sin(\theta)} \atop
-      {0\atop a\cdot cos(\theta) + b\cdot sin(\theta)}}
-      {{-c\cdot sin(\theta) + e\cdot cos(\theta) \atop
-      -d\cdot sin(\theta) + f\cdot cos(\theta)}\atop
-      {0 \atop -a\cdot sin(\theta) + b\cdot cos(\theta)}}{{0\atop 0}\atop{1 \atop 0}}
+\left[{{c\cdot \cos(\theta) - e\cdot \sin(\theta) \atop
+        d\cdot \cos(\theta) - f\cdot \sin(\theta)} \atop
+      {0\atop a\cdot \cos(\theta) - b\cdot \sin(\theta)}}
+      {{c\cdot \sin(\theta) + e\cdot \cos(\theta) \atop
+      d\cdot \sin(\theta) + f\cdot \cos(\theta)}\atop
+      {0 \atop a\cdot \sin(\theta) + b\cdot \cos(\theta)}}
+      {{0\atop 0}\atop{1 \atop 0}}
       {{0 \atop 0}\atop{0\atop 1}}\right]
 $$
 
@@ -4997,18 +4998,18 @@ if(last_transform -> type == TYPE_ROTATED){
   // 1 grau = 0,0174533 radianos
   sin_theta = sin(theta.value * 0.0174533);
   cos_theta = cos(theta.value * 0.0174533);
-  // a' = a cos(t) + b sin(t)
-  result -> value[0] = a.value[0] * cos_theta + a.value[1] * sin_theta;
-  // b' = -a sin(t) + b cos(t)
-  result -> value[1] = -a.value[0] * sin_theta + a.value[1] * cos_theta;
-  // c' = c cos(t) + e sin(t)
-  result -> value[2] = a.value[2] * cos_theta + a.value[4] * sin_theta;
-  // d' = d cos(t) + f sin(t)
-  result -> value[3] = a.value[3] * cos_theta + a.value[5] * sin_theta;
-  // e' = -c sin(t) + e cos(t)
-  result -> value[4] = -a.value[2] * sin_theta + a.value[4] * cos_theta;
-  // f' = -d sin(t) + f cos(t)
-  result -> value[5] = -a.value[3] * sin_theta + a.value[5] * cos_theta;
+  // a' = a cos(t) - b sin(t)
+  result -> value[0] = a.value[0] * cos_theta - a.value[1] * sin_theta;
+  // b' = a sin(t) + b cos(t)
+  result -> value[1] = a.value[0] * sin_theta + a.value[1] * cos_theta;
+  // c' = c cos(t) - e sin(t)
+  result -> value[2] = a.value[2] * cos_theta - a.value[4] * sin_theta;
+  // d' = d cos(t) - f sin(t)
+  result -> value[3] = a.value[3] * cos_theta - a.value[5] * sin_theta;
+  // e' = c sin(t) + e cos(t)
+  result -> value[4] = a.value[2] * sin_theta + a.value[4] * cos_theta;
+  // f' = d sin(t) + f cos(t)
+  result -> value[5] = a.value[3] * sin_theta + a.value[5] * cos_theta;
   return true;
 }
 @
