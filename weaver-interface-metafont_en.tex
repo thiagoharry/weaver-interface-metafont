@@ -8692,8 +8692,8 @@ three dimensions, a fourth one to ensure that the main operations will
 be linear transformations), to rotate each point, we need to multiply
 it by a matrix as shown below:
 
-$$\left[x\; y\; z\; 1\right]\left[{{cos(\theta) \atop \sin(\theta)}\atop
-      {0\atop 0}}{{-sin(\theta) \atop cos(\theta)}\atop {0 \atop
+$$\left[x\; y\; z\; 1\right]\left[{{cos(\theta) \atop -\sin(\theta)}\atop
+      {0\atop 0}}{{\sin(\theta) \atop cos(\theta)}\atop {0 \atop
       0}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
       1}}\right]=\left[x\cdot cos(\theta) - y\cdot sin(\theta)\;\;
       x\cdot sin(\theta) + y\cdot cos(\theta)\;\; z\;\; 1\right]

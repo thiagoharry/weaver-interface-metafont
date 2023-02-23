@@ -950,10 +950,10 @@ void test_pen_expressions(void){
   struct context *cx;
   bool ret;
   struct named_variable *p1, *p2, *p3, *p4, *penrazor, *p5, *p6, *p7, *p8, *p9,
-    *p10, *p11, *p12;
+    *p10, *p11, *p12, *p13, *p13_path;;
   struct pen_variable *pen_p1, *pen_p2, *pen_p3, *pen_p4, *pen_penrazor,
-    *pen_p5, *pen_p6, *pen_p7, *pen_p8;
-  struct path_variable *path_p9, *path_p10, *path_p11, *path_p12;
+    *pen_p5, *pen_p6, *pen_p7, *pen_p8, *pen_p13;
+  struct path_variable *path_p9, *path_p10, *path_p11, *path_p12, *path_p13;
   mf = init_metafont(malloc, free, "tests/pen_expressions.mf");
   cx = init_context();
   void *p = lexer(mf, malloc, free, "tests/pen_expressions.mf");
@@ -971,6 +971,8 @@ void test_pen_expressions(void){
   p10 = p9 -> next;
   p11 = p10 -> next;
   p12 = p11 -> next;
+  p13 = p12 -> next;
+  p13_path = p13 -> next;
   pen_p1 = (struct pen_variable *) p1 -> var;
   pen_p2 = (struct pen_variable *) p2 -> var;
   pen_p3 = (struct pen_variable *) p3 -> var;
@@ -984,6 +986,8 @@ void test_pen_expressions(void){
   path_p10 = (struct path_variable *) p10 -> var;
   path_p11 = (struct path_variable *) p11 -> var;
   path_p12 = (struct path_variable *) p12 -> var;
+  pen_p13 = (struct pen_variable *) p13 -> var;
+  path_p13 = (struct path_variable *) p13_path -> var;
   assert("Interpreting program with pen expressions", ret);
   assert("Assigning pen variable",
 	 pen_p1 -> format == NULL &&
@@ -1116,6 +1120,19 @@ void test_pen_expressions(void){
 	 ALMOST_EQUAL(0.58345, 0.5 * pen_p8 -> gl_matrix[1] +
 	 	      -0.5 * pen_p8 -> gl_matrix[5] +
 	 	      1.0 * pen_p8 -> gl_matrix[13]));
+  assert("Extracted path from rotated pen",
+	 pen_p13 -> format == NULL &&
+	 (pen_p8 -> flags & FLAG_STRAIGHT) &&
+	 (pen_p8 -> flags & FLAG_CONVEX) &&
+	 (pen_p8 -> flags & FLAG_SQUARE) &&
+	 ALMOST_EQUAL(path_p13 ->points[0].x, (1.0-sqrt(3.0))/4.0) &&
+	 ALMOST_EQUAL(path_p13 ->points[0].y, (-1.0-sqrt(3.0))/4.0) &&
+	 ALMOST_EQUAL(path_p13 ->points[1].x, (sqrt(3.0)+1.0)/4.0) &&
+	 ALMOST_EQUAL(path_p13 ->points[1].y, (1.0-sqrt(3.0))/4.0) &&
+	 ALMOST_EQUAL(path_p13 ->points[2].x, (sqrt(3.0)-1.0)/4.0) &&
+	 ALMOST_EQUAL(path_p13 ->points[2].y, (1.0+sqrt(3.0))/4.0) &&
+	 ALMOST_EQUAL(path_p13 ->points[3].x, (-sqrt(3.0)-1.0)/4.0) &&
+	 ALMOST_EQUAL(path_p13 ->points[3].y, (-1.0+sqrt(3.0))/4.0));
   assert("Extracting path from 'nullpen'",
 	 path_p9 -> length == 1 &&
 	 path_p9 -> total_length == 1 &&

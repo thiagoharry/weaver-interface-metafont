@@ -5,6 +5,8 @@ pen p1, p2, p3, p4;
 pen penrazor;
 pen p5, p6, p7, p8;
 path p9, p10, p11, p12;
+pen p13;
+path p13_path;
 
 p1 = pensquare;
 p2 = nullpen;
@@ -32,5 +34,7 @@ p9 = makepath p2;
 p10 = makepath p4;
 p11 = makepath p8;
 p12 = makepath p6;
+p13 = p1 rotated 30;
+p13_path = makepath p13;
 
 end
