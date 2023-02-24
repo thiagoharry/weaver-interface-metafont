@@ -1244,6 +1244,43 @@ void test_pen_expressions(void){
   destroy_context(cx);
 }
 
+void test_numeric_expressions(void){
+  struct metafont *mf;
+  struct context *cx;
+  bool ret;
+  struct named_variable *a, *b, *c, *d, *e, *f;
+  struct numeric_variable *numeric_a, *numeric_b, *numeric_c,
+    *numeric_d, *numeric_e, *numeric_f;
+  mf = init_metafont(malloc, free, "tests/numeric_expressions.mf");
+  cx = init_context();
+  void *p = lexer(mf, malloc, free, "tests/numeric_expressions.mf");
+  ret = eval_program(mf, cx, p);
+  a = (struct named_variable *) mf -> named_variables;
+  b = a -> next;
+  c = b -> next;
+  d = c -> next;
+  e = d -> next;
+  f = e -> next;
+  numeric_a = (struct numeric_variable *) a -> var;
+  numeric_b = (struct numeric_variable *) b -> var;
+  numeric_c = (struct numeric_variable *) c -> var;
+  numeric_d = (struct numeric_variable *) d -> var;
+  numeric_e = (struct numeric_variable *) e -> var;
+  numeric_f = (struct numeric_variable *) f -> var;
+  assert("Interpreting program with numeric expressions", ret);
+  assert("Evaluating transform values as numeric data",
+	 ALMOST_EQUAL(numeric_a -> value, 1.0) &&
+	 ALMOST_EQUAL(numeric_b -> value, 2.0) &&
+	 ALMOST_EQUAL(numeric_c -> value, 3.0) &&
+	 ALMOST_EQUAL(numeric_d -> value, 4.0) &&
+	 ALMOST_EQUAL(numeric_e -> value, 5.0) &&
+	 ALMOST_EQUAL(numeric_f -> value, 6.0));
+  free_token_list(free, p);
+  destroy_metafont(mf);
+  destroy_context(cx);
+}
+
+
 void test_transform_expressions(void){
   struct metafont *mf;
   struct context *cx;
@@ -1291,10 +1328,6 @@ void test_transform_expressions(void){
 	 ALMOST_EQUAL(transform_b -> value[3], 0.0) &&
 	 ALMOST_EQUAL(transform_b -> value[4], 0.0) &&
 	 ALMOST_EQUAL(transform_b -> value[5], 1.0));
-  printf("DEBUG: %f %f %f %f %f %f\n",
-	 transform_c -> value[0], transform_c -> value[1],
-	 transform_c -> value[2], transform_c -> value[3],
-	 transform_c -> value[4], transform_c -> value[5]);
   assert("Evaluating rotation in transform expressions",
 	 ALMOST_EQUAL(transform_c -> value[0], 0.0) &&
 	 ALMOST_EQUAL(transform_c -> value[1], 0.0) &&
@@ -1473,6 +1506,7 @@ int main(int argc, char **argv){
   test_compound_statements();
   test_variables();
   test_assignments();
+  test_numeric_expressions();
   test_transform_expressions();
   test_path_expressions();
   test_pen_expressions();

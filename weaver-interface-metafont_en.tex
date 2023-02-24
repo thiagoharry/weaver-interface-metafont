@@ -1236,8 +1236,8 @@ of special symbolic tokens:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_BEGINGROUP            10 // O token simbólico 'begingroup'
-#define TYPE_ENDGROUP              11 // O token simbólico 'endgroup'
+#define TYPE_BEGINGROUP            10 // Symbolic token 'begingroup'
+#define TYPE_ENDGROUP              11 // Symbolic token 'endgroup'
 @
 \fimcodigo
 
@@ -4899,8 +4899,8 @@ $$\left[{{c \atop d}\atop
       {0\atop a}}{{e \atop f}\atop {0 \atop
       b}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
       1}}\right]
-\left[{{cos(\theta) \atop \sin(\theta)}\atop
-      {0\atop 0}}{{-sin(\theta) \atop cos(\theta)}\atop {0 \atop
+\left[{{cos(\theta) \atop -\sin(\theta)}\atop
+      {0\atop 0}}{{sin(\theta) \atop cos(\theta)}\atop {0 \atop
       0}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
       1}}\right]=
 \left[{{c\cdot cos(\theta) + e\cdot sin(\theta) \atop
@@ -4926,15 +4926,15 @@ if(last_transform -> type == TYPE_ROTATED){
   sin_theta = sin(theta.value * 0.0174533);
   cos_theta = cos(theta.value * 0.0174533);
   // a' = a cos(t) + b sin(t)
-  result -> value[0] = a.value[0] * cos_theta + a.value[1] * sin_theta;
+  result -> value[0] = a.value[0] * cos_theta - a.value[1] * sin_theta;
   // b' = -a sin(t) + b cos(t)
   result -> value[1] = -a.value[0] * sin_theta + a.value[1] * cos_theta;
   // c' = c cos(t) + e sin(t)
-  result -> value[2] = a.value[2] * cos_theta + a.value[4] * sin_theta;
+  result -> value[2] = a.value[2] * cos_theta - a.value[4] * sin_theta;
   // d' = d cos(t) + f sin(t)
-  result -> value[3] = a.value[3] * cos_theta + a.value[5] * sin_theta;
+  result -> value[3] = a.value[3] * cos_theta - a.value[5] * sin_theta;
   // e' = -c sin(t) + e cos(t)
-  result -> value[4] = -a.value[2] * sin_theta + a.value[4] * cos_theta;
+  result -> value[4] = a.value[2] * sin_theta + a.value[4] * cos_theta;
   // f' = -d sin(t) + f cos(t)
   result -> value[5] = -a.value[3] * sin_theta + a.value[5] * cos_theta;
   return true;
@@ -5384,6 +5384,68 @@ return true;
 @
 \fimcodigo
 
+\subsubsecao{8.3.3 Transforms in Numeric Expressions}
+
+Transforms can be placed in primary numeric expressions. The following
+grammar rules allow them:
+
+\alinhaverbatim
+<Numeric Primary> -> <Transform Part><Transform Primary>
+<Transform Part> -> xpart | ypart | xxpart | xypart | yxpart | yypart
+\alinhanormal
+
+The six operators above extract each one of the six numeric values
+in a transform, in the same order that they are listed.
+
+As \monoespaco{xpart} and \monoespaco{ypart} already were defined when
+we were defining pair expressions, we just need to define the next
+four new tokens for the new operators:
+
+\iniciocodigo
+@<METAFONT: Symbolic Token Definition@>+=
+#define TYPE_XXPART  51 // Symbolic token xxpart'
+#define TYPE_XYPART  52 // Symbolic token xypart'
+#define TYPE_YXPART  53 // Symbolic token yxpart'
+#define TYPE_YYPART  54 // Symbolic token yypart'
+@
+\fimcodigo
+
+And the keywords associated with them:
+
+\iniciocodigo
+@<List of Keywords@>+=
+"xxpart", "xypart", "yxpart", "yypart",
+@
+\fimcodigo
+
+These four new operators are evaluated in the function that evaluates
+primary numeric expressions:
+
+\iniciocodigo
+@<Numeric Primary: Additional Operators@>+=
+else if(begin_expression -> type >= TYPE_XXPART &&
+         begin_expression -> type <= TYPE_YYPART){
+  struct transform_variable t;
+  if(!eval_transform_primary(mf, cx, (struct generic_token *)
+                                       begin_expression -> next, end_expression,
+                             &t))
+    return false;
+  switch(begin_expression -> type){
+  case TYPE_XPART:
+    result -> value = t.value[0];
+    return true;
+  case TYPE_YPART:
+    result -> value = t.value[1];
+    return true;
+  default:
+    result -> value = t.value[2 + begin_expression -> type - TYPE_XXPART];
+    return true;
+  }
+}
+@
+\fimcodigo
+
+
 \subsecao{8.4. Path Assignments and Expressions}
 
 To assign a path to a variable with the right type, we use the
@@ -5545,15 +5607,15 @@ This requires the register of these new types of tokens:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_CYCLE          51 // Symbolic token 'cycle'
-#define TYPE_AMPERSAND      52 // Symbolic token '&'
-#define TYPE_JOIN           53 // Symbolic token '..'
-#define TYPE_TENSION        54 // Symbolic token 'tension'
-#define TYPE_AND            55 // Symbolic token 'and'
-#define TYPE_ATLEAST        56 // Symbolic token 'atleast'
-#define TYPE_CONTROLS       57 // Symbolic token 'controls'
-#define TYPE_CURL           58 // Symbolic token 'curl' (still not supported)
-#define TYPE_STRAIGHT_JOIN  59 // Symbolic token '--'
+#define TYPE_CYCLE          55 // Symbolic token 'cycle'
+#define TYPE_AMPERSAND      56 // Symbolic token '&'
+#define TYPE_JOIN           57 // Symbolic token '..'
+#define TYPE_TENSION        58 // Symbolic token 'tension'
+#define TYPE_AND            59 // Symbolic token 'and'
+#define TYPE_ATLEAST        60 // Symbolic token 'atleast'
+#define TYPE_CONTROLS       61 // Symbolic token 'controls'
+#define TYPE_CURL           62 // Symbolic token 'curl' (still not supported)
+#define TYPE_STRAIGHT_JOIN  63 // Symbolic token '--'
 @
 \fimcodigo
 
@@ -7738,9 +7800,9 @@ tokens \monoespaco{reverse}, \monoespaco{subpath} and \monoespaco{of}:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_REVERSE        60 // O token simbólico 'reverse'
-#define TYPE_SUBPATH        61 // O token simbólico 'subpath'
-#define TYPE_OF             62 // O token simbólico 'of'
+#define TYPE_REVERSE        64 // O token simbólico 'reverse'
+#define TYPE_SUBPATH        65 // O token simbólico 'subpath'
+#define TYPE_OF             66 // O token simbólico 'of'
 @
 \fimcodigo
 
@@ -8302,9 +8364,9 @@ This requires adding the following new token types:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_POINT             63 // O token simbólico 'point'
-#define TYPE_PRECONTROL        64 // O token simbólico 'precontrol'
-#define TYPE_POSTCONTROL       65 // O token simbólico 'postcontrol'
+#define TYPE_POINT             67 // O token simbólico 'point'
+#define TYPE_PRECONTROL        68 // O token simbólico 'precontrol'
+#define TYPE_POSTCONTROL       69 // O token simbólico 'postcontrol'
 @
 \fimcodigo
 
@@ -8983,9 +9045,9 @@ This requires three new reserved words:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_NULLPEN        66 // The symbolic token 'nullpen'
-#define TYPE_PENCIRCLE      67 // The symbolic token 'pencircle'
-#define TYPE_MAKEPEN        68 // The symbolic token 'makepen'
+#define TYPE_NULLPEN        70 // The symbolic token 'nullpen'
+#define TYPE_PENCIRCLE      71 // The symbolic token 'pencircle'
+#define TYPE_MAKEPEN        72 // The symbolic token 'makepen'
 @
 \fimcodigo
 
@@ -9283,7 +9345,7 @@ We need to register a new token for ``makepath'':
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_MAKEPATH       69 // O token simbólico 'makepath'
+#define TYPE_MAKEPATH       73 // O token simbólico 'makepath'
 @
 \fimcodigo
 
@@ -10262,8 +10324,8 @@ return true;
 
 To rotate a picture by $\theta$, we multiply by the following matrix:
 
-$$\left[{{cos(\theta) \atop \sin(\theta)}\atop
-      {0\atop 0}}{{-sin(\theta) \atop cos(\theta)}\atop {0 \atop
+$$\left[{{cos(\theta) \atop -\sin(\theta)}\atop
+      {0\atop 0}}{{sin(\theta) \atop cos(\theta)}\atop {0 \atop
       0}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
       1}}\right]
 $$
@@ -10557,7 +10619,7 @@ This means that we need to register a new token for ``nullpicture'':
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_NULLPICTURE        70 // O token simbólico 'nullpicture'
+#define TYPE_NULLPICTURE        74 // O token simbólico 'nullpicture'
 @
 \fimcodigo
 
@@ -10825,7 +10887,7 @@ First we need a new token type for the operator:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_TOTALWEIGHT        71 // Symbolic token 'totalweight'
+#define TYPE_TOTALWEIGHT        75 // Symbolic token 'totalweight'
 @
 \fimcodigo
 

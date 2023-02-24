@@ -5459,6 +5459,69 @@ return true;
 @
 \fimcodigo
 
+\subsubsecao{8.3.3 Transformações em Expressões Numéricas}
+
+Transformações podem aparecer dentro de expressões primárias
+numéricas. Existem as seguintes regras gramaticais adicionais que as
+prevêem:
+
+\alinhaverbatim
+<Primário Numérico> -> <Parte de Transformação><Primário de Transformação>
+<Parte de Transformação> -> xpart | ypart | xxpart | xypart | yxpart | yypart
+\alinhanormal
+
+Os seis operadores acima servem para extrair cada um dos seis valores
+numéricos que compõe uma transformação. A ordem em que aparecem acima
+é a mesma ordem na qual eles extraem o elemento da transformação.
+
+Como \monoespaco{xpart} e \monoespaco{ypart} já havia aparecido quando
+definíamos as expressões de pares, resta definirmos tokens para os
+outros quatro operadores que são novos:
+
+\iniciocodigo
+@<METAFONT: Definição de Token Simbólico@>+=
+#define TYPE_XXPART  51 // O token simbólico xxpart'
+#define TYPE_XYPART  52 // O token simbólico xypart'
+#define TYPE_YXPART  53 // O token simbólico yxpart'
+#define TYPE_YYPART  54 // O token simbólico yypart'
+@
+\fimcodigo
+
+E as palavras reservadas associadas a cada token:
+
+\iniciocodigo
+@<Lista de Palavras Reservadas@>+=
+"xxpart", "xypart", "yxpart", "yypart",
+@
+\fimcodigo
+
+Estes quatro novos operadores são tratados na função que avalia
+expressões numéricas primárias:
+
+\iniciocodigo
+@<Primário Numérico: Operadores Adicionais@>+=
+else if(begin_expression -> type >= TYPE_XXPART &&
+         begin_expression -> type <= TYPE_YYPART){
+  struct transform_variable t;
+  if(!eval_transform_primary(mf, cx, (struct generic_token *)
+                                       begin_expression -> next, end_expression,
+                             &t))
+    return false;
+  switch(begin_expression -> type){
+  case TYPE_XPART:
+    result -> value = t.value[0];
+    return true;
+  case TYPE_YPART:
+    result -> value = t.value[1];
+    return true;
+  default:
+    result -> value = t.value[2 + begin_expression -> type - TYPE_XXPART];
+    return true;
+  }
+}
+@
+\fimcodigo
+
 \subsecao{8.4. Atribuições e Expressões de Caminhos}
 
 Para realizar a atribuição de caminhos a variáveis do tipo certo,
@@ -5620,16 +5683,16 @@ Tudo isso requer que registremos os seguintes novos tipos de tokens:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_CYCLE          51 // O token simbólico 'cycle'
-#define TYPE_AMPERSAND      52 // O token simbólico '&'
-#define TYPE_JOIN           53 // O token simbólico '..'
-#define TYPE_TENSION        54 // O token simbólico 'tension'
-#define TYPE_AND            55 // O token simbólico 'and'
-#define TYPE_ATLEAST        56 // O token simbólico 'atleast'
-#define TYPE_CONTROLS       57 // O token simbólico 'controls'
-#define TYPE_CURL           58 // O token simbólico 'curl'
+#define TYPE_CYCLE          55 // O token simbólico 'cycle'
+#define TYPE_AMPERSAND      56 // O token simbólico '&'
+#define TYPE_JOIN           57 // O token simbólico '..'
+#define TYPE_TENSION        58 // O token simbólico 'tension'
+#define TYPE_AND            59 // O token simbólico 'and'
+#define TYPE_ATLEAST        60 // O token simbólico 'atleast'
+#define TYPE_CONTROLS       61 // O token simbólico 'controls'
+#define TYPE_CURL           52 // O token simbólico 'curl'
                                // (ainda não suportado)
-#define TYPE_STRAIGHT_JOIN  59 // O token simbólico '--'
+#define TYPE_STRAIGHT_JOIN  63 // O token simbólico '--'
 @
 \fimcodigo
 
@@ -7850,9 +7913,9 @@ novos: \monoespaco{reverse}, \monoespaco{subpath} e \monoespaco{of}:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_REVERSE        60 // O token simbólico 'reverse'
-#define TYPE_SUBPATH        61 // O token simbólico 'subpath'
-#define TYPE_OF             62 // O token simbólico 'of'
+#define TYPE_REVERSE        64 // O token simbólico 'reverse'
+#define TYPE_SUBPATH        65 // O token simbólico 'subpath'
+#define TYPE_OF             66 // O token simbólico 'of'
 @
 \fimcodigo
 
@@ -8417,9 +8480,9 @@ Isso requer adicionarmos os seguintes novos tipos de tokens:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_POINT             63 // O token simbólico 'point'
-#define TYPE_PRECONTROL        64 // O token simbólico 'precontrol'
-#define TYPE_POSTCONTROL       65 // O token simbólico 'postcontrol'
+#define TYPE_POINT             67 // O token simbólico 'point'
+#define TYPE_PRECONTROL        68 // O token simbólico 'precontrol'
+#define TYPE_POSTCONTROL       69 // O token simbólico 'postcontrol'
 @
 \fimcodigo
 
@@ -9106,9 +9169,9 @@ Isso requer registrar três novas palavras reservadas:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_NULLPEN        66 // O token simbólico 'nullpen'
-#define TYPE_PENCIRCLE      67 // O token simbólico 'pencircle'
-#define TYPE_MAKEPEN        68 // O token simbólico 'makepen'
+#define TYPE_NULLPEN        70 // O token simbólico 'nullpen'
+#define TYPE_PENCIRCLE      71 // O token simbólico 'pencircle'
+#define TYPE_MAKEPEN        72 // O token simbólico 'makepen'
 @
 \fimcodigo
 
@@ -9409,7 +9472,7 @@ Temos que registrar um novo token para o ``makepath'':
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_MAKEPATH       69 // O token simbólico 'makepath'
+#define TYPE_MAKEPATH       73 // O token simbólico 'makepath'
 @
 \fimcodigo
 
@@ -10401,8 +10464,8 @@ return true;
 Já para rotacionar uma imagem um ângulo $\theta$, multiplicamos sua
 matriz pela vista abaixo:
 
-$$\left[{{cos(\theta) \atop \sin(\theta)}\atop
-      {0\atop 0}}{{-sin(\theta) \atop cos(\theta)}\atop {0 \atop
+$$\left[{{cos(\theta) \atop -\sin(\theta)}\atop
+      {0\atop 0}}{{sin(\theta) \atop cos(\theta)}\atop {0 \atop
       0}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
       1}}\right]
 $$
@@ -10701,7 +10764,7 @@ Isso requer registrar ``nullpicture'' como um token:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_NULLPICTURE        70 // O token simbólico 'nullpicture'
+#define TYPE_NULLPICTURE        74 // O token simbólico 'nullpicture'
 @
 \fimcodigo
 
@@ -10972,7 +11035,7 @@ Primeiro vamos adicionar um novo tipo de token para esse operador:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_TOTALWEIGHT        71 // O token simbólico 'totalweight'
+#define TYPE_TOTALWEIGHT        75 // O token simbólico 'totalweight'
 @
 \fimcodigo
 
