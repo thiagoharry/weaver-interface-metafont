@@ -3391,13 +3391,19 @@ int get_primary_expression_type(struct metafont *mf, struct context *cx,
     }
   }
   else{ // TODO: Código temporário. Usar detecção mais completa
-    struct generic_token *aux;
+    struct generic_token *aux, *aux2;
     aux = (struct generic_token *) begin_expr -> next;
     aux = (struct generic_token *) aux -> next;
+    aux2 = (struct generic_token *) aux -> next;
+    aux2 = (struct generic_token *) aux2 -> next;
     if(begin_expr -> type == TYPE_OPEN_PARENTHESIS &&
        end_expr -> type == TYPE_CLOSE_PARENTHESIS &&
-       aux != NULL &&  aux -> type == TYPE_COMMA)
-      return TYPE_T_PAIR;
+       aux != NULL &&  aux -> type == TYPE_COMMA){
+      if(aux2 -> type == TYPE_COMMA)
+        return TYPE_T_TRANSFORM;
+      else
+        return TYPE_T_PAIR;
+    }
     //@<Descobre Tipo de Expressão Primária@>
   }
   return TYPE_T_NUMERIC;
@@ -4727,35 +4733,55 @@ else if(expr_type == TYPE_T_PAIR){
 \fimcodigo
 
 O operador \monoespaco{xpart} simplesmente retorna o primeiro valor de
-um par:
+um par. Entretanto, devemos ter um cuidado adicional: este operador
+pode ser usado em outro contexto como ainda será visto na Sub-subseção
+8.3.3. Então devemos primeiro nos certificar que o que vem depois do
+operador é um par. Em caso afirmativo, retornamos seu primeiro valor:
 
 \iniciocodigo
 @<Primário Numérico: Operadores Adicionais@>=
 else if(begin_expression -> type == TYPE_XPART){
   struct pair_variable p;
-  if(!eval_pair_primary(mf, cx, (struct generic_token *)
-                                begin_expression -> next, end_expression,
-                                &p))
-    return false;
-  result -> value = p.x;
-  return true;
+  int expr_type = get_primary_expression_type(mf, cx, (struct generic_token *)
+                                                      begin_expression -> next,
+                                                      end_expression);
+  if(expr_type == TYPE_T_PAIR){
+    if(!eval_pair_primary(mf, cx, (struct generic_token *)
+                                  begin_expression -> next, end_expression,
+                                  &p))
+      return false;
+    result -> value = p.x;
+    return true;
+  }
+  else{
+    @<Primário Numérico: X-Part em Não-Par@>
+  }
 }
 @
 \fimcodigo
 
 Enquanto o operador \monoespaco{ypart} retorna o segundo valor de um
-par:
+par. Neste caso também devemos ter o mesmo cuidado de verificar se o
+operando que temos depois é mesmo um par ou de algum outro tipo:
 
 \iniciocodigo
 @<Primário Numérico: Operadores Adicionais@>+=
 else if(begin_expression -> type == TYPE_YPART){
   struct pair_variable p;
-  if(!eval_pair_primary(mf, cx, (struct generic_token *)
-                                begin_expression -> next, end_expression,
-                                &p))
-    return false;
-  result -> value = p.y;
-  return true;
+  int expr_type = get_primary_expression_type(mf, cx, (struct generic_token *)
+                                                      begin_expression -> next,
+                                                      end_expression);
+  if(expr_type == TYPE_T_PAIR){
+    if(!eval_pair_primary(mf, cx, (struct generic_token *)
+                                  begin_expression -> next, end_expression,
+                          &p))
+      return false;
+    result -> value = p.y;
+    return true;
+  }
+  else{
+    @<Primário Numérico: Y-Part em Não-Par@>
+  }
 }
 @
 \fimcodigo
@@ -5507,18 +5533,41 @@ else if(begin_expression -> type >= TYPE_XXPART &&
                                        begin_expression -> next, end_expression,
                              &t))
     return false;
-  switch(begin_expression -> type){
-  case TYPE_XPART:
-    result -> value = t.value[0];
-    return true;
-  case TYPE_YPART:
-    result -> value = t.value[1];
-    return true;
-  default:
-    result -> value = t.value[2 + begin_expression -> type - TYPE_XXPART];
-    return true;
-  }
+  result -> value = t.value[2 + begin_expression -> type - TYPE_XXPART];
+  return true;
 }
+@
+\fimcodigo
+
+Mas e quanto ao \monoespaco{xpart} e \monoespaco{ypart}? Em princípio,
+eles já foram tratados para o caso em que extraimos valores de
+pares. Precisamos apenas incrementar a definição já feita na
+Sub-subseção 8.2.4. para tratar o caso em que devemos aplicá-la quando
+não temos um par. Fazendo isso no caso do \monoespaco{xpart}:
+
+\iniciocodigo
+@<Primário Numérico: X-Part em Não-Par@>=
+struct transform_variable t;
+if(!eval_transform_primary(mf, cx, (struct generic_token *)
+                                   begin_expression -> next, end_expression,
+                           &t))
+  return false;
+result -> value = t.value[0];
+return true;
+@
+\fimcodigo
+
+O mesmo deve ser feito no operador \monoespaco{ypart}:
+
+\iniciocodigo
+@<Primário Numérico: Y-Part em Não-Par@>=
+struct transform_variable t;
+if(!eval_transform_primary(mf, cx, (struct generic_token *)
+                                   begin_expression -> next, end_expression,
+                           &t))
+  return false;
+result -> value = t.value[1];
+return true;
 @
 \fimcodigo
 

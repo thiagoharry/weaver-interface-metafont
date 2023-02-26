@@ -3334,13 +3334,19 @@ int get_primary_expression_type(struct metafont *mf, struct context *cx,
     }
   }
   else{ // TODO: FIXME: Temporary code. Do a proper detection.
-    struct generic_token *aux;
+    struct generic_token *aux, *aux2;
     aux = (struct generic_token *) begin_expr -> next;
     aux = (struct generic_token *) aux -> next;
+    aux2 = (struct generic_token *) aux -> next;
+    aux2 = (struct generic_token *) aux2 -> next;
     if(begin_expr -> type == TYPE_OPEN_PARENTHESIS &&
        end_expr -> type == TYPE_CLOSE_PARENTHESIS &&
-       aux != NULL &&  aux -> type == TYPE_COMMA)
-      return TYPE_T_PAIR;
+       aux != NULL &&  aux -> type == TYPE_COMMA){
+      if(aux2 -> type  == TYPE_COMMA)
+        return TYPE_T_TRANSFORM;
+      else
+        return TYPE_T_PAIR;
+    }
     //@<Discover Primary Expression Type@>
   }
   return TYPE_T_NUMERIC;
@@ -4659,35 +4665,56 @@ else if(expr_type == TYPE_T_PAIR){
 @
 \fimcodigo
 
-The operator \monoespaco{xpart} returns the first value in a pair:
+The operator \monoespaco{xpart} returns the first value in a
+pair. However, we must take an additioonal care: this operator can be
+use in contexts other than getting value from a pair, as we will still
+see in Sub-subsection 8.3.3. Therefore, first we must check if what we
+have after the operator is a pair. If so, we return the first value:
 
 \iniciocodigo
 @<Numeric Primary: Additional Operators@>=
 else if(begin_expression -> type == TYPE_XPART){
   struct pair_variable p;
-  if(!eval_pair_primary(mf, cx, (struct generic_token *)
-                                begin_expression -> next, end_expression,
-                                &p))
-    return false;
-  result -> value = p.x;
-  return true;
+  int expr_type = get_primary_expression_type(mf, cx, (struct generic_token *)
+                                                      begin_expression -> next,
+                                                      end_expression);
+  if(expr_type == TYPE_T_PAIR){
+    if(!eval_pair_primary(mf, cx, (struct generic_token *)
+                                  begin_expression -> next, end_expression,
+                                  &p))
+      return false;
+    result -> value = p.x;
+    return true;
+  }
+  else{
+    @<Numeric Primary: X-Part in Non-Pair@>
+  }
 }
 @
 \fimcodigo
 
 While the operator \monoespaco{ypart} returns the second value in a
-pair:
+pair. In this case we also must take care to check if we have as
+operand is a pair or some other thing:
 
 \iniciocodigo
 @<Numeric Primary: Additional Operators@>+=
 else if(begin_expression -> type == TYPE_YPART){
   struct pair_variable p;
-  if(!eval_pair_primary(mf, cx, (struct generic_token *)
-                                begin_expression -> next, end_expression,
-                                &p))
-    return false;
-  result -> value = p.y;
-  return true;
+  int expr_type = get_primary_expression_type(mf, cx, (struct generic_token *)
+                                                      begin_expression -> next,
+                                                      end_expression);
+  if(expr_type == TYPE_T_PAIR){
+    if(!eval_pair_primary(mf, cx, (struct generic_token *)
+                                  begin_expression -> next, end_expression,
+                          &p))
+      return false;
+    result -> value = p.y;
+    return true;
+  }
+  else{
+    @<Numeric Primary: Y-Part in Non-Pair@>
+  }
 }
 @
 \fimcodigo
@@ -5430,20 +5457,45 @@ else if(begin_expression -> type >= TYPE_XXPART &&
                                        begin_expression -> next, end_expression,
                              &t))
     return false;
-  switch(begin_expression -> type){
-  case TYPE_XPART:
-    result -> value = t.value[0];
-    return true;
-  case TYPE_YPART:
-    result -> value = t.value[1];
-    return true;
-  default:
-    result -> value = t.value[2 + begin_expression -> type - TYPE_XXPART];
-    return true;
-  }
+  result -> value = t.value[2 + begin_expression -> type - TYPE_XXPART];
+  return true;
 }
 @
 \fimcodigo
+
+But what about \monoespaco{xpart} and \monoespaco{ypart}? They were
+already treated when we were evaluating primary numeric expressions in
+Sub-subsection 8.2.4. But we need to augment the definition of this
+operator present there to also deal with cases where the operand is
+not a pair, but a transform. This is how we do this for
+the \monoespaco{xpart} operator:
+
+\iniciocodigo
+@<Numeric Primary: X-Part in Non-Pair@>=
+struct transform_variable t;
+if(!eval_transform_primary(mf, cx, (struct generic_token *)
+                                   begin_expression -> next, end_expression,
+                           &t))
+  return false;
+result -> value = t.value[0];
+return true;
+@
+\fimcodigo
+
+And the same must be done for the \onoespaco{ypart} operator:
+
+\iniciocodigo
+@<Numeric Primary: Y-Part in Non-Pair@>=
+struct transform_variable t;
+if(!eval_transform_primary(mf, cx, (struct generic_token *)
+                                   begin_expression -> next, end_expression,
+                           &t))
+  return false;
+result -> value = t.value[1];
+return true;
+@
+\fimcodigo
+
 
 
 \subsecao{8.4. Path Assignments and Expressions}
