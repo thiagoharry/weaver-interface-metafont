@@ -3399,11 +3399,12 @@ int get_primary_expression_type(struct metafont *mf, struct context *cx,
     if(begin_expr -> type == TYPE_OPEN_PARENTHESIS &&
        end_expr -> type == TYPE_CLOSE_PARENTHESIS &&
        aux != NULL &&  aux -> type == TYPE_COMMA){
-      if(aux2 -> type == TYPE_COMMA)
+      if(aux2 -> type  == TYPE_COMMA)
         return TYPE_T_TRANSFORM;
       else
         return TYPE_T_PAIR;
-    }
+
+}
     //@<Descobre Tipo de Expressão Primária@>
   }
   return TYPE_T_NUMERIC;
@@ -4082,7 +4083,7 @@ tokens até achar a operação secundária mais à direita, ignorando
 aquilo que está aninhado entre parênteses e colchetes. Deve-se seguir
 as mesmas regras para determinar se o \monoespaco{/} é mesmo uma
 divisão ou se é uma fração. Mas como aqui temos um total de nove
-operadores secundários, incluindo os transformadores Devido à
+operadores secundários, incluindo os transformadores, devido à
 quantidade, vamos mostrar separadamente cada um deles ao invés de
 colocá-los todos neste bloco de código abaixo:
 
@@ -4103,7 +4104,10 @@ bool eval_pair_secondary(struct metafont *mf, struct context *cx,
              p -> type == TYPE_DIVISION || p -> type == TYPE_ROTATED ||
              p -> type == TYPE_SCALED || p -> type == TYPE_SHIFTED ||
              p -> type == TYPE_SLANTED || p -> type == TYPE_XSCALED ||
-             p -> type == TYPE_YSCALED || p -> type == TYPE_ZSCALED)){
+             p -> type == TYPE_YSCALED || p -> type == TYPE_ZSCALED ||
+             // O operador 'transformed' não foi ainda definido. Será visto na
+             // Subsubseção 8.3.4.
+             p -> type == TYPE_TRANSFORMED)){
       if(p -> type == TYPE_DIVISION && prev -> type == TYPE_NUMERIC &&
          p != end_expression &&
          ((struct generic_token *) p -> next) -> type != TYPE_NUMERIC &&
@@ -4133,6 +4137,7 @@ bool eval_pair_secondary(struct metafont *mf, struct context *cx,
     @<Operador Secundário de Pares: X-Escala@>
     @<Operador Secundário de Pares: Y-Escala@>
     @<Operador Secundário de Pares: Z-Escala@>
+    @<Operador Secundário de Pares: Operadores Adicionais@>
   }
   else
     return eval_pair_primary(mf, cx, begin_expression,
@@ -5459,8 +5464,9 @@ for(i = 0; i < 6; i ++){
       COUNT_NESTING(p);
     }
     if(IS_NOT_NESTED() && ((i < 5 && p -> type == TYPE_COMMA) ||
-                            (i == 5 && p -> type == TYPE_CLOSE_PARENTHESIS)))
+                            (i == 5 && p -> type == TYPE_CLOSE_PARENTHESIS))){
       break;
+    }
     end_numeric_expr = p;
     if(p != end_expression)
       p = (struct generic_token *) p -> next;
@@ -5485,7 +5491,7 @@ return true;
 @
 \fimcodigo
 
-\subsubsecao{8.3.3 Transformações em Expressões Numéricas}
+\subsubsecao{8.3.3. Transformações em Expressões Numéricas}
 
 Transformações podem aparecer dentro de expressões primárias
 numéricas. Existem as seguintes regras gramaticais adicionais que as
@@ -5568,6 +5574,39 @@ if(!eval_transform_primary(mf, cx, (struct generic_token *)
   return false;
 result -> value = t.value[1];
 return true;
+@
+\fimcodigo
+
+\subsubsecao{8.3.4. Transformações em Expressões de Pares}
+
+Transformações também aparecem nas regras gramaticais de expressões de
+pares. Existe uma expressão secundária que obtém uma expressão
+secundária de par do lado esquerdo e um primário de transformação do
+lado direito:
+
+\alinhaverbatim
+<Secundário de Par> -> <Secundário de Par><Transformador>
+<Transformador> -> (...) | transformed <Primário de Transformação>
+\alinhanormal
+
+O que este operador faz é aplicar a transformação linear sobre o
+par. Vamos implementá-lo com o código adicional abaixo que irá se
+somar ao código que implementa transformações sobre pares da
+Subsubseção 8.2.2.
+
+\iniciocodigo
+@<Operador Secundário de Pares: Operadores Adicionais@>=
+else if(last_mul -> type == TYPE_TRANSFORMED){
+  struct pair_variable a;
+  struct transform_variable b;
+  if(!eval_pair_secondary(mf, cx, begin_expression, end_secondary, &a))
+    return false;
+  if(!eval_transform_primary(mf, cx, begin_primary, end_expression, &b))
+    return false;
+  result -> x = b.value[0] + a.x * b.value[2] + a.y * b.value[3];
+  result -> y = b.value[1] + a.x * b.value[4] + a.y * b.value[5];
+  return true;
+}
 @
 \fimcodigo
 

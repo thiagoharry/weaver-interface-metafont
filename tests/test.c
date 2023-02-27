@@ -1280,6 +1280,29 @@ void test_numeric_expressions(void){
   destroy_context(cx);
 }
 
+void test_pair_expressions(void){
+  struct metafont *mf;
+  struct context *cx;
+  bool ret;
+  struct named_variable *a;
+  struct pair_variable *pair_a;
+  mf = init_metafont(malloc, free, "tests/pair_expressions.mf");
+  cx = init_context();
+  void *p = lexer(mf, malloc, free, "tests/pair_expressions.mf");
+  ret = eval_program(mf, cx, p);
+  a = (struct named_variable *) mf -> named_variables;
+  pair_a = (struct pair_variable *) a -> var;
+  assert("Interpreting program with pair expressions", ret);
+  printf("DEBUG: (%f, %f)\n", pair_a -> x, pair_a -> y);
+  assert("Evaluating transform over pairs",
+	 ALMOST_EQUAL(pair_a -> x, 20.0) &&
+	 ALMOST_EQUAL(pair_a -> y, 27.0));
+  free_token_list(free, p);
+  destroy_metafont(mf);
+  destroy_context(cx);
+}
+
+
 
 void test_transform_expressions(void){
   struct metafont *mf;
@@ -1507,6 +1530,7 @@ int main(int argc, char **argv){
   test_variables();
   test_assignments();
   test_numeric_expressions();
+  test_pair_expressions();
   test_transform_expressions();
   test_path_expressions();
   test_pen_expressions();

@@ -4042,7 +4042,10 @@ bool eval_pair_secondary(struct metafont *mf, struct context *cx,
              p -> type == TYPE_DIVISION || p -> type == TYPE_ROTATED ||
              p -> type == TYPE_SCALED || p -> type == TYPE_SHIFTED ||
              p -> type == TYPE_SLANTED || p -> type == TYPE_XSCALED ||
-             p -> type == TYPE_YSCALED || p -> type == TYPE_ZSCALED)){
+             p -> type == TYPE_YSCALED || p -> type == TYPE_ZSCALED ||
+             // Operator 'transformed' still not defined. We will see
+             // it in Subsubsection 8.3.4.
+             p -> type == TYPE_TRANSFORMED)){
       if(p -> type == TYPE_DIVISION && prev -> type == TYPE_NUMERIC &&
          p != end_expression &&
          ((struct generic_token *) p -> next) -> type != TYPE_NUMERIC &&
@@ -4072,6 +4075,7 @@ bool eval_pair_secondary(struct metafont *mf, struct context *cx,
     @<Secondary Pair Operator: X-Scaling@>
     @<Secondary Pair Operator: Y-Scaling@>
     @<Secondary Pair Operator: Z-Scaling@>
+    @<Secondary Pair Operator: Additional Operators@>
   }
   else
     return eval_pair_primary(mf, cx, begin_expression,
@@ -5411,7 +5415,7 @@ return true;
 @
 \fimcodigo
 
-\subsubsecao{8.3.3 Transforms in Numeric Expressions}
+\subsubsecao{8.3.3. Transforms in Numeric Expressions}
 
 Transforms can be placed in primary numeric expressions. The following
 grammar rules allow them:
@@ -5496,6 +5500,37 @@ return true;
 @
 \fimcodigo
 
+\subsubsecao{8.3.4. Transforms in Pair Expressions}
+
+Transforms also appear in grammar rules about pair expressions. It is
+needed to deal woth transform expressions in pair secondary
+expressions:
+
+\alinhaverbatim
+<Pair Secondary> -> <Pair Secondary><Transformer>
+<Transformer> -> (...) | transformed <Transform Primary>
+\alinhanormal
+
+This operator apply the linear transform in the right-side to the pair
+in the left-side. We can implement it with the code below that augment
+the already written code about transformers in Subsection 8.2.2. about
+pair secondary expressions.
+
+\iniciocodigo
+@<Secondary Pair Operator: Additional Operators@>=
+else if(last_mul -> type == TYPE_TRANSFORMED){
+  struct pair_variable a;
+  struct transform_variable b;
+  if(!eval_pair_secondary(mf, cx, begin_expression, end_secondary, &a))
+    return false;
+  if(!eval_transform_primary(mf, cx, begin_primary, end_expression, &b))
+    return false;
+  result -> x = b.value[0] + a.x * b.value[2] + a.y * b.value[3];
+  result -> y = b.value[1] + a.x * b.value[4] + a.y * b.value[5];
+  return true;
+}
+@
+\fimcodigo
 
 
 \subsecao{8.4. Path Assignments and Expressions}
