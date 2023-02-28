@@ -343,12 +343,12 @@ void test_path_expressions(void){
   bool ret;
   struct named_variable *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9,
     *quartercircle, *halfcircle, *fullcircle, *unitsquare, *a, *b, *c,
-    *d, *e, *f, *g, *h, *i, *j, *k, *l, *n, *q, *r, *s;
+    *d, *e, *f, *g, *h, *i, *j, *k, *l, *n, *q, *r, *s, *m;
   struct path_variable *path_p1, *path_p2, *path_p3, *path_p4, *path_p5,
     *path_p6, *path_p7, *path_p8, *path_p9, *quartercircle_path,
     *halfcircle_path, *fullcircle_path, *unitsquare_path, *path_a,
     *path_b, *path_c, *path_d, *path_e, *path_f, *path_g, *path_h,
-    *path_i, *path_j, *path_k, *path_l;
+    *path_i, *path_j, *path_k, *path_l, *path_m;
   struct numeric_variable *numeric_n;
   struct pair_variable *pair_q, *pair_r, *pair_s;
   mf = init_metafont(malloc, free, "tests/path_expressions.mf");
@@ -385,6 +385,7 @@ void test_path_expressions(void){
   q = n -> next;
   r = q -> next;
   s = r -> next;
+  m = s -> next;
   path_p1 = (struct path_variable *) p1 -> var;
   path_p2 = (struct path_variable *) p2 -> var;
   path_p3 = (struct path_variable *) p3 -> var;
@@ -410,6 +411,7 @@ void test_path_expressions(void){
   path_j = (struct path_variable *) j -> var;
   path_k = (struct path_variable *) k -> var;
   path_l = (struct path_variable *) l -> var;
+  path_m = (struct path_variable *) m -> var;
   numeric_n = (struct numeric_variable *) n -> var;
   pair_q = (struct pair_variable *) q -> var;
   pair_r = (struct pair_variable *) r -> var;
@@ -940,6 +942,17 @@ void test_path_expressions(void){
   assert("Getting correct postcontrol point in a path by index",
 	 ALMOST_EQUAL(pair_s -> x, 0.2598) &&
 	 ALMOST_EQUAL(pair_s -> y, 0.44733));
+  assert("Applying transforms over paths",
+	 path_m -> total_length == 5 &&
+	 ALMOST_EQUAL(get_point(path_m, 0) -> x, 3.0) &&
+	 ALMOST_EQUAL(get_point(path_m, 0) -> y, 4.0) &&
+	 ALMOST_EQUAL(get_point(path_m, 1) -> x, 8.0) &&
+	 ALMOST_EQUAL(get_point(path_m, 1) -> y, 11.0) &&
+	 ALMOST_EQUAL(get_point(path_m, 2) -> x, 14.0) &&
+	 ALMOST_EQUAL(get_point(path_m, 2) -> y, 19.0) &&
+	 ALMOST_EQUAL(get_point(path_m, 3) -> x, 9.0) &&
+	 ALMOST_EQUAL(get_point(path_m, 3) -> y, 12.0) &&
+	 path_m -> cyclic == true);
   free_token_list(free, p);
   destroy_metafont(mf);
   destroy_context(cx);
@@ -1293,7 +1306,6 @@ void test_pair_expressions(void){
   a = (struct named_variable *) mf -> named_variables;
   pair_a = (struct pair_variable *) a -> var;
   assert("Interpreting program with pair expressions", ret);
-  printf("DEBUG: (%f, %f)\n", pair_a -> x, pair_a -> y);
   assert("Evaluating transform over pairs",
 	 ALMOST_EQUAL(pair_a -> x, 20.0) &&
 	 ALMOST_EQUAL(pair_a -> y, 27.0));

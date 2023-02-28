@@ -7446,14 +7446,16 @@ The grammar for secondary path expressions is:
                     <Path Secondary><Transformer>
 \alinhanormal
 
-The transformers are the same that were presented for pair
-expressions. The first thing that we should test in theses expressions
-is if we have a transformer at the end of the expression. If so, then
-we should apply the last rule in the grammar above. If not, we should
-check if we have a secondary pair operator (multiplication or
-division). If so, we apply the second rule, treating the path
-secondary expression as a pair secondary. Otherwise we apply the first
-rule and interpret the expression as a primery path expression.
+The transformers are the same that were presented for pair expressions
+plus the \monoespaco{transformed} operator introduced in the section
+about transforms. The first thing that we should test in theses
+expressions is if we have a transformer at the end of the
+expression. If so, then we should apply the last rule in the grammar
+above. If not, we should check if we have a secondary pair operator
+(multiplication or division). If so, we apply the second rule,
+treating the path secondary expression as a pair secondary. Otherwise
+we apply the first rule and interpret the expression as a primery path
+expression.
 
 Applying a transformer to rotate, scale and others means applying the
 transformation in each extremity point and each control point in the
@@ -7491,7 +7493,8 @@ bool eval_path_secondary(struct metafont *mf, struct context *cx,
              p -> type == TYPE_DIVISION || p -> type == TYPE_ROTATED ||
              p -> type == TYPE_SCALED || p -> type == TYPE_SHIFTED ||
              p -> type == TYPE_SLANTED || p -> type == TYPE_XSCALED ||
-             p -> type == TYPE_YSCALED || p -> type == TYPE_ZSCALED)){
+             p -> type == TYPE_YSCALED || p -> type == TYPE_ZSCALED ||
+             p -> type == TYPE_TRANSFORMED)){
       if(p -> type == TYPE_DIVISION && prev -> type == TYPE_NUMERIC &&
          p != end_expression &&
          ((struct generic_token *) p -> next) -> type != TYPE_NUMERIC &&
@@ -7529,6 +7532,7 @@ bool eval_path_secondary(struct metafont *mf, struct context *cx,
     @<Path Transform: X-Scale@>
     @<Path Transform: Y-Scale@>
     @<Path Transform: Z-Scale@>
+    @<Path Transform: Generic Transform@>
   }
   else if(have_pair_operator){
     struct pair_variable pair;
@@ -7802,9 +7806,9 @@ else if(transform_op -> type == TYPE_YSCALED){
 @
 \fimcodigo
 
-The last transformer is the Z-scale which reads a pair, interprets it
-as a complex number, interpret all points in the path as complex
-numbers and multiply them:
+The last but one transformer is the Z-scale which reads a pair,
+interprets it as a complex number, interpret all points in the path as
+complex numbers and multiply them:
 
 $$
 (a+bi)(c+di) = ac + (ad)i + (cb)i + (bd)i^2 = (ac - bd) + (cb+ad)i
@@ -7823,13 +7827,6 @@ else if(transform_op -> type == TYPE_ZSCALED){
     return false;
   path_zscale(result, a.x, a.y);  
   return true;
-}
-else{
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable transformer\n",
-          mf -> file, transform_op -> line);
-#endif
-  return false;
 }
 @
 \fimcodigo
@@ -7868,6 +7865,70 @@ void path_zscale(struct path_variable *p, float x, float y){
 }
 @
 \fimcodigo
+
+The last transformer is a generic linear transform, where we will get
+a transform specifying how each point in the path should be
+transformed. We deal with this case as below:
+
+\iniciocodigo
+@<Path Transform: Generic Transform@>=
+else if(transform_op -> type == TYPE_TRANSFORMED){
+  struct transform_variable a;
+  if(!eval_transform_primary(mf, cx, transform_op -> next, end_expression, &a))
+    return false;
+  path_transform(result, a.value[0], a.value[1], a.value[2], a.value[3],
+                 a.value[4], a.value[5]);
+  return true;
+}
+else{
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable transformer\n",
+          mf -> file, transform_op -> line);
+#endif
+  return false;
+}
+@
+\fimcodigo
+
+For this, we use the recursive function below:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+void path_transform(struct path_variable *p, float x, float y, float xx,
+                    float xy, float yx, float yy);
+@
+\fimcodigo
+
+Which is defined as below:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+void path_transform(struct path_variable *p, float x, float y, float xx,
+                    float xy, float yx, float yy){
+  int i;
+  for(i = 0; i < p -> length; i ++){
+    if(p -> points[i].subpath != NULL)
+      path_transform((struct path_variable *) (p -> points[i].subpath),
+                     x, y, xx, xy, yx, yy);
+    else{
+      float x0 = p -> points[i].x;
+      float y0 = p -> points[i].y;
+      p -> points[i].x = x + x0 * xx + y0 * xy;
+      p -> points[i].y = y + x0 * yx + y0 * yy;
+      x0 = p -> points[i].u_x;
+      y0 = p -> points[i].u_y;
+      p -> points[i].u_x = x + x0 * xx + y0 * xy;
+      p -> points[i].u_y = y + x0 * yx + y0 * yy;
+      x0 = p -> points[i].v_x;
+      y0 = p -> points[i].v_y;
+      p -> points[i].v_x = x + x0 * xx + y0 * xy;
+      p -> points[i].v_x = y + x0 * yx + y0 * yy;
+    }
+  }
+}
+@
+\fimcodigo
+
 
 \subsubsecao{8.4.4. Primary Path Expressions}
 

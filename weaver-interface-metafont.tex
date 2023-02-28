@@ -7562,10 +7562,12 @@ A gramática para expressões secundárias de caminho é:
 \alinhanormal
 
 Os transformadores são os mesmos que já foram apresentados na
-expressão secundária de par. A primeira coisa que devemos testar é se
-temos um transformador no fim e se temos uma operação secundária de
-par (multiplicação e divisão). Depois de percorrer toda a expressão,
-se houver o tranformador, aplicamos a terceira regra da gramática
+expressão secundária de par, mas incluindo o
+operador \monoespaco{transformed} introduzido na seção sobre
+transformações. A primeira coisa que devemos testar é se temos um
+transformador no fim e se temos uma operação secundária de par
+(multiplicação e divisão). Depois de percorrer toda a expressão, se
+houver o tranformador, aplicamos a terceira regra da gramática
 acima. Se houver uma multiplicação e divisão, mas não um
 transformador, aplicamos a segunda regra. E caso não haja nada disso,
 aplicamos a primeira.
@@ -7605,7 +7607,8 @@ bool eval_path_secondary(struct metafont *mf, struct context *cx,
              p -> type == TYPE_DIVISION || p -> type == TYPE_ROTATED ||
              p -> type == TYPE_SCALED || p -> type == TYPE_SHIFTED ||
              p -> type == TYPE_SLANTED || p -> type == TYPE_XSCALED ||
-             p -> type == TYPE_YSCALED || p -> type == TYPE_ZSCALED)){
+             p -> type == TYPE_YSCALED || p -> type == TYPE_ZSCALED ||
+             p -> type == TYPE_TRANSFORMED)){
       if(p -> type == TYPE_DIVISION && prev -> type == TYPE_NUMERIC &&
          p != end_expression &&
          ((struct generic_token *) p -> next) -> type != TYPE_NUMERIC &&
@@ -7645,6 +7648,7 @@ bool eval_path_secondary(struct metafont *mf, struct context *cx,
     @<Transformação de Caminho: X-Escala@>
     @<Transformação de Caminho: Y-Escala@>
     @<Transformação de Caminho: Z-Escala@>
+    @<Transformação de Caminho: Transformação Genérica@>
   }
   else if(have_pair_operator){
     struct pair_variable pair;
@@ -7918,7 +7922,7 @@ else if(transform_op -> type == TYPE_YSCALED){
 @
 \fimcodigo
 
-A última transformação é a mudança de escala Z que lê um par, o
+A penúltima transformação é a mudança de escala Z que lê um par, o
 interpreta como número complexo, e também interpreta cada ponto do
 caminho como número complexo fazendo a multiplicação:
 
@@ -7930,20 +7934,13 @@ Interpretamos e realizamos a transformação da forma abaixo, lembrando
 também que esta é a última transformação possível:
 
 \iniciocodigo
- @<Transformação de Caminho: Z-Escala@>=
+@<Transformação de Caminho: Z-Escala@>=
 else if(transform_op -> type == TYPE_ZSCALED){
   struct pair_variable a;
   if(!eval_pair_primary(mf, cx, transform_op -> next, end_expression, &a))
     return false;
   path_zscale(result, a.x, a.y);  
   return true;
-}
-else{
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable transformer\n",
-          mf -> file, transform_op -> line);
-#endif
-  return false;
 }
 @
 \fimcodigo
@@ -7977,6 +7974,69 @@ void path_zscale(struct path_variable *p, float x, float y){
       y0 = p -> points[i].v_y;
       p -> points[i].v_x = x0 * x - y0 * y;
       p -> points[i].v_x = x0 * y + y0 * x;
+    }
+  }
+}
+@
+\fimcodigo
+
+E o último tipo de transformador é a transformação genérica, onde
+teremos um transformador que irá indicar como iremos mudar todos os
+pontos do caminho. Tratamos este caso da seguinte forma:
+
+\iniciocodigo
+@<Transformação de Caminho: Transformação Genérica@>=
+else if(transform_op -> type == TYPE_TRANSFORMED){
+  struct transform_variable a;
+  if(!eval_transform_primary(mf, cx, transform_op -> next, end_expression, &a))
+    return false;
+  path_transform(result, a.value[0], a.value[1], a.value[2], a.value[3],
+                 a.value[4], a.value[5]);
+  return true;
+}
+else{
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable transformer\n",
+          mf -> file, transform_op -> line);
+#endif
+  return false;
+}
+@
+\fimcodigo
+
+Para isso usamos a seguinte função recursiva:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+void path_transform(struct path_variable *p, float x, float y, float xx,
+                    float xy, float yx, float yy);
+@
+\fimcodigo
+
+A função é definida como:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+void path_transform(struct path_variable *p, float x, float y, float xx,
+                    float xy, float yx, float yy){
+  int i;
+  for(i = 0; i < p -> length; i ++){
+    if(p -> points[i].subpath != NULL)
+      path_transform((struct path_variable *) (p -> points[i].subpath),
+                     x, y, xx, xy, yx, yy);
+    else{
+      float x0 = p -> points[i].x;
+      float y0 = p -> points[i].y;
+      p -> points[i].x = x + x0 * xx + y0 * xy;
+      p -> points[i].y = y + x0 * yx + y0 * yy;
+      x0 = p -> points[i].u_x;
+      y0 = p -> points[i].u_y;
+      p -> points[i].u_x = x + x0 * xx + y0 * xy;
+      p -> points[i].u_y = y + x0 * yx + y0 * yy;
+      x0 = p -> points[i].v_x;
+      y0 = p -> points[i].v_y;
+      p -> points[i].v_x = x + x0 * xx + y0 * xy;
+      p -> points[i].v_x = y + x0 * yx + y0 * yy;
     }
   }
 }

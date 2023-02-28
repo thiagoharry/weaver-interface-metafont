@@ -7,6 +7,7 @@ path unitsquare;
 path a, b, c, d, e, f, g, h, i, j, k, l;
 numeric n;
 pair q, r, s;
+path m;
 
 p1 = (1, 5);
 p2 = p1;
@@ -42,6 +43,6 @@ n = length fullcircle;
 q = point 666 of fullcircle;
 r = precontrol 666 of halfcircle;
 s = postcontrol 1 of halfcircle;
-
+m = unitsquare transformed (3, 4, 5, 6, 7, 8);
 end
 
