@@ -8925,13 +8925,15 @@ A sintaxe para expressões secundárias de caneta é:
                    slanted <Numérico Primário> |
                    xscaled <Numérico Primário> |
                    yscaled <Numérico Primário> |
-                   zscaled <Par Primário>
+                   zscaled <Par Primário> |
+                   transformed <Transformação Primária>
 \alinhanormal
 
 Transformadores não são coisas novas, eles já eram usados em
-expressões de pares e de caminho. Mas aplicá-los sobre canetas é
-ligeiramente diferente, pois ao invés de modificar cada um de seus
-pontos, nós modificamos apenas sua matriz de transformação OpenGL.
+expressões de pares, transformações e de caminho. Mas aplicá-los sobre
+canetas é ligeiramente diferente, pois ao invés de modificar cada um
+de seus pontos, nós modificamos apenas sua matriz de transformação
+OpenGL.
 
 A declaração da função que avaliará expressões secundárias de caneta
 é:
@@ -8966,7 +8968,8 @@ bool eval_pen_secondary(struct metafont *mf, struct context *cx,
     if(IS_NOT_NESTED() && (p -> type == TYPE_ROTATED ||
        p -> type == TYPE_SCALED || p -> type == TYPE_SHIFTED ||
        p -> type == TYPE_SLANTED || p -> type == TYPE_XSCALED ||
-       p -> type == TYPE_YSCALED || p -> type == TYPE_ZSCALED)){
+       p -> type == TYPE_YSCALED || p -> type == TYPE_ZSCALED ||
+       p -> type == TYPE_TRANSFORMED)){
       last_transformer = p;
       before_last_transformer = prev;
     }
@@ -9001,6 +9004,9 @@ bool eval_pen_secondary(struct metafont *mf, struct context *cx,
     }
     else if(last_transformer -> type == TYPE_ZSCALED){
       @<Secundário de Caneta: Z-Escala@>
+    }
+    else if(last_transformer -> type == TYPE_TRANSFORMED){
+      @<Secundário de Caneta: Transformação Genérica@>
     }
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognized pen transformer\n",
@@ -9254,7 +9260,7 @@ return true;
 @
 \fimcodigo
 
-Por fim, a mudança de escala $z$ înterpreta dois pares como números
+A mudança de escala $z$ înterpreta dois pares como números
 complexos e os multiplica:
 
 $$
@@ -9301,6 +9307,52 @@ if(!(pen -> flags & (FLAG_STRAIGHT | FLAG_NULL))){ // Requer retriangular a cane
 return true;
 @
 \fimcodigo
+
+Por fim, a última transformação envolve aplicar a transformação linear
+$(a, b, c, d, e, f)$, o que é o mesmo que multiplicar o ponto $(x, y,
+z, 1)$ por:
+
+$$\left[x\; y\; z\; 1\right]\left[{{c \atop d}\atop {0\atop
+      a}}{{e \atop f}\atop {0 \atop b}}{{0\atop 0}\atop{1 \atop
+      0}}{{0 \atop 0}\atop{0\atop 1}}\right]=\left[a+cx+dy \;\; b+ex+fy\;\;
+      z\;\; 1\right]
+$$
+
+Fazemos esta transformação com o código abaixo:
+
+\iniciocodigo
+@<Secundário de Caneta: Transformação Genérica@>=
+struct transform_variable t;
+float temp_matrix[16];
+if(!eval_transform_primary(mf, cx, last_transformer -> next, end_expression, &t))
+  return false;
+memcpy(temp_matrix, pen -> gl_matrix, 16 * sizeof(float));
+pen -> gl_matrix[0] = temp_matrix[0] * t.value[2] + temp_matrix[1] * t.value[3] +
+                      temp_matrix[3] * t.value[0];
+pen -> gl_matrix[1] = temp_matrix[0] * t.value[4] + temp_matrix[1] * t.value[5] +
+                      temp_matrix[3] * t.value[1];
+pen -> gl_matrix[4] = temp_matrix[4] * t.value[2] + temp_matrix[5] * t.value[3] +
+                      temp_matrix[7] * t.value[0];
+pen -> gl_matrix[5] = temp_matrix[4] * t.value[4] + temp_matrix[5] * t.value[5] +
+                      temp_matrix[7] * t.value[1];
+pen -> gl_matrix[12] = temp_matrix[12] * t.value[2] + temp_matrix[13] * t.value[3] +
+                      temp_matrix[15] * t.value[0];
+pen -> gl_matrix[13] = temp_matrix[12] * t.value[4] + temp_matrix[13] * t.value[5] +
+                       temp_matrix[15] * t.value[1];
+if(!(pen -> flags & (FLAG_STRAIGHT | FLAG_NULL))){ // Requer retriangular a caneta:
+  if(pen -> referenced != NULL){
+    recursive_copy_points(temporary_alloc, &(pen -> format),
+                          pen -> referenced -> format, true);
+    pen -> referenced = NULL;
+  }
+  else if(pen -> gl_vbo != 0)
+    glDeleteBuffers(1, &(pen -> gl_vbo));  
+  pen -> gl_vbo = 0;
+}
+return true;
+@
+\fimcodigo
+
 
 \subsubsecao{8.5.3. Expressões Primárias de Caneta}
 

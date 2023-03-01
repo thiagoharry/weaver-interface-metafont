@@ -8809,9 +8809,10 @@ The syntax for secondary pen expressions is:
                  xscaled <Numeric Primary> |
                  yscaled <Numeric Primary> |
                  zscaled <Pair Primary>
+                 transformed <Transformação Primária>
 \alinhanormal
 
-Transformers are not new, they were already used in pair expressions
+Transformers are not new, they were already used in pair, transforms
 and path expressions. But apply them over pens is a little different,
 as instead of modifying each one of its points, we modify only its
 OpenGL matrix transformation.
@@ -8850,7 +8851,8 @@ bool eval_pen_secondary(struct metafont *mf, struct context *cx,
     if(IS_NOT_NESTED() && (p -> type == TYPE_ROTATED ||
        p -> type == TYPE_SCALED || p -> type == TYPE_SHIFTED ||
        p -> type == TYPE_SLANTED || p -> type == TYPE_XSCALED ||
-       p -> type == TYPE_YSCALED || p -> type == TYPE_ZSCALED)){
+       p -> type == TYPE_YSCALED || p -> type == TYPE_ZSCALED ||
+       p -> type == TYPE_TRANSFORMED)){
       last_transformer = p;
       before_last_transformer = prev;
     }
@@ -8885,6 +8887,9 @@ bool eval_pen_secondary(struct metafont *mf, struct context *cx,
     }
     else if(last_transformer -> type == TYPE_ZSCALED){
       @<Pen Secondary: Z-Scaling@>
+    }
+    else if(last_transformer -> type == TYPE_TRANSFORMED){
+      @<Pen Secondary: Generic Transform@>
     }
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognized pen transformer\n",
@@ -9132,7 +9137,7 @@ return true;
 @
 \fimcodigo
 
-Finally, scaling in $z$-index means interpreting the point and a pair
+Scaling in $z$-index means interpreting the point and a pair
 as complex numbers and multiply them:
 
 $$
@@ -9178,6 +9183,55 @@ if(!(pen -> flags & (FLAG_STRAIGHT | FLAG_NULL))){ // Requer retriangular a cane
 return true;
 @
 \fimcodigo
+
+Finally, the last transform is apply a transform $(a, b, c, d, e, f)$
+over each pen point, which is the same than multiply each point $(x,
+y, z, 1)$ by:
+
+$$\left[x\; y\; z\; 1\right]\left[{{c \atop d}\atop {0\atop
+      a}}{{e \atop f}\atop {0 \atop b}}{{0\atop 0}\atop{1 \atop
+      0}}{{0 \atop 0}\atop{0\atop 1}}\right]=\left[a+cx+dy \;\; b+ex+fy\;\;
+      z\;\; 1\right]
+$$
+
+Therefore, we multiply the pen matrix by the above matrix using the
+code below:
+
+\iniciocodigo
+@<Pen Secondary: Generic Transform@>=
+struct transform_variable t;
+float temp_matrix[16];
+if(!eval_transform_primary(mf, cx, last_transformer -> next, end_expression, &t))
+  return false;
+memcpy(temp_matrix, pen -> gl_matrix, 16 * sizeof(float));
+pen -> gl_matrix[0] = temp_matrix[0] * t.value[2] + temp_matrix[1] * t.value[3] +
+                      temp_matrix[3] * t.value[0];
+pen -> gl_matrix[1] = temp_matrix[0] * t.value[4] + temp_matrix[1] * t.value[5] +
+                      temp_matrix[3] * t.value[1];
+pen -> gl_matrix[4] = temp_matrix[4] * t.value[2] + temp_matrix[5] * t.value[3] +
+                      temp_matrix[7] * t.value[0];
+pen -> gl_matrix[5] = temp_matrix[4] * t.value[4] + temp_matrix[5] * t.value[5] +
+                      temp_matrix[7] * t.value[1];
+pen -> gl_matrix[12] = temp_matrix[12] * t.value[2] + temp_matrix[13] * t.value[3] +
+                      temp_matrix[15] * t.value[0];
+pen -> gl_matrix[13] = temp_matrix[12] * t.value[4] + temp_matrix[13] * t.value[5] +
+                       temp_matrix[15] * t.value[1];
+if(!(pen -> flags & (FLAG_STRAIGHT | FLAG_NULL))){ // Requer retriangular a caneta:
+  if(pen -> referenced != NULL){
+    recursive_copy_points(temporary_alloc, &(pen -> format),
+                          pen -> referenced -> format, true);
+    pen -> referenced = NULL;
+  }
+  else if(pen -> gl_vbo != 0)
+    glDeleteBuffers(1, &(pen -> gl_vbo));  
+  pen -> gl_vbo = 0;
+}
+return true;
+@
+\fimcodigo
+
+
+@<Pen Secondary: Generic Transform@>
 
 \subsubsecao{8.5.3. Pen Primary Expressions}
 

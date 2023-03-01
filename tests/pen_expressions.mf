@@ -7,6 +7,7 @@ pen p5, p6, p7, p8;
 path p9, p10, p11, p12;
 pen p13;
 path p13_path;
+pen p14;
 
 p1 = pensquare;
 p2 = nullpen;
@@ -36,5 +37,6 @@ p11 = makepath p8;
 p12 = makepath p6;
 p13 = p1 rotated 30;
 p13_path = makepath p13;
+p14 = p1 transformed (3, 4, 5, 6, 7, 8);
 
 end

@@ -963,9 +963,9 @@ void test_pen_expressions(void){
   struct context *cx;
   bool ret;
   struct named_variable *p1, *p2, *p3, *p4, *penrazor, *p5, *p6, *p7, *p8, *p9,
-    *p10, *p11, *p12, *p13, *p13_path;;
+    *p10, *p11, *p12, *p13, *p13_path, *p14;
   struct pen_variable *pen_p1, *pen_p2, *pen_p3, *pen_p4, *pen_penrazor,
-    *pen_p5, *pen_p6, *pen_p7, *pen_p8, *pen_p13;
+    *pen_p5, *pen_p6, *pen_p7, *pen_p8, *pen_p13, *pen_p14;
   struct path_variable *path_p9, *path_p10, *path_p11, *path_p12, *path_p13;
   mf = init_metafont(malloc, free, "tests/pen_expressions.mf");
   cx = init_context();
@@ -986,6 +986,7 @@ void test_pen_expressions(void){
   p12 = p11 -> next;
   p13 = p12 -> next;
   p13_path = p13 -> next;
+  p14 = p13_path -> next;
   pen_p1 = (struct pen_variable *) p1 -> var;
   pen_p2 = (struct pen_variable *) p2 -> var;
   pen_p3 = (struct pen_variable *) p3 -> var;
@@ -1000,6 +1001,7 @@ void test_pen_expressions(void){
   path_p11 = (struct path_variable *) p11 -> var;
   path_p12 = (struct path_variable *) p12 -> var;
   pen_p13 = (struct pen_variable *) p13 -> var;
+  pen_p14 = (struct pen_variable *) p14 -> var;
   path_p13 = (struct path_variable *) p13_path -> var;
   assert("Interpreting program with pen expressions", ret);
   assert("Assigning pen variable",
@@ -1251,7 +1253,17 @@ void test_pen_expressions(void){
 	 ALMOST_EQUAL(path_p12 ->points[3].v_x, 0.44733) &&
 	 ALMOST_EQUAL(path_p12 ->points[3].v_y, 0.2598) &&
 	 path_p12 -> cyclic == true);
-
+  assert("Using transfoms with pens",
+	 pen_p14 -> format == NULL &&
+	 (pen_p14 -> flags & FLAG_STRAIGHT) &&
+	 (pen_p14 -> flags & FLAG_CONVEX) &&
+	 (pen_p14 -> flags & FLAG_SQUARE) &&
+	 ALMOST_EQUAL(2.5, 0.5 * pen_p14 -> gl_matrix[0] +
+	 	      -0.5 * pen_p14 -> gl_matrix[4] +
+	 	      1.0 * pen_p14 -> gl_matrix[12]) &&
+	 ALMOST_EQUAL(3.5, 0.5 * pen_p14 -> gl_matrix[1] +
+	 	      -0.5 * pen_p14 -> gl_matrix[5] +
+	 	      1.0 * pen_p14 -> gl_matrix[13]));
   free_token_list(free, p);
   destroy_metafont(mf);
   destroy_context(cx);
