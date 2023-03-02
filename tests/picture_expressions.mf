@@ -1,8 +1,8 @@
 % To test picture expressions
 % This program should work and be accepted.
 
-picture a, b, c, d, e, f, g, h, i, j, k;
-numeric wa, wb, wc, wd, we, wf, wg, wh, wi, wj, wk;
+picture a, b, c, d, e, f, g, h, i, j, k, l;
+numeric wa, wb, wc, wd, we, wf, wg, wh, wi, wj, wk, wl;
 
 % 'a' must be a 10x10 white transparent image
 a = nullpicture (10, 10);
@@ -46,5 +46,10 @@ wj = totalweight j;
 % 'k' will allow us to test the zscaling operation
 k = (-nullpicture(1, 1)) zscaled (3, 4);
 wk = totalweight k;
+% 'l' will allow us to test a generic transform. In practice we will
+% express the same zscaling above and we should get the same result
+l = (-nullpicture(1, 1)) transformed (0, 0, 3, -4, 4, 3);
+wl = totalweight l;
+
 
 end

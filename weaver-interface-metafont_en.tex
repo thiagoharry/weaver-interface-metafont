@@ -8809,7 +8809,7 @@ The syntax for secondary pen expressions is:
                  xscaled <Numeric Primary> |
                  yscaled <Numeric Primary> |
                  zscaled <Pair Primary>
-                 transformed <Transformação Primária>
+                 transformed <Transform Primary>
 \alinhanormal
 
 Transformers are not new, they were already used in pair, transforms
@@ -10346,11 +10346,12 @@ A picture secondary expression has the following syntax:
                  slanted <Numeric Primary> |
                  xscaled <Numeric Primary> |
                  yscaled <Numeric Primary> |
-                 zscaled <Pair Primary>
+                 zscaled <Pair Primary> |
+                 transformed <Transform Primary>
 \alinhanormal
 
-The same transformers that we can use in pairs, paths and pens also
-can be used in images. But how we do apply them is a little
+The same transformers that we can use in pairs, transforms, paths and
+pens also can be used in images. But how we do apply them is a little
 different. Like what we do for pens, we first store all the required
 transformations in a matrix to accumulate transformations before
 applying them. But contrary to pens, picture variables do not store
@@ -10444,7 +10445,8 @@ bool eval_picture_secondary(struct metafont *mf, struct context *cx,
     if(IS_NOT_NESTED() && (p -> type == TYPE_ROTATED ||
        p -> type == TYPE_SCALED || p -> type == TYPE_SHIFTED ||
        p -> type == TYPE_SLANTED || p -> type == TYPE_XSCALED ||
-       p -> type == TYPE_YSCALED || p -> type == TYPE_ZSCALED)){
+       p -> type == TYPE_YSCALED || p -> type == TYPE_ZSCALED ||
+       p -> type == TYPE_TRANSFORMED)){
       last_transformer = p;
       before_last_transformer = prev;
     }
@@ -10480,6 +10482,9 @@ bool eval_picture_secondary(struct metafont *mf, struct context *cx,
     }
     else if(last_transformer -> type == TYPE_ZSCALED){
       @<Picture Secondary: Z-Scaling@>
+    }
+    else if(last_transformer -> type == TYPE_TRANSFORMED){
+      @<Picture Secondary: Generic Transform@>
     }
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognized picture transformer\n",
@@ -10669,7 +10674,7 @@ return true;
 @
 \fimcodigo
 
-Finally, the z-scaling is represented by the following matrix as
+The z-scaling is represented by the following matrix as
 multiplicand:
 
 $$\left[{{a \atop -b}\atop {0\atop
@@ -10694,6 +10699,43 @@ matrix[8] = temp_matrix[8] * p.x - temp_matrix[9] * p.y;
 matrix[9] = temp_matrix[8] * p.y + temp_matrix[9] * p.x;
 matrix[12] = temp_matrix[12] * p.x - temp_matrix[13] * p.y;
 matrix[13] = temp_matrix[12] * p.y + temp_matrix[13] * p.x;
+*modified = true;
+return true;
+@
+\fimcodigo
+
+Finally, in the case of a generic transform represented by a transform
+expression that evaluates to $(a, b, c, d, e, f)$, this is represented
+by the matrix:
+
+$$\left[{{c \atop c}\atop {0\atop
+      a}}{{e \atop f}\atop {0 \atop b}}{{0\atop 0}\atop{1 \atop
+      0}}{{0 \atop 0}\atop{0\atop 1}}\right]
+$$
+
+Therefore, to multiply the existing matrix by this, we use the code
+below:
+
+\iniciocodigo
+@<Picture Secondary: Generic Transform@>=
+struct transform_variable t;
+float temp_matrix[16];
+if(!eval_transform_primary(mf, cx, last_transformer -> next, end_expression,
+                           &t))
+  return false;
+memcpy(temp_matrix, matrix, 16 * sizeof(float));
+matrix[0] = temp_matrix[0] * t.value[2] + temp_matrix[1] * t.value[3] +
+            t.value[0];
+matrix[1] = temp_matrix[0] * t.value[4] + temp_matrix[1] * t.value[5] +
+            t.value[1];
+matrix[4] = temp_matrix[4] * t.value[2] + temp_matrix[5] * t.value[3] +
+            t.value[0];
+matrix[5] = temp_matrix[4] * t.value[4] + temp_matrix[5] * t.value[5] +
+            t.value[1];
+matrix[12] = temp_matrix[12] * t.value[2] + temp_matrix[13] * t.value[3] +
+             t.value[0];
+matrix[13] = temp_matrix[12] * t.value[4] + temp_matrix[13] * t.value[5] +
+             t.value[1];
 *modified = true;
 return true;
 @

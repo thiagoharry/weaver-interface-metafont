@@ -8926,7 +8926,7 @@ A sintaxe para expressões secundárias de caneta é:
                    xscaled <Numérico Primário> |
                    yscaled <Numérico Primário> |
                    zscaled <Par Primário> |
-                   transformed <Transformação Primária>
+                   transformed <Primário de Transformação>
 \alinhanormal
 
 Transformadores não são coisas novas, eles já eram usados em
@@ -10478,18 +10478,19 @@ Uma expressão secundária de imagem tem a seguinte sintaxe:
                    slanted <Numérico Primário> |
                    xscaled <Numérico Primário> |
                    yscaled <Numérico Primário> |
-                   zscaled <Par Primário>
+                   zscaled <Par Primário> |
+                   transformed <Primário de Transformação>
 \alinhanormal
 
-Os mesmos transformadores que podem ser usados em pares, caminhos e
-canetas podem também ser usados em imagens. Mas o modo como
-transformamos as imagens é diferente. Assim como canetas, as
-transformações lineares sobre imagens são armazenadas na forma de uma
-matriz que acumula todas as transformações. Desta forma, podemos
-realizar as transformações de uma só vez somente depois que o usuário
-especificar todas as que serão necessárias. Mas ao contrário de
-canetas, as variáveis de imagem não possuem uma matriz própria
-armazenada na variável.
+Os mesmos transformadores que podem ser usados em pares,
+transformações, caminhos e canetas podem também ser usados em
+imagens. Mas o modo como transformamos as imagens é diferente. Assim
+como canetas, as transformações lineares sobre imagens são armazenadas
+na forma de uma matriz que acumula todas as transformações. Desta
+forma, podemos realizar as transformações de uma só vez somente depois
+que o usuário especificar todas as que serão necessárias. Mas ao
+contrário de canetas, as variáveis de imagem não possuem uma matriz
+própria armazenada na variável.
 
 As matrizes são recursos que irão existir somente enquanto estivermos
 avaliando expressões secundárias de imagem. E serão efetivamente
@@ -10579,7 +10580,8 @@ bool eval_picture_secondary(struct metafont *mf, struct context *cx,
     if(IS_NOT_NESTED() && (p -> type == TYPE_ROTATED ||
        p -> type == TYPE_SCALED || p -> type == TYPE_SHIFTED ||
        p -> type == TYPE_SLANTED || p -> type == TYPE_XSCALED ||
-       p -> type == TYPE_YSCALED || p -> type == TYPE_ZSCALED)){
+       p -> type == TYPE_YSCALED || p -> type == TYPE_ZSCALED ||
+       p -> type == TYPE_TRANSFORMED)){
       last_transformer = p;
       before_last_transformer = prev;
     }
@@ -10615,6 +10617,9 @@ bool eval_picture_secondary(struct metafont *mf, struct context *cx,
     }
     else if(last_transformer -> type == TYPE_ZSCALED){
       @<Secundário de Imagem: Z-Escala@>
+    }
+    else if(last_transformer -> type == TYPE_TRANSFORMED){
+      @<Secundário de Imagem: Transformação Genérica@>
     }
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognized picture transformer\n",
@@ -10808,7 +10813,7 @@ return true;
 @
 \fimcodigo
 
-E por fim, a mudança de escala $z$ é representada pela multiplicação
+Já a  mudança de escala $z$ é representada pela multiplicação
 pela matriz:
 
 $$\left[{{a \atop -b}\atop {0\atop
@@ -10833,6 +10838,42 @@ matrix[8] = temp_matrix[8] * p.x - temp_matrix[9] * p.y;
 matrix[9] = temp_matrix[8] * p.y + temp_matrix[9] * p.x;
 matrix[12] = temp_matrix[12] * p.x - temp_matrix[13] * p.y;
 matrix[13] = temp_matrix[12] * p.y + temp_matrix[13] * p.x;
+*modified = true;
+return true;
+@
+\fimcodigo
+
+Finalmente, a transformação genérica $(a, b, c, d, e, f)$ é
+representada pela matriz;
+
+$$\left[{{c \atop c}\atop {0\atop
+      a}}{{e \atop f}\atop {0 \atop b}}{{0\atop 0}\atop{1 \atop
+      0}}{{0 \atop 0}\atop{0\atop 1}}\right]
+$$
+
+Então para multiplicar a matriz existente pela transformação, usamos o
+código abaixo:
+
+\iniciocodigo
+@<Secundário de Imagem: Transformação Genérica@>=
+struct transform_variable t;
+float temp_matrix[16];
+if(!eval_transform_primary(mf, cx, last_transformer -> next, end_expression,
+                           &t))
+  return false;
+memcpy(temp_matrix, matrix, 16 * sizeof(float));
+matrix[0] = temp_matrix[0] * t.value[2] + temp_matrix[1] * t.value[3] +
+            t.value[0];
+matrix[1] = temp_matrix[0] * t.value[4] + temp_matrix[1] * t.value[5] +
+            t.value[1];
+matrix[4] = temp_matrix[4] * t.value[2] + temp_matrix[5] * t.value[3] +
+            t.value[0];
+matrix[5] = temp_matrix[4] * t.value[4] + temp_matrix[5] * t.value[5] +
+            t.value[1];
+matrix[12] = temp_matrix[12] * t.value[2] + temp_matrix[13] * t.value[3] +
+             t.value[0];
+matrix[13] = temp_matrix[12] * t.value[4] + temp_matrix[13] * t.value[5] +
+             t.value[1];
 *modified = true;
 return true;
 @

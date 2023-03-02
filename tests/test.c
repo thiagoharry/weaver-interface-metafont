@@ -1441,13 +1441,13 @@ void test_picture_expressions(void){
   struct context *cx;
   bool ret;
   struct named_variable *a, *wa, *b, *wb, *c, *wc, *d, *wd, *e, *we, *f, *wf,
-    *g, *wg, *h, *wh, *i, *wi, *j, *wj, *k, *wk;
+    *g, *wg, *h, *wh, *i, *wi, *j, *wj, *k, *wk, *l, *wl;
   struct picture_variable *picture_a, *picture_b, *picture_c, *picture_d,
     *picture_e, *picture_f, *picture_g, *picture_h, *picture_i, *picture_j,
-    *picture_k;
+    *picture_k, *picture_l;
   struct numeric_variable *numeric_wa, *numeric_wb, *numeric_wc, *numeric_wd,
     *numeric_we, *numeric_wf, *numeric_wg, *numeric_wh, *numeric_wi,
-    *numeric_wj, *numeric_wk;
+    *numeric_wj, *numeric_wk, *numeric_wl;
   mf = init_metafont(malloc, free, "tests/picture_expressions.mf");
   cx = init_context();
   void *p = lexer(mf, malloc, free, "tests/picture_expressions.mf");
@@ -1463,7 +1463,8 @@ void test_picture_expressions(void){
   i = h -> next;
   j = i -> next;
   k = j -> next;
-  wa = k -> next;
+  l = k -> next;
+  wa = l -> next;
   wb = wa -> next;
   wc = wb -> next;
   wd = wc -> next;
@@ -1474,6 +1475,7 @@ void test_picture_expressions(void){
   wi = wh -> next;
   wj = wi -> next;
   wk = wj -> next;
+  wl = wk -> next;
   picture_a = (struct picture_variable *) a -> var;
   picture_b = (struct picture_variable *) b -> var;
   picture_c = (struct picture_variable *) c -> var;
@@ -1485,6 +1487,7 @@ void test_picture_expressions(void){
   picture_i = (struct picture_variable *) i -> var;
   picture_j = (struct picture_variable *) j -> var;
   picture_k = (struct picture_variable *) k -> var;
+  picture_l = (struct picture_variable *) l -> var;
   numeric_wa = (struct numeric_variable *) wa -> var;
   numeric_wb = (struct numeric_variable *) wb -> var;
   numeric_wc = (struct numeric_variable *) wc -> var;
@@ -1496,6 +1499,7 @@ void test_picture_expressions(void){
   numeric_wi = (struct numeric_variable *) wi -> var;
   numeric_wj = (struct numeric_variable *) wj -> var;
   numeric_wk = (struct numeric_variable *) wk -> var;
+  numeric_wl = (struct numeric_variable *) wl -> var;
   //printf("k: %dx%d: %f:\n", picture_k -> width, picture_k -> height,
   //	 numeric_wk -> value);
   //print_picture(picture_k);
@@ -1532,7 +1536,10 @@ void test_picture_expressions(void){
   	 ALMOST_EQUAL(numeric_wj -> value, 9.0));
   assert("Z-scaling pictures",
    	 picture_k -> width == 7 && picture_k -> height == 7 &&
-  	 ALMOST_EQUAL(numeric_wk -> value, 25.0));    
+  	 ALMOST_EQUAL(numeric_wk -> value, 25.0));
+  assert("Generic transform over pictures",
+   	 picture_l -> width == 7 && picture_l -> height == 7 &&
+  	 ALMOST_EQUAL(numeric_wl -> value, 25.0));    
   free_token_list(free, p);
   destroy_metafont(mf);
   destroy_context(cx);
