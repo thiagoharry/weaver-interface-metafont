@@ -10856,23 +10856,27 @@ The grammar for primary picture expressions is:
 <Picture Primary> -> <Picture Variable> |
                      nullpicture <Pair Primary> |
                      ( <Picture Expression> ) |
-                     <'+' or '-'> <Picture Primary>
+                     <'+' or '-'> <Picture Primary> |
+                     subpicture <Pair Primary> and <Pair Primary> of
+                                <Picture Primary>
 \alinhanormal
 
-This means that we need to register a new token for ``nullpicture'':
+This means that we need to register a new token for ``nullpicture'' and
+``subpicture'':
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_NULLPICTURE        74 // O token simbólico 'nullpicture'
+#define TYPE_NULLPICTURE        74 // Symbolic token 'nullpicture'
+#define TYPE_SUBPICTURE         75 // Symbolic token 'subpicture'
 @
 \fimcodigo
 
-And this also requires adding this string to the list of reserved
+And this also requires adding these strings to the list of reserved
 keywords:
 
 \iniciocodigo
 @<List of Keywords@>+=
-"nullpicture",
+"nullpicture", "subpicture",
 @
 \fimcodigo
 
@@ -10913,6 +10917,9 @@ bool eval_picture_primary(struct metafont *mf, struct context *cx,
     }
     else if(begin_expression -> type == TYPE_SUBTRACT){
       @<Primary Picture: Inverse@>
+    }
+    else if(begin_expression -> type == TYPE_SUBPICTURE){
+      @<Primary Picture: Subpicture@>
     }
   }
 #if defined(W_DEBUG_METAFONT)
@@ -11043,10 +11050,10 @@ return true;
 @
 \fimcodigo
 
-Now the penultimate case: when we have a token \monoespaco{+} before
-the picture. In this case the operator is not doing anything. It is an
-identity operator. So we just ignore it and evaluate the next tokens
-as the resulting picture:
+Now the antepenultimate case: when we have a token \monoespaco{+}
+before the picture. In this case the operator is not doing
+anything. It is an identity operator. So we just ignore it and
+evaluate the next tokens as the resulting picture:
 
 \iniciocodigo
 @<Primary Picture: Identity@>=
@@ -11109,43 +11116,139 @@ return true;
 @
 \fimcodigo
 
+FInally, the primary expression to compute subpictures. This
+expression begins with token \monoespaco{subpicture}, get a primary
+pair (offset in pixels), a token \monoespaco{and}, a second pair (with
+subpicture size), a token \monoespaco{of} and a primary expression
+with a picture (from where the subpicture will be extracted).
+
+The first part for evaluate this expression is reading the two pairs
+and the picture from the subexpressions. The second part is extract
+the subpicture as requested:
+
+\iniciocodigo
+@<Primary Picture: Subpicture@>=
+struct pair_variable pair_offset, subpicture_size;
+struct picture_variable original_picture;
+@<Subpicture: Extract Subexpressions@>
+//@<Subimagem: Extract Subpicture@>
+return false;
+@
+\fimcodigo
+
+Extract the subexpressions involves delimiting the begin and end for
+each subexpression while searching for the auxiliary
+tokens \monoespaco{of} and \monoespaco{and}. We also store an state to
+check if we are reading the tokens in the right order, or if we are in
+a malformed expressions where the tokens are present, but in the wrong
+order, or without subexpressions:
+
+\iniciocodigo
+@<Subpicture: Extract Subexpressions@>=
+{
+  DECLARE_NESTING_CONTROL();
+  struct generic_token *begin_pair1 = NULL, *end_pair1 = NULL,
+                       *begin_pair2 = NULL, *end_pair2 = NULL,
+                       *begin_pic = NULL, *end_pic = NULL,
+                       *p = begin_expression -> next,
+                       *last_token = begin_expression;
+  int state = 0;
+  begin_pair1 = p;
+  while(p != end_expression && p != NULL){
+    COUNT_NESTING(p);
+    if(IS_NOT_NESTED() && p -> type == TYPE_AND){
+      if(state != 0 || last_token -> type == TYPE_SUBPICTURE){
+#if defined(W_DEBUG_METAFONT)
+        fprintf(stderr,
+                "METAFONT: Error: %s:%d: Malformed subpicture expression.\n",
+                mf -> file, p -> line);
+#endif
+        return false;
+      }
+      end_pair1 = last_token;
+      state ++;
+      begin_pair2 = p -> next;
+    }
+    else if(IS_NOT_NESTED() && p -> type == TYPE_OF){
+      if(state != 1 || last_token -> type == TYPE_AND){
+#if defined(W_DEBUG_METAFONT)
+        fprintf(stderr,
+                "METAFONT: Error: %s:%d: Malformed subpicture expression.\n",
+                mf -> file, p -> line);
+#endif
+        return false;
+      }
+      end_pair2 = last_token;
+      state ++;
+      begin_pic = p -> next;
+    }
+    last_token = p;
+    p = p -> next;
+  }
+  if(p == NULL){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr,
+            "METAFONT: Error: %s:%d: Malformed subpicture expression.\n",
+            mf -> file, p -> line);
+#endif
+    return false;
+  }
+  end_pic = p;
+  if(!eval_pair_primary(mf, cx, begin_pair1, end_pair1, &pair_offset))
+    return false;
+  if(!eval_pair_primary(mf, cx, begin_pair2, end_pair2, &subpicture_size))
+    return false;
+  if(!eval_picture_primary(mf, cx, begin_pic, end_pic, &original_picture))
+    return false;
+}
+@
+\fimcodigo
+
+
+
 \subsubsecao{8.6.4. Pictures in Numeric Expressions}
 
-There is a single scenario where we need to evaluate a picture
-expression inside expressions of other types. We have an additional
-numeric expression:
+There are cases where we need to evaluate a picture expression inside
+expressions of other types. We have three additional numeric
+expressions:
 
 \alinhaverbatim
-<Numeric Primary> -> totalweight <Picture Primary>
+<Numeric Primary> -> totalweight <Picture Primary> |
+                     width <Picture Primary> |
+                     height <Picture Primary>
 \alinhanormal
 
-What the operator \monoespaco{totalweight} do is evaluate a picture
-expression, get the resulting picture and return the sum of its pixels
-weight. Each pixel weight is computed as the euclidean distance
-between its RGB component and the color white, and then normalizing
-the result dividing by $\sqrt{3}$. So the color white has weight 0 and
-the black color has weight 1. The computed value is then multiplied by
-the alpha component.
+The two last operators just return respectively the picture width and
+height. The operator \monoespaco{totalweight} does is evaluate a
+picture expression, get the resulting picture and return the sum of
+its pixels weight. Each pixel weight is computed as the euclidean
+distance between its RGB component and the color white, and then
+normalizing the result dividing by $\sqrt{3}$. So the color white has
+weight 0 and the black color has weight 1. The computed value is then
+multiplied by the alpha component.
 
-First we need a new token type for the operator:
+First we need a new token types for the three new operators:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_TOTALWEIGHT        75 // Symbolic token 'totalweight'
+#define TYPE_TOTALWEIGHT        76 // Symbolic token 'totalweight'
+#define TYPE_WIDTH              77 // Symbolic token 'width'
+#define TYPE_HEIGHT             78 // Symbolic token 'height'
 @
 \fimcodigo
 
-And we add its name to the list of keywords:
+And we add their names to the list of keywords:
 
 \iniciocodigo
 @<List of Keywords@>+=
-"totalweight",
+"totalweight", "width", "height",
 @
 \fimcodigo
 
-We will recover the pixels from a texture first rendering the texture
-to a temporary framebuffer and then reading the valuesd using
-function \monoespaco{glReadPixels} to get the framebuffer content:
+For the first operator, we will recover the pixels from a texture
+first rendering the texture to a temporary framebuffer and then
+reading the valuesd using function \monoespaco{glReadPixels} to get
+the framebuffer content:
 
 \iniciocodigo
 @<Numeric Primary: Additional Operators@>+=
@@ -11213,6 +11316,55 @@ else if(begin_expression -> type == TYPE_TOTALWEIGHT){
 }
 @
 \fimcodigo
+
+For the next two operators, \monoespaco{width}
+and \monoespaco{height}, everything is simpler. We just need to get
+the image and get their width and height respectively. For the width:
+
+\iniciocodigo
+@<Numeric Primary: Additional Operators@>+=
+else if(begin_expression -> type == TYPE_WIDTH){
+  struct picture_variable p;
+  if(begin_expression == end_expression){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Missing picture expression after "
+                    "'width'.\n", mf -> file, begin_expression -> line);
+#endif
+    return false;
+  }
+  if(!eval_picture_primary(mf, cx, (struct generic_token *)
+                                   begin_expression -> next, end_expression,
+                           &p))
+    return false;
+  result -> value = (float) p.width;
+  return true;
+}
+@
+\fimcodigo
+
+And for the height:
+
+\iniciocodigo
+@<Numeric Primary: Additional Operators@>+=
+else if(begin_expression -> type == TYPE_HEIGHT){
+  struct picture_variable p;
+  if(begin_expression == end_expression){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Missing picture expression after "
+                    "'height'.\n", mf -> file, begin_expression -> line);
+#endif
+    return false;
+  }
+  if(!eval_picture_primary(mf, cx, (struct generic_token *)
+                                   begin_expression -> next, end_expression,
+                           &p))
+    return false;
+  result -> value = (float) p.height;
+  return true;
+}
+@
+\fimcodigo
+
 
 \subsecao{8.7. Boolean Assignments and Expressions}
 

@@ -1,8 +1,8 @@
 % To test picture expressions
 % This program should work and be accepted.
 
-picture a, b, c, d, e, f, g, h, i, j, k, l;
-numeric wa, wb, wc, wd, we, wf, wg, wh, wi, wj, wk, wl;
+picture a, b, c, d, e, f, g, h, i, j, k, l, m;
+numeric wa, wb, wc, wd, we, wf, wg, wh, wi, wj, wk, wl, wm;
 
 % 'a' must be a 10x10 white transparent image
 a = nullpicture (10, 10);
@@ -50,6 +50,8 @@ wk = totalweight k;
 % express the same zscaling above and we should get the same result
 l = (-nullpicture(1, 1)) transformed (0, 0, 3, -4, 4, 3);
 wl = totalweight l;
-
+% 'm' will allow us to test subpictures
+m = subpicture (1, 1) and (3, 1) of (i + (-nullpicture(1, 1)));
+wm = totalweight m;
 
 end

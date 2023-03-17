@@ -10998,22 +10998,25 @@ de imagens é:
 <Primário de Imagem> -> <Variável de Imagem> |
                         nullpicture <Primário de Par> |
                         ( <Expressão de Imagem> ) |
-                        <Mais ou Menos> <Primário de Imagem>
+                        <Mais ou Menos> <Primário de Imagem> |
+                        subpicture <Primário de Par> and <Primário de Par> of
+                                   <Primário de Imagem>
 \alinhanormal
 
-Isso requer registrar ``nullpicture'' como um token:
+Isso requer registrar ``nullpicture'' e ``subpicture'' como um token:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
 #define TYPE_NULLPICTURE        74 // O token simbólico 'nullpicture'
+#define TYPE_SUBPICTURE         75 // O token simbólico 'subpicture'
 @
 \fimcodigo
 
-E requer que essa string seja adicionada à lista de palavras reservadas:
+E requer que essas strings seja adicionada à lista de palavras reservadas:
 
 \iniciocodigo
 @<Lista de Palavras Reservadas@>+=
-"nullpicture",
+"nullpicture", "subpicture",
 @
 \fimcodigo
 
@@ -11054,6 +11057,9 @@ bool eval_picture_primary(struct metafont *mf, struct context *cx,
     }
     else if(begin_expression -> type == TYPE_SUBTRACT){
       @<Imagem Primária: Inverso@>
+    }
+    else if(begin_expression -> type == TYPE_SUBPICTURE){
+      @<Imagem Primária: Subimagem@>
     }
   }
 #if defined(W_DEBUG_METAFONT)
@@ -11184,7 +11190,7 @@ return true;
 @
 \fimcodigo
 
-E agora o penúltimo caso de imagem primária: quando vem um
+E agora o antepenúltimo caso de imagem primária: quando vem um
 token \monoespaco{+} antes de uma imagem. Neste caso o operador não faz
 nada, é um operador de identidade para imagens. Então só precisamos
 ignorar ele e avaliar os tokens restantes:
@@ -11251,45 +11257,139 @@ return true;
 @
 \fimcodigo
 
+FInalmente, a expressão primária de computar sub-imagens. Esta
+expressão começa com um token \monoespaco{subpicture}, recebe um par
+primário (o offset em pixels), um token \monoespaco{and}, um segundo
+par (com o tamanho da sub-imagem a ser extraída), o
+token \monoespaco{of} e uma expressão primária de imagem (de onde a
+sub-imagem deve ser extraída).
+
+A primeira parte da avaliação desta expressão envolve extrair os pares
+e a imagem das subexpressões. A segunda parte é executar o comando de
+gerar uma sub-imagem:
+
+\iniciocodigo
+@<Imagem Primária: Subimagem@>=
+struct pair_variable pair_offset, subpicture_size;
+struct picture_variable original_picture;
+@<Subimagem: Extrai Subexpressões@>
+//@<Subimagem: Extrai Subimagem@>
+return false;
+@
+\fimcodigo
+
+Extrair as subexpressões envolve delimitar o começo e fim de cada uma
+delas. Para isso percorremos a expressão como um todo buscando pelos
+tokens de auxílio \monoespaco{of} e \monoespaco{and}. Armazenamos
+também um estado para saber quantas subexpressões já delimitamos. Isso
+nos ajuda a detectar se temos uma expressão mal-formada onde os tokens
+de auxílio aparecem, mas na ordem errada ou sem expressões entre eles:
+
+\iniciocodigo
+@<Subimagem: Extrai Subexpressões@>=
+{
+  DECLARE_NESTING_CONTROL();
+  struct generic_token *begin_pair1 = NULL, *end_pair1 = NULL,
+                       *begin_pair2 = NULL, *end_pair2 = NULL,
+                       *begin_pic = NULL, *end_pic = NULL,
+                       *p = begin_expression -> next,
+                       *last_token = begin_expression;
+  int state = 0;
+  begin_pair1 = p;
+  while(p != end_expression && p != NULL){
+    COUNT_NESTING(p);
+    if(IS_NOT_NESTED() && p -> type == TYPE_AND){
+      if(state != 0 || last_token -> type == TYPE_SUBPICTURE){
+#if defined(W_DEBUG_METAFONT)
+        fprintf(stderr,
+                "METAFONT: Error: %s:%d: Malformed subpicture expression.\n",
+                mf -> file, p -> line);
+#endif
+        return false;
+      }
+      end_pair1 = last_token;
+      state ++;
+      begin_pair2 = p -> next;
+    }
+    else if(IS_NOT_NESTED() && p -> type == TYPE_OF){
+      if(state != 1 || last_token -> type == TYPE_AND){
+#if defined(W_DEBUG_METAFONT)
+        fprintf(stderr,
+                "METAFONT: Error: %s:%d: Malformed subpicture expression.\n",
+                mf -> file, p -> line);
+#endif
+        return false;
+      }
+      end_pair2 = last_token;
+      state ++;
+      begin_pic = p -> next;
+    }
+    last_token = p;
+    p = p -> next;
+  }
+  if(p == NULL){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr,
+            "METAFONT: Error: %s:%d: Malformed subpicture expression.\n",
+            mf -> file, p -> line);
+#endif
+    return false;
+  }
+  end_pic = p;
+  if(!eval_pair_primary(mf, cx, begin_pair1, end_pair1, &pair_offset))
+    return false;
+  if(!eval_pair_primary(mf, cx, begin_pair2, end_pair2, &subpicture_size))
+    return false;
+  if(!eval_picture_primary(mf, cx, begin_pic, end_pic, &original_picture))
+    return false;
+}
+@
+\fimcodigo
+
 \subsubsecao{8.6.4. Imagens em Expressões Numéricas}
 
-Há um caso no qual precisamos avaliar uma expressão de imagem dentro
-de uma expressão numérica. Há uma expressão primária numérica
-adicional:
+Há casos nos quais precisamos avaliar uma expressão de imagem dentro
+de uma expressão numérica. Há três expressões primárias numéricas
+adicionais onde devemos avaliar uma imagem:
 
 \alinhaverbatim
-<Primário Numérico> -> totalweight <Primário de Imagem>
+<Primário Numérico> -> totalweight <Primário de Imagem> |
+                       width <Primário de Imagem> |
+                       height <Primário de Imagem>
 \alinhanormal
 
-O que o operador \monoespaco{totalweight} faz é avaliar uma expressão
-de imagem, ler a imagem obtida e retornar a soma do ``peso'' de cada
-pixel. O peso de um pixel branco transparente deve ser zero e o de um
-pixelpreto opaco deve ser 1. Já para calcular valores intermediários,
-converteremos um pixel colorido para um tom de cinza. Para isso
-obteremos uma média ponderada entre os valores entre 0 e 1 deles,
-dando um peso maior para o verde e menor para o azul. Isso porque a
-visão humana é mais sensível ao verde que ao azul. O resultado desta
-média sera o peso do píxel colorido. Depois de obter o valor,
-multiplicamos pela transparência.
+Os dois últimos operadores apenas retornam respectivamente a largura e
+altura da imagem. Já o operador \monoespaco{totalweight} avalia
+uma expressão de imagem, lê a imagem obtida e retorna a soma do
+``peso'' de cada pixel. O peso de um pixel branco transparente deve
+ser zero e o de um pixel preto opaco deve ser 1. Já para calcular
+valores intermediários, converteremos um pixel colorido para um tom de
+cinza. Para isso obteremos uma média ponderada entre os valores entre
+0 e 1 deles, dando um peso maior para o verde e menor para o
+azul. Isso porque a visão humana é mais sensível ao verde que ao
+azul. O resultado desta média sera o peso do píxel colorido. Depois de
+obter o valor, multiplicamos pela transparência.
 
-Primeiro vamos adicionar um novo tipo de token para esse operador:
+Primeiro vamos adicionar novos tipos de tokens para esses operadores:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_TOTALWEIGHT        75 // O token simbólico 'totalweight'
+#define TYPE_TOTALWEIGHT        76 // O token simbólico 'totalweight'
+#define TYPE_WIDTH              77 // O token simbólico 'width'
+#define TYPE_HEIGHT             78 // O token simbólico 'height'
 @
 \fimcodigo
 
-E adicionamos seu nome à lista de palavras reservadas:
+E adicionamos seus nomes à lista de palavras reservadas:
 
 \iniciocodigo
 @<Lista de Palavras Reservadas@>+=
-"totalweight",
+"totalweight", "width", "height",
 @
 \fimcodigo
 
-O modo pelo qual iremos obter os pixels de uma textura será
-renderizando ela para um framebuffer e lendo
+Para o primeiro operador, o modo pelo qual iremos obter os pixels de
+uma textura será renderizando ela para um framebuffer e lendo
 usando \monoespaco{glReadPixels} para obter o conteúdo do framebuffer:
 
 \iniciocodigo
@@ -11360,6 +11460,55 @@ else if(begin_expression -> type == TYPE_TOTALWEIGHT){
 }
 @
 \fimcodigo
+
+Para os operadores \monoespaco{width} e \monoespaco{height}, tudo é
+mais simples. Basta obter a imagem e retornar respectivamente a
+largura e altura. No caso da largura:
+
+\iniciocodigo
+@<Primário Numérico: Operadores Adicionais@>+=
+else if(begin_expression -> type == TYPE_WIDTH){
+  struct picture_variable p;
+  if(begin_expression == end_expression){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Missing picture expression after "
+                    "'width'.\n", mf -> file, begin_expression -> line);
+#endif
+    return false;
+  }
+  if(!eval_picture_primary(mf, cx, (struct generic_token *)
+                                   begin_expression -> next, end_expression,
+                           &p))
+    return false;
+  result -> value = (float) p.width;
+  return true;
+}
+@
+\fimcodigo
+
+E no caso da altura:
+
+\iniciocodigo
+@<Primário Numérico: Operadores Adicionais@>+=
+else if(begin_expression -> type == TYPE_HEIGHT){
+  struct picture_variable p;
+  if(begin_expression == end_expression){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Missing picture expression after "
+                    "'height'.\n", mf -> file, begin_expression -> line);
+#endif
+    return false;
+  }
+  if(!eval_picture_primary(mf, cx, (struct generic_token *)
+                                   begin_expression -> next, end_expression,
+                           &p))
+    return false;
+  result -> value = (float) p.height;
+  return true;
+}
+@
+\fimcodigo
+
 
 \subsecao{8.7. Atribuições e Expressões Booleanas}
 
