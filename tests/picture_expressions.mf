@@ -51,7 +51,7 @@ wk = totalweight k;
 l = (-nullpicture(1, 1)) transformed (0, 0, 3, -4, 4, 3);
 wl = totalweight l;
 % 'm' will allow us to test subpictures
-m = subpicture (1, 1) and (3, 1) of (i + (-nullpicture(1, 1)));
+m = subpicture (2, 1) and (3, 1) of (i + (-nullpicture(1, 1)));
 wm = totalweight m;
 
 end

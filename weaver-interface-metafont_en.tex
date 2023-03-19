@@ -11131,7 +11131,7 @@ the subpicture as requested:
 struct pair_variable pair_offset, subpicture_size;
 struct picture_variable original_picture;
 @<Subpicture: Extract Subexpressions@>
-//@<Subimagem: Extract Subpicture@>
+@<Subimagem: Extract Subpicture@>
 return false;
 @
 \fimcodigo
@@ -11204,7 +11204,49 @@ order, or without subexpressions:
 @
 \fimcodigo
 
+Extract the subpicture requires generating a new texture with the size
+indicated by the second pair and rendering the original image in the
+new texture changing its size and offset according with what is stored
+in the two pairs:
 
+\iniciocodigo
+@<Subimagem: Extract Subpicture@>=
+{
+  GLuint temporary_framebuffer = 0;
+  float render_matrix[16] = {1.0, 0.0, 0.0, 0.0,
+                             0.0, 1.0, 0.0, 0.0,
+                             0.0, 0.0, 1.0, 0.0,
+                             0.0, 0.0, 0.0, 1.0};
+  get_new_framebuffer(&temporary_framebuffer, &(result -> texture),
+                      subpicture_size.x, subpicture_size.y);
+  result -> width = subpicture_size.x;
+  result -> height = subpicture_size.y;
+  // Initializing the new texture as transparent white (1, 1, 1, 0)
+  glClearColor(1.0, 1.0, 1.0, 0.0);
+  glClear(GL_COLOR_BUFFER_BIT);
+  // Adjusting the size to render in the new texture
+  render_matrix[0] = original_picture.width / subpicture_size.x;
+  render_matrix[5] = original_picture.height / subpicture_size.y;
+  // Adjusting the offset in the render matrix
+  render_matrix[12] = -2.0 * (pair_offset.x +
+                      0.5 * (subpicture_size.x - original_picture.width)) /
+                      subpicture_size.x;
+  render_matrix[13] = -2.0 * (pair_offset.y +
+                      0.5 * (subpicture_size.y - original_picture.height)) /
+                      subpicture_size.y;
+  // Rendering:
+  render_picture(&original_picture, render_matrix, result -> width, result -> height,
+                 false);
+  
+  // Finalization:
+  glDisable(GL_BLEND);
+  glDeleteTextures(1, &(original_picture.texture));
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glDeleteFramebuffers(1, &temporary_framebuffer);
+  return true;
+}
+@
+\fimcodigo
 
 \subsubsecao{8.6.4. Pictures in Numeric Expressions}
 

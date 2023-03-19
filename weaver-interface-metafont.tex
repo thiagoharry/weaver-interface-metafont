@@ -11273,7 +11273,7 @@ gerar uma sub-imagem:
 struct pair_variable pair_offset, subpicture_size;
 struct picture_variable original_picture;
 @<Subimagem: Extrai Subexpressões@>
-//@<Subimagem: Extrai Subimagem@>
+@<Subimagem: Extrai Subimagem@>
 return false;
 @
 \fimcodigo
@@ -11342,6 +11342,50 @@ de auxílio aparecem, mas na ordem errada ou sem expressões entre eles:
     return false;
   if(!eval_picture_primary(mf, cx, begin_pic, end_pic, &original_picture))
     return false;
+}
+@
+\fimcodigo
+
+Extrair a sub-imagem requer gerar uma nova textura com o tamanho
+indicado pelo segundo par e renderizar a imagem lida nesta nova
+textura, de acordo com as informações presentes nos pares sobre
+tamanho e offset:
+
+\iniciocodigo
+@<Subimagem: Extrai Subimagem@>=
+{
+  GLuint temporary_framebuffer = 0;
+  float render_matrix[16] = {1.0, 0.0, 0.0, 0.0,
+                             0.0, 1.0, 0.0, 0.0,
+                             0.0, 0.0, 1.0, 0.0,
+                             0.0, 0.0, 0.0, 1.0};
+  get_new_framebuffer(&temporary_framebuffer, &(result -> texture),
+                      subpicture_size.x, subpicture_size.y);
+  result -> width = subpicture_size.x;
+  result -> height = subpicture_size.y;
+  // Inicializar nova textura com branco transparente (1, 1, 1, 0)
+  glClearColor(1.0, 1.0, 1.0, 0.0);
+  glClear(GL_COLOR_BUFFER_BIT);
+  // Ajustando tamanho da renderização na textura
+  render_matrix[0] = original_picture.width / subpicture_size.x;
+  render_matrix[5] = original_picture.height / subpicture_size.y;
+  // Passando o offset para a matriz de renderização
+  render_matrix[12] = -2.0 * (pair_offset.x +
+                      0.5 * (subpicture_size.x - original_picture.width)) /
+                      subpicture_size.x;
+  render_matrix[13] = -2.0 * (pair_offset.y +
+                      0.5 * (subpicture_size.y - original_picture.height)) /
+                      subpicture_size.y;
+  // Renderiza:
+  render_picture(&original_picture, render_matrix, result -> width, result -> height,
+                 false);
+  
+  // Finaliza:
+  glDisable(GL_BLEND);
+  glDeleteTextures(1, &(original_picture.texture));
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glDeleteFramebuffers(1, &temporary_framebuffer);
+  return true;
 }
 @
 \fimcodigo

@@ -1512,9 +1512,9 @@ void test_picture_expressions(void){
   numeric_wk = (struct numeric_variable *) wk -> var;
   numeric_wl = (struct numeric_variable *) wl -> var;
   numeric_wm = (struct numeric_variable *) wm -> var;
-  //printf("k: %dx%d: %f:\n", picture_k -> width, picture_k -> height,
-  //	 numeric_wk -> value);
-  //print_picture(picture_k);
+  //printf("k: %dx%d: %f:\n", picture_m -> width, picture_m -> height,
+  // 	 numeric_wm -> value);
+  //print_picture(picture_m);
   assert("Interpreting program with picture expressions", ret);
   assert("Generating nullpicture with correct size and weight",
 	 picture_a -> width == 10 && picture_a -> height == 10 &&

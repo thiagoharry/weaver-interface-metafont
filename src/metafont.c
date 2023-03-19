@@ -277,13 +277,13 @@ char*value;
 
 #define TYPE_NULLPICTURE        74 
 #define TYPE_SUBPICTURE         75 
-/*:409*//*420:*/
-#line 11233 "weaver-interface-metafont_en.tex"
+/*:409*//*421:*/
+#line 11275 "weaver-interface-metafont_en.tex"
 
 #define TYPE_TOTALWEIGHT        76 
 #define TYPE_WIDTH              77 
 #define TYPE_HEIGHT             78 
-/*:420*/
+/*:421*/
 #line 365 "weaver-interface-metafont_en.tex"
 
 
@@ -476,11 +476,11 @@ static char*list_of_keywords[]= {
 #line 10878 "weaver-interface-metafont_en.tex"
 
 "nullpicture","subpicture",
-/*:410*//*421:*/
-#line 11243 "weaver-interface-metafont_en.tex"
+/*:410*//*422:*/
+#line 11285 "weaver-interface-metafont_en.tex"
 
 "totalweight","width","height",
-/*:421*/
+/*:422*/
 #line 858 "weaver-interface-metafont_en.tex"
 
 NULL};
@@ -2712,8 +2712,8 @@ return false;
 result->value= t.value[2+begin_expression->type-TYPE_XXPART];
 return true;
 }
-/*:223*//*422:*/
-#line 11254 "weaver-interface-metafont_en.tex"
+/*:223*//*423:*/
+#line 11296 "weaver-interface-metafont_en.tex"
 
 else if(begin_expression->type==TYPE_TOTALWEIGHT){
 struct picture_variable p;
@@ -2777,8 +2777,8 @@ glBindFramebuffer(GL_FRAMEBUFFER,0);
 glDeleteFramebuffers(1,&temporary_framebuffer);
 return true;
 }
-/*:422*//*423:*/
-#line 11325 "weaver-interface-metafont_en.tex"
+/*:423*//*424:*/
+#line 11367 "weaver-interface-metafont_en.tex"
 
 else if(begin_expression->type==TYPE_WIDTH){
 struct picture_variable p;
@@ -2796,8 +2796,8 @@ return false;
 result->value= (float)p.width;
 return true;
 }
-/*:423*//*424:*/
-#line 11348 "weaver-interface-metafont_en.tex"
+/*:424*//*425:*/
+#line 11390 "weaver-interface-metafont_en.tex"
 
 else if(begin_expression->type==TYPE_HEIGHT){
 struct picture_variable p;
@@ -2815,7 +2815,7 @@ return false;
 result->value= (float)p.height;
 return true;
 }
-/*:424*/
+/*:425*/
 #line 3233 "weaver-interface-metafont_en.tex"
 
 /*158:*/
@@ -7452,6 +7452,45 @@ return false;
 /*:419*/
 #line 11133 "weaver-interface-metafont_en.tex"
 
+/*420:*/
+#line 11213 "weaver-interface-metafont_en.tex"
+
+{
+GLuint temporary_framebuffer= 0;
+float render_matrix[16]= {1.0,0.0,0.0,0.0,
+0.0,1.0,0.0,0.0,
+0.0,0.0,1.0,0.0,
+0.0,0.0,0.0,1.0};
+get_new_framebuffer(&temporary_framebuffer,&(result->texture),
+subpicture_size.x,subpicture_size.y);
+result->width= subpicture_size.x;
+result->height= subpicture_size.y;
+
+glClearColor(1.0,1.0,1.0,0.0);
+glClear(GL_COLOR_BUFFER_BIT);
+
+render_matrix[0]= original_picture.width/subpicture_size.x;
+render_matrix[5]= original_picture.height/subpicture_size.y;
+
+render_matrix[12]= -2.0*(pair_offset.x+
+0.5*(subpicture_size.x-original_picture.width))/
+subpicture_size.x;
+render_matrix[13]= -2.0*(pair_offset.y+
+0.5*(subpicture_size.y-original_picture.height))/
+subpicture_size.y;
+
+render_picture(&original_picture,render_matrix,result->width,result->height,
+false);
+
+
+glDisable(GL_BLEND);
+glDeleteTextures(1,&(original_picture.texture));
+glBindFramebuffer(GL_FRAMEBUFFER,0);
+glDeleteFramebuffers(1,&temporary_framebuffer);
+return true;
+}
+/*:420*/
+#line 11134 "weaver-interface-metafont_en.tex"
 
 return false;
 /*:418*/
