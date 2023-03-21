@@ -3298,62 +3298,12 @@ else if(begin_expression -> type == TYPE_LENGTH){
 @
 \fimcodigo
 
-But how can we identify if we are facing a numeric priumary expression
-or an expression of different kind? Well, reading its tokens. We still
-cannot define a function that does this completely, as we still did
-not define how are functions of different types. But for now we will
-present the more simplist definition that if the expression is
-composed by a single token, if numeric, the expression is numeric, and
-if it is a variable, the expression have the same type than the
-variable. This captures the simplest case:
+Notice that identifying if we have or not a numeric primary expression
+involves calling \monoespaco{get\_primatry\_expression\_type}. This
+function will be defined in Subsection 8.8. For now, we just need to
+know that given the beginning and ending tokens for some expression,
+it returns the expression type.
 
-\iniciocodigo
-@<Local Function Declaration (metafont.c)@>+=
-int get_primary_expression_type(struct metafont *mf, struct context *cx,
-                               struct generic_token *begin_expr,
-                               struct generic_token *end_expr);
-@
-\fimcodigo
-
-\iniciocodigo
-@<Auxiliary Local Functions (metafont.c)@>+=
-int get_primary_expression_type(struct metafont *mf, struct context *cx,
-                               struct generic_token *begin_expr,
-                               struct generic_token *end_expr){
-  if(begin_expr == end_expr){
-    if(begin_expr -> type == TYPE_NUMERIC)
-      return TYPE_T_NUMERIC;
-    else if(begin_expr -> type == TYPE_SYMBOLIC){
-      struct symbolic_token *p = (struct symbolic_token *) begin_expr;
-      if(p -> var == NULL)
-        return 0; // Unknown
-      else{
-        struct variable *v = (struct variable *) (p -> var);
-        return v -> type;
-      }
-    }
-  }
-  else{ // TODO: FIXME: Temporary code. Do a proper detection.
-    struct generic_token *aux, *aux2;
-    aux = (struct generic_token *) begin_expr -> next;
-    aux = (struct generic_token *) aux -> next;
-    aux2 = (struct generic_token *) aux -> next;
-    aux2 = (struct generic_token *) aux2 -> next;
-    if(begin_expr -> type == TYPE_OPEN_PARENTHESIS &&
-       end_expr -> type == TYPE_CLOSE_PARENTHESIS &&
-       aux != NULL &&  aux -> type == TYPE_COMMA){
-      if(aux2 -> type  == TYPE_COMMA)
-        return TYPE_T_TRANSFORM;
-      else
-        return TYPE_T_PAIR;
-    }
-    //@<Discover Primary Expression Type@>
-  }
-  return TYPE_T_NUMERIC;
-  //return 0; // Unknown
-}
-@
-\fimcodigo
 
 3) If we find some of the numeric operators, we have a numeric
 operator followed by a numeric primary expression.
@@ -11409,6 +11359,169 @@ else if(begin_expression -> type == TYPE_HEIGHT){
 
 
 \subsecao{8.7. Boolean Assignments and Expressions}
+
+\subsecao{8.8. Identifying Expression Types}
+
+Several times we have an expression and want to identify its type. For
+example, in boolean expressions we can compare values from numeric,
+pair, transform and boolean expressions. In a numeric expression we
+can use \monoespaco{length} operator over numeric or pair
+expressions. We can multiply between two numeric expressions or
+between a numeric and a pair expression. Operators
+like \monoespaco{xpart} works in pairs and transforms.
+
+Notice that in none of the cases above we expect to identify a path,
+picture or pen expression. Therefore, we will ignore these expressions
+when trying to identiy the type.
+
+Identify the type of some expression can be complex. But the most
+common cases are simple and can be evaluated fast. We will use
+different functions to evaluate the type for primary, secondary and
+tertiary expressions:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+int get_primary_expression_type(struct metafont *mf, struct context *cx,
+                               struct generic_token *begin_expr,
+                               struct generic_token *end_expr);
+int get_secondary_expression_type(struct metafont *mf, struct context *cx,
+                                 struct generic_token *begin_expr,
+                                 struct generic_token *end_expr);
+int get_tertiary_expression_type(struct metafont *mf, struct context *cx,
+                                struct generic_token *begin_expr,
+                                struct generic_token *end_expr);
+@
+\fimcodigo
+
+To identify primary expressions, first we can treat the simplest cases
+(the expression have a single token) and then we deal with the more
+complex cases. The rules that allow us to identify the types are:
+
+1) A variable is an expression with the variable type.
+
+2) The expression is boolean if it is the single
+ token \monoespaco{true} or \monoespaco{false}. Or if it begins
+ with \monoespaco{cycle}, \monoespaco{odd} or
+\monoespaco{not}.
+
+3) The expression is a pair if it begins
+ with \monoespaco{point}, \monoespaco{precontrol}
+ or \monoespaco{postcontrol}. Or if in the expression we have
+ a \monoespaco{[}. And also if it begins with a numeric token and have
+ parenthesis or the beginning of a primary pair.
+
+4) The expresison is numeric if it has a ingle numeric token or the
+token \monoespaco{normaldeviate}. Or if it is a numeric token followed
+by \monoespaco{/}. Or if it begins
+with \monoespaco{length}, \monoespaco{xpart}, \monoespaco{ypart},
+\monoespaco{xxpart},
+\monoespaco{xypart}, \monoespaco{yxpart}, \monoespaco{yypart}, \monoespaco{angle},
+\monoespaco{sqrt}, \monoespaco{sind}, \monoespaco{cosd}, \monoespaco{log},
+\monoespaco{mexp}, \monoespaco{floor}, \monoespaco{uniformdeviate}.
+
+5) If we have a \monoespaco{+} ou \monoespaco{-}, we discover the type
+ignoring this first token and checking the type of the remaining
+expression.
+
+6) If we begin and end with parenthesis, and have no comma, we should
+evaluate the type of the tertiary expression inside the
+parenthesis. If we have a single comma, we have a pair. If we have
+five commas, we have a transform.
+
+7) In the other cases, we have an unknown expression and some error
+may be occurred.
+
+The code that tries to encompass these rules (but not in the above
+order) is:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+int get_primary_expression_type(struct metafont *mf, struct context *cx,
+                               struct generic_token *begin_expr,
+                               struct generic_token *end_expr){
+  if(begin_expr == end_expr){
+    if(begin_expr -> type == TYPE_SYMBOLIC){ // Case 1
+      struct variable *var = (struct variable *)
+                               ((struct symbolic_token *) begin_expr) -> var;
+      return var -> type;
+    }
+    //if(begin_expr -> type == TYPE_TRUE || begin_expr -> type == TYPE_FALSE ||
+    //   begin_expr -> type == TYPE_NOT) // Case 2
+    //  return TYPE_T_BOOLEAN;
+    if(begin_expr -> type == TYPE_NUMERIC ||
+       begin_expr -> type == TYPE_NORMALDEVIATE) // Case 4
+      return TYPE_T_NUMERIC;
+    else
+      return -1;
+  }
+  else{
+    //if(begin_expr -> type == TYPE_CYCLE || begin_expr -> type == TYPE_ODD ||
+    //   begin_expr -> type == TYPE_NOT) // Case 2
+    //  return TYPE_T_BOOLEAN;
+    // Pair expression (case 3):
+    if(begin_expr -> type == TYPE_POINT ||
+       begin_expr -> type == TYPE_PRECONTROL ||
+       begin_expr -> type == TYPE_POSTCONTROL)
+      return TYPE_T_PAIR;    
+    // Numeric expression (Case 4):
+    if(begin_expr -> type == TYPE_LENGTH || begin_expr -> type == TYPE_XPART ||
+       begin_expr -> type == TYPE_YPART || begin_expr -> type == TYPE_ANGLE ||
+       begin_expr -> type == TYPE_XXPART || begin_expr -> type == TYPE_FLOOR ||
+       begin_expr -> type == TYPE_XYPART || begin_expr -> type == TYPE_SIND ||
+       begin_expr -> type == TYPE_YXPART || begin_expr -> type == TYPE_SQRT ||
+       begin_expr -> type == TYPE_YYPART || begin_expr -> type == TYPE_LOG ||
+       begin_expr -> type == TYPE_COSD ||   begin_expr -> type == TYPE_EXP ||
+       begin_expr -> type == TYPE_UNIFORMDEVIATE) // Caso 4
+      return TYPE_T_NUMERIC;
+    // Case 5:
+    if(begin_expr -> type == TYPE_SUM || begin_expr -> type == TYPE_SUBTRACT)
+      return get_primary_expression_type(mf, cx, begin_expr -> next, end_expr);
+    // Numeric token, it could be a numeric or pair expression:
+    if(begin_expr -> type == TYPE_NUMERIC){
+      struct generic_token *t = begin_expr;
+      while(t != NULL && t != end_expr){
+        if(t -> type == TYPE_OPEN_BRACKETS || t -> type == TYPE_PRECONTROL ||
+           t -> type == TYPE_OPEN_PARENTHESIS || t -> type == TYPE_POINT ||
+           t -> type == TYPE_POSTCONTROL)
+          return TYPE_T_PAIR;
+        t = t -> next;
+      }
+      return TYPE_T_NUMERIC;
+    }
+    
+    // The remaining cases not encompassed by the more general rules 
+    // are expressions that begins with parenthesis but do not end
+    // with them: (1+1)[p1, p1] and also: normaldeviate[p1, p2]
+    if((begin_expr -> type == TYPE_OPEN_PARENTHESIS &&
+        end_expr -> type != TYPE_CLOSE_PARENTHESIS) ||
+       begin_expr -> type == TYPE_NORMALDEVIATE)
+      return TYPE_T_PAIR;
+    if(begin_expr -> type == TYPE_OPEN_PARENTHESIS &&
+       end_expr -> type == TYPE_CLOSE_PARENTHESIS &&
+       begin_expr -> next != end_expr){
+      DECLARE_NESTING_CONTROL();
+      int number_of_commas = 0;
+      struct generic_token *t = begin_expr -> next;
+      while(t != NULL && t -> next != end_expr){
+        COUNT_NESTING(t);
+        if(IS_NOT_NESTED() && t -> type == TYPE_COMMA)
+          number_of_commas ++;
+        t = t -> next;
+      }
+      if(number_of_commas == 0)
+        return -1;
+        //return get_tertiary_expression_type(mf, cx, begin_expr -> next, t);
+      else if(number_of_commas == 1)
+        return TYPE_T_PAIR;
+      else if(number_of_commas == 5)
+        return TYPE_T_TRANSFORM;
+    }
+    return -1;
+  }
+}
+@
+\fimcodigo
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

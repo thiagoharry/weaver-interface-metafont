@@ -3354,64 +3354,12 @@ else if(begin_expression -> type == TYPE_LENGTH){
 @
 \fimcodigo
 
-Mas como vamos reconhecer se estamos diante de uma expressão primária
-que é numérica ou se estamos diante de uma que é de outro tipo?
-Basicamente lendo seus tokens. Ainda não podemos definir uma função
-que faz isso completamente, pois ainda temos que ver como são as
-expressões primárias de outros tipos. Mas por hora vamos apresentar a
-definição mais simplória de que se a expressão é composta por um único
-token, se for numérico, a expressão é numérica, e se for uma variável,
-é do tipo que foi declarada a variável. Isso captura o caso mais
-simples de uso desta função:
-
-\iniciocodigo
-@<Declaração de Função Local (metafont.c)@>+=
-int get_primary_expression_type(struct metafont *mf, struct context *cx,
-                               struct generic_token *begin_expr,
-                               struct generic_token *end_expr);
-@
-\fimcodigo
-
-\iniciocodigo
-@<Funções Auxiliares Locais (metafont.c)@>+=
-int get_primary_expression_type(struct metafont *mf, struct context *cx,
-                               struct generic_token *begin_expr,
-                               struct generic_token *end_expr){
-  if(begin_expr == end_expr){
-    if(begin_expr -> type == TYPE_NUMERIC)
-      return TYPE_T_NUMERIC;
-    else if(begin_expr -> type == TYPE_SYMBOLIC){
-      struct symbolic_token *p = (struct symbolic_token *) begin_expr;
-      if(p -> var == NULL)
-        return 0; // Desconhecido
-      else{
-        struct variable *v = (struct variable *) (p -> var);
-        return v -> type;
-      }
-    }
-  }
-  else{ // TODO: Código temporário. Usar detecção mais completa
-    struct generic_token *aux, *aux2;
-    aux = (struct generic_token *) begin_expr -> next;
-    aux = (struct generic_token *) aux -> next;
-    aux2 = (struct generic_token *) aux -> next;
-    aux2 = (struct generic_token *) aux2 -> next;
-    if(begin_expr -> type == TYPE_OPEN_PARENTHESIS &&
-       end_expr -> type == TYPE_CLOSE_PARENTHESIS &&
-       aux != NULL &&  aux -> type == TYPE_COMMA){
-      if(aux2 -> type  == TYPE_COMMA)
-        return TYPE_T_TRANSFORM;
-      else
-        return TYPE_T_PAIR;
-
-}
-    //@<Descobre Tipo de Expressão Primária@>
-  }
-  return TYPE_T_NUMERIC;
-  //return 0; // Desconhecido
-}
-@
-\fimcodigo
+Note que identificar se estamos ou não em uma expressão numérica
+primária envolve usar a
+função \monoespaco{get\_primatry\_expression\_type}. Esta função é
+definida na Subseção 8.8. Mas por hora, só é necessário saber que ela
+recebe o começo e fim de uma expressão e à partir daí retorna o tipo
+da expressão.
 
 3) Se encontrarmos algum dos operadores numéricos, temos um operador
 numérico seguido de um primário numérico.
@@ -11556,9 +11504,250 @@ else if(begin_expression -> type == TYPE_HEIGHT){
 
 \subsecao{8.7. Atribuições e Expressões Booleanas}
 
+\subsecao{8.8. Identificando Tipos de Expressões}
+
+Muitas vezes temos uma expressão e devemos identificar qual o tipo da
+expressão para tratá-la corretamente. Por exemplo, quando temos uma
+expressão booleana comparando qual valor é maior, o que estamos
+comparando pode ser uma expressão numérica, de par, de transformação
+ou outra expressão booleana. Em uma expressão numérica, podemos usar o
+operador \monoespaco{length} sobre outros números ou sobre pares. Uma
+multiplicação pode ser entre números ou entre um escalar e um
+vetor. Os operadores \monoespaco{xpart} funcionam tanto em pares como
+em transformadores.
+
+Note que nenhuma das vezes em que precisamos identificar o tipo de uma
+expressão espera-se que encontremos um caminho, imagem ou uma caneta. Por
+causa disso, vamos ignorar esses tipos nas nossas funções.
+
+Identificar o tipo de uma expressão pode ser complexo e
+trabalhoso. Felizmente, os casos mais comuns tentem a ser simples e
+serão avaliados rapidamente. De qualquer forma, vamos usar funções
+diferentes para poder identificar expressões primárias, secundárias e
+terciárias:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+int get_primary_expression_type(struct metafont *mf, struct context *cx,
+                               struct generic_token *begin_expr,
+                               struct generic_token *end_expr);
+int get_secondary_expression_type(struct metafont *mf, struct context *cx,
+                                 struct generic_token *begin_expr,
+                                 struct generic_token *end_expr);
+int get_tertiary_expression_type(struct metafont *mf, struct context *cx,
+                                struct generic_token *begin_expr,
+                                struct generic_token *end_expr);
+@
+\fimcodigo
+
+Para identificar expressões primárias, primeiro podemos tratar os
+casos mais simples (a expressão é composta por um único token) e
+depois lidar com os casos mais complexos. As regras que nos permitem
+identificar são:
+
+1) Uma variável é uma expressão com o tipo da variável.
+
+2) São expressões booleanas as que tem como único
+token \monoespaco{true} ou \monoespaco{false}. Ou que começam
+com \monoespaco{cycle}, \monoespaco{odd} e
+\monoespaco{not}.
+
+3) São expressões de pares os que começam
+com \monoespaco{point}, \monoespaco{precontrol}
+e \monoespaco{postcontrol}. Ou se dentro da expressão tivermos
+um \monoespaco{[}. E também algo que começa com token numérico e tem
+parênteses ou o começo de um primário de par um pouco depois
+(\monoespaco{-3(8, 4)}).
+
+4) É expressão numérica um único token numérico, o
+token \monoespaco{normaldeviate}, um token numérico seguido
+por \monoespaco{/} e toda expressão que começa
+com \monoespaco{length}, \monoespaco{xpart}, \monoespaco{ypart}, \monoespaco{xxpart},
+\monoespaco{xypart}, \monoespaco{yxpart}, \monoespaco{yypart}, \monoespaco{angle},
+\monoespaco{sqrt}, \monoespaco{sind}, \monoespaco{cosd}, \monoespaco{log},
+\monoespaco{mexp}, \monoespaco{floor}, \monoespaco{uniformdeviate}.
+
+5) Se temos um \monoespaco{+} ou \monoespaco{-}, descobrimos o tipo
+avaliando o tipo do restante da expressão.
+
+6) Se temos parênteses e dentro deles temos uma vírgula, é um par. Se
+houverem mais vírgulas, é uma transformação. Se não houverem vírgulas,
+devemos avaliar o tipo da expressão terciária interna.
+
+7) Nos demais casos, o tipo é desconhecido e um erro deve ter ocorrido.
+
+Na nossa implementação, para testar mais rapidamente, primeiro
+checamos se temos ou não um caso simples composto por um único
+token. Todos os casos acima são tratados separadamente de acordo com
+isso:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>=
+int get_primary_expression_type(struct metafont *mf, struct context *cx,
+                               struct generic_token *begin_expr,
+                               struct generic_token *end_expr){
+  if(begin_expr == end_expr){
+    if(begin_expr -> type == TYPE_SYMBOLIC){ // Caso 1
+      struct variable *var = (struct variable *)
+                               ((struct symbolic_token *) begin_expr) -> var;
+      return var -> type;
+    }
+    //if(begin_expr -> type == TYPE_TRUE || begin_expr -> type == TYPE_FALSE ||
+    //   begin_expr -> type == TYPE_NOT) // Caso 2
+    //  return TYPE_T_BOOLEAN;
+    if(begin_expr -> type == TYPE_NUMERIC ||
+       begin_expr -> type == TYPE_NORMALDEVIATE) // Caso 4
+      return TYPE_T_NUMERIC;
+    else
+      return -1;
+  }
+  else{
+    //if(begin_expr -> type == TYPE_CYCLE || begin_expr -> type == TYPE_ODD ||
+    //   begin_expr -> type == TYPE_NOT) // Caso 2
+    //  return TYPE_T_BOOLEAN;
+    // Expressão de par (caso 3):
+    if(begin_expr -> type == TYPE_POINT ||
+       begin_expr -> type == TYPE_PRECONTROL ||
+       begin_expr -> type == TYPE_POSTCONTROL)
+      return TYPE_T_PAIR;    
+    // Expressão numérica (Caso 4):
+    if(begin_expr -> type == TYPE_LENGTH || begin_expr -> type == TYPE_XPART ||
+       begin_expr -> type == TYPE_YPART || begin_expr -> type == TYPE_ANGLE ||
+       begin_expr -> type == TYPE_XXPART || begin_expr -> type == TYPE_FLOOR ||
+       begin_expr -> type == TYPE_XYPART || begin_expr -> type == TYPE_SIND ||
+       begin_expr -> type == TYPE_YXPART || begin_expr -> type == TYPE_SQRT ||
+       begin_expr -> type == TYPE_YYPART || begin_expr -> type == TYPE_LOG ||
+       begin_expr -> type == TYPE_COSD ||   begin_expr -> type == TYPE_EXP ||
+       begin_expr -> type == TYPE_UNIFORMDEVIATE) // Caso 4
+      return TYPE_T_NUMERIC;
+    // Caso 5:
+    if(begin_expr -> type == TYPE_SUM || begin_expr -> type == TYPE_SUBTRACT)
+      return get_primary_expression_type(mf, cx, begin_expr -> next, end_expr);
+    // Token numérico, pode ser expressão numérica ou de par:
+    if(begin_expr -> type == TYPE_NUMERIC){
+      struct generic_token *t = begin_expr;
+      while(t != NULL && t != end_expr){
+        if(t -> type == TYPE_OPEN_BRACKETS || t -> type == TYPE_PRECONTROL ||
+           t -> type == TYPE_OPEN_PARENTHESIS || t -> type == TYPE_POINT ||
+           t -> type == TYPE_POSTCONTROL)
+          return TYPE_T_PAIR;
+        t = t -> next;
+      }
+      return TYPE_T_NUMERIC;
+    }
+    // Pode haver expressão de par que começa com parênteses e não termina:
+    // (1+1)[p1, p2] e também: normaldeviate[p1, p2]
+    if((begin_expr -> type == TYPE_OPEN_PARENTHESIS &&
+        end_expr -> type != TYPE_CLOSE_PARENTHESIS) ||
+       begin_expr -> type == TYPE_NORMALDEVIATE)
+      return TYPE_T_PAIR;
+    if(begin_expr -> type == TYPE_OPEN_PARENTHESIS &&
+       end_expr -> type == TYPE_CLOSE_PARENTHESIS &&
+       begin_expr -> next != end_expr){
+      DECLARE_NESTING_CONTROL();
+      int number_of_commas = 0;
+      struct generic_token *t = begin_expr -> next;
+      while(t != NULL && t -> next != end_expr){
+        COUNT_NESTING(t);
+        if(IS_NOT_NESTED() && t -> type == TYPE_COMMA)
+          number_of_commas ++;
+        t = t -> next;
+      }
+      if(number_of_commas == 0)
+        return -1;
+        //return get_tertiary_expression_type(mf, cx, begin_expr -> next, t);
+      else if(number_of_commas == 1)
+        return TYPE_T_PAIR;
+      else if(number_of_commas == 5)
+        return TYPE_T_TRANSFORM;
+    }
+    return -1;
+  }
+}
+@
+\fimcodigo
+
+Agora vamos às expressões secundárias. As regras que usaremos são:
+
+1) Se temos um único token, avaliamos tudo como expressão primária.
+
+2) Se temos \monoespaco{and}, a expressão é booleana.
+
+3) Se temos um transformador (\monoespaco{transformed}, \monoespaco{rotated},
+\monoespaco{scaled}, \monoespaco{shifted}, \monoespaco{slanted},
+\monoespaco{xscaled}, \monoespaco{yscaled}, \monoespaco{zscaled}), ignoramos
+ele e o que há depois dele, voltando a avaliar o restante da expressão
+como expressão secundária. Pode ser um transformador ou um par.
+
+4) Se temos multiplicações e divisões, devemos checar a que está mais
+à direita. Se um dos operandos for um par, é um par. Caso contrário, é
+expressão numérica. Lembrando que a regra para a divisão é um pouco
+complexa. Um token \monoespaco{/} só é divisão quando não é delimitada
+por dois tokens numéricos. Neste caso, temos uma fração, não uma
+divisão, e não há aí um operador secundário. A exceção é quando o
+token anterior já faz parte de uma fração. Assim, 1/3 é fração ao
+invésd e divisão, e não há nenhum operador secundário aí. Já 1/3/1/3
+contém um operador secundário de divisão, dividindo duas frações de
+1/3.
+
+5) Nos demais casos, não pudemos identificar e o tipo deve ser
+avaliado como se a expressão fôsse primária.
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>=
+int get_secondary_expression_type(struct metafont *mf, struct context *cx,
+                                 struct generic_token *begin_expr,
+                                 struct generic_token *end_expr){
+  DECLARE_NESTING_CONTROL();
+  struct generic_token *t = begin_expr, *prev = NULL, *last_op = NULL;
+  struct generic_token *last_fraction = NULL;
+  struct generic_token *before_last_op = NULL, *prev_prev = NULL;
+  if(begin_expr == end_expr)
+    return get_primary_expression_type(mf, cx, begin_expr, end_expr);
+  while(t != end_expr && t != NULL){
+    COUNT_NESTING(t);
+    if(IS_NOT_NESTED()){
+      //if(t -> type == TYPE_AND)
+      //  return TYPE_T_BOOLEAN;
+      if(t -> type == TYPE_TRANSFORMED || t -> type == TYPE_ROTATED ||
+         t -> type == TYPE_SCALED || t -> type == TYPE_SHIFTED ||
+         t -> type == TYPE_SLANTED || t -> type == TYPE_XSCALED ||
+         t -> type == TYPE_YSCALED || t -> type == TYPE_ZSCALED){
+        if(prev == NULL)
+          return -1;
+        return get_secondary_expression_type(mf, cx, begin_expr, prev);
+      }
+      if(t -> type == TYPE_MULTIPLICATION || t -> type == TYPE_DIVISION){
+        if(t -> type == TYPE_DIVISION && prev -> type == TYPE_NUMERIC &&
+           t != end_expr &&
+           ((struct generic_token *) t -> next) -> type != TYPE_NUMERIC &&
+           last_fraction != prev_prev)
+          last_fraction = t;
+        else{
+          last_op = t;
+          before_last_op = prev;
+        }
+      }
+    }
+    prev_prev = prev;
+    prev = t;
+    t = t -> next;
+  }
+  if(last_op != NULL){
+    int s = get_primary_expression_type(mf, cx, last_op -> next, end_expr) +
+            get_secondary_expression_type(mf, cx, begin_expr, before_last_op);
+    if(s == 2 * TYPE_T_NUMERIC)
+      return TYPE_T_NUMERIC;
+    else if(s == TYPE_T_NUMERIC + TYPE_T_PAIR)
+      return TYPE_T_PAIR;
+    else return -1;
+  }
+  else return get_primary_expression_type(mf, cx, begin_expr, end_expr);
+}
+@
+\fimcodigo
+
 \secao{Referências}
-
-
 
 \referencia{Knuth, D. E. (1984) ``Literate Programming'', The Computer
   Journal, Volume 27, Edição 2, Páginas 97--111.}
