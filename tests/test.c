@@ -1304,7 +1304,6 @@ void test_numeric_expressions(void){
 	 ALMOST_EQUAL(numeric_d -> value, 4.0) &&
 	 ALMOST_EQUAL(numeric_e -> value, 5.0) &&
 	 ALMOST_EQUAL(numeric_f -> value, 6.0));
-  printf("DEBUG: %f %f\n", numeric_g -> value, numeric_h -> value);
   assert("Evaluating numeric width and height for pictures",
 	 ALMOST_EQUAL(numeric_g -> value, 5.0) &&
 	 ALMOST_EQUAL(numeric_h -> value, 6.0));

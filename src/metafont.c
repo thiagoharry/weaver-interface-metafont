@@ -7570,8 +7570,7 @@ number_of_commas++;
 t= t->next;
 }
 if(number_of_commas==0)
-return-1;
-
+return get_tertiary_expression_type(mf,cx,begin_expr->next,t);
 else if(number_of_commas==1)
 return TYPE_T_PAIR;
 else if(number_of_commas==5)
@@ -7581,7 +7580,7 @@ return-1;
 }
 }
 /*:425*//*426:*/
-#line 11697 "weaver-interface-metafont.tex"
+#line 11696 "weaver-interface-metafont.tex"
 
 int get_secondary_expression_type(struct metafont*mf,struct context*cx,
 struct generic_token*begin_expr,
@@ -7632,7 +7631,38 @@ else return-1;
 }
 else return get_primary_expression_type(mf,cx,begin_expr,end_expr);
 }
-/*:426*/
+/*:426*//*427:*/
+#line 11771 "weaver-interface-metafont.tex"
+
+int get_tertiary_expression_type(struct metafont*mf,struct context*cx,
+struct generic_token*begin_expr,
+struct generic_token*end_expr){
+DECLARE_NESTING_CONTROL();
+struct generic_token*t= begin_expr,*prev= NULL,*last_op= NULL;
+if(begin_expr==end_expr)
+return get_primary_expression_type(mf,cx,begin_expr,end_expr);
+while(t!=end_expr&&t!=NULL){
+COUNT_NESTING(t);
+if(IS_NOT_NESTED()){
+
+
+
+
+
+if(t->type==TYPE_PYTHAGOREAN_SUM||
+t->type==TYPE_PYTHAGOREAN_SUBTRACT)
+return TYPE_T_NUMERIC;
+if(IS_VALID_SUM_OR_SUB(prev,t)&&t!=end_expr)
+last_op= t;
+}
+prev= t;
+t= t->next;
+}
+if(last_op!=NULL)
+return get_secondary_expression_type(mf,cx,last_op->next,end_expr);
+else return get_secondary_expression_type(mf,cx,begin_expr,end_expr);
+}
+/*:427*/
 #line 234 "weaver-interface-metafont.tex"
 
 /*9:*/

@@ -11582,7 +11582,7 @@ token. Todos os casos acima são tratados separadamente de acordo com
 isso:
 
 \iniciocodigo
-@<Funções Auxiliares Locais (metafont.c)@>=
+@<Funções Auxiliares Locais (metafont.c)@>+=
 int get_primary_expression_type(struct metafont *mf, struct context *cx,
                                struct generic_token *begin_expr,
                                struct generic_token *end_expr){
@@ -11654,8 +11654,7 @@ int get_primary_expression_type(struct metafont *mf, struct context *cx,
         t = t -> next;
       }
       if(number_of_commas == 0)
-        return -1;
-        //return get_tertiary_expression_type(mf, cx, begin_expr -> next, t);
+        return get_tertiary_expression_type(mf, cx, begin_expr -> next, t);
       else if(number_of_commas == 1)
         return TYPE_T_PAIR;
       else if(number_of_commas == 5)
@@ -11694,7 +11693,7 @@ contém um operador secundário de divisão, dividindo duas frações de
 avaliado como se a expressão fôsse primária.
 
 \iniciocodigo
-@<Funções Auxiliares Locais (metafont.c)@>=
+@<Funções Auxiliares Locais (metafont.c)@>+=
 int get_secondary_expression_type(struct metafont *mf, struct context *cx,
                                  struct generic_token *begin_expr,
                                  struct generic_token *end_expr){
@@ -11747,6 +11746,61 @@ int get_secondary_expression_type(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
+Por fim, as expressões terciárias. Neste caso, as regras seguidas são:
+
+1) Se temos um único token, avaliamos tudo como expressão primária.
+
+2) Se temos um \monoespaco{or} ou uma relação
+(\monoespaco{<}, \monoespaco{<=}, \monoespaco{>}, \monoespaco{>=},
+\monoespaco{=}, \monoespaco{<>}), então é uma expressão booleana. Tecnicamente as
+relações não são expressões terciárias. A ordem de precedência delas
+seria de expressões quarternárias. Mas podemos considerar todos esses
+operadores aqui, já que não estamos de fato avaliando as expressões,
+onde seguir regras de precedência é fundamental.
+
+3) Se temos soma e subtração pitagóricos
+(\monoespaco{++}, \monoespaco{+-+}), então é expressão numérica.
+
+4) Se temos soma ou subtração, o tipo da expressão é o mesmo de
+qualquer um de seus operandos.
+
+5) Nos demais casos, tentamos novamente avaliando a expressão como
+secundária.
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+int get_tertiary_expression_type(struct metafont *mf, struct context *cx,
+                                struct generic_token *begin_expr,
+                                struct generic_token *end_expr){
+  DECLARE_NESTING_CONTROL();
+  struct generic_token *t = begin_expr, *prev = NULL, *last_op = NULL;
+  if(begin_expr == end_expr)
+    return get_primary_expression_type(mf, cx, begin_expr, end_expr);
+  while(t != end_expr && t != NULL){
+    COUNT_NESTING(t);
+    if(IS_NOT_NESTED()){
+      //if(t -> type == TYPE_OR || t -> type == TYPE_LT ||
+      //     t -> type == TYPE_GT || t -> type == TYPE_GEQ ||
+      //     t -> type == TYPE_LEQ || t -> type == TYPE_EQ ||
+      //     t -> type == TYPE_NEQ)
+      //  return TYPE_T_BOOLEAN;
+      if(t -> type == TYPE_PYTHAGOREAN_SUM ||
+         t -> type == TYPE_PYTHAGOREAN_SUBTRACT)
+        return TYPE_T_NUMERIC;
+      if(IS_VALID_SUM_OR_SUB(prev, t) && t != end_expr)
+        last_op = t;
+    }
+    prev = t;
+    t = t -> next;
+  }
+  if(last_op != NULL)
+    return get_secondary_expression_type(mf, cx, last_op -> next, end_expr);
+  else return get_secondary_expression_type(mf, cx, begin_expr, end_expr);
+}
+@
+\fimcodigo
+
+
 \secao{Referências}
 
 \referencia{Knuth, D. E. (1984) ``Literate Programming'', The Computer
@@ -11757,9 +11811,5 @@ int get_secondary_expression_type(struct metafont *mf, struct context *cx,
 
 
 \fim
-
-
-
-
 
 

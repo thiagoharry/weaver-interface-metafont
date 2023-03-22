@@ -11509,8 +11509,7 @@ int get_primary_expression_type(struct metafont *mf, struct context *cx,
         t = t -> next;
       }
       if(number_of_commas == 0)
-        return -1;
-        //return get_tertiary_expression_type(mf, cx, begin_expr -> next, t);
+        return get_tertiary_expression_type(mf, cx, begin_expr -> next, t);
       else if(number_of_commas == 1)
         return TYPE_T_PAIR;
       else if(number_of_commas == 5)
@@ -11521,6 +11520,142 @@ int get_primary_expression_type(struct metafont *mf, struct context *cx,
 }
 @
 \fimcodigo
+
+Now the secondary expressions. The rules that we will use are:
+
+1) If we have a single token, we evaluate everything as a primary
+expression.
+
+2) If we have \monoespaco{and}, the expression is boolean.
+
+3) If we have a transformer (\monoespaco{transformed}, \monoespaco{rotated},
+\monoespaco{scaled}, \monoespaco{shifted}, \monoespaco{slanted},
+\monoespaco{xscaled}, \monoespaco{yscaled}, \monoespaco{zscaled}), we ignore it
+and all the tokens after it and re-evaluate the expression. In this case
+we will have a transform or a pair.
+
+4) In case of multiplications and divisions, the most important is the
+operator more at the right. In the case of multiplication, if one of
+the operands is a pair, then we have a pair expression. If both are
+numeric, we have a numeric expression. In the case of division, the
+left operand type is the operation type. A token \monoespaco{/} is a
+division when it is not delimited by numeric tokens. If it is, then we
+have a fraction, not a division operator. Except when one of the
+tokens is already part of some fraction: in this case, we have a
+division operator. Therefore, 1/3 is a fraction, not a division. But
+1/3/1/3 is a single division that divide two fractions.
+
+5) In the other cases, if we cannot identify the type, we try again
+interpreting the entire expression as a primary expression.
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+int get_secondary_expression_type(struct metafont *mf, struct context *cx,
+                                 struct generic_token *begin_expr,
+                                 struct generic_token *end_expr){
+  DECLARE_NESTING_CONTROL();
+  struct generic_token *t = begin_expr, *prev = NULL, *last_op = NULL;
+  struct generic_token *last_fraction = NULL;
+  struct generic_token *before_last_op = NULL, *prev_prev = NULL;
+  if(begin_expr == end_expr)
+    return get_primary_expression_type(mf, cx, begin_expr, end_expr);
+  while(t != end_expr && t != NULL){
+    COUNT_NESTING(t);
+    if(IS_NOT_NESTED()){
+      //if(t -> type == TYPE_AND)
+      //  return TYPE_T_BOOLEAN;
+      if(t -> type == TYPE_TRANSFORMED || t -> type == TYPE_ROTATED ||
+         t -> type == TYPE_SCALED || t -> type == TYPE_SHIFTED ||
+         t -> type == TYPE_SLANTED || t -> type == TYPE_XSCALED ||
+         t -> type == TYPE_YSCALED || t -> type == TYPE_ZSCALED){
+        if(prev == NULL)
+          return -1;
+        return get_secondary_expression_type(mf, cx, begin_expr, prev);
+      }
+      if(t -> type == TYPE_MULTIPLICATION || t -> type == TYPE_DIVISION){
+        if(t -> type == TYPE_DIVISION && prev -> type == TYPE_NUMERIC &&
+           t != end_expr &&
+           ((struct generic_token *) t -> next) -> type != TYPE_NUMERIC &&
+           last_fraction != prev_prev)
+          last_fraction = t;
+        else{
+          last_op = t;
+          before_last_op = prev;
+        }
+      }
+    }
+    prev_prev = prev;
+    prev = t;
+    t = t -> next;
+  }
+  if(last_op != NULL){
+    int s = get_primary_expression_type(mf, cx, last_op -> next, end_expr) +
+            get_secondary_expression_type(mf, cx, begin_expr, before_last_op);
+    if(s == 2 * TYPE_T_NUMERIC)
+      return TYPE_T_NUMERIC;
+    else if(s == TYPE_T_NUMERIC + TYPE_T_PAIR)
+      return TYPE_T_PAIR;
+    else return -1;
+  }
+  else return get_primary_expression_type(mf, cx, begin_expr, end_expr);
+}
+@
+\fimcodigo
+
+Finally, the tertiary expressions. In this case, the rules are:
+
+1) If we have a single token, evaluate its type as a primary expression.
+
+2) If we have an \monoespaco{or} or a relation
+(\monoespaco{<}, \monoespaco{<=}, \monoespaco{>}, \monoespaco{>=},
+\monoespaco{=}, \monoespaco{<>}), then it is a boolean expression.
+Technically, the relations are not tertiary expressions, but
+quarternary ones. But we can deal with them here, as we are not
+evaluating the expression value, where it is mandatory to follow
+precedence rules.
+
+3) If we have a pyhtagoric sum or subtraction,
+(\monoespaco{++}, \monoespaco{+-+}), it is a numeric expression.
+
+4) In the case of a sum or subtraction, the expression type is the
+same that its operands type.
+
+5) I other cases, we try again to check the type, but interpreting the
+expression as a secondary expression.
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+int get_tertiary_expression_type(struct metafont *mf, struct context *cx,
+                                struct generic_token *begin_expr,
+                                struct generic_token *end_expr){
+  DECLARE_NESTING_CONTROL();
+  struct generic_token *t = begin_expr, *prev = NULL, *last_op = NULL;
+  if(begin_expr == end_expr)
+    return get_primary_expression_type(mf, cx, begin_expr, end_expr);
+  while(t != end_expr && t != NULL){
+    COUNT_NESTING(t);
+    if(IS_NOT_NESTED()){
+      //if(t -> type == TYPE_OR || t -> type == TYPE_LT ||
+      //     t -> type == TYPE_GT || t -> type == TYPE_GEQ ||
+      //     t -> type == TYPE_LEQ || t -> type == TYPE_EQ ||
+      //     t -> type == TYPE_NEQ)
+      //  return TYPE_T_BOOLEAN;
+      if(t -> type == TYPE_PYTHAGOREAN_SUM ||
+         t -> type == TYPE_PYTHAGOREAN_SUBTRACT)
+        return TYPE_T_NUMERIC;
+      if(IS_VALID_SUM_OR_SUB(prev, t) && t != end_expr)
+        last_op = t;
+    }
+    prev = t;
+    t = t -> next;
+  }
+  if(last_op != NULL)
+    return get_secondary_expression_type(mf, cx, last_op -> next, end_expr);
+  else return get_secondary_expression_type(mf, cx, begin_expr, end_expr);
+}
+@
+\fimcodigo
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
