@@ -2753,6 +2753,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
   @<Assignment for Path Variables@>
   @<Assignment for Pen Variables@>
   @<Assignment for Picture Variables@>
+  @<Assignment for Boolean Variables@>
   return true;
 }
 @
@@ -11360,6 +11361,76 @@ else if(begin_expression -> type == TYPE_HEIGHT){
 
 \subsecao{8.7. Boolean Assignments and Expressions}
 
+Like for all other expressions and assignments, we begin defining the
+code to assign variables after evaluate an expression:
+
+\iniciocodigo
+@<Assignment for Boolean Variables@>=
+else if(type == TYPE_T_BOOLEAN){
+  int i;
+  //bool ret;
+  struct boolean_variable result;
+  //ret = eval_numeric_expression(mf, cx, begin_expression,
+  //                             (struct generic_token *) *end_token_list,
+  //                              &result);
+  //if(!ret)
+  //  return false;
+  var = (struct symbolic_token *) begin_token_list;
+  for(i = 0; i < number_of_variables; i ++){
+    ((struct boolean_variable *) var -> var) -> value = result.value;
+    var = (struct symbolic_token *) (var -> next);
+    var = (struct symbolic_token *) (var -> next);
+  }
+}
+@
+\fimcodigo
+
+Now that we can assign the result of expressions, we can write the
+code to proper evaluate the expressions.
+
+\subsubsecao{8.7.1. Comparisons}
+
+Comparisons are made using relations. They allow us to check if two
+values are equal or not, and also which value is bigger or
+smaller. The grammar rules to compare values are:
+
+\alinhaverbatim
+<Boolean Expression> -> <Boolean Tertiary> |
+                        <Numeric Expression> <Relation> <Numeric Tertiary> |
+                        <Pair Expression> <Relation> <Pair Tertiary>       |
+                        <Boolean Expression> <Relation> <Boolean Tertiary> |
+                        <Transform Expression> <Relation> <Transform Tertiary>
+<Relation> -> < | <= | > | >= | = | <>
+\alinhanormal
+
+This mean that comparisons using these relations are in fact
+quarternary expressions. They have a precedence order even smaller
+that tertiary operators. For other types of expressions, we considered
+a tertiary expression as synonym for expressions of that type. But for
+boolean expressions, tertiary expressions are an inner type for
+general boolean expressions.
+
+The relations above require new token types to represent them:
+
+\iniciocodigo
+@<METAFONT: Symbolic Token Definition@>+=
+#define TYPE_LT                    79 // O token simbólico '<'
+#define TYPE_LEQ                   80 // O token simbólico '<='
+#define TYPE_GT                    81 // O token simbólico '>'
+#define TYPE_GEQ                   82 // O token simbólico '>='
+#define TYPE_NEQ                   84 // O token simbólico '<>'
+@
+\fimcodigo
+
+And we also add their names to the list of reserved keywords:
+
+\iniciocodigo
+@<List of Keywords@>+=
+"<", "<=", ">", ">=", "<>",
+@
+\fimcodigo
+
+
 \subsecao{8.8. Identifying Expression Types}
 
 Several times we have an expression and want to identify its type. For
@@ -11637,7 +11708,7 @@ int get_tertiary_expression_type(struct metafont *mf, struct context *cx,
     if(IS_NOT_NESTED()){
       //if(t -> type == TYPE_OR || t -> type == TYPE_LT ||
       //     t -> type == TYPE_GT || t -> type == TYPE_GEQ ||
-      //     t -> type == TYPE_LEQ || t -> type == TYPE_EQ ||
+      //     t -> type == TYPE_LEQ || t -> type == TYPE_ASSIGNMENT ||
       //     t -> type == TYPE_NEQ)
       //  return TYPE_T_BOOLEAN;
       if(t -> type == TYPE_PYTHAGOREAN_SUM ||

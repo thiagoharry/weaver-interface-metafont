@@ -2810,6 +2810,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
   @<Atribuição de Variável de Caminho@>
   @<Atribuição de Variável de Caneta@>
   @<Atribuição de Variável de Imagem@>
+  @<Atribuição de Variável Booleana@>
   return true;
 }
 @
@@ -11504,6 +11505,91 @@ else if(begin_expression -> type == TYPE_HEIGHT){
 
 \subsecao{8.7. Atribuições e Expressões Booleanas}
 
+Como em todos os outros tipos de atribuições e expressões, começamos
+definindo o código que faz a atribuição de variáveis após avaliar a
+expressão:
+
+\iniciocodigo
+@<Atribuição de Variável Booleana@>=
+else if(type == TYPE_T_BOOLEAN){
+  int i;
+  //bool ret;
+  struct boolean_variable result;
+  //ret = eval_numeric_expression(mf, cx, begin_expression,
+  //                             (struct generic_token *) *end_token_list,
+  //                              &result);
+  //if(!ret)
+  //  return false;
+  var = (struct symbolic_token *) begin_token_list;
+  for(i = 0; i < number_of_variables; i ++){
+    ((struct boolean_variable *) var -> var) -> value = result.value;
+    var = (struct symbolic_token *) (var -> next);
+    var = (struct symbolic_token *) (var -> next);
+  }
+}
+@
+\fimcodigo
+
+Podendo atribuir o resultado de expressões às variáveis, vamos agora à
+parte de escrever código para avaliar as expressões booleanas.
+
+\subsubsecao{8.7.1. Comparações}
+
+Comparações são feitas usando relações. Elas permitem avaliar se duas
+variáveis ou expressões nos dão o mesmo resultado, um resultado
+diferente, bem como avaliar a relação de ordem entre seus
+resultados. As regras gramaticais para comparar valores são:
+
+\alinhaverbatim
+<Expressão Booleana> -> <Terciário Booleano> |
+                        <Expressão Numérica> <Relação> <Terciário Numérico> |
+                        <Expressão de Par> <Relação> <Terciário de Par>     |
+                        <Expressão Booleana> <Relação> <Terciário Booleano> |
+                        <Expressão de Transformação> <Relação>
+                                           <Terciário de Transformação>
+<Relação> -> < | <= | > | >= | = | <>
+\alinhanormal
+
+Isso significa que as comparações usando estas relações são expressões
+quarternárias. Elas tem uma precedência ainda menor que as expressões
+terciárias booleanas. Para outros tipos de expressão, nós consideramos
+uma expressão terciária como sendo sinônimo para a expressão daquele
+tipo. Mas para expressões booleanas, expressões terciárias são um tipo
+interno das expressões mais gerais.
+
+As relações mostradas acima requerem que novos tipos de tokens sejam
+considerados:
+
+\iniciocodigo
+@<METAFONT: Definição de Token Simbólico@>+=
+#define TYPE_LT                    79 // O token simbólico '<'
+#define TYPE_LEQ                   80 // O token simbólico '<='
+#define TYPE_GT                    81 // O token simbólico '>'
+#define TYPE_GEQ                   82 // O token simbólico '>='
+#define TYPE_NEQ                   84 // O token simbólico '<>'
+@
+\fimcodigo
+
+E adicionamos seus nomes à lista de palavras reservadas:
+
+\iniciocodigo
+@<Lista de Palavras Reservadas@>+=
+"<", "<=", ">", ">=", "<>",
+@
+\fimcodigo
+
+
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+bool eval_boolean_expression(struct metafont *mf, struct context *cx,
+                             struct generic_token *begin_expression,
+                             struct generic_token *end_token_list,
+                             struct boolean_variable *result);
+@
+\fimcodigo
+
+
 \subsecao{8.8. Identificando Tipos de Expressões}
 
 Muitas vezes temos uma expressão e devemos identificar qual o tipo da
@@ -11781,7 +11867,7 @@ int get_tertiary_expression_type(struct metafont *mf, struct context *cx,
     if(IS_NOT_NESTED()){
       //if(t -> type == TYPE_OR || t -> type == TYPE_LT ||
       //     t -> type == TYPE_GT || t -> type == TYPE_GEQ ||
-      //     t -> type == TYPE_LEQ || t -> type == TYPE_EQ ||
+      //     t -> type == TYPE_LEQ || t -> type == TYPE_ASSIGNMENT ||
       //     t -> type == TYPE_NEQ)
       //  return TYPE_T_BOOLEAN;
       if(t -> type == TYPE_PYTHAGOREAN_SUM ||
