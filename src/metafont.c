@@ -291,7 +291,11 @@ char*value;
 #define TYPE_GT                    81 
 #define TYPE_GEQ                   82 
 #define TYPE_NEQ                   84 
-/*:425*/
+/*:425*//*429:*/
+#line 11672 "weaver-interface-metafont_en.tex"
+
+#define TYPE_OR                    85 
+/*:429*/
 #line 365 "weaver-interface-metafont_en.tex"
 
 
@@ -492,7 +496,11 @@ static char*list_of_keywords[]= {
 #line 11428 "weaver-interface-metafont_en.tex"
 
 "<","<=",">",">=","<>",
-/*:426*/
+/*:426*//*430:*/
+#line 11680 "weaver-interface-metafont_en.tex"
+
+"or",
+/*:430*/
 #line 858 "weaver-interface-metafont_en.tex"
 
 NULL};
@@ -881,7 +889,21 @@ struct generic_token*begin_expression,
 struct generic_token*end_expression,
 struct picture_variable*result);
 /*:409*//*427:*/
-#line 11454 "weaver-interface-metafont_en.tex"
+#line 11437 "weaver-interface-metafont_en.tex"
+
+bool eval_boolean_expression(struct metafont*mf,struct context*cx,
+struct generic_token*begin_expression,
+struct generic_token*end_token_list,
+struct boolean_variable*result);
+/*:427*//*431:*/
+#line 11689 "weaver-interface-metafont_en.tex"
+
+bool eval_boolean_tertiary(struct metafont*mf,struct context*cx,
+struct generic_token*begin_expression,
+struct generic_token*end_expression,
+struct boolean_variable*result);
+/*:431*//*433:*/
+#line 11762 "weaver-interface-metafont_en.tex"
 
 int get_primary_expression_type(struct metafont*mf,struct context*cx,
 struct generic_token*begin_expr,
@@ -892,7 +914,7 @@ struct generic_token*end_expr);
 int get_tertiary_expression_type(struct metafont*mf,struct context*cx,
 struct generic_token*begin_expr,
 struct generic_token*end_expr);
-/*:427*/
+/*:433*/
 #line 214 "weaver-interface-metafont_en.tex"
 
 /*15:*/
@@ -2089,13 +2111,13 @@ var= (struct symbolic_token*)(var->next);
 
 else if(type==TYPE_T_BOOLEAN){
 int i;
-
+bool ret;
 struct boolean_variable result;
-
-
-
-
-
+ret= eval_boolean_expression(mf,cx,begin_expression,
+(struct generic_token*)*end_token_list,
+&result);
+if(!ret)
+return false;
 var= (struct symbolic_token*)begin_token_list;
 for(i= 0;i<number_of_variables;i++){
 ((struct boolean_variable*)var->var)->value= result.value;
@@ -7507,7 +7529,240 @@ mf->file,begin_expression->line);
 return false;
 }
 /*:410*//*428:*/
-#line 11509 "weaver-interface-metafont_en.tex"
+#line 11459 "weaver-interface-metafont_en.tex"
+
+bool eval_boolean_expression(struct metafont*mf,struct context*cx,
+struct generic_token*begin_expression,
+struct generic_token*end_expression,
+struct boolean_variable*result){
+DECLARE_NESTING_CONTROL();
+struct generic_token*p= begin_expression,*prev= NULL;
+struct generic_token*last_operator= NULL,*before_last_operator= NULL;
+while(p!=end_expression){
+COUNT_NESTING(p);
+if(IS_NOT_NESTED()&&p!=begin_expression&&
+(p->type==TYPE_LT||p->type==TYPE_LEQ||
+p->type==TYPE_GT||p->type==TYPE_GEQ||
+p->type==TYPE_NEQ||p->type==TYPE_ASSIGNMENT)){
+last_operator= p;
+before_last_operator= prev;
+}
+prev= p;
+p= p->next;
+}
+if(last_operator==NULL)
+return eval_boolean_tertiary(mf,cx,begin_expression,end_expression,
+result);
+else{
+int type;
+if(before_last_operator==NULL){
+#if defined(W_DEBUG_METAFONT)
+fprintf(stderr,"METAFONT: Error: %s:%d: Relational operator without "
+"l-value.\n",mf->file,begin_expression->line);
+#endif
+return false;
+}
+type= get_tertiary_expression_type(mf,cx,last_operator->next,
+end_expression);
+switch(type){
+case TYPE_T_NUMERIC:
+{
+struct numeric_variable a,b;
+if(!eval_numeric_expression(mf,cx,begin_expression,
+before_last_operator,&a))
+return false;
+if(!eval_numeric_expression(mf,cx,begin_expression,
+before_last_operator,&b))
+return false;
+switch(last_operator->type){
+case TYPE_LT:
+result->value= a.value<b.value;
+return true;
+case TYPE_LEQ:
+result->value= a.value<=b.value;
+return true;
+case TYPE_GT:
+result->value= a.value> b.value;
+return true;
+case TYPE_GEQ:
+result->value= a.value>=b.value;
+return true;
+case TYPE_ASSIGNMENT:
+result->value= a.value==b.value;
+return true;
+case TYPE_NEQ:
+result->value= a.value!=b.value;
+return true;
+}
+break;
+}
+case TYPE_T_PAIR:
+{
+struct pair_variable a,b;
+if(!eval_pair_expression(mf,cx,begin_expression,
+before_last_operator,&a))
+return false;
+if(!eval_pair_expression(mf,cx,begin_expression,
+before_last_operator,&b))
+return false;
+switch(last_operator->type){
+case TYPE_LT:
+result->value= (a.x<b.x)||(a.x==b.x&&a.y<b.y);
+return true;
+case TYPE_LEQ:
+result->value= (a.x<b.x)||(a.x==b.x&&a.y<=b.y);
+return true;
+case TYPE_GT:
+result->value= (a.x> b.x)||(a.x==b.x&&a.y> b.y);
+return true;
+case TYPE_GEQ:
+result->value= (a.x> b.x)||(a.x==b.x&&a.y> b.y);
+return true;
+case TYPE_ASSIGNMENT:
+result->value= (a.x==b.x&&a.y==b.y);
+return true;
+case TYPE_NEQ:
+result->value= (a.x!=b.x||a.y!=b.y);
+return true;
+}
+break;
+}
+case TYPE_T_TRANSFORM:
+{
+struct transform_variable a,b;
+int i;
+if(!eval_transform_expression(mf,cx,begin_expression,
+before_last_operator,&a))
+return false;
+if(!eval_transform_expression(mf,cx,begin_expression,
+before_last_operator,&b))
+return false;
+switch(last_operator->type){
+case TYPE_LT:
+for(i= 0;i<5;i++)
+if(a.value[i]!=b.value[i]){
+result->value= (a.value[i]<b.value[i]);
+return true;
+}
+result->value= (a.value[i]<b.value[i]);
+return true;
+case TYPE_LEQ:
+for(i= 0;i<5;i++)
+if(a.value[i]!=b.value[i]){
+result->value= (a.value[i]<b.value[i]);
+return true;
+}
+result->value= (a.value[i]<=b.value[i]);
+return true;
+case TYPE_GT:
+for(i= 0;i<5;i++)
+if(a.value[i]!=b.value[i]){
+result->value= (a.value[i]> b.value[i]);
+return true;
+}
+result->value= (a.value[i]> b.value[i]);
+return true;
+case TYPE_GEQ:
+for(i= 0;i<5;i++)
+if(a.value[i]!=b.value[i]){
+result->value= (a.value[i]> b.value[i]);
+return true;
+}
+result->value= (a.value[i]>=b.value[i]);
+return true;
+case TYPE_ASSIGNMENT:
+for(i= 0;i<5;i++)
+if(a.value[i]!=b.value[i]){
+result->value= false;
+return true;
+}
+result->value= (a.value[i]==b.value[i]);
+return true;
+case TYPE_NEQ:
+for(i= 0;i<5;i++)
+if(a.value[i]!=b.value[i]){
+result->value= true;
+return true;
+}
+result->value= (a.value[i]!=b.value[i]);
+return true;
+}
+break;
+}
+case TYPE_T_BOOLEAN:
+{
+struct boolean_variable a,b;
+a.value= b.value= -1;
+if(!eval_boolean_tertiary(mf,cx,begin_expression,
+before_last_operator,&a))
+return false;
+if(!eval_boolean_expression(mf,cx,begin_expression,
+before_last_operator,&b))
+return false;
+switch(last_operator->type){
+case TYPE_LT:
+result->value= a.value<b.value;
+return true;
+case TYPE_LEQ:
+result->value= a.value<=b.value;
+return true;
+case TYPE_GT:
+result->value= a.value> b.value;
+return true;
+case TYPE_GEQ:
+result->value= a.value>=b.value;
+return true;
+case TYPE_ASSIGNMENT:
+result->value= (a.value==b.value);
+return true;
+case TYPE_NEQ:
+result->value= (a.value!=b.value);
+return true;
+}
+break;
+}
+default:
+}
+return true;
+}
+}
+/*:428*//*432:*/
+#line 11705 "weaver-interface-metafont_en.tex"
+
+bool eval_boolean_tertiary(struct metafont*mf,struct context*cx,
+struct generic_token*begin_expression,
+struct generic_token*end_expression,
+struct boolean_variable*result){
+DECLARE_NESTING_CONTROL();
+struct generic_token*p= begin_expression,*prev= NULL;
+struct generic_token*last_operator= NULL,*before_last_operator= NULL;
+while(p!=end_expression){
+COUNT_NESTING(p);
+if(IS_NOT_NESTED()&&p!=begin_expression&&p->type==TYPE_OR){
+last_operator= p;
+before_last_operator= prev;
+}
+prev= p;
+p= p->next;
+}
+if(last_operator==NULL)
+return false;
+
+
+else{
+struct boolean_variable a,b;
+a.value= b.value= -1;
+
+
+
+if(!eval_boolean_tertiary(mf,cx,begin_expression,
+before_last_operator,&b))
+return false;
+return(a.value||b.value);
+}
+}
+/*:432*//*434:*/
+#line 11817 "weaver-interface-metafont_en.tex"
 
 int get_primary_expression_type(struct metafont*mf,struct context*cx,
 struct generic_token*begin_expr,
@@ -7591,8 +7846,8 @@ return TYPE_T_TRANSFORM;
 return-1;
 }
 }
-/*:428*//*429:*/
-#line 11623 "weaver-interface-metafont_en.tex"
+/*:434*//*435:*/
+#line 11931 "weaver-interface-metafont_en.tex"
 
 int get_secondary_expression_type(struct metafont*mf,struct context*cx,
 struct generic_token*begin_expr,
@@ -7643,8 +7898,8 @@ else return-1;
 }
 else return get_primary_expression_type(mf,cx,begin_expr,end_expr);
 }
-/*:429*//*430:*/
-#line 11698 "weaver-interface-metafont_en.tex"
+/*:435*//*436:*/
+#line 12006 "weaver-interface-metafont_en.tex"
 
 int get_tertiary_expression_type(struct metafont*mf,struct context*cx,
 struct generic_token*begin_expr,
@@ -7674,7 +7929,7 @@ if(last_op!=NULL)
 return get_secondary_expression_type(mf,cx,last_op->next,end_expr);
 else return get_secondary_expression_type(mf,cx,begin_expr,end_expr);
 }
-/*:430*/
+/*:436*/
 #line 215 "weaver-interface-metafont_en.tex"
 
 /*9:*/

@@ -11513,13 +11513,13 @@ expressão:
 @<Atribuição de Variável Booleana@>=
 else if(type == TYPE_T_BOOLEAN){
   int i;
-  //bool ret;
+  bool ret;
   struct boolean_variable result;
-  //ret = eval_numeric_expression(mf, cx, begin_expression,
-  //                             (struct generic_token *) *end_token_list,
-  //                              &result);
-  //if(!ret)
-  //  return false;
+  ret = eval_boolean_expression(mf, cx, begin_expression,
+                               (struct generic_token *) *end_token_list,
+                                &result);
+  if(!ret)
+    return false;
   var = (struct symbolic_token *) begin_token_list;
   for(i = 0; i < number_of_variables; i ++){
     ((struct boolean_variable *) var -> var) -> value = result.value;
@@ -11578,7 +11578,7 @@ E adicionamos seus nomes à lista de palavras reservadas:
 @
 \fimcodigo
 
-
+A declaração da função que avaliará expressões booleanas é:
 
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
@@ -11589,6 +11589,300 @@ bool eval_boolean_expression(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
+Esta função deverá checar se temos um dos operadores de relações
+booleanas. Se não tivermos, a expressão deve ser avaliada como
+terciária. Se tivermos, devemos identificar a relação mais à direita e
+avaliar ela após avaliar as duas outras sub-expressões. Mas antes de
+fazer isso, precisamos saber qual o tipo destas expressões. Para isso,
+vamos assumir que temos uma função que dada uma expressão terciária,
+retorna seu tipo. Ela será
+chamada \monoespaco{get\_tertiary\_expression\_type}. Iremos definir
+ela na Subseção 8.8. Mas por hora, vamos simplesmente assumir que ela
+existe.
+
+A implementação desta função é:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+bool eval_boolean_expression(struct metafont *mf, struct context *cx,
+                             struct generic_token *begin_expression,
+                             struct generic_token *end_expression,
+                             struct boolean_variable *result){
+  DECLARE_NESTING_CONTROL();
+  struct generic_token *p = begin_expression, *prev = NULL;
+  struct generic_token *last_operator = NULL, *before_last_operator = NULL;
+  while(p != end_expression){
+    COUNT_NESTING(p);
+    if(IS_NOT_NESTED() && p != begin_expression &&
+       (p -> type == TYPE_LT || p -> type == TYPE_LEQ ||
+        p -> type == TYPE_GT || p -> type == TYPE_GEQ ||
+        p -> type == TYPE_NEQ || p -> type == TYPE_ASSIGNMENT)){
+      last_operator = p;
+      before_last_operator = prev;
+    }
+    prev = p;
+    p = p -> next;
+  }
+  if(last_operator == NULL)
+    return eval_boolean_tertiary(mf, cx, begin_expression, end_expression,
+                                 result);
+  else{
+    int type;
+    if(before_last_operator == NULL){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: Relational operator without "
+                      "l-value.\n", mf -> file, begin_expression -> line);
+#endif
+      return false;
+    }
+    type = get_tertiary_expression_type(mf, cx,  last_operator -> next,
+                                        end_expression);
+    switch(type){
+    case TYPE_T_NUMERIC:
+    {
+      struct numeric_variable a, b;
+      if(!eval_numeric_expression(mf, cx, begin_expression,
+                                  before_last_operator, &a))
+        return false;
+      if(!eval_numeric_expression(mf, cx, begin_expression,
+                                  before_last_operator, &b))
+        return false;
+      switch(last_operator -> type){
+      case TYPE_LT:
+        result -> value = a.value < b.value;
+        return true;
+      case TYPE_LEQ:
+        result -> value = a.value <= b.value;
+        return true;
+      case TYPE_GT:
+        result -> value = a.value > b.value;
+        return true;
+      case TYPE_GEQ:
+        result -> value = a.value >= b.value;
+        return true;
+      case TYPE_ASSIGNMENT:
+        result -> value = a.value == b.value;
+        return true;
+      case TYPE_NEQ:
+        result -> value = a.value != b.value;
+        return true;
+      }
+      break;
+    }
+    case TYPE_T_PAIR:
+    {
+      struct pair_variable a, b;
+      if(!eval_pair_expression(mf, cx, begin_expression,
+                               before_last_operator, &a))
+        return false;
+      if(!eval_pair_expression(mf, cx, begin_expression,
+                               before_last_operator, &b))
+        return false;
+      switch(last_operator -> type){
+      case TYPE_LT:
+        result -> value = (a.x < b.x) || (a.x == b.x && a.y < b.y);
+        return true;
+      case TYPE_LEQ:
+        result -> value = (a.x < b.x) || (a.x == b.x && a.y <= b.y);
+        return true;
+      case TYPE_GT:
+        result -> value = (a.x > b.x) || (a.x == b.x && a.y > b.y);
+        return true;
+      case TYPE_GEQ:
+        result -> value = (a.x > b.x) || (a.x == b.x && a.y > b.y);
+        return true;
+      case TYPE_ASSIGNMENT:
+        result -> value = (a.x == b.x && a.y == b.y);
+        return true;
+      case TYPE_NEQ:
+        result -> value = (a.x != b.x || a.y != b.y);
+        return true;
+      }
+      break;
+    }
+    case TYPE_T_TRANSFORM:
+    {
+      struct transform_variable a, b;
+      int i;
+      if(!eval_transform_expression(mf, cx, begin_expression,
+                                    before_last_operator, &a))
+        return false;
+      if(!eval_transform_expression(mf, cx, begin_expression,
+                                    before_last_operator, &b))
+        return false;
+      switch(last_operator -> type){
+        case TYPE_LT:
+          for(i = 0; i < 5; i ++)
+            if(a.value[i] != b.value[i]){
+              result -> value = (a.value[i] < b.value[i]);
+              return true;
+            }
+          result -> value = (a.value[i] < b.value[i]);
+          return true;
+        case TYPE_LEQ:
+          for(i = 0; i < 5; i ++)
+            if(a.value[i] != b.value[i]){
+              result -> value = (a.value[i] < b.value[i]);
+              return true;
+            }
+          result -> value = (a.value[i] <= b.value[i]);
+          return true;
+        case TYPE_GT:
+          for(i = 0; i < 5; i ++)
+            if(a.value[i] != b.value[i]){
+              result -> value = (a.value[i] > b.value[i]);
+              return true;
+            }
+          result -> value = (a.value[i] > b.value[i]);
+          return true;
+        case TYPE_GEQ:
+          for(i = 0; i < 5; i ++)
+            if(a.value[i] != b.value[i]){
+              result -> value = (a.value[i] > b.value[i]);
+              return true;
+            }
+          result -> value = (a.value[i] >= b.value[i]);
+          return true;
+        case TYPE_ASSIGNMENT:
+          for(i = 0; i < 5; i ++)
+            if(a.value[i] != b.value[i]){
+              result -> value = false;
+              return true;
+            }
+          result -> value = (a.value[i] == b.value[i]);
+          return true;
+        case TYPE_NEQ:
+          for(i = 0; i < 5; i ++)
+            if(a.value[i] != b.value[i]){
+              result -> value = true;
+              return true;
+            }
+          result -> value = (a.value[i] != b.value[i]);
+          return true;
+      }          
+      break;
+    }
+    case TYPE_T_BOOLEAN:
+    {
+      struct boolean_variable a, b;
+      a.value = b.value = -1;
+      if(!eval_boolean_tertiary(mf, cx, begin_expression,
+                                before_last_operator, &a))
+        return false;
+      if(!eval_boolean_expression(mf, cx, begin_expression,
+                                before_last_operator, &b))
+        return false;
+      switch(last_operator -> type){
+      case TYPE_LT:
+        result -> value = a.value < b.value;
+        return true;
+      case TYPE_LEQ:
+        result -> value = a.value <= b.value;
+        return true;
+      case TYPE_GT:
+        result -> value = a.value > b.value;
+        return true;
+      case TYPE_GEQ:
+        result -> value = a.value >= b.value;
+        return true;
+      case TYPE_ASSIGNMENT:
+        result -> value = (a.value == b.value);
+        return true;
+      case TYPE_NEQ:
+        result -> value = (a.value != b.value);
+        return true;
+      }
+      break;
+    }
+    default:
+    }
+    return true;
+  }
+}
+@
+\fimcodigo
+
+\subsubsecao{8.7.2. A Operação OR}
+
+O operador booleano OR é a única operação booleana terciária. A
+gramática das expressões booleanas terciárias é:
+
+\alinhaverbatim
+<Terciário Booleano> -> <Terciário Booleano> or <Secundário Booleano> |
+                        <Secundário Booleano>
+\alinhanormal
+
+Para implementarmos esta expressão, precisamos então
+definir \monoespaco{or} como um novo tipo de token simbólico:
+
+\iniciocodigo
+@<METAFONT: Definição de Token Simbólico@>+=
+#define TYPE_OR                    85 // O token simbólico 'or'
+@
+\fimcodigo
+
+O qual deve ser adicionado à lista de palavras reservadas:
+
+\iniciocodigo
+@<Lista de Palavras Reservadas@>+=
+"or",
+@
+\fimcodigo
+
+A declaração da função que tratará expressões terciárias é:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+bool eval_boolean_tertiary(struct metafont *mf, struct context *cx,
+                           struct generic_token *begin_expression,
+                           struct generic_token *end_expression,
+                           struct boolean_variable *result);
+@
+\fimcodigo
+
+E a implementação desta função segue o modelo esperado. Ela percorre a
+lista de tokens até achar o último \monoespaco{or} não-aninhado em
+parênteses e outros delimitadores e aplica o operador sobre o
+resultado das subexpressões que o cercam. Se não existir um
+operador \monoespaco{or}, toda a expressão é tradada como uma
+expressão secundária:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+bool eval_boolean_tertiary(struct metafont *mf, struct context *cx,
+                           struct generic_token *begin_expression,
+                           struct generic_token *end_expression,
+                           struct boolean_variable *result){
+  DECLARE_NESTING_CONTROL();
+  struct generic_token *p = begin_expression, *prev = NULL;
+  struct generic_token *last_operator = NULL, *before_last_operator = NULL;
+  while(p != end_expression){
+    COUNT_NESTING(p);
+    if(IS_NOT_NESTED() && p != begin_expression && p -> type == TYPE_OR){
+      last_operator = p;
+      before_last_operator = prev;
+    }
+    prev = p;
+    p = p -> next;
+  }
+  if(last_operator == NULL)
+    return false;
+    //return eval_boolean_secondary(mf, cx, begin_expression, end_expression,
+    //                              result);
+  else{
+    struct boolean_variable a, b;
+    a.value = b.value = -1;
+    //if(!eval_boolean_secondary(mf, cx, begin_expression,
+    //                           before_last_operator, &a))
+    //  return false;
+    if(!eval_boolean_tertiary(mf, cx, begin_expression,
+                              before_last_operator, &b))
+      return false;
+    return (a.value || b.value);
+  }
+}
+@
+\fimcodigo
 
 \subsecao{8.8. Identificando Tipos de Expressões}
 
