@@ -1565,13 +1565,14 @@ void test_boolean_expressions(void){
   bool ret;
   struct named_variable *a0, *b0, *c0, *d0, *e0, *f0, *a1, *b1, *c1, *d1, *e1,
     *f1, *a2, *b2, *c2, *d2, *e2, *f2, *a3, *b3, *c3, *d3, *e3, *f3, *a4, *b4,
-    *c4, *d4;
+    *c4, *d4, *a5, *b5, *c5, *d5;
   struct boolean_variable *boolean_a0, *boolean_b0, *boolean_c0, *boolean_d0,
     *boolean_e0, *boolean_f0, *boolean_a1, *boolean_b1, *boolean_c1,
     *boolean_d1, *boolean_e1, *boolean_f1, *boolean_a2, *boolean_b2,
     *boolean_c2, *boolean_d2, *boolean_e2, *boolean_f2, *boolean_a3,
     *boolean_b3, *boolean_c3, *boolean_d3, *boolean_e3, *boolean_f3,
-    *boolean_a4, *boolean_b4, *boolean_c4, *boolean_d4;
+    *boolean_a4, *boolean_b4, *boolean_c4, *boolean_d4,
+    *boolean_a5, *boolean_b5, *boolean_c5, *boolean_d5;
   mf = init_metafont(malloc, free, "tests/boolean_expressions.mf");
   cx = init_context();
   void *p = lexer(mf, malloc, free, "tests/boolean_expressions.mf");
@@ -1603,7 +1604,11 @@ void test_boolean_expressions(void){
   a4 = f3 -> next;
   b4 = a4 -> next;
   c4 = b4 -> next;
-  d4 = c4 -> next;  
+  d4 = c4 -> next;
+  a5 = d4 -> next;
+  b5 = a5 -> next;
+  c5 = b5 -> next;
+  d5 = c5 -> next;  
   boolean_a0 = (struct boolean_variable *) a0 -> var;
   boolean_b0 = (struct boolean_variable *) b0 -> var;
   boolean_c0 = (struct boolean_variable *) c0 -> var;
@@ -1632,6 +1637,10 @@ void test_boolean_expressions(void){
   boolean_b4 = (struct boolean_variable *) b4 -> var;
   boolean_c4 = (struct boolean_variable *) c4 -> var;
   boolean_d4 = (struct boolean_variable *) d4 -> var;
+  boolean_a5 = (struct boolean_variable *) a5 -> var;
+  boolean_b5 = (struct boolean_variable *) b5 -> var;
+  boolean_c5 = (struct boolean_variable *) c5 -> var;
+  boolean_d5 = (struct boolean_variable *) d5 -> var;
   assert("Interpreting program with boolean expressions", ret);
   assert("Boolean comparisons between numerics",
 	 boolean_a0 -> value && !(boolean_b0 -> value) && boolean_c0 -> value &&
@@ -1647,7 +1656,10 @@ void test_boolean_expressions(void){
 	 (boolean_d3 -> value) && !(boolean_e3 -> value) && (boolean_f3 -> value));  
   assert("Testing Boolean OR",
 	 !(boolean_a4 -> value) && (boolean_b4 -> value) && (boolean_c4 -> value) &&
-	 (boolean_d4 -> value));  
+	 (boolean_d4 -> value));
+  assert("Testing Boolean AND",
+	 !(boolean_a5 -> value) && !(boolean_b5 -> value) &&
+	 !(boolean_c5 -> value) && (boolean_d5 -> value));  
   free_token_list(free, p);
   destroy_metafont(mf);
   destroy_context(cx);
