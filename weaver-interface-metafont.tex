@@ -11566,7 +11566,7 @@ considerados:
 #define TYPE_LEQ                   80 // O token simbólico '<='
 #define TYPE_GT                    81 // O token simbólico '>'
 #define TYPE_GEQ                   82 // O token simbólico '>='
-#define TYPE_NEQ                   84 // O token simbólico '<>'
+#define TYPE_NEQ                   83 // O token simbólico '<>'
 @
 \fimcodigo
 
@@ -11817,7 +11817,7 @@ definir \monoespaco{or} como um novo tipo de token simbólico:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_OR                    85 // O token simbólico 'or'
+#define TYPE_OR                    84 // O token simbólico 'or'
 @
 \fimcodigo
 
@@ -11877,13 +11877,14 @@ bool eval_boolean_tertiary(struct metafont *mf, struct context *cx,
     if(!eval_boolean_tertiary(mf, cx, begin_expression,
                               before_last_operator, &b))
       return false;
-    return (a.value || b.value);
+    result -> value =  (a.value || b.value);
+    return true;
   }
 }
 @
 \fimcodigo
 
-\subsubsecao{8.7.2. A Operação AND}
+\subsubsecao{8.7.3. A Operação AND}
 
 O operador booleano AND é a única operação booleana secundária. A
 gramática das expressões booleanas secundárias é:
@@ -11933,24 +11934,159 @@ bool eval_boolean_secondary(struct metafont *mf, struct context *cx,
     p = p -> next;
   }
   if(last_operator == NULL)
-    return false;
-    //return eval_boolean_primary(mf, cx, begin_expression, end_expression,
-    //                            result);
+    return eval_boolean_primary(mf, cx, begin_expression, end_expression,
+                                result);
   else{
     struct boolean_variable a, b;
     a.value = b.value = -1;
-    //if(!eval_boolean_primary(mf, cx, begin_expression,
-    //                         before_last_operator, &a))
-    //  return false;
+    if(!eval_boolean_primary(mf, cx, begin_expression,
+                             before_last_operator, &a))
+      return false;
     if(!eval_boolean_secondary(mf, cx, begin_expression,
                                before_last_operator, &b))
       return false;
-    return (a.value && b.value);
+    result -> value = (a.value && b.value);
+    return true;
   }
 }
 @
 \fimcodigo
 
+\subsubsecao{8.7.4. Expressões Primárias Booleanos}
+
+A gramática das expressões primárias booleanas é:
+
+\alinhaverbatim
+<Primário Booleano> -> <Variável Booleana> | true | false |
+                       cycle <Caminho Primário> | odd <Primário Numérico> |
+                       not <Primário Booleano> |
+                       ( <Expressão Booleana> )
+\alinhanormal
+
+A maioria destas expressões é auto-explictiva. Uma variável booleana é
+avaliada para seja qual for o seu valor armazenado. Os
+valores \monoespaco{true} e \monoespaco{false} representam verdadeiro
+e falso. O \monoespaco{not} é o operador NOT de degação. Parênteses
+podem ser usados para mudar a ordem de avaliação de operadores. O
+token \monoespaco{odd} serve para checar se o número à seguir é ímpar
+após arredondá-lo para o inteiro mais próximo. E \monoespaco{cycle}
+serve para checar se um caminho é cíclico ou não.
+
+Os seguintes novos tipos de token não foram ainda definidos:
+
+\iniciocodigo
+@<METAFONT: Definição de Token Simbólico@>+=
+#define TYPE_TRUE                    85 // O token simbólico 'true'
+#define TYPE_FALSE                   86 // O token simbólico 'false'
+#define TYPE_ODD                     87 // O token simbólico 'odd'
+#define TYPE_NOT                     88 // O token simbólico 'not'
+@
+\fimcodigo
+
+E o nome de cada um deles deve ser adicionado à lista de palavras
+reservadas:
+
+\iniciocodigo
+@<Lista de Palavras Reservadas@>+=
+"true", "false", "odd", "not",
+@
+\fimcodigo
+
+A função que avaliará expressões booleanas primárias é:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+bool eval_boolean_primary(struct metafont *mf, struct context *cx,
+                          struct generic_token *begin_expression,
+                          struct generic_token *end_expression,
+                          struct boolean_variable *result);
+@
+\fimcodigo
+
+No caso de expressões booleanas primárias, é perfeitamente possível
+identificar qual regra gramatical seguir após observar o primeiro
+token encontrado. Então a função apenas observa o primeiro token, e
+depois disso ela decide o que fazer:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+bool eval_boolean_primary(struct metafont *mf, struct context *cx,
+                          struct generic_token *begin_expression,
+                          struct generic_token *end_expression,
+                          struct boolean_variable *result){
+  switch(begin_expression -> type){
+    case TYPE_SYMBOLIC: // Variável
+      struct boolean_variable *var;
+      var = ((struct symbolic_token *) begin_expression) -> var;
+      if(var -> value == -1){
+#if defined(W_DEBUG_METAFONT)
+        fprintf(stderr, "METAFONT: Error: %s:%d: Unitialized variable "
+                "'%s'.\n", mf -> file, begin_expression -> line,
+                ((struct symbolic_token *) begin_expression) -> value);
+#endif
+        return false;
+      }
+      result -> value = var -> value;
+      return true;
+    break;
+    case TYPE_TRUE: // Verdadeiro
+      result -> value = 1;
+      return true;
+    break;
+    case TYPE_FALSE: // Falso
+      result -> value = 0;
+      return true;
+    break;
+    case TYPE_CYCLE: // 'cycle'
+      struct path_variable path;
+      if(!eval_path_primary(mf, cx, begin_expression -> next, end_expression,
+                            &path))
+        return false;
+      result -> value = path.cyclic;
+      if(temporary_free != NULL)
+        path_recursive_free(temporary_free, &path, false);
+      return true;
+    break;
+    case TYPE_ODD: // 'odd'
+      struct numeric_variable num;
+      if(!eval_numeric_primary(mf, cx, begin_expression -> next, end_expression,
+                               &num))
+        return false;
+      result -> value = (((int) round(num.value)) % 2);
+      return true;
+    break;
+    case TYPE_NOT: // 'not'
+      struct boolean_variable b;
+      if(!eval_boolean_primary(mf, cx, begin_expression -> next, end_expression,
+                              &b))
+        return false;
+      result -> value = !(b.value);
+      return true;
+    break;
+    case TYPE_OPEN_PARENTHESIS: // '('
+      if(end_expression -> type != TYPE_CLOSE_PARENTHESIS){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
+              "expression.\n",  mf -> file, begin_expression -> line);
+#endif
+        return false;
+      }
+      struct generic_token *last_token = begin_expression;
+      while(last_token -> next != end_expression)
+        last_token = last_token -> next;
+      return eval_boolean_expression(mf, cx, begin_expression -> next,
+                                     last_token, result);
+    break;
+    default:
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
+              "expression.\n",  mf -> file, begin_expression -> line);
+#endif
+    return false;
+  }
+}
+@
+\fimcodigo
 
 \subsecao{8.8. Identificando Tipos de Expressões}
 
@@ -12227,11 +12363,11 @@ int get_tertiary_expression_type(struct metafont *mf, struct context *cx,
   while(t != end_expr && t != NULL){
     COUNT_NESTING(t);
     if(IS_NOT_NESTED()){
-      //if(t -> type == TYPE_OR || t -> type == TYPE_LT ||
-      //     t -> type == TYPE_GT || t -> type == TYPE_GEQ ||
-      //     t -> type == TYPE_LEQ || t -> type == TYPE_ASSIGNMENT ||
-      //     t -> type == TYPE_NEQ)
-      //  return TYPE_T_BOOLEAN;
+      if(t -> type == TYPE_OR || t -> type == TYPE_LT ||
+           t -> type == TYPE_GT || t -> type == TYPE_GEQ ||
+           t -> type == TYPE_LEQ || t -> type == TYPE_ASSIGNMENT ||
+           t -> type == TYPE_NEQ)
+        return TYPE_T_BOOLEAN;
       if(t -> type == TYPE_PYTHAGOREAN_SUM ||
          t -> type == TYPE_PYTHAGOREAN_SUBTRACT)
         return TYPE_T_NUMERIC;

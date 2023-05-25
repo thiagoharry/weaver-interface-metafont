@@ -1565,50 +1565,31 @@ void test_boolean_expressions(void){
   bool ret;
   struct named_variable *a0, *b0, *c0, *d0, *e0, *f0, *a1, *b1, *c1, *d1, *e1,
     *f1, *a2, *b2, *c2, *d2, *e2, *f2, *a3, *b3, *c3, *d3, *e3, *f3, *a4, *b4,
-    *c4, *d4, *a5, *b5, *c5, *d5;
+    *c4, *d4, *a5, *b5, *c5, *d5, *a6, *b6, *c6, *d6, *e6, *f6;
   struct boolean_variable *boolean_a0, *boolean_b0, *boolean_c0, *boolean_d0,
     *boolean_e0, *boolean_f0, *boolean_a1, *boolean_b1, *boolean_c1,
     *boolean_d1, *boolean_e1, *boolean_f1, *boolean_a2, *boolean_b2,
     *boolean_c2, *boolean_d2, *boolean_e2, *boolean_f2, *boolean_a3,
     *boolean_b3, *boolean_c3, *boolean_d3, *boolean_e3, *boolean_f3,
     *boolean_a4, *boolean_b4, *boolean_c4, *boolean_d4,
-    *boolean_a5, *boolean_b5, *boolean_c5, *boolean_d5;
+    *boolean_a5, *boolean_b5, *boolean_c5, *boolean_d5,
+    *boolean_a6, *boolean_b6, *boolean_c6, *boolean_d6, *boolean_e6,
+    *boolean_f6;
   mf = init_metafont(malloc, free, "tests/boolean_expressions.mf");
   cx = init_context();
   void *p = lexer(mf, malloc, free, "tests/boolean_expressions.mf");
   ret = eval_program(mf, cx, p);
   a0 = (struct named_variable *) mf -> named_variables;
-  b0 = a0 -> next;
-  c0 = b0 -> next;
-  d0 = c0 -> next;
-  e0 = d0 -> next;
-  f0 = e0 -> next;
-  a1 = f0 -> next;
-  b1 = a1 -> next;
-  c1 = b1 -> next;
-  d1 = c1 -> next;
-  e1 = d1 -> next;
-  f1 = e1 -> next;
-  a2 = f1 -> next;
-  b2 = a2 -> next;
-  c2 = b2 -> next;
-  d2 = c2 -> next;
-  e2 = d2 -> next;
-  f2 = e2 -> next;
-  a3 = f2 -> next;
-  b3 = a3 -> next;
-  c3 = b3 -> next;
-  d3 = c3 -> next;
-  e3 = d3 -> next;
-  f3 = e3 -> next;
-  a4 = f3 -> next;
-  b4 = a4 -> next;
-  c4 = b4 -> next;
-  d4 = c4 -> next;
-  a5 = d4 -> next;
-  b5 = a5 -> next;
-  c5 = b5 -> next;
-  d5 = c5 -> next;  
+  b0 = a0 -> next; c0 = b0 -> next; d0 = c0 -> next; e0 = d0 -> next;
+  f0 = e0 -> next; a1 = f0 -> next; b1 = a1 -> next; c1 = b1 -> next;
+  d1 = c1 -> next; e1 = d1 -> next; f1 = e1 -> next; a2 = f1 -> next;
+  b2 = a2 -> next; c2 = b2 -> next; d2 = c2 -> next; e2 = d2 -> next;
+  f2 = e2 -> next; a3 = f2 -> next; b3 = a3 -> next; c3 = b3 -> next;
+  d3 = c3 -> next; e3 = d3 -> next; f3 = e3 -> next; a4 = f3 -> next;
+  b4 = a4 -> next; c4 = b4 -> next; d4 = c4 -> next; a5 = d4 -> next;
+  b5 = a5 -> next; c5 = b5 -> next; d5 = c5 -> next; a6 = d5 -> next;
+  b6 = a6 -> next; c6 = b6 -> next; d6 = c6 -> next; e6 = d6 -> next;
+  f6 = e6 -> next;
   boolean_a0 = (struct boolean_variable *) a0 -> var;
   boolean_b0 = (struct boolean_variable *) b0 -> var;
   boolean_c0 = (struct boolean_variable *) c0 -> var;
@@ -1641,6 +1622,12 @@ void test_boolean_expressions(void){
   boolean_b5 = (struct boolean_variable *) b5 -> var;
   boolean_c5 = (struct boolean_variable *) c5 -> var;
   boolean_d5 = (struct boolean_variable *) d5 -> var;
+  boolean_a6 = (struct boolean_variable *) a6 -> var;
+  boolean_b6 = (struct boolean_variable *) b6 -> var;
+  boolean_c6 = (struct boolean_variable *) c6 -> var;
+  boolean_d6 = (struct boolean_variable *) d6 -> var;
+  boolean_e6 = (struct boolean_variable *) e6 -> var;
+  boolean_f6 = (struct boolean_variable *) f6 -> var;
   assert("Interpreting program with boolean expressions", ret);
   assert("Boolean comparisons between numerics",
 	 boolean_a0 -> value && !(boolean_b0 -> value) && boolean_c0 -> value &&
@@ -1653,13 +1640,17 @@ void test_boolean_expressions(void){
 	 !(boolean_d2 -> value) && boolean_e2 -> value && !(boolean_f2 -> value));
   assert("Boolean comparisons between booleans",
 	 !(boolean_a3 -> value) && (boolean_b3 -> value) && !(boolean_c3 -> value) &&
-	 (boolean_d3 -> value) && !(boolean_e3 -> value) && (boolean_f3 -> value));  
+	 (boolean_d3 -> value) && !(boolean_e3 -> value) && (boolean_f3 -> value));
   assert("Testing Boolean OR",
 	 !(boolean_a4 -> value) && (boolean_b4 -> value) && (boolean_c4 -> value) &&
 	 (boolean_d4 -> value));
   assert("Testing Boolean AND",
 	 !(boolean_a5 -> value) && !(boolean_b5 -> value) &&
-	 !(boolean_c5 -> value) && (boolean_d5 -> value));  
+	 !(boolean_c5 -> value) && (boolean_d5 -> value));
+  assert("Testing De Morgan's Law", boolean_a6);
+  assert("Testing Boolean Variable evaluation", boolean_b6);
+  assert("Testing 'odd' operator", !boolean_c6 && boolean_d6);
+  assert("Testing 'cycle' operator", boolean_e6 && !boolean_f6);
   free_token_list(free, p);
   destroy_metafont(mf);
   destroy_context(cx);

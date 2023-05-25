@@ -11731,7 +11731,8 @@ bool eval_boolean_tertiary(struct metafont *mf, struct context *cx,
     if(!eval_boolean_tertiary(mf, cx, begin_expression,
                               before_last_operator, &b))
       return false;
-    return (a.value || b.value);
+    result -> value =  (a.value || b.value);
+    return true;
   }
 }
 @
@@ -11798,7 +11799,8 @@ bool eval_boolean_secondary(struct metafont *mf, struct context *cx,
     if(!eval_boolean_secondary(mf, cx, begin_expression,
                                before_last_operator, &b))
       return false;
-    return (a.value && b.value);
+    result -> value = (a.value && b.value);
+    return true;
   }
 }
 @
