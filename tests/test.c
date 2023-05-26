@@ -1639,8 +1639,8 @@ void test_boolean_expressions(void){
 	 boolean_a2 -> value && !(boolean_b2 -> value) && boolean_c2 -> value &&
 	 !(boolean_d2 -> value) && boolean_e2 -> value && !(boolean_f2 -> value));
   assert("Boolean comparisons between booleans",
-	 !(boolean_a3 -> value) && (boolean_b3 -> value) && !(boolean_c3 -> value) &&
-	 (boolean_d3 -> value) && !(boolean_e3 -> value) && (boolean_f3 -> value));
+	 !(boolean_a3 -> value) && (boolean_b3 -> value) && (boolean_c3 -> value) &&
+	 !(boolean_d3 -> value) && (boolean_e3 -> value) && (boolean_f3 -> value));
   assert("Testing Boolean OR",
 	 !(boolean_a4 -> value) && (boolean_b4 -> value) && (boolean_c4 -> value) &&
 	 (boolean_d4 -> value));
@@ -1649,8 +1649,8 @@ void test_boolean_expressions(void){
 	 !(boolean_c5 -> value) && (boolean_d5 -> value));
   assert("Testing De Morgan's Law", boolean_a6);
   assert("Testing Boolean Variable evaluation", boolean_b6);
-  assert("Testing 'odd' operator", !boolean_c6 && boolean_d6);
-  assert("Testing 'cycle' operator", boolean_e6 && !boolean_f6);
+  assert("Testing 'odd' operator", (!boolean_c6 -> value) && boolean_d6 -> value);
+  assert("Testing 'cycle' operator", boolean_e6 -> value && !(boolean_f6 -> value));
   free_token_list(free, p);
   destroy_metafont(mf);
   destroy_context(cx);

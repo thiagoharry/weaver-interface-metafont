@@ -11497,8 +11497,8 @@ bool eval_boolean_expression(struct metafont *mf, struct context *cx,
       if(!eval_numeric_expression(mf, cx, begin_expression,
                                   before_last_operator, &a))
         return false;
-      if(!eval_numeric_expression(mf, cx, begin_expression,
-                                  before_last_operator, &b))
+      if(!eval_numeric_expression(mf, cx, last_operator -> next,
+                                  end_expression, &b))
         return false;
       switch(last_operator -> type){
       case TYPE_LT:
@@ -11528,8 +11528,8 @@ bool eval_boolean_expression(struct metafont *mf, struct context *cx,
       if(!eval_pair_expression(mf, cx, begin_expression,
                                before_last_operator, &a))
         return false;
-      if(!eval_pair_expression(mf, cx, begin_expression,
-                               before_last_operator, &b))
+      if(!eval_pair_expression(mf, cx, last_operator -> next,
+                               end_expression, &b))
         return false;
       switch(last_operator -> type){
       case TYPE_LT:
@@ -11560,8 +11560,8 @@ bool eval_boolean_expression(struct metafont *mf, struct context *cx,
       if(!eval_transform_expression(mf, cx, begin_expression,
                                     before_last_operator, &a))
         return false;
-      if(!eval_transform_expression(mf, cx, begin_expression,
-                                    before_last_operator, &b))
+      if(!eval_transform_expression(mf, cx, last_operator -> next,
+                                    end_expression, &b))
         return false;
       switch(last_operator -> type){
         case TYPE_LT:
@@ -11622,8 +11622,8 @@ bool eval_boolean_expression(struct metafont *mf, struct context *cx,
       if(!eval_boolean_tertiary(mf, cx, begin_expression,
                                 before_last_operator, &a))
         return false;
-      if(!eval_boolean_expression(mf, cx, begin_expression,
-                                before_last_operator, &b))
+      if(!eval_boolean_expression(mf, cx, last_operator -> next,
+                                  end_expression, &b))
         return false;
       switch(last_operator -> type){
       case TYPE_LT:
@@ -11728,8 +11728,8 @@ bool eval_boolean_tertiary(struct metafont *mf, struct context *cx,
     if(!eval_boolean_secondary(mf, cx, begin_expression,
                                before_last_operator, &a))
       return false;
-    if(!eval_boolean_tertiary(mf, cx, begin_expression,
-                              before_last_operator, &b))
+    if(!eval_boolean_tertiary(mf, cx, last_operator -> next,
+                              end_expression, &b))
       return false;
     result -> value =  (a.value || b.value);
     return true;
@@ -11788,16 +11788,16 @@ bool eval_boolean_secondary(struct metafont *mf, struct context *cx,
   }
   if(last_operator == NULL)
     return false;
-    //return eval_boolean_primary(mf, cx, begin_expression, end_expression,
-    //                            result);
+    return eval_boolean_primary(mf, cx, begin_expression, end_expression,
+                                result);
   else{
     struct boolean_variable a, b;
     a.value = b.value = -1;
-    //if(!eval_boolean_primary(mf, cx, begin_expression,
-    //                         before_last_operator, &a))
-    //  return false;
-    if(!eval_boolean_secondary(mf, cx, begin_expression,
-                               before_last_operator, &b))
+    if(!eval_boolean_primary(mf, cx, begin_expression,
+                             before_last_operator, &a))
+      return false;
+    if(!eval_boolean_secondary(mf, cx, last_operator -> next,
+                               end_expression, &b))
       return false;
     result -> value = (a.value && b.value);
     return true;
