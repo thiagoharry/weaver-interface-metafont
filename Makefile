@@ -12,7 +12,7 @@ benchmark:
 test:
 	ctangle weaver-interface-metafont.tex
 	cp src/metafont.* tests/
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -Wall -g -O2 tests/window.c tests/test.c -o test_metafont -lpthread -lX11 -lEGL -lGLESv2 -lm #-DW_DEBUG_METAFONT
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -Wall -g -O2 tests/window.c tests/test.c -o test_metafont -lpthread -lX11 -lEGL -lGLESv2 -lm -DW_DEBUG_METAFONT
 	./test_metafont
 test_en:
 	ctangle weaver-interface-metafont_en.tex

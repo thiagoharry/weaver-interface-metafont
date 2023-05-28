@@ -11418,7 +11418,7 @@ The relations above require new token types to represent them:
 #define TYPE_LEQ                   80 // O token simbólico '<='
 #define TYPE_GT                    81 // O token simbólico '>'
 #define TYPE_GEQ                   82 // O token simbólico '>='
-#define TYPE_NEQ                   84 // O token simbólico '<>'
+#define TYPE_NEQ                   83 // O token simbólico '<>'
 @
 \fimcodigo
 
@@ -11619,11 +11619,11 @@ bool eval_boolean_expression(struct metafont *mf, struct context *cx,
     {
       struct boolean_variable a, b;
       a.value = b.value = -1;
-      if(!eval_boolean_tertiary(mf, cx, begin_expression,
-                                before_last_operator, &a))
+      if(!eval_boolean_expression(mf, cx, begin_expression,
+                                  before_last_operator, &a))
         return false;
-      if(!eval_boolean_expression(mf, cx, last_operator -> next,
-                                  end_expression, &b))
+      if(!eval_boolean_tertiary(mf, cx, last_operator -> next,
+                                end_expression, &b))
         return false;
       switch(last_operator -> type){
       case TYPE_LT:
@@ -11670,7 +11670,7 @@ representing the \monoespaco{or} opeartor:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_OR                    85 // Symbolic token 'or'
+#define TYPE_OR                    84 // Symbolic token 'or'
 @
 \fimcodigo
 
@@ -11725,11 +11725,11 @@ bool eval_boolean_tertiary(struct metafont *mf, struct context *cx,
   else{
     struct boolean_variable a, b;
     a.value = b.value = -1;
-    if(!eval_boolean_secondary(mf, cx, begin_expression,
-                               before_last_operator, &a))
+    if(!eval_boolean_tertiary(mf, cx, begin_expression,
+                             before_last_operator, &a))
       return false;
-    if(!eval_boolean_tertiary(mf, cx, last_operator -> next,
-                              end_expression, &b))
+    if(!eval_boolean_secondary(mf, cx, last_operator -> next,
+                               end_expression, &b))
       return false;
     result -> value =  (a.value || b.value);
     return true;
@@ -11787,20 +11787,169 @@ bool eval_boolean_secondary(struct metafont *mf, struct context *cx,
     p = p -> next;
   }
   if(last_operator == NULL)
-    return false;
     return eval_boolean_primary(mf, cx, begin_expression, end_expression,
                                 result);
   else{
     struct boolean_variable a, b;
     a.value = b.value = -1;
-    if(!eval_boolean_primary(mf, cx, begin_expression,
-                             before_last_operator, &a))
+    if(!eval_boolean_secondary(mf, cx, begin_expression,
+                               before_last_operator, &a))
       return false;
-    if(!eval_boolean_secondary(mf, cx, last_operator -> next,
-                               end_expression, &b))
+    if(!eval_boolean_primary(mf, cx, last_operator -> next,
+                             end_expression, &b))
       return false;
     result -> value = (a.value && b.value);
     return true;
+  }
+}
+@
+\fimcodigo
+
+\subsubsecao{8.7.4. Primary Boolean Expressions}
+
+The grammar for boolean primary expressions is:
+
+\alinhaverbatim
+<Boolean Primary> -> <Boolean Variable> | true | false |
+                     cycle <Path Primary> | odd <Numeric Primary> |
+                     not <Boolean Primary> |
+                     ( <Boolean Expression> )
+\alinhanormal
+
+Most of these expressions have obvious meanings. A boolean variable is
+evaluated to what vaue it has stored. The values \monoespaco{true}
+and \monoespaco{false} evaluated to the boolean value correspinding to
+their names. The \monoespaco{not} operator is the boolean
+NOT. Parenthesis can be used to change the order of evaluation for
+operators. The token \monoespaco{odd} checks if the following numeric
+is odd after rounding it to the nearest
+integer. And \monoespaco{cycle} checks if a path is cyclic.
+
+The following new tokens are defined:
+
+\iniciocodigo
+@<METAFONT: Symbolic Token Definition@>+=
+#define TYPE_TRUE                    85 // O token simbólico 'true'
+#define TYPE_FALSE                   86 // O token simbólico 'false'
+#define TYPE_ODD                     87 // O token simbólico 'odd'
+#define TYPE_NOT                     88 // O token simbólico 'not'
+@
+\fimcodigo
+
+Each of their names should be added to the list of reserved kyewords:
+
+\iniciocodigo
+@<List of Keywords@>+=
+"true", "false", "odd", "not",
+@
+\fimcodigo
+
+The function that evaluates boolean primaries is:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+bool eval_boolean_primary(struct metafont *mf, struct context *cx,
+                          struct generic_token *begin_expression,
+                          struct generic_token *end_expression,
+                          struct boolean_variable *result);
+@
+\fimcodigo
+
+In boolean primary expressions, it is possible to determine which
+grammar rule to follow just checking the first token. Therefore, this
+function just checks the first token and apply the correct rule:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+bool eval_boolean_primary(struct metafont *mf, struct context *cx,
+                          struct generic_token *begin_expression,
+                          struct generic_token *end_expression,
+                          struct boolean_variable *result){
+  switch(begin_expression -> type){
+    case TYPE_SYMBOLIC: // Variável
+      struct boolean_variable *var;
+      var = ((struct symbolic_token *) begin_expression) -> var;
+      if(var -> value == -1){
+#if defined(W_DEBUG_METAFONT)
+        fprintf(stderr, "METAFONT: Error: %s:%d: Unitialized variable "
+                "'%s'.\n", mf -> file, begin_expression -> line,
+                ((struct symbolic_token *) begin_expression) -> value);
+#endif
+        return false;
+      }
+      result -> value = var -> value;
+      return true;
+    break;
+    case TYPE_TRUE: // Verdadeiro
+      if(end_expression != begin_expression){
+#if defined(W_DEBUG_METAFONT)
+        fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
+                "boolean expression. Did you miss a ';'?\n",
+                mf -> file, begin_expression -> line);
+#endif
+        return false;
+      }
+      result -> value = 1;
+      return true;
+    break;
+    case TYPE_FALSE: // Falso
+      if(end_expression != begin_expression){
+#if defined(W_DEBUG_METAFONT)
+        fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
+                "boolean expression. Did you miss a ';'?\n",
+                mf -> file, begin_expression -> line);
+#endif
+        return false;
+      }
+      result -> value = 0;
+      return true;
+    break;
+    case TYPE_CYCLE: // 'cycle'
+      struct path_variable path;
+      if(!eval_path_primary(mf, cx, begin_expression -> next, end_expression,
+                            &path))
+        return false;
+      result -> value = path.cyclic;
+      if(temporary_free != NULL)
+        path_recursive_free(temporary_free, &path, false);
+      return true;
+    break;
+    case TYPE_ODD: // 'odd'
+      struct numeric_variable num;
+      if(!eval_numeric_primary(mf, cx, begin_expression -> next, end_expression,
+                               &num))
+        return false;
+      result -> value = (((int) round(num.value)) % 2);
+      return true;
+    break;
+    case TYPE_NOT: // 'not'
+      struct boolean_variable b;
+      if(!eval_boolean_primary(mf, cx, begin_expression -> next, end_expression,
+                              &b))
+        return false;
+      result -> value = !(b.value);
+      return true;
+    break;
+    case TYPE_OPEN_PARENTHESIS: // '('
+      if(end_expression -> type != TYPE_CLOSE_PARENTHESIS){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
+              "expression.\n",  mf -> file, begin_expression -> line);
+#endif
+        return false;
+      }
+      struct generic_token *last_token = begin_expression;
+      while(last_token -> next != end_expression)
+        last_token = last_token -> next;
+      return eval_boolean_expression(mf, cx, begin_expression -> next,
+                                     last_token, result);
+    break;
+    default:
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
+              "expression.\n",  mf -> file, begin_expression -> line);
+#endif
+    return false;
   }
 }
 @
@@ -11892,9 +12041,9 @@ int get_primary_expression_type(struct metafont *mf, struct context *cx,
                                ((struct symbolic_token *) begin_expr) -> var;
       return var -> type;
     }
-    //if(begin_expr -> type == TYPE_TRUE || begin_expr -> type == TYPE_FALSE ||
-    //   begin_expr -> type == TYPE_NOT) // Case 2
-    //  return TYPE_T_BOOLEAN;
+    if(begin_expr -> type == TYPE_TRUE || begin_expr -> type == TYPE_FALSE ||
+       begin_expr -> type == TYPE_NOT) // Case 2
+      return TYPE_T_BOOLEAN;
     if(begin_expr -> type == TYPE_NUMERIC ||
        begin_expr -> type == TYPE_NORMALDEVIATE) // Case 4
       return TYPE_T_NUMERIC;
@@ -11902,9 +12051,9 @@ int get_primary_expression_type(struct metafont *mf, struct context *cx,
       return -1;
   }
   else{
-    //if(begin_expr -> type == TYPE_CYCLE || begin_expr -> type == TYPE_ODD ||
-    //   begin_expr -> type == TYPE_NOT) // Case 2
-    //  return TYPE_T_BOOLEAN;
+    if(begin_expr -> type == TYPE_CYCLE || begin_expr -> type == TYPE_ODD ||
+       begin_expr -> type == TYPE_NOT) // Case 2
+      return TYPE_T_BOOLEAN;
     // Pair expression (case 3):
     if(begin_expr -> type == TYPE_POINT ||
        begin_expr -> type == TYPE_PRECONTROL ||
@@ -12009,8 +12158,8 @@ int get_secondary_expression_type(struct metafont *mf, struct context *cx,
   while(t != end_expr && t != NULL){
     COUNT_NESTING(t);
     if(IS_NOT_NESTED()){
-      //if(t -> type == TYPE_AND)
-      //  return TYPE_T_BOOLEAN;
+      if(t -> type == TYPE_AND)
+        return TYPE_T_BOOLEAN;
       if(t -> type == TYPE_TRANSFORMED || t -> type == TYPE_ROTATED ||
          t -> type == TYPE_SCALED || t -> type == TYPE_SHIFTED ||
          t -> type == TYPE_SLANTED || t -> type == TYPE_XSCALED ||
@@ -12082,11 +12231,11 @@ int get_tertiary_expression_type(struct metafont *mf, struct context *cx,
   while(t != end_expr && t != NULL){
     COUNT_NESTING(t);
     if(IS_NOT_NESTED()){
-      //if(t -> type == TYPE_OR || t -> type == TYPE_LT ||
-      //     t -> type == TYPE_GT || t -> type == TYPE_GEQ ||
-      //     t -> type == TYPE_LEQ || t -> type == TYPE_ASSIGNMENT ||
-      //     t -> type == TYPE_NEQ)
-      //  return TYPE_T_BOOLEAN;
+      if(t -> type == TYPE_OR || t -> type == TYPE_LT ||
+           t -> type == TYPE_GT || t -> type == TYPE_GEQ ||
+           t -> type == TYPE_LEQ || t -> type == TYPE_ASSIGNMENT ||
+           t -> type == TYPE_NEQ)
+        return TYPE_T_BOOLEAN;
       if(t -> type == TYPE_PYTHAGOREAN_SUM ||
          t -> type == TYPE_PYTHAGOREAN_SUBTRACT)
         return TYPE_T_NUMERIC;
