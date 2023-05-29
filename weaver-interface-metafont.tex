@@ -310,7 +310,14 @@ a aparência de um token numérico:
 
 \iniciocodigo
 @<Estrutura de Dados Locais (metafont.c)@>=
-#define TYPE_NUMERIC 1
+enum { // Tipos de Tokens
+  TYPE_NUMERIC = 1, TYPE_STRING, TYPE_SYMBOLIC,
+  // Os 3 primeiros tipos básicos (numérico, string e simbólico) estão acima.
+  // Os outros serão colocados logo abaixo:
+  @<METAFONT: Definição de Token Simbólico@>
+  // E um último tipo que não deve ser usado:
+  TYPE_INVALID_TOKEN
+};
 struct numeric_token{
   int type;   // Deve ser igual a 'TYPE_NUMERIC'
   void *next;
@@ -326,7 +333,6 @@ E isso é como representaremos tokens de strings:
 
 \iniciocodigo
 @<Estrutura de Dados Locais (metafont.c)@>+=
-#define TYPE_STRING 2
 struct string_token{
   int type;   // Deve ser igual a 'TYPE_STRING'
   void *next;
@@ -353,7 +359,6 @@ dinamicamente de acordo com o tamanho do símbolo:
 
 \iniciocodigo
 @<Estrutura de Dados Locais (metafont.c)@>+=
-#define TYPE_SYMBOLIC 3
 struct symbolic_token{
   int type;   // Deve ser igual a 'TYPE_SYMBOLIC'
   void *next;
@@ -378,12 +383,6 @@ seguinte estrutura:
 
 \iniciocodigo
 @<Estrutura de Dados Locais (metafont.c)@>+=
-#define TYPE_OPEN_PARENTHESIS  4 // '('
-#define TYPE_CLOSE_PARENTHESIS 5 // ')'
-#define TYPE_COMMA             6 // ','
-#define TYPE_SEMICOLON         7 // ';'
-@<METAFONT: Definição de Token Simbólico@>
-// (...)
 struct generic_token{
   int type;   // Should be one of the above
   void *next;
@@ -394,10 +393,22 @@ struct generic_token{
 @
 \fimcodigo
 
+Precisamos apenas definir para eles um tipo de token que indique o quê
+eles são:
+
+\iniciocodigo
+@<METAFONT: Definição de Token Simbólico@>=
+TYPE_OPEN_PARENTHESIS,  // '('
+TYPE_CLOSE_PARENTHESIS, // ')'
+TYPE_COMMA,             // ','
+TYPE_SEMICOLON,         // ';'
+@
+\fimcodigo
+
 Podemos definir posteriormente muitos outros tipos de tokens
-simbólicos reservados. Basta definirmos eles associando a um número
-único maior do que 6. Qualquer token cujo tipo é um número igual ou
-maior que 3 é simbólico.
+simbólicos reservados. Note que pelas regras da enumeração em C que
+usamos, qualquer token cujo tipo é um número igual ou maior que 3 é
+simbólico.
 
 Todo token possui um ponteiro para um próximo token. Isso ocorre
 porque eles geralmente formarão uma lista encadeada de tokens. Para
@@ -997,8 +1008,8 @@ abreviação deste símbolo de finalização, seja qual ele for:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>=
-#define TYPE_END             8 // O token simbólico 'end'
-#define TYPE_DUMP            9 // O token simbólico 'dump'
+TYPE_END,  // O token simbólico 'end'
+TYPE_DUMP, // O token simbólico 'dump'
 @
 \fimcodigo
 
@@ -1250,26 +1261,46 @@ Uma declaração individual na linguagem pode na verdade ser composta
 por muitas outras declarações. A sintaxe para isso é:
 
 \alinhaverbatim
-<Declaração> -> <Vazia> | <Composta> | <Declaração de Variável> |
-                <Atribuição> | <Definição> | <Comando>
-<Composta> -> begingroup <Lista de Declarações> <Não-Título> endgroup
+<Declaração> -> <Simples> | <Composta>
+<Simples> -> <Vazia> | <Declaração de Variável> | <Atribuição> | <Comando>
+<Composta> -> <Bloco Composto> | <Bloco Condicional> | <Declaração de Caractere>
+<Bloco Composto> -> begingroup <Lista de Declarações> endgroup
+<Bloco Condicional> -> if <Expressão Booleana> :
+                         <Lista de Declarações>
+                         <Alternativas>
+                       fi
+<Definição de Caractere> -> beginchar <Descrição de Caractere>
+                              <Lista de Declarações>
+                            endchar
 \alinhanormal
 
-Já sabemos o que é uma lista de declarações e já temos uma função que
-as avalia. Já a declaração não-título, por enquanto iremos tratar como
-sendo qualquer tipo de declaração. Pois nossa versão da linguagem
-ainda não suporta declarações de título (seriam strings
-isoladas). Desta forma, para nós, uma declaração composta é apenas uma
-lista de declarações delimitada por tokens \monoespaco{begingroup}
-e \monoespaco{endgroup}.
+Pela gramática acima, declarações podem ser simples ou compostas. As
+simples podem ser vazias, declaração de variável, atribuição ou
+comando. As declarações compostas são os blocos compostos (começam
+com \monoespaco{begingroup} e terminam com \monoespaco{endgroup}),
+comandos condicionais (começam com \monoespaco{if} e terminam
+com \monoespaco{fi}) ou de definição de caractere (começam
+com \monoespaco{beginchar} e terminam com \monoespaco{endchar}).
 
-Por isso vamos ter que levar em conta a existência destes dois tipos
-novos de tokens simbólicos no nosso analisador léxico:
+As declarações compostas são formadas por múltiplas declarações, já
+que dentro delas há listas de outras declarações. Podem haver outras
+declarações simples e compostas dentro de cada declaração
+composta. Mas cada declaração composta deve ser iniciada e finalizada
+na ordem correta. Se o último começo de declaração composta que lemos
+foi um \monoespaco{begingroup}, se encontramos um \monoespaco{fi} ou
+um \monoespaco{endchar}, o programa não está correto.
+
+Para ler corretamente declarações compostas, devemos sevar em conta os
+tokens que as delimitam, definidos abaixo:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_BEGINGROUP            10 // O token simbólico 'begingroup'
-#define TYPE_ENDGROUP              11 // O token simbólico 'endgroup'
+TYPE_BEGINGROUP,            // O token simbólico 'begingroup'
+TYPE_ENDGROUP,              // O token simbólico 'endgroup'
+TYPE_IF,                    // O token simbólico 'if'
+TYPE_FI,                    // O token simbólico 'fi'
+TYPE_BEGINCHAR,             // O token simbólico 'beginchar'
+TYPE_ENDCHAR,               // O token simbólico 'endchar'
 @
 \fimcodigo
 
@@ -1277,7 +1308,7 @@ E adicionamos eles à nossa lista de palavras reservadas:
 
 \iniciocodigo
 @<Lista de Palavras Reservadas@>+=
-"begingroup", "endgroup",
+"begingroup", "endgroup", "if", "fi", "beginchar", "endchar",
 @
 \fimcodigo
 
@@ -1434,13 +1465,13 @@ nosso analisador léxico os seguintes tokens especiais:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_T_BOOLEAN               12 // O token simbólico 'boolean'
-#define TYPE_T_PATH                  13 // O token simbólico 'path'
-#define TYPE_T_PEN                   14 // O token simbólico 'pen'
-#define TYPE_T_PICTURE               15 // O token simbólico 'picture'
-#define TYPE_T_TRANSFORM             16 // O token simbólico 'transform'
-#define TYPE_T_PAIR                  17 // O token simbólico 'pair'
-#define TYPE_T_NUMERIC               18 // O token simbólico 'numeric'
+TYPE_T_BOOLEAN,               // O token simbólico 'boolean'
+TYPE_T_PATH,                  // O token simbólico 'path'
+TYPE_T_PEN,                   // O token simbólico 'pen'
+TYPE_T_PICTURE,               // O token simbólico 'picture'
+TYPE_T_TRANSFORM,             // O token simbólico 'transform'
+TYPE_T_PAIR,                  // O token simbólico 'pair'
+TYPE_T_NUMERIC,               // O token simbólico 'numeric'
 @
 \fimcodigo
 
@@ -2702,8 +2733,8 @@ representam a mesma coisa e tem significado especial:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_ASSIGNMENT            19 // O token simbólico '='
-#define TYPE_ASSIGNMENT2           20 // O token simbólico ':='
+TYPE_ASSIGNMENT,            // O token simbólico '='
+TYPE_ASSIGNMENT2,           // O token simbólico ':='
 @
 \fimcodigo
 
@@ -2911,14 +2942,14 @@ analisador sintático:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_SUM                   21 // O token simbólico '+'
-#define TYPE_SUBTRACT              22 // O token simbólico '-'
-#define TYPE_PYTHAGOREAN_SUM       23 // O token simbólico '++'
-#define TYPE_PYTHAGOREAN_SUBTRACT  24 // O token simbólico '+-+'
-#define TYPE_OPEN_BRACKETS         25 // O token simbólico '['
-#define TYPE_CLOSE_BRACKETS        26 // O token simbólico ']'
-#define TYPE_OPEN_BRACES           27 // O token simbólico '{'
-#define TYPE_CLOSE_BRACES          28 // O token simbólico '}'
+TYPE_SUM,                   // O token simbólico '+'
+TYPE_SUBTRACT,              // O token simbólico '-'
+TYPE_PYTHAGOREAN_SUM,       // O token simbólico '++'
+TYPE_PYTHAGOREAN_SUBTRACT,  // O token simbólico '+-+'
+TYPE_OPEN_BRACKETS,         // O token simbólico '['
+TYPE_CLOSE_BRACKETS,        // O token simbólico ']'
+TYPE_OPEN_BRACES,           // O token simbólico '{'
+TYPE_CLOSE_BRACES,          // O token simbólico '}'
 @
 \fimcodigo
 
@@ -3116,8 +3147,8 @@ e definir seus tipos:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_MULTIPLICATION        29 // O token simbólico '*'
-#define TYPE_DIVISION              30 // O token simbólico '/'
+TYPE_MULTIPLICATION,        // O token simbólico '*'
+TYPE_DIVISION,              // O token simbólico '/'
 @
 \fimcodigo
 
@@ -3243,14 +3274,14 @@ operadores numéricos. Os colchetes Já pertencem à esta lista:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_LENGTH         31 // O token simbólico 'length'
-#define TYPE_SQRT           32 // O token simbólico 'sqrt'
-#define TYPE_SIND           33 // O token simbólico 'sind'
-#define TYPE_COSD           34 // O token simbólico 'cosd'
-#define TYPE_LOG            35 // O token simbólico 'log'
-#define TYPE_EXP            36 // O token simbólico 'exp'
-#define TYPE_FLOOR          37 // O token simbólico 'floor'
-#define TYPE_UNIFORMDEVIATE 38 // O token simbólico 'uniformdeviate'
+TYPE_LENGTH,         // O token simbólico 'length'
+TYPE_SQRT,           // O token simbólico 'sqrt'
+TYPE_SIND,           // O token simbólico 'sind'
+TYPE_COSD,           // O token simbólico 'cosd'
+TYPE_LOG,            // O token simbólico 'log'
+TYPE_EXP,            // O token simbólico 'exp'
+TYPE_FLOOR,          // O token simbólico 'floor'
+TYPE_UNIFORMDEVIATE, // O token simbólico 'uniformdeviate'
 @
 \fimcodigo
 
@@ -3625,7 +3656,7 @@ O único token novo a ser tratado é \monoespaco{normaldeviate}:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_NORMALDEVIATE  39 // O token simbólico 'normaldeviate'
+TYPE_NORMALDEVIATE,  // O token simbólico 'normaldeviate'
 @
 \fimcodigo
 
@@ -3997,13 +4028,13 @@ transformadores:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_ROTATED  40 // O token simbólico 'rotated'
-#define TYPE_SCALED   41 // O token simbólico 'scaled'
-#define TYPE_SHIFTED  42 // O token simbólico 'shifted'
-#define TYPE_SLANTED  43 // O token simbólico 'slanted'
-#define TYPE_XSCALED  44 // O token simbólico 'xscaled'
-#define TYPE_YSCALED  45 // O token simbólico 'yscaled'
-#define TYPE_ZSCALED  46 // O token simbólico 'zscaled'
+TYPE_ROTATED,  // O token simbólico 'rotated'
+TYPE_SCALED,   // O token simbólico 'scaled'
+TYPE_SHIFTED,  // O token simbólico 'shifted'
+TYPE_SLANTED,  // O token simbólico 'slanted'
+TYPE_XSCALED,  // O token simbólico 'xscaled'
+TYPE_YSCALED,  // O token simbólico 'yscaled'
+TYPE_ZSCALED,  // O token simbólico 'zscaled'
 @
 \fimcodigo
 
@@ -4653,9 +4684,9 @@ Isso requer definir os seguintes novos tipos de tokens:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_XPART  47 // O token simbólico 'xpart'
-#define TYPE_YPART  48 // O token simbólico 'ypart'
-#define TYPE_ANGLE  49 // O token simbólico 'angle'
+TYPE_XPART,  // O token simbólico 'xpart'
+TYPE_YPART,  // O token simbólico 'ypart'
+TYPE_ANGLE,  // O token simbólico 'angle'
 @
 \fimcodigo
 
@@ -4824,7 +4855,7 @@ expressões de pares:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_TRANSFORMED  50 // O token simbólico 'transformed'
+TYPE_TRANSFORMED,  // O token simbólico 'transformed'
 @
 \fimcodigo
 
@@ -5461,10 +5492,10 @@ outros quatro operadores que são novos:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_XXPART  51 // O token simbólico xxpart'
-#define TYPE_XYPART  52 // O token simbólico xypart'
-#define TYPE_YXPART  53 // O token simbólico yxpart'
-#define TYPE_YYPART  54 // O token simbólico yypart'
+TYPE_XXPART,  // O token simbólico xxpart'
+TYPE_XYPART,  // O token simbólico xypart'
+TYPE_YXPART,  // O token simbólico yxpart'
+TYPE_YYPART,  // O token simbólico yypart'
 @
 \fimcodigo
 
@@ -5720,16 +5751,16 @@ Tudo isso requer que registremos os seguintes novos tipos de tokens:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_CYCLE          55 // O token simbólico 'cycle'
-#define TYPE_AMPERSAND      56 // O token simbólico '&'
-#define TYPE_JOIN           57 // O token simbólico '..'
-#define TYPE_TENSION        58 // O token simbólico 'tension'
-#define TYPE_AND            59 // O token simbólico 'and'
-#define TYPE_ATLEAST        60 // O token simbólico 'atleast'
-#define TYPE_CONTROLS       61 // O token simbólico 'controls'
-#define TYPE_CURL           52 // O token simbólico 'curl'
-                               // (ainda não suportado)
-#define TYPE_STRAIGHT_JOIN  63 // O token simbólico '--'
+TYPE_CYCLE,          // O token simbólico 'cycle'
+TYPE_AMPERSAND,      // O token simbólico '&'
+TYPE_JOIN,           // O token simbólico '..'
+TYPE_TENSION,        // O token simbólico 'tension'
+TYPE_AND,            // O token simbólico 'and'
+TYPE_ATLEAST,        // O token simbólico 'atleast'
+TYPE_CONTROLS,       // O token simbólico 'controls'
+TYPE_CURL,           // O token simbólico 'curl'
+                     // (ainda não suportado)
+TYPE_STRAIGHT_JOIN,  // O token simbólico '--'
 @
 \fimcodigo
 
@@ -8010,9 +8041,9 @@ novos: \monoespaco{reverse}, \monoespaco{subpath} e \monoespaco{of}:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_REVERSE        64 // O token simbólico 'reverse'
-#define TYPE_SUBPATH        65 // O token simbólico 'subpath'
-#define TYPE_OF             66 // O token simbólico 'of'
+TYPE_REVERSE,        // O token simbólico 'reverse'
+TYPE_SUBPATH,        // O token simbólico 'subpath'
+TYPE_OF,             // O token simbólico 'of'
 @
 \fimcodigo
 
@@ -8577,9 +8608,9 @@ Isso requer adicionarmos os seguintes novos tipos de tokens:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_POINT             67 // O token simbólico 'point'
-#define TYPE_PRECONTROL        68 // O token simbólico 'precontrol'
-#define TYPE_POSTCONTROL       69 // O token simbólico 'postcontrol'
+TYPE_POINT,             // O token simbólico 'point'
+TYPE_PRECONTROL,        // O token simbólico 'precontrol'
+TYPE_POSTCONTROL,       // O token simbólico 'postcontrol'
 @
 \fimcodigo
 
@@ -9318,9 +9349,9 @@ Isso requer registrar três novas palavras reservadas:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_NULLPEN        70 // O token simbólico 'nullpen'
-#define TYPE_PENCIRCLE      71 // O token simbólico 'pencircle'
-#define TYPE_MAKEPEN        72 // O token simbólico 'makepen'
+TYPE_NULLPEN,        // O token simbólico 'nullpen'
+TYPE_PENCIRCLE,      // O token simbólico 'pencircle'
+TYPE_MAKEPEN,        // O token simbólico 'makepen'
 @
 \fimcodigo
 
@@ -9621,7 +9652,7 @@ Temos que registrar um novo token para o ``makepath'':
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_MAKEPATH       73 // O token simbólico 'makepath'
+TYPE_MAKEPATH,       // O token simbólico 'makepath'
 @
 \fimcodigo
 
@@ -10956,8 +10987,8 @@ Isso requer registrar ``nullpicture'' e ``subpicture'' como um token:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_NULLPICTURE        74 // O token simbólico 'nullpicture'
-#define TYPE_SUBPICTURE         75 // O token simbólico 'subpicture'
+TYPE_NULLPICTURE,        // O token simbólico 'nullpicture'
+TYPE_SUBPICTURE,         // O token simbólico 'subpicture'
 @
 \fimcodigo
 
@@ -11367,9 +11398,9 @@ Primeiro vamos adicionar novos tipos de tokens para esses operadores:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_TOTALWEIGHT        76 // O token simbólico 'totalweight'
-#define TYPE_WIDTH              77 // O token simbólico 'width'
-#define TYPE_HEIGHT             78 // O token simbólico 'height'
+TYPE_TOTALWEIGHT,        // O token simbólico 'totalweight'
+TYPE_WIDTH,              // O token simbólico 'width'
+TYPE_HEIGHT,             // O token simbólico 'height'
 @
 \fimcodigo
 
@@ -11562,11 +11593,11 @@ considerados:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_LT                    79 // O token simbólico '<'
-#define TYPE_LEQ                   80 // O token simbólico '<='
-#define TYPE_GT                    81 // O token simbólico '>'
-#define TYPE_GEQ                   82 // O token simbólico '>='
-#define TYPE_NEQ                   83 // O token simbólico '<>'
+TYPE_LT,                    // O token simbólico '<'
+TYPE_LEQ,                   // O token simbólico '<='
+TYPE_GT,                    // O token simbólico '>'
+TYPE_GEQ,                   // O token simbólico '>='
+TYPE_NEQ,                   // O token simbólico '<>'
 @
 \fimcodigo
 
@@ -11823,7 +11854,7 @@ definir \monoespaco{or} como um novo tipo de token simbólico:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_OR                    84 // O token simbólico 'or'
+TYPE_OR,                    // O token simbólico 'or'
 @
 \fimcodigo
 
@@ -11982,10 +12013,10 @@ Os seguintes novos tipos de token não foram ainda definidos:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-#define TYPE_TRUE                    85 // O token simbólico 'true'
-#define TYPE_FALSE                   86 // O token simbólico 'false'
-#define TYPE_ODD                     87 // O token simbólico 'odd'
-#define TYPE_NOT                     88 // O token simbólico 'not'
+TYPE_TRUE,                    // O token simbólico 'true'
+TYPE_FALSE,                   // O token simbólico 'false'
+TYPE_ODD,                     // O token simbólico 'odd'
+TYPE_NOT,                     // O token simbólico 'not'
 @
 \fimcodigo
 

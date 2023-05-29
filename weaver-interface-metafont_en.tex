@@ -292,7 +292,14 @@ numeric token is represented:
 
 \iniciocodigo
 @<Local Data Structures (metafont.c)@>=
-#define TYPE_NUMERIC 1
+enum { // Token types
+  TYPE_NUMERIC = 1, TYPE_STRING, TYPE_SYMBOLIC,
+  // The 3 basic token types (numeric, string and symbolic) are abov.
+  // Others will be placed below:
+  @<METAFONT: Symbolic Token Definition@>
+  // And there is also this last one that shouldn't be used:
+  TYPE_INVALID_TOKEN
+};
 struct numeric_token{
   int type;   // Should be equal 'TYPE_NUMERIC'
   void *next;
@@ -308,7 +315,6 @@ And this is how we will represent string tokens:
 
 \iniciocodigo
 @<Local Data Structures (metafont.c)@>+=
-#define TYPE_STRING 2
 struct string_token{
   int type;   // Should be equal 'TYPE_STRING'
   void *next;
@@ -334,7 +340,6 @@ a string to store its name:
 
 \iniciocodigo
 @<Local Data Structures (metafont.c)@>+=
-#define TYPE_SYMBOLIC 3
 struct symbolic_token{
   int type;   // Should be equal 'TYPE_SYMBOLIC'
   void *next;
@@ -358,12 +363,6 @@ represent them with the following structure:
 
 \iniciocodigo
 @<Local Data Structures (metafont.c)@>+=
-#define TYPE_OPEN_PARENTHESIS  4 // '('
-#define TYPE_CLOSE_PARENTHESIS 5 // ')'
-#define TYPE_COMMA             6 // ','
-#define TYPE_SEMICOLON         7 // ';'
-@<METAFONT: Symbolic Token Definition@>
-// (...)
 struct generic_token{
   int type;   // Should be one of the above
   void *next;
@@ -374,11 +373,23 @@ struct generic_token{
 @
 \fimcodigo
 
-We can define later more reserved symbolic tokens. We just need to
-define them to an unique number greater than 6. Any token whose type
-is a number greater or equal than 3 is a symbolic token.
+We just need to define a type for each of them:
 
-Every token have a pointer to a next token. THis happens because
+\iniciocodigo
+@<METAFONT: Symbolic Token Definition@>=
+TYPE_OPEN_PARENTHESIS,  // '('
+TYPE_CLOSE_PARENTHESIS, // ')'
+TYPE_COMMA,             // ','
+TYPE_SEMICOLON,         // ';'
+@
+\fimcodigo
+
+
+We can define later more reserved symbolic tokens. Notice that by
+C \monoespaco{enum} rules, any token whose type is a number greater or
+equal than 3 is a symbolic token.
+
+Every token have a pointer to a next token. This happens because
 usually they will be part of a linked list. To deallocate the memory
 occupied by a token list given a deallocation function and the given
 list, we can use the following function:
@@ -971,8 +982,8 @@ end-of-file marking:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>=
-#define TYPE_END             8 // The symbolic token 'end'
-#define TYPE_DUMP            9 // The symbolic token 'dump'
+TYPE_END,  // Symbolic token 'end'
+TYPE_DUMP, // Symbolic token 'dump'
 @
 \fimcodigo
 
@@ -1219,25 +1230,45 @@ An individual statement in the language can be composed by many other
 statements. The syntax for this is:
 
 \alinhaverbatim
-<Statement> -> <Empty> | <Compound> | <Declaration> | <Assignment> |
-               <Definition> | <Command>
-<Compound> -> begingroup <List of Statements> <Non-Title> endgroup
+<Statement> -> <Simple> | <Compound>
+<Simple> -> <Empty> | <Declaration> | <Assignment> | <Command>
+<Compound> -> <Compound Block> | <Conditional> | <Character Definition>
+<Compound Block> -> begingroup <List of Statements> endgroup
+<Conditional> -> if <Boolean Expression> :
+                   <List of Statements>
+                 fi
+<Character Definition> -> beginchar <Character Description>
+                            <List of Statements>
+                          endchar
 \alinhanormal
 
-We already know what is a list of statements and already have a
-function to eval them. The non-title declaration, for now, will be
-treated as any other statement, because we still do not support title
-statements (they are isolated strings). Therefore, a compund statement
-is just a list of statements delimited by
-tokens \monoespaco{begingroup} and \monoespaco{endgroup}.
+By the above grammar, we have simple and compound statements. The
+simple statements could be empty, variable declaration, assignment and
+commands. The compound statements are the compound blocks (begin
+with \monoespaco{begingroup} and end with \monoespaco{endgroup}),
+conditionals (begin with \monoespaco{if}, end with \monoespaco{fi}) or
+charactere definition (begin with \monoespaco{beginchar}, end
+with \monoespaco{endchar}).
 
-Then we need to take into account the existance of these two new kind
-of special symbolic tokens:
+The compound statements are composed by multiple other statements, as
+they contain a list of statements inside them. We could have multiple
+simple and compound statements inside each compound statement. Each
+compound statement must be closed in the right order. If we read
+a \monoespaco{begingroup} and no other beginning of compound
+statement, andif the next token is a \monoespaco{fi} or
+a \monoespaco{endchar}, then we are reading an incorrect program.
+
+To read correctly compound statements, we need to take into account
+their delimiting tokens, which we define below:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_BEGINGROUP            10 // Symbolic token 'begingroup'
-#define TYPE_ENDGROUP              11 // Symbolic token 'endgroup'
+TYPE_BEGINGROUP,            // Symbolic token 'begingroup'
+TYPE_ENDGROUP,              // Symbolic token 'endgroup'
+TYPE_IF,                    // Symbolic token 'if'
+TYPE_FI,                    // Symbolic token 'fi'
+TYPE_BEGINCHAR,             // Symbolic token 'beginchar'
+TYPE_ENDCHAR,               // Symbolic token 'endchar'
 @
 \fimcodigo
 
@@ -1245,7 +1276,7 @@ And we add them to the list of reserved keywords:
 
 \iniciocodigo
 @<List of Keywords@>+=
-"begingroup", "endgroup",
+"begingroup", "endgroup", "if", "fi", "beginchar", "endchar",
 @
 \fimcodigo
 
@@ -1404,13 +1435,13 @@ tokens:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_T_BOOLEAN               12 // Symbolic token 'boolean'
-#define TYPE_T_PATH                  13 // Symbolic token 'path'
-#define TYPE_T_PEN                   14 // Symbolic token 'pen'
-#define TYPE_T_PICTURE               15 // Symbolic token 'picture'
-#define TYPE_T_TRANSFORM             16 // Symbolic token 'transform'
-#define TYPE_T_PAIR                  17 // Symbolic token 'pair'
-#define TYPE_T_NUMERIC               18 // Symbolic token 'numeric'
+TYPE_T_BOOLEAN,               // Symbolic token 'boolean'
+TYPE_T_PATH,                  // Symbolic token 'path'
+TYPE_T_PEN,                   // Symbolic token 'pen'
+TYPE_T_PICTURE,               // Symbolic token 'picture'
+TYPE_T_TRANSFORM,             // Symbolic token 'transform'
+TYPE_T_PAIR,                  // Symbolic token 'pair'
+TYPE_T_NUMERIC,               // Symbolic token 'numeric'
 @
 \fimcodigo
 
@@ -2646,8 +2677,8 @@ have an special meaning:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_ASSIGNMENT            19 // Symbolic token '='
-#define TYPE_ASSIGNMENT2           20 // Symbolic token ':='
+TYPE_ASSIGNMENT,            // Symbolic token '='
+TYPE_ASSIGNMENT2,           // Symbolic token ':='
 @
 \fimcodigo
 
@@ -2851,14 +2882,14 @@ parser:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_SUM                   21 // Symbolic token '+'
-#define TYPE_SUBTRACT              22 // Symbolic token '-'
-#define TYPE_PYTHAGOREAN_SUM       23 // Symbolic token '++'
-#define TYPE_PYTHAGOREAN_SUBTRACT  24 // Symbolic token '+-+'
-#define TYPE_OPEN_BRACKETS         25 // Symbolic token '['
-#define TYPE_CLOSE_BRACKETS        26 // Symbolic token ']'
-#define TYPE_OPEN_BRACES           27 // Symbolic token '{'
-#define TYPE_CLOSE_BRACES          28 // Symbolic token '}'
+TYPE_SUM,                   // Symbolic token '+'
+TYPE_SUBTRACT,              // Symbolic token '-'
+TYPE_PYTHAGOREAN_SUM,       // Symbolic token '++'
+TYPE_PYTHAGOREAN_SUBTRACT,  // Symbolic token '+-+'
+TYPE_OPEN_BRACKETS,         // Symbolic token '['
+TYPE_CLOSE_BRACKETS,        // Symbolic token ']'
+TYPE_OPEN_BRACES,           // Symbolic token '{'
+TYPE_CLOSE_BRACES,          // Symbolic token '}'
 @
 \fimcodigo
 
@@ -3067,8 +3098,8 @@ Let's add these operators as reserved tokens and define their types:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_MULTIPLICATION        29 // Symbolic token '*'
-#define TYPE_DIVISION              30 // Symbolic token '/'
+TYPE_MULTIPLICATION,        // Symbolic token '*'
+TYPE_DIVISION,              // Symbolic token '/'
 @
 \fimcodigo
 
@@ -3190,14 +3221,14 @@ numeric operators. The brackets are already in this list:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_LENGTH         31 // Symbolic token 'length'
-#define TYPE_SQRT           32 // Symbolic token 'sqrt'
-#define TYPE_SIND           33 // Symbolic token 'sind'
-#define TYPE_COSD           34 // Symbolic token 'cosd'
-#define TYPE_LOG            35 // Symbolic token 'log'
-#define TYPE_EXP            36 // Symbolic token 'exp'
-#define TYPE_FLOOR          37 // Symbolic token 'floor'
-#define TYPE_UNIFORMDEVIATE 38 // Symbolic token 'uniformdeviate'
+TYPE_LENGTH,         // Symbolic token 'length'
+TYPE_SQRT,           // Symbolic token 'sqrt'
+TYPE_SIND,           // Symbolic token 'sind'
+TYPE_COSD,           // Symbolic token 'cosd'
+TYPE_LOG,            // Symbolic token 'log'
+TYPE_EXP,            // Symbolic token 'exp'
+TYPE_FLOOR,          // Symbolic token 'floor'
+TYPE_UNIFORMDEVIATE, // Symbolic token 'uniformdeviate'
 @
 \fimcodigo
 
@@ -3566,7 +3597,7 @@ The only new token in this part is \monoespaco{normaldeviate}:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_NORMALDEVIATE  39 // O token simbólico 'normaldeviate'
+TYPE_NORMALDEVIATE,   // O token simbólico 'normaldeviate'
 @
 \fimcodigo
 
@@ -3936,13 +3967,13 @@ Let's add the seven new keywords representing transformers:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_ROTATED  40 // Symbolic token 'rotated'
-#define TYPE_SCALED   41 // Symbolic token 'scaled'
-#define TYPE_SHIFTED  42 // Symbolic token 'shifted'
-#define TYPE_SLANTED  43 // Symbolic token 'slanted'
-#define TYPE_XSCALED  44 // Symbolic token 'xscaled'
-#define TYPE_YSCALED  45 // Symbolic token 'yscaled'
-#define TYPE_ZSCALED  46 // Symbolic token 'zscaled'
+TYPE_ROTATED,  // Symbolic token 'rotated'
+TYPE_SCALED,   // Symbolic token 'scaled'
+TYPE_SHIFTED,  // Symbolic token 'shifted'
+TYPE_SLANTED,  // Symbolic token 'slanted'
+TYPE_XSCALED,  // Symbolic token 'xscaled'
+TYPE_YSCALED,  // Symbolic token 'yscaled'
+TYPE_ZSCALED,  // Symbolic token 'zscaled'
 @
 \fimcodigo
 
@@ -4586,9 +4617,9 @@ This require defining the following three new token types:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_XPART  47 // Symbolic token 'xpart'
-#define TYPE_YPART  48 // Symbolic token 'ypart'
-#define TYPE_ANGLE  49 // Symbolic token 'angle'
+TYPE_XPART,  // Symbolic token 'xpart'
+TYPE_YPART,  // Symbolic token 'ypart'
+TYPE_ANGLE,  // Symbolic token 'angle'
 @
 \fimcodigo
 
@@ -4758,7 +4789,7 @@ expressions:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_TRANSFORMED  50 // Symbolic token 'transformed'
+TYPE_TRANSFORMED,  // Symbolic token 'transformed'
 @
 \fimcodigo
 
@@ -5385,10 +5416,10 @@ four new tokens for the new operators:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_XXPART  51 // Symbolic token xxpart'
-#define TYPE_XYPART  52 // Symbolic token xypart'
-#define TYPE_YXPART  53 // Symbolic token yxpart'
-#define TYPE_YYPART  54 // Symbolic token yypart'
+TYPE_XXPART,  // Symbolic token xxpart'
+TYPE_XYPART,  // Symbolic token xypart'
+TYPE_YXPART,  // Symbolic token yxpart'
+TYPE_YYPART,  // Symbolic token yypart'
 @
 \fimcodigo
 
@@ -5645,15 +5676,15 @@ This requires the register of these new types of tokens:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_CYCLE          55 // Symbolic token 'cycle'
-#define TYPE_AMPERSAND      56 // Symbolic token '&'
-#define TYPE_JOIN           57 // Symbolic token '..'
-#define TYPE_TENSION        58 // Symbolic token 'tension'
-#define TYPE_AND            59 // Symbolic token 'and'
-#define TYPE_ATLEAST        60 // Symbolic token 'atleast'
-#define TYPE_CONTROLS       61 // Symbolic token 'controls'
-#define TYPE_CURL           62 // Symbolic token 'curl' (still not supported)
-#define TYPE_STRAIGHT_JOIN  63 // Symbolic token '--'
+TYPE_CYCLE,          // Symbolic token 'cycle'
+TYPE_AMPERSAND,      // Symbolic token '&'
+TYPE_JOIN,           // Symbolic token '..'
+TYPE_TENSION,        // Symbolic token 'tension'
+TYPE_AND,            // Symbolic token 'and'
+TYPE_ATLEAST,        // Symbolic token 'atleast'
+TYPE_CONTROLS,       // Symbolic token 'controls'
+TYPE_CURL,           // Symbolic token 'curl' (still not supported)
+TYPE_STRAIGHT_JOIN,  // Symbolic token '--'
 @
 \fimcodigo
 
@@ -7899,9 +7930,9 @@ tokens \monoespaco{reverse}, \monoespaco{subpath} and \monoespaco{of}:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_REVERSE        64 // O token simbólico 'reverse'
-#define TYPE_SUBPATH        65 // O token simbólico 'subpath'
-#define TYPE_OF             66 // O token simbólico 'of'
+TYPE_REVERSE,        // O token simbólico 'reverse'
+TYPE_SUBPATH,        // O token simbólico 'subpath'
+TYPE_OF,             // O token simbólico 'of'
 @
 \fimcodigo
 
@@ -8463,9 +8494,9 @@ This requires adding the following new token types:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_POINT             67 // O token simbólico 'point'
-#define TYPE_PRECONTROL        68 // O token simbólico 'precontrol'
-#define TYPE_POSTCONTROL       69 // O token simbólico 'postcontrol'
+TYPE_POINT,             // O token simbólico 'point'
+TYPE_PRECONTROL,        // O token simbólico 'precontrol'
+TYPE_POSTCONTROL,       // O token simbólico 'postcontrol'
 @
 \fimcodigo
 
@@ -9198,9 +9229,9 @@ This requires three new reserved words:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_NULLPEN        70 // The symbolic token 'nullpen'
-#define TYPE_PENCIRCLE      71 // The symbolic token 'pencircle'
-#define TYPE_MAKEPEN        72 // The symbolic token 'makepen'
+TYPE_NULLPEN,        // The symbolic token 'nullpen'
+TYPE_PENCIRCLE,      // The symbolic token 'pencircle'
+TYPE_MAKEPEN,        // The symbolic token 'makepen'
 @
 \fimcodigo
 
@@ -9498,7 +9529,7 @@ We need to register a new token for ``makepath'':
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_MAKEPATH       73 // O token simbólico 'makepath'
+TYPE_MAKEPATH,       // O token simbólico 'makepath'
 @
 \fimcodigo
 
@@ -10817,8 +10848,8 @@ This means that we need to register a new token for ``nullpicture'' and
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_NULLPICTURE        74 // Symbolic token 'nullpicture'
-#define TYPE_SUBPICTURE         75 // Symbolic token 'subpicture'
+TYPE_NULLPICTURE,        // Symbolic token 'nullpicture'
+TYPE_SUBPICTURE,         // Symbolic token 'subpicture'
 @
 \fimcodigo
 
@@ -11224,9 +11255,9 @@ First we need a new token types for the three new operators:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_TOTALWEIGHT        76 // Symbolic token 'totalweight'
-#define TYPE_WIDTH              77 // Symbolic token 'width'
-#define TYPE_HEIGHT             78 // Symbolic token 'height'
+TYPE_TOTALWEIGHT,        // Symbolic token 'totalweight'
+TYPE_WIDTH,              // Symbolic token 'width'
+TYPE_HEIGHT,             // Symbolic token 'height'
 @
 \fimcodigo
 
@@ -11414,11 +11445,11 @@ The relations above require new token types to represent them:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_LT                    79 // O token simbólico '<'
-#define TYPE_LEQ                   80 // O token simbólico '<='
-#define TYPE_GT                    81 // O token simbólico '>'
-#define TYPE_GEQ                   82 // O token simbólico '>='
-#define TYPE_NEQ                   83 // O token simbólico '<>'
+TYPE_LT,                    // O token simbólico '<'
+TYPE_LEQ,                   // O token simbólico '<='
+TYPE_GT,                    // O token simbólico '>'
+TYPE_GEQ,                   // O token simbólico '>='
+TYPE_NEQ,                   // O token simbólico '<>'
 @
 \fimcodigo
 
@@ -11670,7 +11701,7 @@ representing the \monoespaco{or} opeartor:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_OR                    84 // Symbolic token 'or'
+TYPE_OR,                    // Symbolic token 'or'
 @
 \fimcodigo
 
@@ -11829,10 +11860,10 @@ The following new tokens are defined:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-#define TYPE_TRUE                    85 // O token simbólico 'true'
-#define TYPE_FALSE                   86 // O token simbólico 'false'
-#define TYPE_ODD                     87 // O token simbólico 'odd'
-#define TYPE_NOT                     88 // O token simbólico 'not'
+TYPE_TRUE,                    // O token simbólico 'true'
+TYPE_FALSE,                   // O token simbólico 'false'
+TYPE_ODD,                     // O token simbólico 'odd'
+TYPE_NOT,                     // O token simbólico 'not'
 @
 \fimcodigo
 
