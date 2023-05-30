@@ -1359,21 +1359,116 @@ Agora vamos à declaração composta. A primeira coisa a lembrarmos é que
 será importante para a linguagem saber em qual nível de aninhamento
 estamos para saber o escopo de eventuais variáveis declaradas. Por
 causa disso, o contexto de nossa análise deve memorizar o nível de
-aninhamento atual. Cada \monoespaco{begingroup} aumenta esse nível em
-1 e cada \monoespaco{endgroup} diminui o nível em 1. Declaremos o
-nível de aninhamento atual abaixo:
+aninhamento atual. Cada início de declaração composta
+(\monoespaco{begingroup}, \monoespaco{if}, \monoespaco{beginchar})}
+aumenta esse nível em 1 e cada fim de declaração composta
+(\monoespaco{endgroup}, \monoespaco{fi}, \monoespaco{endchar}) diminui
+o nível em 1. Também devemos saber qual o token que criou o último
+nível de aninhamento caso estejamos aninhados em uma declaração
+composta e devemos armazenar uma cópia do token esperado que o
+finalizará em uma pilha. Desta forma, saberemos se uma declaração
+composta está sendo finalizada pelo token correspondente. Declaramos o
+nível de aninhamento atual e a pilha de tokens esperados de
+finalização:
 
 \iniciocodigo
 @<Atributos (struct context)@>=
   int nesting_level;
+  struct generic_token *end_token_stack;
 @
 \fimcodigo
 
-Isso deve ser inicializado em zero:
+O nível de aninhamento deve ser inicializada como zero e a pilha de
+tokens de finalização deve ser vazia inicialmente:
 
 \iniciocodigo
 @<Inicialização (struct context)@>=
   cx -> nesting_level = 0;
+  cx -> end_token_stack = NULL;
+@
+\fimcodigo
+
+Para facilitar a escrita de código que lida com estes níveis de
+aninhamento, vamos criar duas funções auxiliares. Ambas recebem
+um \monoespaco{struct context} com o contexto de execução atual e um
+token. A primeira deve aumentar em 1 o nível de aninhamento dado um
+token que começa uma declaração composta e a segunda deve diminuir
+dado um token que finaliza um nível de aninhamento. A primeira deve
+retornar erro se receber um token incorreto que não inicia uma
+declaração composta e a segunda também vai gerar erro se o token
+passado não for o correto que finaliza o nível de aninhamento atual:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+bool begin_nesting_level(struct metafont *mf, struct context *cx,
+                         struct generic_token *tok);
+bool end_nesting_level(struct metafont *mf, struct context *cx,
+                       struct generic_token *tok);
+@
+\fimcodigo
+
+A implementação da primeira função:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+bool begin_nesting_level(struct metafont *mf, struct context *cx,
+                         struct generic_token *tok){
+  struct generic_token *end_token;
+  end_token = (struct generic_token *)
+                    temporary_alloc(sizeof(struct generic_token));
+  if(end_token == NULL){
+    fprintf(stderr, "ERROR: No memory.");
+    return false;
+  }
+  switch(tok -> type){
+  case TYPE_BEGINGROUP:
+    end_token -> type = TYPE_ENDGROUP;
+    break;
+  case TYPE_IF:
+    end_token -> type = TYPE_FI;
+    break;
+  case TYPE_BEGINCHAR:
+    end_token -> type = TYPE_ENDCHAR;
+    break;
+  default:
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr,
+              "METAFONT: Error: %s:%d: Invalid token beginning"
+              " compound statement.\n", mf -> file,
+              ((struct generic_token *) tok) -> line);
+#endif
+      return false;
+  }
+  cx -> nesting_level ++;
+  end_token -> next = cx -> end_token_stack;
+  cx -> end_token_stack = end_token -> next;
+  return true;
+}
+@
+\fimcodigo
+
+E a implementação da segunda função:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+bool end_nesting_level(struct metafont *mf, struct context *cx,
+                       struct generic_token *tok){
+  struct generic_token *end_tok = cx -> end_token_stack;
+  if(end_tok == NULL || end_tok-> type != tok -> type){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr,
+            "METAFONT: Error: %s:%d: Invalid token ending"
+            " compound statement.\n", mf -> file,
+            ((struct generic_token *) tok) -> line);
+#endif
+    return false;
+  }
+  cx -> nesting_level --;
+  cx -> end_token_stack = end_tok -> next;
+  if(temporary_free != NULL)
+    temporary_free(end_tok);
+  return true;
+}
 @
 \fimcodigo
 

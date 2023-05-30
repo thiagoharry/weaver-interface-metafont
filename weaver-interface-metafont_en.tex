@@ -1327,25 +1327,115 @@ if(begin_token_list == end_token_list && begin_token_list == NULL)
 Now let's deal with the compound statement. The first thing to recall
 is that it will be important for the language to know in which nesting
 level we are to know the scope of each declared variable. Because of
-this, our context will store the current nesting
-level. Each \monoespaco{begingroup} should increase by 1 the nesting
-level and each \monoespaco{endgroup} should decrease by 1. We declare
-the nesting level below:
+this, our context will store the current nesting level. Each beginning
+of compound statement
+(\monoespaco{begingroup}, \monoespaco{if}, \monoespaco{beginchar})
+should increase by 1 the nesting level and each ending of compound
+statement
+(\monoespaco{endgroup}, \monoespaco{fi}, \monoespaco{endchar}) should
+decrease by 1. Therefore, we also must to know which token should end
+the most recent nesting level. We should store in a stack the expected
+tokens that should end our nestings. Therefore, we will know if a
+compound statement is closed correctly. We declare the nesting level
+and the stack of expected ending tokens below:
 
 \iniciocodigo
 @<Attributes (struct context)@>=
   int nesting_level;
+  struct generic_token *end_token_stack;
 @
 \fimcodigo
 
-This should be initialized as zero:
+The nesting level should be initialized to zero and the ending token
+stack should begin empty:
 
 \iniciocodigo
 @<Initialization (struct context)@>=
   cx -> nesting_level = 0;
+  cx -> end_token_stack = NULL;
 @
 \fimcodigo
 
+To help us to manage nesting levels, we will create two auxiliary
+functions. Both of them get as argument a \monoespaco{struct context}
+with the evaluation context and a token. The first will begin a new
+nesting level using that token and the second will end the current
+nesting level. Both of them will return error if an invalid token is
+supplied:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+bool begin_nesting_level(struct metafont *mf, struct context *cx,
+                         struct generic_token *tok);
+bool end_nesting_level(struct metafont *mf, struct context *cx,
+                       struct generic_token *tok);
+@
+\fimcodigo
+
+The first function implementation:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+bool begin_nesting_level(struct metafont *mf, struct context *cx,
+                         struct generic_token *tok){
+  struct generic_token *end_token;
+  end_token = (struct generic_token *)
+                    temporary_alloc(sizeof(struct generic_token));
+  if(end_token == NULL){
+    fprintf(stderr, "ERROR: No memory.");
+    return false;
+  }
+  switch(tok -> type){
+  case TYPE_BEGINGROUP:
+    end_token -> type = TYPE_ENDGROUP;
+    break;
+  case TYPE_IF:
+    end_token -> type = TYPE_FI;
+    break;
+  case TYPE_BEGINCHAR:
+    end_token -> type = TYPE_ENDCHAR;
+    break;
+  default:
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr,
+              "METAFONT: Error: %s:%d: Invalid token beginning"
+              " compound statement.\n", mf -> file,
+              ((struct generic_token *) tok) -> line);
+#endif
+      return false;
+  }
+  cx -> nesting_level ++;
+  end_token -> next = cx -> end_token_stack;
+  cx -> end_token_stack = end_token -> next;
+  return true;
+}
+@
+\fimcodigo
+
+And the second function:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+bool end_nesting_level(struct metafont *mf, struct context *cx,
+                       struct generic_token *tok){
+  struct generic_token *end_tok = cx -> end_token_stack;
+  if(end_tok == NULL || end_tok-> type != tok -> type){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr,
+            "METAFONT: Error: %s:%d: Invalid token ending"
+            " compound statement.\n", mf -> file,
+            ((struct generic_token *) tok) -> line);
+#endif
+    return false;
+  }
+  cx -> nesting_level --;
+  cx -> end_token_stack = end_tok -> next;
+  if(temporary_free != NULL)
+    temporary_free(end_tok);
+  return true;
+}
+@
+\fimcodigo
 
 The second thing to recall is that if we are in a compound statement,
 this means that the end of the declaration pointer could be wrong.
