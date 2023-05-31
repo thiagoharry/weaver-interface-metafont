@@ -1045,22 +1045,18 @@ começo e o fim da lista de declarações:
 bool eval_program(struct metafont *mf, struct context *cx,
                   void *token_list){
   struct generic_token *end = (struct generic_token *) token_list;
-  struct generic_token *previous = NULL;
-  while(end != NULL && end -> type != TYPE_END){
-    previous = end;
+  while(end != NULL && end -> type != TYPE_END)
     end = (struct generic_token *) (end -> next);
-  }
   if(end == NULL){
 #if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s:%d: Program not finished with "
-                    "'end' or 'dump'.\n", mf -> file,
-                    (previous == NULL)?(1):(previous -> line));
+    fprintf(stderr, "METAFONT: Error: %s: Program not finished with "
+                    "'end' or 'dump'.\n", mf -> file);
 #endif
     return false;
   }
   if(end == token_list)
     return true;
-  return eval_list_of_statements(mf, cx, token_list, previous);
+  return eval_list_of_statements(mf, cx, token_list, end);
 }
 @
 \fimcodigo
@@ -1333,6 +1329,7 @@ bool eval_statement(struct metafont *mf, struct context *cx,
   //@<Declaração: Comando@>
   // Se estamos aqui, não identificamos o tipo de declaração:
 #if defined(W_DEBUG_METAFONT)
+    printf("DEBUG: %d\n", ((struct generic_token *) begin_token_list) -> type);
     fprintf(stderr, "METAFONT: Error: %s:%d: Unknown statement.\n",
             mf -> file,
             ((struct generic_token *) begin_token_list) -> line);
@@ -1441,7 +1438,7 @@ bool begin_nesting_level(struct metafont *mf, struct context *cx,
   }
   cx -> nesting_level ++;
   end_token -> next = cx -> end_token_stack;
-  cx -> end_token_stack = end_token -> next;
+  cx -> end_token_stack = end_token;
   return true;
 }
 @
@@ -1456,6 +1453,7 @@ bool end_nesting_level(struct metafont *mf, struct context *cx,
   struct generic_token *end_tok = cx -> end_token_stack;
   if(end_tok == NULL || end_tok-> type != tok -> type){
 #if defined(W_DEBUG_METAFONT)
+    printf("DEBUG: end_tok: %p\n", end_tok);
     fprintf(stderr,
             "METAFONT: Error: %s:%d: Invalid token ending"
             " compound statement.\n", mf -> file,
@@ -1472,73 +1470,89 @@ bool end_nesting_level(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
-A segunda coisa a lembrarmos é que se estivermos em uma declaração
-composta, isso significa que o ponteiro para o fim da declaração pode
-estar errado. Por exemplo, suponha que a função
-\monoespaco{eval\_list\_of\_statements} avaliou os seguintes tokens
-abaixo:
+Como exatamente uma declaração composta é avaliada? Primeiro lembre-se
+que a função \monoespaco{eval\_list\_of\_statements} separa o código
+em partes usando o ponto-e-vírgula como delimitador. Em seguida, ele
+passa cada parte para a função \monoespaco{eval\_statement}. Esse
+comportamento é um pouco ingênuo, pois declarações compostas são
+declarações que podem possuir outras declarações e ponto-e-vírgula
+dentro delas. Além disso, considere a seguinte lista de tokens:
 
 \alinhaverbatim
-[begingroup][T1][T2][;][T3][T4][;][endgroup][;]
+[begingroup][T1][T2][;][T3][T4][;][endgroup][T5];
 \alinhanormal
 
-Corretamente a função marcou o começo da primeira declaração
-em \monoespaco{begingroup}, mas erroneamente ela
-marcou \monoespaco{T2} como o fim da primeira declaração porque ela
-funciona de maneira ingênua, tratando os ponto-e-vírgula como
-separador de declarações, sem levar em conta as declarações compostas
-que podem conter ponto-e-vírgula dentro delas. O fim da primeira
-declaração deveria ser ao invés de \monoespaco{T2}, o
-token \monoespaco{endgroup}.
+Nessa sequência, os três primeiros tokens seriam passados para serem
+avaliados. depois, seria o \monoespaco{[T3][T4]}. E por fim,
+o \monoespaco{[endgroup]}. Mas vamos fazer as coisas um pouco
+diferentes. Quando recebermos um \monoespaco{[begingroup][T5]},
+devemos avaliar só ele iniciando um novo aninhamento. Esta é uma ordem
+incorreta. Idealmente nós deveríamos primeiro
+avaliar \monoespaco{[begingroup]}, iniciando um novo bloco de
+aninhamento. Depois, cada uma das declarações dentro do bloco. Depois,
+o fim do bloco com \monoespaco{[endgroup]}. E só então o
+token \monoespaco{[T5]}.
 
-Ao invés de aumentar a complexidade da
-função \monoespaco{eval\_list\_of\_statements} fazendo ela levar em
-conta declarações compostas, ao invés disso vamos fazer com que a
-função \monoespaco{eval\_statements} seja capaz de corrigir o ponteiro
-passado, mudando ele para a verdadeira posição. Somente depois disso
-podemos passar a lista de declarações dentro do bloco para ser
-avaliada:
+Felizmente, é fácil tornar a avaliação nesta ordem. Isso pode ser
+feito porque a função \monoespaco{eval\_statement} pode modificar a
+posição do ponteiro que marca o fim da expressão que ela
+avaliou. Sendo assim, ao receber os três primeiros tokens onde o
+primeiro é um \monoespaco{[begingroup]}, ela pode tratar só o primeiro
+token e colocar o ponteiro de fim da expressão nele. Isso faz com
+que \monosoespaco{eval\_list\_of\_statements}envie de novo
+tokens \monoespaco{[T1][T2]} para serem avaliados.
+
+O código para tratar então qualquer declaração que comece
+com \monoespaco{begingroup } é:
 
 \iniciocodigo
 @<Declaração: Composta@>=
 else if(((struct generic_token *) begin_token_list) -> type ==
         TYPE_BEGINGROUP){
-  struct generic_token *t = begin_token_list, *previous = NULL;
-  int nesting_level = 0;
-  while(t != NULL){
-    if(t -> type == TYPE_BEGINGROUP)
-      nesting_level ++;
-    else if(t -> type == TYPE_ENDGROUP){
-      nesting_level --;
-      if(nesting_level == 0)
-        break;
-    }
-    previous = t;
-    t = (struct generic_token *) (t -> next);
-  }
-  *end_token_list = t; // Agora a declaração está demarcada corretamente
-  if(*end_token_list == NULL){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s:%d: Unclosed 'begingroup'.\n",
-            mf -> file,
-            ((struct generic_token *) begin_token_list) -> line);
-#endif
-    return false;
-  }
-  if(previous == begin_token_list) // Declaração composta vazia
-    return true;
-  else{
-    bool ret;
-    cx -> nesting_level ++;
-    ret = eval_list_of_statements(mf, cx, ((struct generic_token *)
-                                         begin_token_list) -> next,
-                                  previous);
-    cx -> nesting_level --;
-    return ret;
-  }
+  begin_nesting_level(mf, cx, begin_token_list);
+  *end_token_list = begin_token_list;
+  return true;
 }
 @
 \fimcodigo
+
+Da mesma forma, se recebermos uma função que começa
+com \monoespaco{endgroup}, nós tratamos só este priemiro token
+encerrando o aninhamento do bloco:
+
+\iniciocodigo
+@<Declaração: Composta@>+=
+else if(((struct generic_token *) begin_token_list) -> type ==
+        TYPE_ENDGROUP){
+  if(!end_nesting_level(mf, cx, begin_token_list))
+    return false;
+  *end_token_list = begin_token_list;
+  return true;
+}
+@
+\fimcodigo
+
+Esse também é um bom momento para avaliarmos o fim do programa, quando
+há um token \monoespaco{end} (apesar dele não ser uma declaração
+composta). Neste caso, devemos gerar um erro se estivermos dentro de
+um aninhamento de declaração composta:
+
+\iniciocodigo
+@<Declaração: Composta@>+=
+else if(((struct generic_token *) begin_token_list) -> type ==
+        TYPE_END){
+  if(cx -> nesting_level > 0){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s: Program ending with unclosed "
+                    "compound statement.\n", mf -> file);
+#endif
+    return false;
+  }
+  return true;
+}
+@
+\fimcodigo
+
 
 \secao{7. Declaração de Variáveis}
 

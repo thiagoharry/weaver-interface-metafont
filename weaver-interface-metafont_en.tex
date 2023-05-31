@@ -1018,22 +1018,18 @@ marking the beginning and end of such list:
 bool eval_program(struct metafont *mf, struct context *cx,
                   void *token_list){
   struct generic_token *end = (struct generic_token *) token_list;
-  struct generic_token *previous = NULL;
-  while(end != NULL && end -> type != TYPE_END){
-    previous = end;
+  while(end != NULL && end -> type != TYPE_END)
     end = (struct generic_token *) (end -> next);
-  }
   if(end == NULL){
 #if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s:%d: Program not finished with "
-                    "'end' or 'dump'.\n", mf -> file,
-                    (previous == NULL)?(1):(previous -> line));
+    fprintf(stderr, "METAFONT: Error: %s: Program not finished with "
+                    "'end' or 'dump'.\n", mf -> file);
 #endif
     return false;
   }
   if(end == token_list)
     return true;
-  return eval_list_of_statements(mf, cx, token_list, previous);
+  return eval_list_of_statements(mf, cx, token_list, end);
 }
 @
 \fimcodigo
@@ -1406,7 +1402,7 @@ bool begin_nesting_level(struct metafont *mf, struct context *cx,
   }
   cx -> nesting_level ++;
   end_token -> next = cx -> end_token_stack;
-  cx -> end_token_stack = end_token -> next;
+  cx -> end_token_stack = end_token;
   return true;
 }
 @
@@ -1437,69 +1433,84 @@ bool end_nesting_level(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
-The second thing to recall is that if we are in a compound statement,
-this means that the end of the declaration pointer could be wrong.
-For example, supose that the
-function \monoespaco{eval\_list\_of\_statements} evaluated the
-following tokens:
+How exactly a statement is evaluated? First, recall that the
+function \monoespaco{eval\_list\_of\_statements} splits the code using
+semiconlons as delimiters. Next, each part is given to
+function \monoespaco{eval\_statement}. This behaviour may be a little
+naive, as compound statements are full statements that can contain
+semicolons and other statements. Besides this, consider the following
+list of tokens:
 
 \alinhaverbatim
-[begingroup][T1][T2][;][T3][T4][;][endgroup][;]
+[begingroup][T1][T2][;][T3][T4][;][endgroup][;][T5];
 \alinhanormal
 
-The function correctly would consider the beginning of the first
-statement the token \monoespaco{begingroup}. But wrongly would
-consider the token \monoespaco{T2} as the end of this statement.
-Because it works in a naive logic, always considering the semicolons
-as the delimiters for statements, not considering that statements
-could contain semicolons. The end of the first statement should be the
-token \monoespaco{endgroup} instead.
+In this sequence, the first three tokens would be passed to be
+evaluated. Next would be \monoespaco{[T3][T4]}. And
+finally, \monoespaco{[endgroup][T5]}. This is wrong, as we ideally
+should evaluate first the beginning of a new nesting block
+with \monoespaco{[begingroup]}. Next, each statement in the
+block. Next, we end the nesting with \monoespaco{[endgroup]}. And only
+then we evaluate \monoespaco{[T5]}.
 
-Instead of increasing the complexity of
-function \monoespaco{eval\_list\_of\_statements} making it aware of
-compound statements, we will make the
-function \monoespaco{eval\_statements} correct the pointers, making
-the pointers to delimit correctly the statement. Only after correcting
-the pointers, we can pass the list of statements from the compouns
-statement to be evaluated:
+Fortunately, it's easy to evaluate things in this order. This can be
+done because the function \monoespaco{eval\_statement} can change the
+pointer for the end of the expression. If it did not evaluate all
+tokens given to it, it should place the pointer in the last evaluated
+token. Therefore, when getting the first three tokens above, where the
+first one is a \monoespaco{[begingroup]}, the function can just create
+a new nesting and return, setting the end of the evaluated expression
+to the first token. This makes the
+function \monoespaco{eval\_list\_of\_statements} send again the
+tokens \monoespaco{[T1][T2]} to be evaluated.
+
+The code to deal with any statement that begins
+with \monoespaco{begingroup} is:
 
 \iniciocodigo
 @<Statement: Compound@>=
 else if(((struct generic_token *) begin_token_list) -> type ==
         TYPE_BEGINGROUP){
-  struct generic_token *t = begin_token_list, *previous = NULL;
-  int nesting_level = 0;
-  while(t != NULL){
-    if(t -> type == TYPE_BEGINGROUP)
-      nesting_level ++;
-    else if(t -> type == TYPE_ENDGROUP){
-      nesting_level --;
-      if(nesting_level == 0)
-        break;
-    }
-    previous = t;
-    t = (struct generic_token *) (t -> next);
-  }
-  *end_token_list = t; // Now the statement is correctly delimited
-  if(*end_token_list == NULL){
+  begin_nesting_level(mf, cx, begin_token_list);
+  *end_token_list = begin_token_list;
+  return true;
+}
+@
+\fimcodigo
+
+In the same way, if we get an statement that begins
+with \monoespaco{endgroup}, we evaluate only this first token
+finishing the current nesting level:
+
+\iniciocodigo
+@<Statement: Compound@>+=
+else if(((struct generic_token *) begin_token_list) -> type ==
+        TYPE_ENDGROUP){
+  if(!end_nesting_level(mf, cx, begin_token_list))
+    return false;
+  *end_token_list = begin_token_list;
+  return true;
+}
+@
+\fimcodigo
+
+This is also a good moment to evaluate the end of the program, when we
+find an \monoespaco{end} token (despite not being an compound
+statement). In this case, we should generate an error if we are inside
+a some nesting in a compound statement:
+
+\iniciocodigo
+@<Statement: Compound@>+=
+else if(((struct generic_token *) begin_token_list) -> type ==
+        TYPE_END){
+  if(cx -> nesting_level > 0){
 #if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s:%d: Unclosed 'begingroup'.\n",
-            mf -> file,
-            ((struct generic_token *) begin_token_list) -> line);
+    fprintf(stderr, "METAFONT: Error: %s: Program ending with unclosed "
+                    "compound statement.\n", mf -> file);
 #endif
     return false;
   }
-  if(previous == begin_token_list) // Empty compound statement
-    return true;
-  else{
-    bool ret;
-    cx -> nesting_level ++;
-    ret = eval_list_of_statements(mf, cx, ((struct generic_token *)
-                                         begin_token_list) -> next,
-                                  previous);
-    cx -> nesting_level --;
-    return ret;
-  }
+  return true;
 }
 @
 \fimcodigo
