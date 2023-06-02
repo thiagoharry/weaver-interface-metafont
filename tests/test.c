@@ -1656,6 +1656,31 @@ void test_boolean_expressions(void){
   destroy_context(cx);
 }
 
+void test_if_statements(void){
+  struct metafont *mf;
+  struct context *cx;
+  bool ret;
+  struct named_variable *a, *b, *c;
+  struct numeric_variable *numeric_a, *numeric_b, *numeric_c;
+  mf = init_metafont(malloc, free, "tests/if_statement.mf");
+  cx = init_context();
+  void *p = lexer(mf, malloc, free, "tests/if_statement.mf");
+  ret = eval_program(mf, cx, p);
+  a = (struct named_variable *) mf -> named_variables;
+  b = a -> next;
+  c = b -> next;
+  numeric_a = (struct numeric_variable *) a -> var;
+  numeric_b = (struct numeric_variable *) b -> var;
+  numeric_c = (struct numeric_variable *) c -> var;
+  assert("Interpreting program with 'if' statements", ret);
+  assert("Interpreting 'if', 'elseif' and 'else'",
+	 numeric_a -> value == 2 && numeric_b -> value == 11 &&
+	 numeric_c -> value == 17);
+  free_token_list(free, p);
+  destroy_metafont(mf);
+  destroy_context(cx);
+}
+
 
 void test_opengl(void){
   assert("No errors in OpenGL", glGetError() == GL_NO_ERROR);
@@ -1679,6 +1704,7 @@ int main(int argc, char **argv){
   test_pen_expressions();
   test_picture_expressions();
   test_boolean_expressions();
+  test_if_statements();
   test_opengl();
   imprime_resultado();
   _Wfinish_metafont();

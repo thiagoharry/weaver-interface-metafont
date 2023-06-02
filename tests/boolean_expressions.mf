@@ -1,0 +1,64 @@
+% To test boolean expressions
+% This program should work and be accepted.
+
+boolean a0, b0, c0, d0, e0, f0;
+boolean a1, b1, c1, d1, e1, f1;
+boolean a2, b2, c2, d2, e2, f2;
+boolean a3, b3, c3, d3, e3, f3;
+boolean a4, b4, c4, d4;
+boolean a5, b5, c5, d5;
+boolean a6, b6, c6, d6, e6, f6;
+
+% Testing boolean comparison of integers
+a0 = 1+1 > 1;   % true
+b0 = 2 < (1-1); % false
+c0 = 2<=2;      % true
+d0 = -5 >= 3;   % false
+e0 = (2=2);     % true
+f0 = -3<>-3;    % false
+% Testing boolean comparison of pairs
+a1 = (1, 90) > (2, 0);  % false
+b1 = (2, 2) < (2, 3);   % true
+c1 = (0, 1)<=(0, 0);    % false
+d1 = (0, 1)>=(0, 0);    % true 
+e1 = (1, 2)=(1, 2.5);   % false
+f1 = (-2, -2)<>(-2, 2); % true 
+% Testing boolean comparison of transforms
+a2 = (1, 0, 0, 3, 4, 5) > (1, 0, 0, 3, 4, 4);  % true
+b2 = (2, 4, 0, 0, 0, 0) < (2, 3, 0, 0, 0, 0);  % false
+c2 = (0, 1, 0, 0, 0, 7) <= (0, 1, 0, 0, 0, 7); % true
+d2 = (0, 0, 0, 0, 0, 0) >= (0, 0, 0, 0, 0, 1); % false 
+e2 = (1, 2, 6, 5, 4, 3) = (1, 2, 6, 5, 4, 3);  % true
+f2 = (1, 2, 6, 5, 4, 3) <> (1, 2, 6, 5, 4, 3); %false
+% Testing boolean comparison of booleans
+a3 = false > true;   % false
+b3 = false < true;   % true
+c3 = true <= true;   % true
+d3 = false >= true;  % false
+e3 = (true = true);  % true
+f3 = false <> true;  % true
+% Testing boolean OR
+a4 = false or false;
+b4 = false or true;
+c4 = true or false;
+d4 = true or true;
+% Testing boolean AND
+a5 = false and false;
+b5 = false and true;
+c5 = true and false;
+d5 = true and true;
+% Testing De Morgan's Law (this tests literals, parenthesis and NOT):
+a6 = ((false or false) = not (not false and not false)) and
+  ((false or true) = not (not false and not true)) and
+  ((true or false) = not (not true and not false)) and
+  ((true or true) = not (not true and not true));
+% Testing variable evaluation
+b6 = a6;
+% Testing 'odd':
+c6 = odd 0;
+d6 = odd 1;
+% Testing 'cycle':
+e6 = cycle ((0, 0)--(1, 0)--(1, 1)--(0, 1)--cycle);
+f6 = cycle ((1, 5) .. controls (1, 3)  .. (0, 4));
+
+end

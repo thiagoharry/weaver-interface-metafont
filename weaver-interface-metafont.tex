@@ -1251,7 +1251,7 @@ iteração avançamos os ponteiros para os próximos tokens, mas cuidamos
 para nunca sair de dentro da região delimitada
 por \monoespaco{begin\_token\_list} e \monoespaco{end\_token\_list}.
 
-\secao{6. Declaração Composta}
+\secao{6. Declaração Composta: Bloco Composto}
 
 Uma declaração individual na linguagem pode na verdade ser composta
 por muitas outras declarações. A sintaxe para isso é:
@@ -1329,10 +1329,10 @@ bool eval_statement(struct metafont *mf, struct context *cx,
   //@<Declaração: Comando@>
   // Se estamos aqui, não identificamos o tipo de declaração:
 #if defined(W_DEBUG_METAFONT)
-    printf("DEBUG: %d\n", ((struct generic_token *) begin_token_list) -> type);
-    fprintf(stderr, "METAFONT: Error: %s:%d: Unknown statement.\n",
+    fprintf(stderr, "METAFONT: Error: %s:%d: Unknown statement (%s).\n",
             mf -> file,
-            ((struct generic_token *) begin_token_list) -> line);
+            ((struct generic_token *) begin_token_list) -> line,
+            list_of_keywords[((struct generic_token *) begin_token_list) -> type - 8]);
 #endif
   return false;
 }
@@ -1968,9 +1968,11 @@ void update_token_pointer_for_variable(struct symbolic_token *var_token,
   struct symbolic_token *p = var_token -> next;
   int nesting_level = 0;
   while(p != NULL && nesting_level >= 0){
-    if(p -> type == TYPE_BEGINGROUP)
+    if(p -> type == TYPE_BEGINGROUP || p -> type == TYPE_IF ||
+       p -> type == TYPE_BEGINCHAR)
       nesting_level ++;
-    else if(p -> type == TYPE_ENDGROUP)
+    else if(p -> type == TYPE_ENDGROUP || p -> type == TYPE_FI ||
+            p -> type == TYPE_ENDCHAR)
       nesting_level --;
     else if(p -> type == TYPE_SYMBOLIC){
       if(!strcmp(p -> value, var_token -> value)){
@@ -12553,6 +12555,262 @@ int get_tertiary_expression_type(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
+\secao{9. Declaração Composta: Declaração Condicional}
+
+Uma declaração condicional é um \monoespaco{if}, uma estrutura que
+garante que certos trechos de código sejam executados somente se
+certas condições forem verdadeiras. A gramática completa para
+expressões deste tipo é:
+
+\alinhaverbatim
+<Bloco Condicional> -> if <Expressão Booleana> :
+                         <Lista de Declarações>
+                         <Alternativas>
+                       fi
+<Alternativas> -> <Vazio> |
+                  elseif <Expressão Booleana>:
+                    <Lista de Declarações>
+                  <Alternativas> |
+                  else: <Lista de Declarações>
+\alinhanormal
+
+Declararemos então os seguintes novos tipos de tokens:
+
+\iniciocodigo
+@<METAFONT: Definição de Token Simbólico@>+=
+TYPE_ELSEIF,  // O token simbólico 'elseif'
+TYPE_ELSE,    // O token simbólico 'else'
+TYPE_COLON,   // O token simbólico ':'
+@
+\fimcodigo
+
+Os quais devem ser adicionados à lista de palavras reservadas:
+
+\iniciocodigo
+@<Lista de Palavras Reservadas@>+=
+"elseif", "else", ":",
+@
+\fimcodigo
+
+Na Seção 6 nós vimos a primeira das declarações compostas. A que
+começa com \monoespaco{begingroup} e termina
+com \monoespaco{endgroup}. A declaração condicional
+usando \monoespaco{if} também é uma declaração composta do tipo, que
+contém dentro de si várias outras declarações.
+
+Lembre-se que código é primeiro avaliado na
+função \monoespaco{eval\_list\_of\_statement}, qe separa o código
+usando ponto-e-vírgula como delimitador e passa para a
+função \monoespaco{eval\_statement} tratar cada parte. Esta função
+deve interpretar o código que recebe, mas tem também a liberdade de
+mudar a posição do ponteiro que delimita o fim da expressão que
+avaliou, o qual é usado para depois escolher os próximos tokens a
+serem lidos. É nessa segunda função que o código que trata
+um \monoespaco{if} é localizado.
+
+Assim como no caso do \monoespaco{begingroup} da Seção 6,
+quando encontramos tokens a serem avaliados que começam
+com \monoespaco{if}, o que fazemos é iniciar um novo nível de
+aninhamento e depois disso corrigimos a posição do ponteiro do último
+token avaliado para que os próximos tokens a serem avaliados sejam os
+corretos. Mas aqui, para determinar a posição do ponteiro do próximo
+token temos que executar uma lógica mais complexa, avaliando
+expressões booleanas.
+
+Basicamente, diante de um \monoespaco{if}, primeiro avaliamos a
+expressão booleana diante dele. Se ela for verdadeira, posicionamos o
+ponteiro para o próximo dois pontos (``:'') encontrado. Se não, então
+percorremos os próximos tokens tentando encontrar o
+próximo \monoespaco{elseif} ou \monoespaco{else}. No caso de
+um \monoespaco{elseif}, novamente avaliamos sua expressão booleana
+para saber se devemos colocar o ponteiro diante do código de seu
+corpo. Já no caso de um \monoespaco{else}, sempre devemos colocar o
+ponteiro diante de seu corpo. E se não encontrarmos nem
+um \monoespaco{else}, e nem um \monoespaco{elseif} onde a expressão
+booleana é verdadeira, então pulamos a declaração condicional,
+colocando o ponteiro de fim no \monoespaco{fi}.
+
+Entretanto, mesmo o código que iremos ignorar por estar dentro de um
+bloco condicional que não deve ser executado, deve passar por um
+mínimo de checagem para que erros de sintaxe não sejam ignorados. Por
+exemplo, pode haver um \monoespaco{endgroup} ou \monoespaco{endchar}
+solto, sem que qualquer uma destas declarações compostas tenha sido
+iniciada com um \monoespaco{begingroup} ou \monoespaco{beginchar}
+correspondente. Esse tipo de erro pode ser um sintoma de que
+o \monoespaco{if} foi finalizado incorretamente e por isso não devemos
+ignorar tais erros. À medida que percorremos código que não deve ser
+executado por corresponder à uma expressão falsa de um \monoespaco{if}
+ou \monoespaco{elseif}, devemos fazer uma checagem ao passarmos por
+tokens que aumentam ou diminuem o nível de aninhamento para garantir
+que eles estão corretos.
+
+O código que trata então um \monoespaco{if} é:
+
+\iniciocodigo
+@<Declaração: Composta@>+=
+else if(((struct generic_token *) begin_token_list) -> type ==
+        TYPE_IF){
+  struct generic_token *begin_bool, *end_bool;
+  struct boolean_variable b;
+  int current_nesting_level;
+  // Iniciando o aninhamento
+  begin_nesting_level(mf, cx, begin_token_list);
+  current_nesting_level = cx -> nesting_level;
+  // Delimitando a expressão booleana
+  begin_bool = ((struct generic_token *) begin_token_list) -> next;
+  end_bool = begin_bool;
+  while(end_bool != *end_token_list &&
+        ((struct generic_token *) (end_bool -> next)) -> type != TYPE_COLON)
+    end_bool = end_bool -> next;
+  if(end_bool == *end_token_list){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Error delimiting boolean "
+                    "condition.\n", mf -> file, end_bool -> line);
+#endif
+    return false;
+  }
+  // Avaliando a expressão booleana:
+  if(!eval_boolean_expression(mf, cx, begin_bool, end_bool, &b))
+    return false;
+  if(b.value == 1){ // Verdadeiro: código no 'if' deve ser avaliado
+    *end_token_list = end_bool -> next;
+    return true;
+  }
+  else{ // Falso: pulamos o código no 'if'
+    struct generic_token *t = end_bool -> next;
+    while(t -> next != NULL){
+      if(t -> type == TYPE_FI && cx -> nesting_level == current_nesting_level){
+        // Achamos o 'fi' correspondente ao nosso 'if'
+        if(!end_nesting_level(mf, cx, t))
+          return false;
+        *end_token_list = t;
+        return true;
+      }
+      else if(t -> type == TYPE_ELSE &&
+              cx -> nesting_level == current_nesting_level){
+        // Achamos o 'else' correspondente ao nosso 'if'
+        *end_token_list = t -> next;
+        if(((struct generic_token *) *end_token_list) -> type != TYPE_COLON){
+#if defined(W_DEBUG_METAFONT)
+          fprintf(stderr, "METAFONT: Error: %s:%d: Expected ':' after "
+                  "'else'.\n", mf -> file,
+                  ((struct generic_token *) *end_token_list) -> line);
+#endif
+          return false;
+        }
+        return true;
+      }
+      else if(t -> type == TYPE_ELSEIF &&
+              cx -> nesting_level == current_nesting_level){
+        // Achamos um 'elseif' correspondente ao nosos 'if'
+        begin_bool = t -> next;
+        end_bool = begin_bool;
+        while(end_bool != *end_token_list &&
+              ((struct generic_token *)
+                (end_bool -> next)) -> type != TYPE_COLON)
+          end_bool = end_bool -> next;
+        if(!eval_boolean_expression(mf, cx, begin_bool, end_bool, &b))
+          return false;
+        if(b.value == 1){ // Verdadeiro: código no 'elseif' deve ser avaliado
+          *end_token_list = end_bool -> next;
+          return true;
+        }
+      }
+      // Outros tokens que mudam nível de aninhamento
+      else if(t -> type == TYPE_IF || t -> type == TYPE_BEGINGROUP ||
+              t -> type == TYPE_BEGINCHAR)
+        begin_nesting_level(mf, cx, t);
+      else if(t -> type == TYPE_FI || t -> type == TYPE_ENDGROUP ||
+              t -> type == TYPE_ENDCHAR)
+        if(!end_nesting_level(mf, cx, t))
+          return false;
+      t = t -> next;
+    }
+  }
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Not found corresponding 'fi' "
+          "for 'if' statement.\n", mf -> file,
+          ((struct generic_token *) begin_token_list) -> line);
+#endif  
+  return false;
+}
+@
+\fimcodigo
+
+A responsabilidade de encontrar o código certo a ser executado é do
+trecho acima que trata o \monoespaco{if}. Mas nós podemos também
+encontrar um \monoespaco{elseif} ou um \monoespaco{else} no começo de
+uma declaração a ser avaliada. Quando isso ocorre, ou indica que é um
+erro de sintaxe, quando um destes tokens está solto, sem
+um \monoespaco{if} correspondenteo, ou então significa que estamos
+dentro de um \monoespaco{if}, onde já terminamos de executar o código
+correto e encontramos um delimitador onde novas expressões booleanas
+podems ser testadas. Independente da expressão que estiver lá, nós já
+terminamos de executar o nosso \monoespaco{if}. Então devemos ignorar
+tudo que vem a seguir até achar o \monoespaco{fi} que encerra
+o \monoespaco{if} em que estamos:
+
+\iniciocodigo
+@<Declaração: Composta@>+=
+else if(((struct generic_token *) begin_token_list) -> type ==
+        TYPE_ELSEIF ||
+        ((struct generic_token *) begin_token_list) -> type ==
+        TYPE_ELSE){
+  int current_nesting_level;
+  struct generic_token *t;
+  if(cx -> end_token_stack == NULL ||
+     cx -> end_token_stack -> type != TYPE_FI){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Token 'elseif' or 'else' should "
+          "have a corresponding 'if'.\n", mf -> file,
+          ((struct generic_token *) begin_token_list) -> line);
+#endif  
+    return false;
+  }
+  current_nesting_level = cx -> nesting_level;
+  t = begin_token_list;
+  while(t != NULL){
+    if(t -> type == TYPE_FI && cx -> nesting_level == current_nesting_level){
+      // Achamos o 'fi' correspondente ao nosso 'if'
+      if(!end_nesting_level(mf, cx, t))
+        return false;
+      *end_token_list = t;
+      return true;
+    }
+    else if(t -> type == TYPE_IF || t -> type == TYPE_BEGINGROUP ||
+            t -> type == TYPE_BEGINCHAR)
+      begin_nesting_level(mf, cx, t);
+    else if(t -> type == TYPE_FI || t -> type == TYPE_ENDGROUP ||
+            t -> type == TYPE_ENDCHAR)
+      if(!end_nesting_level(mf, cx, t))
+        return false;
+    t = t -> next;
+  }
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Not found corresponding 'fi' "
+          "for 'else' or 'elseif' statement.\n", mf -> file,
+          ((struct generic_token *) begin_token_list) -> line);
+#endif
+  return false;
+}
+@
+\fimcodigo
+
+Finalmente, nós podemos também encontrar um \monoespaco{fi} no começo
+de declaração a ser avaliada. Neste caso, nós apenas diminuimos o
+nível de aninhamento e marcamos o fim do que avaliamos para o próprio
+token \monoespaco{fi}:
+
+\iniciocodigo
+@<Declaração: Composta@>+=
+else if(((struct generic_token *) begin_token_list) -> type == TYPE_FI){
+  if(!end_nesting_level(mf, cx, begin_token_list))
+    return false;
+  *end_token_list = begin_token_list;
+  return true;
+}
+@
+\fimcodigo
 
 \secao{Referências}
 

@@ -680,7 +680,7 @@ if(isalpha(c) || c == '_'){
 \fimcodigo
 
 b) The second family is composed by the symbols for greater, equal and
-lesser, colon and a pipe..
+lesser, colon and a pipe.
 
 \iniciocodigo
 @<Lexer: Rule B@>=
@@ -1220,7 +1220,7 @@ individual statement. During the iteration we always ensure that we do
 not go outside the region delimited by \monoespaco{begin\_token\_list}
 and \monoespaco{end\_token\_list}.
 
-\secao{6. Compound Statements}
+\secao{6. Compound Statements: Compound Block}
 
 An individual statement in the language can be composed by many other
 statements. The syntax for this is:
@@ -1932,9 +1932,11 @@ void update_token_pointer_for_variable(struct symbolic_token *var_token,
   struct symbolic_token *p = var_token -> next;
   int nesting_level = 0;
   while(p != NULL && nesting_level >= 0){
-    if(p -> type == TYPE_BEGINGROUP)
+    if(p -> type == TYPE_BEGINGROUP || p -> type == TYPE_IF ||
+       p -> type == TYPE_BEGINCHAR)
       nesting_level ++;
-    else if(p -> type == TYPE_ENDGROUP)
+    else if(p -> type == TYPE_ENDGROUP || p -> type == TYPE_FI ||
+            p -> type == TYPE_ENDCHAR)
       nesting_level --;
     else if(p -> type == TYPE_SYMBOLIC){
       if(!strcmp(p -> value, var_token -> value)){
@@ -12384,6 +12386,256 @@ int get_tertiary_expression_type(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
+\secao{9. Compound Statements: Conditional Statement}
+
+A conditional statement is a \monoespaco{if}, it ensures that some
+piece of code will be evaluated only if some conditions are true. The
+complete gramamr for these statements is:
+
+\alinhaverbatim
+<Conditional Block> -> if <Boolean Expression> :
+                          <List of Statements>
+                         <Alternatives>
+                       fi
+<Alternativas> -> <Empty> |
+                  elseif <Boolean Expression>:
+                    <List of Statements>
+                  <Alternatives> |
+                  else: <List of Statements>
+\alinhanormal
+
+We need to declare two new kinds of tokens:
+
+\iniciocodigo
+@<METAFONT: Symbolic Token Definition@>+=
+TYPE_ELSEIF,  // Symbolic token 'elseif'
+TYPE_ELSE,    // Symbolic token 'else'
+TYPE_COLON,   // Symbolic token ':'
+@
+\fimcodigo
+
+Which should be associated with the following reserved words:
+
+\iniciocodigo
+@<List of Keywords@>+=
+"elseif", "else", ":",
+@
+\fimcodigo
+
+In Section 6, we introduced the first compound statement: the one that
+begins with \monoespaco{begingroup} and ends
+with \monoespaco{endgroup}. The conditional statement
+using \monoespaco{if} is also a compound statement, which can contain
+other inner statements.
+
+Remember thar the code is first read in teh
+function \monoespaco{eval\_list\_of\_statement}, which splits the
+tokens using semicolons as delimiters and give each part to the
+function \monoespaco{eval\_statement}. This second function evaluates
+the given code, but it can also change the pointer that delimits the
+last evaluated token, which is used to determine the next tokens to be
+evaluated. It's in this function that our \monoespaco{if} will be
+evaluated.
+
+Like in the \monoespaco{begingroup} case, seen in Section 6, when we
+find a \monoespaco{if} in the first position in the list of tokens to
+be evalueated, we increase the nesting level and correct the position
+of the end pointer, ensuring that the next tokens to be evaluated will
+be the right ones. Here we do the same, but the logic to choose the
+right pointer is more complex and involves evaluating boolean
+expressions.
+
+Given a \monoespaco{if}, we first evaluate the boolean expression next
+to it. If true, the position for the pointer will be the colon after
+the expression. Otherwise, we walk over the tokens trying to find
+a \monoespaco{elseif}, \monoespaco{else} or \monoespaco{fi}. In the
+first case, we treat like we did with the \monoespaco{if}, checking
+and evaluating the boolean expression next to it to decide if we place
+the pointer in its colon. In the second case, we place the pointer in
+the colon next to \monoespaco{else}. And in the last case, we found
+the end of the compound statement and no true boolean expression. We
+place the pointer in the \monoespaco{fi}, and doing this, we skip all
+the statements inside the \monoespaco{if}.
+
+However, the code that we ignore and do not evaluate because it is
+inside a block with a false boolean expression in a conditional
+statement also need to be checked for some critical syntax errors. For
+example, we could have tokens \monoespaco{endgroup}
+or \monoespaco{endchar} inside a \monoespaco{if} that were not
+preceded by a \monoespaco{begingroup} or \monoespaco{beginchar}. These
+errors could indicate that the user wrote an
+incorrect \monoespaco{if}, perhaps placing the \monoespaco{fi} in the
+wrong place. Therefore, these errors should not be ignorated. While we
+walk over the non-evaluated tokens in a \monoespaco{if}, we still
+would run code to update the nesting level when we find tokens
+like \monoespaco{begingroup}, \monoespaco{if}, \monoespaco{beginchar}
+and their corresponding closing tokens.
+
+The code that evaluates our \monoespaco{if} statement is:
+
+\iniciocodigo
+@<Statement: Compound@>+=
+else if(((struct generic_token *) begin_token_list) -> type ==
+        TYPE_IF){
+  struct generic_token *begin_bool, *end_bool;
+  struct boolean_variable b;
+  int current_nesting_level;
+  // Beginning the nesting
+  begin_nesting_level(mf, cx, begin_token_list);
+  current_nesting_level = cx -> nesting_level;
+  // Delimiting boolean expression
+  begin_bool = ((struct generic_token *) begin_token_list) -> next;
+  end_bool = begin_bool;
+  while(end_bool != *end_token_list &&
+        ((struct generic_token *) (end_bool -> next)) -> type != TYPE_COLON)
+    end_bool = end_bool -> next;
+  if(end_bool == *end_token_list){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Error delimiting boolean "
+                    "condition.\n", mf -> file, end_bool -> line);
+#endif
+    return false;
+  }
+  // Evaluating boolean expression:
+  if(!eval_boolean_expression(mf, cx, begin_bool, end_bool, &b))
+    return false;
+  if(b.value == 1){ // True: Code inside this 'if' must be evaluated
+    *end_token_list = end_bool -> next;
+    return true;
+  }
+  else{ // False: We skip code in this 'if'
+    struct generic_token *t = end_bool -> next;
+    while(t -> next != NULL){
+      if(t -> type == TYPE_FI && cx -> nesting_level == current_nesting_level){
+        // We found the 'fi' corresponding to this 'if'
+        if(!end_nesting_level(mf, cx, t))
+          return false;
+        *end_token_list = t;
+        return true;
+      }
+      else if(t -> type == TYPE_ELSE &&
+              cx -> nesting_level == current_nesting_level){
+        // We found the 'else' corresponding to this 'if'
+        *end_token_list = t -> next;
+        if(((struct generic_token *) *end_token_list) -> type != TYPE_COLON){
+#if defined(W_DEBUG_METAFONT)
+          fprintf(stderr, "METAFONT: Error: %s:%d: Expected ':' after "
+                  "'else'.\n", mf -> file,
+                  ((struct generic_token *) *end_token_list) -> line);
+#endif
+          return false;
+        }
+        return true;
+      }
+      else if(t -> type == TYPE_ELSEIF &&
+              cx -> nesting_level == current_nesting_level){
+        // We found the 'elseif' corresponding to our 'if'
+        begin_bool = t -> next;
+        end_bool = begin_bool;
+        while(end_bool != *end_token_list &&
+              ((struct generic_token *)
+                (end_bool -> next)) -> type != TYPE_COLON)
+          end_bool = end_bool -> next;
+        if(!eval_boolean_expression(mf, cx, begin_bool, end_bool, &b))
+          return false;
+        if(b.value == 1){ // True: Code in 'elseif' must be evaluated
+          *end_token_list = end_bool -> next;
+          return true;
+        }
+      }
+      // Other tokens that change our nesting level:
+      else if(t -> type == TYPE_IF || t -> type == TYPE_BEGINGROUP ||
+              t -> type == TYPE_BEGINCHAR)
+        begin_nesting_level(mf, cx, t);
+      else if(t -> type == TYPE_FI || t -> type == TYPE_ENDGROUP ||
+              t -> type == TYPE_ENDCHAR)
+        if(!end_nesting_level(mf, cx, t))
+          return false;
+      t = t -> next;
+    }
+  }
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Not found corresponding 'fi' "
+          "for 'if' statement.\n", mf -> file,
+          ((struct generic_token *) begin_token_list) -> line);
+#endif  
+  return false;
+}
+@
+\fimcodigo
+
+Find the correct code to be evaluated is the above code
+responsability. If we find a \monoespaco{elseif} or \monoespaco{else}
+in the beginning of a new statement, one of two things is happening:
+we either are dealing with a syntax error, where these tokens do not
+have a corresponding \monoespaco{if}, or we are inside
+some \monoespaco{if} where we already evaluated the right conditional
+code and found the other conditional expression with code that should
+not be evaluated. In the second case, we should ignore the following
+tokens until we find the \monoespaco{fi} corresponding to
+our \monoespaco{ìf}:
+
+\iniciocodigo
+@<Statement: Compound@>+=
+else if(((struct generic_token *) begin_token_list) -> type ==
+        TYPE_ELSEIF ||
+        ((struct generic_token *) begin_token_list) -> type ==
+        TYPE_ELSE){
+  int current_nesting_level;
+  struct generic_token *t;
+  if(cx -> end_token_stack == NULL ||
+     cx -> end_token_stack -> type != TYPE_FI){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Token 'elseif' or 'else' should "
+          "have a corresponding 'if'.\n", mf -> file,
+          ((struct generic_token *) begin_token_list) -> line);
+#endif  
+    return false;
+  }
+  current_nesting_level = cx -> nesting_level;
+  t = begin_token_list;
+  while(t != NULL){
+    if(t -> type == TYPE_FI && cx -> nesting_level == current_nesting_level){
+      // We found the 'fi' corresponding to our 'if'
+      if(!end_nesting_level(mf, cx, t))
+        return false;
+      *end_token_list = t;
+      return true;
+    }
+    else if(t -> type == TYPE_IF || t -> type == TYPE_BEGINGROUP ||
+            t -> type == TYPE_BEGINCHAR)
+      begin_nesting_level(mf, cx, t);
+    else if(t -> type == TYPE_FI || t -> type == TYPE_ENDGROUP ||
+            t -> type == TYPE_ENDCHAR)
+      if(!end_nesting_level(mf, cx, t))
+        return false;
+    t = t -> next;
+  }
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Not found corresponding 'fi' "
+          "for 'else' or 'elseif' statement.\n", mf -> file,
+          ((struct generic_token *) begin_token_list) -> line);
+#endif
+  return false;
+}
+@
+\fimcodigo
+
+Finally, we also can find a \monoespaco{fi} in the beginning of a new
+statement to be evaluated. In this case, we lower the nesting level
+and mark as the end of our evaluated tokens this \monoespaco{fi}
+token:
+
+\iniciocodigo
+@<Statement: Compound@>+=
+else if(((struct generic_token *) begin_token_list) -> type == TYPE_FI){
+  if(!end_nesting_level(mf, cx, begin_token_list))
+    return false;
+  *end_token_list = begin_token_list;
+  return true;
+}
+@
+\fimcodigo
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
