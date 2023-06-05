@@ -5571,7 +5571,7 @@ return true;
 @
 \fimcodigo
 
-And the same must be done for the \onoespaco{ypart} operator:
+And the same must be done for the \monoespaco{ypart} operator:
 
 \iniciocodigo
 @<Numeric Primary: Y-Part in Non-Pair@>=
@@ -9316,8 +9316,6 @@ return true;
 \fimcodigo
 
 
-@<Pen Secondary: Generic Transform@>
-
 \subsubsecao{8.5.3. Pen Primary Expressions}
 
 The grammar for pen primary expressions are defined as:
@@ -12632,6 +12630,107 @@ else if(((struct generic_token *) begin_token_list) -> type == TYPE_FI){
   if(!end_nesting_level(mf, cx, begin_token_list))
     return false;
   *end_token_list = begin_token_list;
+  return true;
+}
+@
+\fimcodigo
+
+\secao{10. The \monoespaco{draw} Command}
+
+Finally we can begin specifying one of the most important command in
+the language. The command that uses a pen to draw a path in an image.
+
+\subsecao{10.1. Triangulation}
+
+The first thing that needs to be done is triangulate a pen. Video
+cards and OpenGL works drawing triangles in the screen. Therefore,
+each pen should be transformed in a set of triangles before drawing
+them. This was mentioned in Subsection 7.5. about pen variables. But
+the code for triangulation still needs to be defined.
+
+To recap, these are the relevant variables stored inside
+a \monoespaco{struct pen\_variable} that we will use during
+triangulation:
+
+* \monoespaco{struct path\_variable *format}: A cyclic path with the
+  pen shape.
+
+* \monoespaco{int flags}: Stores information if the above shape is
+  null, is concave or convex, it is a polycon or a shape with curves,
+  if it is a square or a circle.
+
+* \monoespaco{GLuint gl\_vbo}: References que vertices stored in the
+  video card. Will store 0 if the pen was not triangulated.
+
+The function that will perform the triangulation is:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+bool triangulate_pen(struct pen_variable *pen);
+@
+\fimcodigo
+
+And its implementation:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+bool triangulate_pen(struct pen_variable *pen){
+  if(pen -> gl_vbo != 0)
+    return true; // ALready triangulated
+  @<Triangulation: Null or Square Pen@>
+  @<Triangulation: Convex Polygon@>
+}
+@
+\fimcodigo
+
+The simplest case is when we have a null pen created
+by \monoespaco{nullpen}. These pens never will draw anything, so they
+do not need to be triangulated. Another simple case is the square
+pen. They can draw things, but we do not need to triangulate them
+because we can use the square vertices that we already defined in the
+variable \monoespaco{square} in Subsection 8.6. These two simple cases
+are treated below:
+
+\iniciocodigo
+@<Triangulation: Null or Square Pen@>=
+if((pen -> flags | FLAG_NULL) || (pen -> flags | FLAG_SQUARE))
+  return true;
+@
+\fimcodigo
+
+The next simplest case is when we have a convex polygon. For them, we
+can use a very simple algorithm. We choose any vertex as the pivot and
+perform a triangulation creating triangles that always use this vertex
+and each other adjacent pair of vertices in our shape. It's the fan
+triangulation:
+
+\imagem{images/triangulacao_leque.eps}
+
+To use this, we can just pass all the pen vertices in the same order
+that they are stored and later, when drawing them, we will tell OpenGL to use
+fan triangulation:
+
+\iniciocodigo
+@<Triangulation: Convex Polygon@>=
+if((pen -> flags | FLAG_STRAIGHT) && (pen -> flags | FLAG_CONVEX)){
+  int i;
+  GLsizei size = sizeof(float) * 2 * pen -> format -> length;
+  float *data = (float *) temporary_alloc(size);
+  if(data == NULL){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: Not enough memory.\n");
+#endif
+    return false;
+  }
+  for(i = 0; i < pen -> format -> length; i ++){
+    data[2 * i] = pen -> format -> points[i].x;
+    data[2 * i + 1] = pen -> format -> points[i].y;
+  }
+  glGenBuffers(1, &(pen -> gl_vbo));
+  glBindBuffer(GL_ARRAY_BUFFER, pen -> gl_vbo);
+  glBufferData(pen -> gl_vbo, size, data, GL_STATIC_DRAW);
+  if(temporary_free != NULL)
+    temporary_free(data);
   return true;
 }
 @
