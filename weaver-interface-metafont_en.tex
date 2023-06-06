@@ -12655,12 +12655,82 @@ triangulation:
 * \monoespaco{struct path\_variable *format}: A cyclic path with the
   pen shape.
 
-* \monoespaco{int flags}: Stores information if the above shape is
-  null, is concave or convex, it is a polycon or a shape with curves,
-  if it is a square or a circle.
-
 * \monoespaco{GLuint gl\_vbo}: References que vertices stored in the
   video card. Will store 0 if the pen was not triangulated.
+
+* \monoespaco{int flags}: Stores information if the above shape is
+  null, is concave or convex, it is a polycon or a shape with curves,
+  if it is a square or a circle. Besides these flags that were already
+  presented,we will also define and use here two other flags:
+
+\iniciocodigo
+@<Local Macros (metafont.c)@>+=
+#define FLAG_ORIENTATION      32
+#define FLAG_COUNTERCLOCKWISE 64
+@
+\fimcodigo
+
+The second flag above will store if we are storing the shape of the
+pen in the counterclockwise order (if the flag is set) or in the
+clockwise order (if the flag is not set). But this information is
+initialized and is reliable only if the first flag above is set.
+
+We will use the following function to check the pen orientation:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+bool is_pen_counterclockwise(struct pen_variable *pen);
+@
+\fimcodigo
+
+The function works checking if we already have the information stored
+in the flag and returning it if so. Otherwise, it tries to discover
+the orientation. This is done searching for the vertex with the
+smallest $y$ coordinate (and biggest $x$ in case of tie) Let $A$ be
+this vertex, $P$ the previous vertex and $N$ the next. The signal of
+the scalar product between $AP$ and $AN$ inform the orientation:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+bool is_pen_counterclockwise(struct pen_variable *pen){
+  int i, index = 0;
+  int size = pen -> format -> length;
+  float smallest_y = INFINITY, biggest_x = -INFINITY;
+  if(pen -> flags & FLAG_ORIENTATION)
+    return (pen -> flags & FLAG_COUNTERCLOCKWISE);
+  for(i = 0; i < size; i ++){
+    if(pen -> format -> points[i].y < smallest_y ||
+       (pen -> format -> points[i].y == smallest_y &&
+        pen -> format -> points[i].y > biggest_x)){
+      smallest_y = pen -> format -> points[i].y;
+      biggest_x = pen -> format -> points[i].x;
+      index = i;
+    }
+  }
+  {
+    int n = (index - 1) % size, p = (index + 1) % size;
+    while(pen -> format -> points[index].x == pen -> format -> points[n].x &&
+          pen -> format -> points[index].y == pen -> format -> points[n].y)
+      n = (n + 1) % size;
+    while(pen -> format -> points[index].x == pen -> format -> points[p].x &&
+          pen -> format -> points[index].y == pen -> format -> points[p].y)
+      p = (p - 1) % size;
+    float ap_x = pen -> format -> points[p].x -
+                 pen -> format -> points[index].x;
+    float ap_y = pen -> format -> points[p].y -
+                 pen -> format -> points[index].y;
+    float an_x = pen -> format -> points[n].x -
+                 pen -> format -> points[index].x;
+    float an_y = pen -> format -> points[n].y -
+                 pen -> format -> points[index].y;
+    float prod = ap_x * an_x + ap_y * an_y;
+    pen -> flags += FLAG_ORIENTATION;
+    pen -> flags += FLAG_COUNTERCLOCKWISE * (prod > 0);
+    return (prod > 0);
+  }
+}
+@
+\fimcodigo
 
 The function that will perform the triangulation is:
 
@@ -12713,7 +12783,7 @@ fan triangulation:
 \iniciocodigo
 @<Triangulation: Convex Polygon@>=
 if((pen -> flags | FLAG_STRAIGHT) && (pen -> flags | FLAG_CONVEX)){
-  int i;
+  int i, index, increment;
   GLsizei size = sizeof(float) * 2 * pen -> format -> length;
   float *data = (float *) temporary_alloc(size);
   if(data == NULL){
@@ -12722,9 +12792,18 @@ if((pen -> flags | FLAG_STRAIGHT) && (pen -> flags | FLAG_CONVEX)){
 #endif
     return false;
   }
+  if(is_pen_counterclockwise(pen)){
+    index = 0;
+    increment = 1;
+  }
+  else{
+    index = pen -> format -> length - 1;
+    increment = -1;
+  }
   for(i = 0; i < pen -> format -> length; i ++){
-    data[2 * i] = pen -> format -> points[i].x;
-    data[2 * i + 1] = pen -> format -> points[i].y;
+    data[2 * i] = pen -> format -> points[index].x;
+    data[2 * i + 1] = pen -> format -> points[index].y;
+    index += increment;
   }
   glGenBuffers(1, &(pen -> gl_vbo));
   glBindBuffer(GL_ARRAY_BUFFER, pen -> gl_vbo);

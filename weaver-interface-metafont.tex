@@ -12837,12 +12837,83 @@ pen\_variable}:
 * \monoespaco{struct path\_variable *format}: Possui um caminho
   cíclico com o formato da caneta.
 
-* \monoespaco{int flags}: Possui informação se o caminho acima define
-  uma forma convexa ou côncava, um polígono ou uma figura com curvas,
-  se é um quadrado, um círculo ou um polígono nulo sem lados.
-
 * \monoespaco{GLuint gl\_vbo}: Referência para os vértices armazenados
   na placa de vídeo. Será 0 se a caneta ainda não foi triangulada.
+
+* \monoespaco{int flags}: Possui informação se o caminho acima define
+  uma forma convexa ou côncava, um polígono ou uma figura com curvas,
+  se é um quadrado, um círculo ou um polígono nulo sem lados. Além
+  disso, nesta seção vamos definir e usar os novos valores desta flag:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#define FLAG_ORIENTATION      32
+#define FLAG_COUNTERCLOCKWISE 64
+@
+\fimcodigo
+
+A segunda flag acima será usada para indicar se estamos armazenando
+osvértices do formato da caneta no sentido anti-horário (se estiver
+ativa) ou horário (se não estiver ativa). Entretanto, só vamos
+considerar o valor válido e inicializado se a flag anterior acima
+estiver ativa.
+
+Vamos usar a seguinte função para obter tal informação de uma caneta:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+bool is_pen_counterclockwise(struct pen_variable *pen);
+@
+\fimcodigo
+
+A função funciona checando se temos tal informação armazenada na flag
+e a retornando. Se não, ela busca descobrir. Ela faz isso encontrando
+o vértice com a menor coordenada $y$ (e o maior $x$ se houver
+empate). Seja $A$ este vértice, $P$ o vértice anterior e $N$ o
+próximo. O sinal do resultado do produto escalar de $AP$ e $AN$
+determina a orientação:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+bool is_pen_counterclockwise(struct pen_variable *pen){
+  int i, index = 0;
+  int size = pen -> format -> length;
+  float smallest_y = INFINITY, biggest_x = -INFINITY;
+  if(pen -> flags & FLAG_ORIENTATION)
+    return (pen -> flags & FLAG_COUNTERCLOCKWISE);
+  for(i = 0; i < size; i ++){
+    if(pen -> format -> points[i].y < smallest_y ||
+       (pen -> format -> points[i].y == smallest_y &&
+        pen -> format -> points[i].y > biggest_x)){
+      smallest_y = pen -> format -> points[i].y;
+      biggest_x = pen -> format -> points[i].x;
+      index = i;
+    }
+  }
+  {
+    int n = (index - 1) % size, p = (index + 1) % size;
+    while(pen -> format -> points[index].x == pen -> format -> points[n].x &&
+          pen -> format -> points[index].y == pen -> format -> points[n].y)
+      n = (n + 1) % size;
+    while(pen -> format -> points[index].x == pen -> format -> points[p].x &&
+          pen -> format -> points[index].y == pen -> format -> points[p].y)
+      p = (p - 1) % size;
+    float ap_x = pen -> format -> points[p].x -
+                 pen -> format -> points[index].x;
+    float ap_y = pen -> format -> points[p].y -
+                 pen -> format -> points[index].y;
+    float an_x = pen -> format -> points[n].x -
+                 pen -> format -> points[index].x;
+    float an_y = pen -> format -> points[n].y -
+                 pen -> format -> points[index].y;
+    float prod = ap_x * an_x + ap_y * an_y;
+    pen -> flags += FLAG_ORIENTATION;
+    pen -> flags += FLAG_COUNTERCLOCKWISE * (prod > 0);
+    return (prod > 0);
+  }
+}
+@
+\fimcodigo
 
 A função que fará a triangulação é:
 
@@ -12890,14 +12961,14 @@ triangulação em leque:
 
 \imagem{images/triangulacao_leque.eps}
 
-Para isso basta passarmos os vértices da caneta na ordem que eles
-aparecem usando o OpenGL. Depois, quando chegar a hora de desenhar, é
-só pedir para o OpenGL usar a triangulação em leque:
+Para isso basta passarmos os vértices da caneta na ordem anti-horária
+para a placa de vídeo usando o OpenGL. Depois, quando chegar a hora de
+desenhar, é só pedir para o OpenGL usar a triangulação em leque:
 
 \iniciocodigo
 @<Triangulação: Polígono Convexo@>=
 if((pen -> flags | FLAG_STRAIGHT) && (pen -> flags | FLAG_CONVEX)){
-  int i;
+  int i, index, increment;
   GLsizei size = sizeof(float) * 2 * pen -> format -> length;
   float *data = (float *) temporary_alloc(size);
   if(data == NULL){
@@ -12906,9 +12977,18 @@ if((pen -> flags | FLAG_STRAIGHT) && (pen -> flags | FLAG_CONVEX)){
 #endif
     return false;
   }
+  if(is_pen_counterclockwise(pen)){
+    index = 0;
+    increment = 1;
+  }
+  else{
+    index = pen -> format -> length - 1;
+    increment = -1;
+  }
   for(i = 0; i < pen -> format -> length; i ++){
-    data[2 * i] = pen -> format -> points[i].x;
-    data[2 * i + 1] = pen -> format -> points[i].y;
+    data[2 * i] = pen -> format -> points[index].x;
+    data[2 * i + 1] = pen -> format -> points[index].y;
+    index += increment;
   }
   glGenBuffers(1, &(pen -> gl_vbo));
   glBindBuffer(GL_ARRAY_BUFFER, pen -> gl_vbo);
