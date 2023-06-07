@@ -12749,6 +12749,7 @@ bool triangulate_pen(struct pen_variable *pen){
     return true; // ALready triangulated
   @<Triangulation: Null or Square Pen@>
   @<Triangulation: Convex Polygon@>
+  @<Triangulation: Circle@>
 }
 @
 \fimcodigo
@@ -12782,7 +12783,7 @@ fan triangulation:
 
 \iniciocodigo
 @<Triangulation: Convex Polygon@>=
-if((pen -> flags | FLAG_STRAIGHT) && (pen -> flags | FLAG_CONVEX)){
+if((pen -> flags & FLAG_STRAIGHT) && (pen -> flags & FLAG_CONVEX)){
   int i, index, increment;
   GLsizei size = sizeof(float) * 2 * pen -> format -> length;
   float *data = (float *) temporary_alloc(size);
@@ -12804,6 +12805,83 @@ if((pen -> flags | FLAG_STRAIGHT) && (pen -> flags | FLAG_CONVEX)){
     data[2 * i] = pen -> format -> points[index].x;
     data[2 * i + 1] = pen -> format -> points[index].y;
     index += increment;
+  }
+  glGenBuffers(1, &(pen -> gl_vbo));
+  glBindBuffer(GL_ARRAY_BUFFER, pen -> gl_vbo);
+  glBufferData(pen -> gl_vbo, size, data, GL_STATIC_DRAW);
+  if(temporary_free != NULL)
+    temporary_free(data);
+  return true;
+}
+@
+\fimcodigo
+
+Now let's deal with the next case for triangulation: circles. A
+circular pen is created using expression \monoespaco{pencircle}. For
+this kind of pen, we must generate its vertices during triangulation:
+we will not use the stored vertices. But how many vertices should be
+generated? If the circle have a single pixel as diameter, perhaps 4
+vertices in the perimeter is enough, nobody would notice that this is
+a square instead of a circle. But if the circle becames bigger, we
+would need more vertices to correctly approximate its shape.
+
+The number of required vertices is given by the circle circumference,
+in pixels: we need $2\pi r$ vertices in the perimeter. The angle
+between them is given by the formula $L=\theta r$ to compute the arc
+length in the circle. If we want 1 pixel as arc, then, the angle
+between them is $1/r$ in radians, where $r$ is the radius.
+
+We will use the same fan triangulation as before. But we will use as
+axis the center of the circle. Therefore, we will store $2\pi r +1$
+vertices.
+
+The radius will be approximated as half the biggest side of the square
+where our circle is inscribed. We compute this after performing the
+linear transformation in the square using the circle transform
+matrix. Therefore, we will get a suitable upper bound for the radius,
+considering that our circle could have been transformed in a ellipse
+after the linear transformation.
+
+The code to triangulate the circle is:
+
+\iniciocodigo
+@<Triangulation: Circle@>=
+if((pen -> flags & FLAG_CIRCULAR)){
+  float radius;
+  {
+    float x1, y1, x2, y2, x4, y4, side1, side2;
+    // (x1, y1) = (-0.5, -0.5)
+    x1 = -0.5 * pen -> gl_matrix[0] - 0.5 * pen -> gl_matrix[4];
+    y1 = -0.5 * pen -> gl_matrix[1] - 0.5 * pen -> gl_matrix[5];
+    // (x2, y2) = (-0.5, 0.5)
+    x2 = -0.5 * pen -> gl_matrix[0] + 0.5 * pen -> gl_matrix[4];
+    y2 = -0.5 * pen -> gl_matrix[1] + 0.5 * pen -> gl_matrix[5];
+    // (x4, y4) = (0.5, -0.5)
+    x4 = 0.5 * pen -> gl_matrix[0] - 0.5 * pen -> gl_matrix[4];
+    y4 = 0.5 * pen -> gl_matrix[1] - 0.5 * pen -> gl_matrix[5];
+    side1 = sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));
+    side2 = sqrt((x4-x1)*(x4-x1)+(y4-y1)*(y4-y1));
+    radius = ((side1 >= side2)?(side1):(side2))/ 2.0;
+  }
+  GLsizei size = sizeof(float) * 2 * (((int) (2 * M_PI * radius)) + 2);
+  float *data = (float *) temporary_alloc(size);
+  if(data == NULL){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: Not enough memory.\n");
+#endif
+    return false;
+  }
+  {
+    int i;
+    float angle = 0.0;
+    data[0] = 0.0;
+    data[1] = 0.0; // Circle center
+    for(i = 2; i < size; i ++){
+      data[i] = sin(angle);
+      i ++;
+      data[i] = cos(angle);
+      angle += 1/radius;
+    }
   }
   glGenBuffers(1, &(pen -> gl_vbo));
   glBindBuffer(GL_ARRAY_BUFFER, pen -> gl_vbo);

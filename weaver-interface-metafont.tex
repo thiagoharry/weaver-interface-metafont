@@ -12932,6 +12932,7 @@ bool triangulate_pen(struct pen_variable *pen){
     return true; // Já triangulado
   @<Triangulação: Caneta Nula ou Quadrada@>
   @<Triangulação: Polígono Convexo@>
+  @<Triangulação: Círculo@>
 }
 @
 \fimcodigo
@@ -12967,7 +12968,7 @@ desenhar, é só pedir para o OpenGL usar a triangulação em leque:
 
 \iniciocodigo
 @<Triangulação: Polígono Convexo@>=
-if((pen -> flags | FLAG_STRAIGHT) && (pen -> flags | FLAG_CONVEX)){
+if((pen -> flags & FLAG_STRAIGHT) && (pen -> flags & FLAG_CONVEX)){
   int i, index, increment;
   GLsizei size = sizeof(float) * 2 * pen -> format -> length;
   float *data = (float *) temporary_alloc(size);
@@ -13000,6 +13001,86 @@ if((pen -> flags | FLAG_STRAIGHT) && (pen -> flags | FLAG_CONVEX)){
 @
 \fimcodigo
 
+Vamos agora passar para o próximo caso de triangulação: o círculo. Uma
+caneta circular é gerada com a expressão \monoespaco{pencircle}. Para
+este tipo de caneta, devemos gerar seus vértices na hora para fazer a
+triangulação. Com saber quantos vértices gerar? Se o círculo tiver um
+único pixel de diâmetro, 4 vértices já seriam o suficiente para
+aproximá-lo e ninguém notaria estar diante de um quadrado ao invés de
+um círculo. Mas quanto maior ele fica, maior o número de vértices que
+devemos usar.
+
+Devemos levar em conta a fórmula do arco de circunferência $L=\theta
+r$. Aqui $\theta$ é um ângulo interno do círculo e $r$ seu raio. O
+valor de $L$ é o comprimento de arco definido port ais
+valores. Devemos então fazer com que cada arco que desenhamos tenha um
+tamanho de 1 pixel, fazendo com que o desenho sempre se pareça com um
+círculo. Para isso o ângulo interno entre cada um deles em radianos
+deve ser $1/r$. Como o ângulo total é $2\pi$, então devemos
+representar $2\pi r$ vértices diferentes no perímetro do círculo.
+
+A triangulação que usaremos será a mesma triangulação em leque
+anterior. Mas vamos escolher como pivô o centro do círculo. Desta
+forma, vamos armazenar $2\pi r + 1$ vértices.
+
+Já o raio do círculo é escolhido como sendo metade do maior lado do
+quadrado de lado 1 que passa pela mesma transformação linear definida
+pela matriz de transformação do círculo. Como um círculo de diâmetro 1
+é inscrito em um quadrado de lado 1, então este valor nos dá um limite
+superior adequado para representar o raio do círculo em cada ponto de
+seu perímetro, mesmo depois de uma transformação linear possivelmente
+transformar nosso círculo em uma elipse.
+
+O código para a triangulação do círculo é:
+
+\iniciocodigo
+@<Triangulação: Círculo@>=
+if((pen -> flags & FLAG_CIRCULAR)){
+  float radius;
+  {
+    float x1, y1, x2, y2, x4, y4, side1, side2;
+    // (x1, y1) = (-0.5, -0.5)
+    x1 = -0.5 * pen -> gl_matrix[0] - 0.5 * pen -> gl_matrix[4];
+    y1 = -0.5 * pen -> gl_matrix[1] - 0.5 * pen -> gl_matrix[5];
+    // (x2, y2) = (-0.5, 0.5)
+    x2 = -0.5 * pen -> gl_matrix[0] + 0.5 * pen -> gl_matrix[4];
+    y2 = -0.5 * pen -> gl_matrix[1] + 0.5 * pen -> gl_matrix[5];
+    // (x4, y4) = (0.5, -0.5)
+    x4 = 0.5 * pen -> gl_matrix[0] - 0.5 * pen -> gl_matrix[4];
+    y4 = 0.5 * pen -> gl_matrix[1] - 0.5 * pen -> gl_matrix[5];
+    side1 = sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));
+    side2 = sqrt((x4-x1)*(x4-x1)+(y4-y1)*(y4-y1));
+    radius = ((side1 >= side2)?(side1):(side2))/ 2.0;
+  }
+  GLsizei size = sizeof(float) * 2 * (((int) (2 * M_PI * radius)) + 2);
+  float *data = (float *) temporary_alloc(size);
+  if(data == NULL){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: Not enough memory.\n");
+#endif
+    return false;
+  }
+  {
+    int i;
+    float angle = 0.0;
+    data[0] = 0.0;
+    data[1] = 0.0; // Centro do círculo
+    for(i = 2; i < size; i ++){
+      data[i] = sin(angle);
+      i ++;
+      data[i] = cos(angle);
+      angle += 1/radius;
+    }
+  }
+  glGenBuffers(1, &(pen -> gl_vbo));
+  glBindBuffer(GL_ARRAY_BUFFER, pen -> gl_vbo);
+  glBufferData(pen -> gl_vbo, size, data, GL_STATIC_DRAW);
+  if(temporary_free != NULL)
+    temporary_free(data);
+  return true;
+}
+@
+\fimcodigo
 
 \secao{Referências}
 
