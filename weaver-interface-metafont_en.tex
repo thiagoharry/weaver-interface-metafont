@@ -12750,6 +12750,7 @@ bool triangulate_pen(struct pen_variable *pen){
   @<Triangulation: Null or Square Pen@>
   @<Triangulation: Convex Polygon@>
   @<Triangulation: Circle@>
+  @<Triangulation: Convex Shape@>
 }
 @
 \fimcodigo
@@ -12877,15 +12878,189 @@ if((pen -> flags & FLAG_CIRCULAR)){
     data[0] = 0.0;
     data[1] = 0.0; // Circle center
     for(i = 2; i < size; i ++){
-      data[i] = sin(angle);
+      data[i] = 0.5 * sin(angle);
       i ++;
-      data[i] = cos(angle);
+      data[i] = 0.5 * cos(angle);
       angle += 1/radius;
     }
   }
   glGenBuffers(1, &(pen -> gl_vbo));
   glBindBuffer(GL_ARRAY_BUFFER, pen -> gl_vbo);
   glBufferData(pen -> gl_vbo, size, data, GL_STATIC_DRAW);
+  if(temporary_free != NULL)
+    temporary_free(data);
+  return true;
+}
+@
+\fimcodigo
+
+Now we will deal with the last possible shape for a convex pen: when
+the pen is not a polygon, it has curves. In this case, like in the
+circle, we need to consider the size of our shape, including the
+matrix transformation, to decide how many vertices we should use to
+approximate correctly our curve. But this time, we need to do this
+iterating over the extremity points and control points that form the
+shape of our pen.
+
+For each pair of extremity points $(A, D)$, with the control points
+$(B, C)$, we will use the sum of the distances $AB$, $BC$ and $CD$ to
+decide the number of vertices. This estimation should produce
+reasonable values, except when our curve crosses itself. However, we
+do not support pens with non-simple forms, therefore we should not
+care about this unsupported case.
+
+If the sum of the distances $AB+BC+CD$ is equal the distance $AD$,
+then we have a straight line. IN this case, we just need to consider
+the vertices for the extremity points, not the intermediate points.
+
+After deciding the number of vertices that should be generated, if we
+need intermediate points between the extremities, then we can use the
+following formula, where we change the $t$ value between 0 and 1 (with
+values 0 and 1 corresponding to the extremity points):
+
+$$
+P(t) = (1-t)^3A + 3(1-t)^2tB + 3(1-t)t^2C + t^3D
+$$
+
+Naturally, we should walk over the points in the counterclockwise
+orientation, which non necessarily is the stored orientation. When
+measuring the distances, we should also consider the linear transform
+stored in the transform matrix, but when generating the vertices we
+should ignore the transform, as it will be performed by the video card
+when rendering the pen.
+
+The code to triangulate a pen in this case is:
+
+\iniciocodigo
+@<Triangulation: Convex Shape@>=
+if((pen -> flags & FLAG_CONVEX)){
+  bool counterclockwise = is_pen_counterclockwise(pen);
+  int i, number_of_vertices = 1;
+  for(i = 0; i < pen -> format -> length - 1; i ++){
+    int distance = 0, x1, y1, x2, y2;
+    float dx, dy;
+    x1 =  pen -> format -> points[i].x * pen -> gl_matrix[0] +
+          pen -> format -> points[i].y * pen -> gl_matrix[4];
+    y1 =  pen -> format -> points[i].x * pen -> gl_matrix[1] +
+          pen -> format -> points[i].y * pen -> gl_matrix[5];
+    x2 =  pen -> format -> points[i].u_x * pen -> gl_matrix[0] +
+          pen -> format -> points[i].u_y * pen -> gl_matrix[4];
+    y2 =  pen -> format -> points[i].u_x * pen -> gl_matrix[1] +
+          pen -> format -> points[i].u_y * pen -> gl_matrix[5];
+    dx = x2 - x1;
+    dy = y2 - y1;
+    distance += (int) sqrt(dx * dx + dy * dy);
+    x1 = x2;
+    y1 = y2;
+    x2 =  pen -> format -> points[i].v_x * pen -> gl_matrix[0] +
+          pen -> format -> points[i].v_y * pen -> gl_matrix[4];
+    y2 =  pen -> format -> points[i].v_x * pen -> gl_matrix[1] +
+          pen -> format -> points[i].v_y * pen -> gl_matrix[5];
+    dx = x2 - x1;
+    dy = y2 - y1;
+    distance += (int) sqrt(dx * dx + dy * dy);
+    x1 = x2;
+    y1 = y2;
+    x2 =  pen -> format -> points[i + 1].x * pen -> gl_matrix[0] +
+          pen -> format -> points[i + 1].y * pen -> gl_matrix[4];
+    y2 =  pen -> format -> points[i + 1].x * pen -> gl_matrix[1] +
+          pen -> format -> points[i + 1].y * pen -> gl_matrix[5];
+    dx = x2 - x1;
+    dy = y2 - y1;
+    distance += (int) sqrt(dx * dx + dy * dy);
+    x1 =  pen -> format -> points[i].x * pen -> gl_matrix[0] +
+          pen -> format -> points[i].y * pen -> gl_matrix[4];
+    y1 =  pen -> format -> points[i].x * pen -> gl_matrix[1] +
+          pen -> format -> points[i].y * pen -> gl_matrix[5];
+    dx = x2 - x1;
+    dy = y2 - y1;
+    if(distance == (int) sqrt(dx * dx + dy * dy))
+      number_of_vertices ++; // Linha reta
+    else
+      number_of_vertices += distance;
+  }
+  float *data = (float *) temporary_alloc(number_of_vertices * 2 *
+                                          sizeof(float));
+    if(data == NULL){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: Not enough memory.\n");
+#endif
+    return false;
+  }
+  {
+    struct path_points *p0, *p1;
+    int v;
+    if(counterclockwise)
+      p0 = &(pen -> format -> points[0]);
+    else
+      p0 = &(pen -> format -> points[pen -> format -> length - 1]);
+    data[0] = p0 -> x;
+    data[1] = p0 -> y;
+    v = 2;
+    for(i = 0; i < pen -> format -> length - 1; i ++){
+      float b_x, b_y, c_x, c_y, dx, dy, x1, x2, y1, y2;
+      int distance = 0;
+      if(counterclockwise){
+        p1 = &(pen -> format -> points[1 + i]);
+        b_x = p0 -> u_x;
+        b_y = p0 -> u_y;
+        c_x = p0 -> v_x;
+        c_y = p0 -> v_y;
+      }
+      else{
+        p1 = &(pen -> format -> points[pen -> format -> length - 2 - i]);
+        b_x = p1 -> v_x;
+        b_y = p1 -> v_y;
+        c_x = p1 -> u_x;
+        c_y = p1 -> u_y;
+      }
+      x1 =  p0 -> x * pen -> gl_matrix[0] + p0 -> y * pen -> gl_matrix[4];
+      y1 =  p0 -> x * pen -> gl_matrix[1] + p0 -> y * pen -> gl_matrix[5];
+      x2 =  b_x * pen -> gl_matrix[0] + b_y * pen -> gl_matrix[4];
+      y2 =  b_x * pen -> gl_matrix[1] + b_y * pen -> gl_matrix[5];
+      dx = x2 - x1;
+      dy = y2 - y1;
+      distance += (int) sqrt(dx * dx + dy * dy);
+      x1 = x2;
+      y1 = y2;
+      x2 =  c_x * pen -> gl_matrix[0] + c_y * pen -> gl_matrix[4];
+      y2 =  c_x * pen -> gl_matrix[1] + c_y * pen -> gl_matrix[5];
+      dx = x2 - x1;
+      dy = y2 - y1;
+      distance += (int) sqrt(dx * dx + dy * dy);
+      x1 = x2;
+      y1 = y2;
+      x2 =  p1 -> x * pen -> gl_matrix[0] + p1 -> y * pen -> gl_matrix[4];
+      y2 =  p1 -> x * pen -> gl_matrix[1] + p1 -> y * pen -> gl_matrix[5];
+      dx = x2 - x1;
+      dy = y2 - y1;
+      distance += (int) sqrt(dx * dx + dy * dy);
+      x1 =  p0 -> x * pen -> gl_matrix[0] + p0 -> y * pen -> gl_matrix[4];
+      y1 =  p0 -> x * pen -> gl_matrix[1] + p0 -> y * pen -> gl_matrix[5];
+      dx = x2 - x1;
+      dy = y2 - y1;
+      if(distance == (int) sqrt(dx * dx + dy * dy)){
+        data[v++] = p1 -> x;
+        data[v++] = p1 -> y;
+      }
+      else{
+        int j;
+        float dt = 1.0 / ((float) distance);
+        for(j = 1; j <= distance; j ++){
+          float t = dt * j;
+          data[v++] = (1-t)*(1-t)*(1-t)* p0 -> x + 3*(1-t)*(1-t)*t * b_x +
+                      3*(1-t)*t*t * c_x + t * t * t * p1 -> x;
+          data[v++] = (1-t)*(1-t)*(1-t)* p0 -> y + 3*(1-t)*(1-t)*t * b_y +
+                      3*(1-t)*t*t * c_y + t * t * t * p1 -> y;
+        }
+      }
+      p0 = p1;
+    }
+  }
+  glGenBuffers(1, &(pen -> gl_vbo));
+  glBindBuffer(GL_ARRAY_BUFFER, pen -> gl_vbo);
+  glBufferData(pen -> gl_vbo, number_of_vertices * 2 *
+                              sizeof(float), data, GL_STATIC_DRAW);
   if(temporary_free != NULL)
     temporary_free(data);
   return true;

@@ -8362,7 +8362,7 @@ bool triangulate_pen(struct pen_variable*pen){
 if(pen->gl_vbo!=0)
 return true;
 /*459:*/
-#line 12766 "weaver-interface-metafont_en.tex"
+#line 12767 "weaver-interface-metafont_en.tex"
 
 if((pen->flags|FLAG_NULL)||(pen->flags|FLAG_SQUARE))
 return true;
@@ -8370,7 +8370,7 @@ return true;
 #line 12750 "weaver-interface-metafont_en.tex"
 
 /*460:*/
-#line 12785 "weaver-interface-metafont_en.tex"
+#line 12786 "weaver-interface-metafont_en.tex"
 
 if((pen->flags&FLAG_STRAIGHT)&&(pen->flags&FLAG_CONVEX)){
 int i,index,increment;
@@ -8406,7 +8406,7 @@ return true;
 #line 12751 "weaver-interface-metafont_en.tex"
 
 /*461:*/
-#line 12848 "weaver-interface-metafont_en.tex"
+#line 12849 "weaver-interface-metafont_en.tex"
 
 if((pen->flags&FLAG_CIRCULAR)){
 float radius;
@@ -8439,9 +8439,9 @@ float angle= 0.0;
 data[0]= 0.0;
 data[1]= 0.0;
 for(i= 2;i<size;i++){
-data[i]= sin(angle);
+data[i]= 0.5*sin(angle);
 i++;
-data[i]= cos(angle);
+data[i]= 0.5*cos(angle);
 angle+= 1/radius;
 }
 }
@@ -8454,6 +8454,144 @@ return true;
 }
 /*:461*/
 #line 12752 "weaver-interface-metafont_en.tex"
+
+/*462:*/
+#line 12935 "weaver-interface-metafont_en.tex"
+
+if((pen->flags&FLAG_CONVEX)){
+bool counterclockwise= is_pen_counterclockwise(pen);
+int i,number_of_vertices= 1;
+for(i= 0;i<pen->format->length-1;i++){
+int distance= 0,x1,y1,x2,y2;
+float dx,dy;
+x1= pen->format->points[i].x*pen->gl_matrix[0]+
+pen->format->points[i].y*pen->gl_matrix[4];
+y1= pen->format->points[i].x*pen->gl_matrix[1]+
+pen->format->points[i].y*pen->gl_matrix[5];
+x2= pen->format->points[i].u_x*pen->gl_matrix[0]+
+pen->format->points[i].u_y*pen->gl_matrix[4];
+y2= pen->format->points[i].u_x*pen->gl_matrix[1]+
+pen->format->points[i].u_y*pen->gl_matrix[5];
+dx= x2-x1;
+dy= y2-y1;
+distance+= (int)sqrt(dx*dx+dy*dy);
+x1= x2;
+y1= y2;
+x2= pen->format->points[i].v_x*pen->gl_matrix[0]+
+pen->format->points[i].v_y*pen->gl_matrix[4];
+y2= pen->format->points[i].v_x*pen->gl_matrix[1]+
+pen->format->points[i].v_y*pen->gl_matrix[5];
+dx= x2-x1;
+dy= y2-y1;
+distance+= (int)sqrt(dx*dx+dy*dy);
+x1= x2;
+y1= y2;
+x2= pen->format->points[i+1].x*pen->gl_matrix[0]+
+pen->format->points[i+1].y*pen->gl_matrix[4];
+y2= pen->format->points[i+1].x*pen->gl_matrix[1]+
+pen->format->points[i+1].y*pen->gl_matrix[5];
+dx= x2-x1;
+dy= y2-y1;
+distance+= (int)sqrt(dx*dx+dy*dy);
+x1= pen->format->points[i].x*pen->gl_matrix[0]+
+pen->format->points[i].y*pen->gl_matrix[4];
+y1= pen->format->points[i].x*pen->gl_matrix[1]+
+pen->format->points[i].y*pen->gl_matrix[5];
+dx= x2-x1;
+dy= y2-y1;
+if(distance==(int)sqrt(dx*dx+dy*dy))
+number_of_vertices++;
+else
+number_of_vertices+= distance;
+}
+float*data= (float*)temporary_alloc(number_of_vertices*2*
+sizeof(float));
+if(data==NULL){
+#if defined(W_DEBUG_METAFONT)
+fprintf(stderr,"METAFONT: Error: Not enough memory.\n");
+#endif
+return false;
+}
+{
+struct path_points*p0,*p1;
+int v;
+if(counterclockwise)
+p0= &(pen->format->points[0]);
+else
+p0= &(pen->format->points[pen->format->length-1]);
+data[0]= p0->x;
+data[1]= p0->y;
+v= 2;
+for(i= 0;i<pen->format->length-1;i++){
+float b_x,b_y,c_x,c_y,dx,dy,x1,x2,y1,y2;
+int distance= 0;
+if(counterclockwise){
+p1= &(pen->format->points[1+i]);
+b_x= p0->u_x;
+b_y= p0->u_y;
+c_x= p0->v_x;
+c_y= p0->v_y;
+}
+else{
+p1= &(pen->format->points[pen->format->length-2-i]);
+b_x= p1->v_x;
+b_y= p1->v_y;
+c_x= p1->u_x;
+c_y= p1->u_y;
+}
+x1= p0->x*pen->gl_matrix[0]+p0->y*pen->gl_matrix[4];
+y1= p0->x*pen->gl_matrix[1]+p0->y*pen->gl_matrix[5];
+x2= b_x*pen->gl_matrix[0]+b_y*pen->gl_matrix[4];
+y2= b_x*pen->gl_matrix[1]+b_y*pen->gl_matrix[5];
+dx= x2-x1;
+dy= y2-y1;
+distance+= (int)sqrt(dx*dx+dy*dy);
+x1= x2;
+y1= y2;
+x2= c_x*pen->gl_matrix[0]+c_y*pen->gl_matrix[4];
+y2= c_x*pen->gl_matrix[1]+c_y*pen->gl_matrix[5];
+dx= x2-x1;
+dy= y2-y1;
+distance+= (int)sqrt(dx*dx+dy*dy);
+x1= x2;
+y1= y2;
+x2= p1->x*pen->gl_matrix[0]+p1->y*pen->gl_matrix[4];
+y2= p1->x*pen->gl_matrix[1]+p1->y*pen->gl_matrix[5];
+dx= x2-x1;
+dy= y2-y1;
+distance+= (int)sqrt(dx*dx+dy*dy);
+x1= p0->x*pen->gl_matrix[0]+p0->y*pen->gl_matrix[4];
+y1= p0->x*pen->gl_matrix[1]+p0->y*pen->gl_matrix[5];
+dx= x2-x1;
+dy= y2-y1;
+if(distance==(int)sqrt(dx*dx+dy*dy)){
+data[v++]= p1->x;
+data[v++]= p1->y;
+}
+else{
+int j;
+float dt= 1.0/((float)distance);
+for(j= 1;j<=distance;j++){
+float t= dt*j;
+data[v++]= (1-t)*(1-t)*(1-t)*p0->x+3*(1-t)*(1-t)*t*b_x+
+3*(1-t)*t*t*c_x+t*t*t*p1->x;
+data[v++]= (1-t)*(1-t)*(1-t)*p0->y+3*(1-t)*(1-t)*t*b_y+
+3*(1-t)*t*t*c_y+t*t*t*p1->y;
+}
+}
+p0= p1;
+}
+}
+glGenBuffers(1,&(pen->gl_vbo));
+glBindBuffer(GL_ARRAY_BUFFER,pen->gl_vbo);
+glBufferData(pen->gl_vbo,number_of_vertices*2*
+sizeof(float),data,GL_STATIC_DRAW);
+if(temporary_free!=NULL)
+temporary_free(data);
+return true;
+}
+/*:462*/
+#line 12753 "weaver-interface-metafont_en.tex"
 
 }
 /*:458*/
