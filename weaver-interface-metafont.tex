@@ -1327,8 +1327,7 @@ bool eval_statement(struct metafont *mf, struct context *cx,
   @<Declaração: Composta@>
   @<Declaração: Declaração de Variável@>
   @<Declaração: Atribuição@>
-  //@<Declaração: Definição@>
-  //@<Declaração: Comando@>
+  @<Declaração: Comando@>
   // Se estamos aqui, não identificamos o tipo de declaração:
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr, "METAFONT: Error: %s:%d: Unknown statement (%s).\n",
@@ -10335,6 +10334,11 @@ void assign_picture_variable(struct metafont *mf,
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
   glBindTexture(GL_TEXTURE_2D, 0);
   glDeleteFramebuffers(1, &temporary_framebuffer);
+  if(target ==
+         &(mf -> internal_picture_variables[INTERNAL_PICTURE_CURRENTPICTURE])){
+    // O código abaixo será definido na Subseção 10.2:
+    @<Gera nova 'currentpicture'@>
+  }
 }
 @
 \fimcodigo
@@ -12818,7 +12822,26 @@ else if(((struct generic_token *) begin_token_list) -> type == TYPE_FI){
 
 Finalmente podemos começar a especificar um dos mais importantes
 comandos da linguagem. O comando que usa uma caneta para caminhos
-em uma imagem.
+em uma imagem. A sintaxe do comando é:
+
+\alinhaverbatim
+<Comando> -> <Comando 'draw'> | ...
+<Comando 'draw'> -> draw <Expressão de Caminho>
+\alinhanormal
+
+O que requer um token e palavra reservada nova para o 'draw:
+
+\iniciocodigo
+@<METAFONT: Definição de Token Simbólico@>+=
+TYPE_DRAW,  // O token simbólico 'draw'
+@
+\fimcodigo
+
+\iniciocodigo
+@<Lista de Palavras Reservadas@>+=
+"draw",
+@
+\fimcodigo
 
 \subsecao{10.1. Triangulação}
 
@@ -12934,6 +12957,7 @@ bool triangulate_pen(struct pen_variable *pen){
   @<Triangulação: Polígono Convexo@>
   @<Triangulação: Círculo@>
   @<Triangulação: Forma Curva Convexa@>
+  @<Triangulação: Forma Côncava@>
 }
 @
 \fimcodigo
@@ -13255,6 +13279,234 @@ if((pen -> flags & FLAG_CONVEX)){
   if(temporary_free != NULL)
     temporary_free(data);
   return true;
+}
+@
+\fimcodigo
+
+Com relação à canetas com formas côncavas, por enquanto nós não iremos
+suportá-las, mas isso deve mudar futuramente:
+
+\iniciocodigo
+@<Triangulação: Forma Côncava@>=
+if(!(pen -> flags & FLAG_CONVEX)){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: Concave pens still not supported.\n");
+#endif
+  return false;
+}
+@
+\fimcodigo
+
+\subsecao{10.2. Desenhando Caminhos}
+
+Agora que temos o código de triangulação, podemos começar o desenho de
+nosso caminho. Para renderizarmos na
+imagem \monoespaco{currentpicture}, vamos precisar criar um framebuffer:
+
+\iniciocodigo
+@<Variáveis Locais (metafont.c)@>+=
+GLuint currentpicture_fb;
+@
+\fimcodigo
+
+O qual é inicializado como zero:
+
+\iniciocodigo
+@<Inicialização de Weaver Metafont@>+=
+currentpicture_fb = 0;
+@
+\fimcodigo
+
+Toda vez que formos desenhar na \monoespaco{currentpicture}, podemos
+usar o código abaixo:
+
+\iniciocodigo
+@<Prepara 'currentpicture' para Desenho@>=
+{
+  if(currentpicture_fb == 0){
+    int width, height;
+    GLuint texture;
+    width = mf ->
+             internal_picture_variables[INTERNAL_PICTURE_CURRENTPICTURE].width;
+    height = mf ->
+            internal_picture_variables[INTERNAL_PICTURE_CURRENTPICTURE].height;
+    texture = mf ->
+           internal_picture_variables[INTERNAL_PICTURE_CURRENTPICTURE].texture;
+    glGenFramebuffers(1, &currentpicture_fb);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
+                 GL_UNSIGNED_BYTE, NULL);
+    glBindFramebuffer(GL_FRAMEBUFFER, currentpicture_fb);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                           texture, 0);
+  }
+  else
+    glBindFramebuffer(GL_FRAMEBUFFER, currentpicture_fb);
+}
+@
+\fimcodigo
+
+Se por algum motivo nós mudarmos a nossa \monoespaco{currentpicture}
+para outra imagem, devemos remover o framebuffer anterior:
+
+\iniciocodigo
+@<Gera nova 'currentpicture'@>=
+{
+  if(currentpicture_fb != 0){
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glDeleteFramebuffers(1, &currentpicture_fb);
+  }
+  currentpicture_fb = 0;
+}
+@
+\fimcodigo
+
+Terminada a definição da burocracia necessária para desenhar em uma
+imagem, a implementação do comando de desenho é dada abaixo:
+
+\iniciocodigo
+@<Declaração: Comando@>=
+else if(((struct generic_token *) begin_token_list) -> type ==
+        TYPE_DRAW){
+  int i, j;
+  struct path_variable path;
+  struct pen_variable *currentpen = &(mf -> internal_pen_variables[0]);
+  struct picture_variable *currentpicture =
+                                        &(mf -> internal_picture_variables[0]);
+  if(!eval_path_expression(mf, cx,
+                          ((struct generic_token *) begin_token_list) -> next,
+                          (struct generic_token *) *end_token_list,
+                           &path))
+    return false;
+  triangulate_pen(currentpen);
+  @<Prepara 'currentpicture' para Desenho@>
+  for(i = 0; i < path.length; i ++){
+    int distance = 0;
+    float dx, dy, dt;
+    dx = path.points[i].u_x - path.points[i].x;
+    dy = path.points[i].u_y - path.points[i].y;
+    distance += (int) sqrt(dx * dx + dy * dy);
+    dx = path.points[i].v_x - path.points[i].u_x;
+    dy = path.points[i].v_y - path.points[i].u_y;
+    distance += (int) sqrt(dx * dx + dy * dy);
+    dx = path.points[(i+1) % path.length].v_x - path.points[i].v_x;
+    dy = path.points[(i+1) % path.length].v_y - path.points[i].v_y;
+    distance += (int) sqrt(dx * dx + dy * dy);
+    dt = 1 / ((float) distance);
+    for(j = 0; j <= distance; j ++){
+      float t = dt * j;
+      float x = (1-t)*(1-t)*(1-t) * path.points[i].x +
+                3*(1-t)*(1-t)*t * path.points[i].u_x +
+                3*(1-t)*t*t * path.points[i].v_x +
+                t*t*t * path.points[i + 1].x;
+      float y = (1-t)*(1-t)*(1-t) * path.points[i].y +
+                3*(1-t)*(1-t)*t * path.points[i].u_y +
+                3*(1-t)*t*t * path.points[i].v_y +
+                t*t*t * path.points[i + 1].y;
+      drawpoint(currentpen, currentpicture, x, y);
+    }
+  }
+  if(temporary_free != NULL)
+    path_recursive_free(temporary_free, &path, false);  
+}
+@
+\fimcodigo
+
+O código acima primeiro obtém as variáveis relevantes ao comando
+(\monoespaco{currentpen}, \monoespaco{currentpicture}) e avalia a
+expressão de caminho após o token \monoespaco{draw}. Em seguida, a
+caneta é triangulada e depois iniciamos o loop no qual iremos desenhar
+ponto-a-ponto o nosso caminho usando a função que ainda será
+definida \monoespaco{drawpoint}. Para obter casa um dos pontos, usamos
+a fórmula das curvas de Beziér cúbicas $z(t) = (1-t)^3z_1 +
+3(1-t)^2tz_2' + 3(1-t)t^2z_3'+t^3z_4$. E para saber quantos pontos
+intermediários devem ser desenhados entre dois pontos de extremidade,
+nós obtemos a distância entre o primeiro ponto de extremidade, o
+primeiro ponto de controle, somamos à distância entre os dois pontos
+de controle e somamos à distância entre o segundo ponto de controle e
+o segundo ponto de extremidade. Depois de desenhar tudo, desalocamos a
+variável temporária que armazenou o caminho desenhado.
+
+Resta apenas definir a função \monoespaco{drawpoint}. O seu cabeçalho
+é:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+void drawpoint(struct pen_variable *pen, struct picture_variable *pic,
+               float x, float y);
+@
+\fimcodigo
+
+A caneta possui todas as coordenadas de seus vértices triangulados
+usando o número de pixels como coordenada. A imagem tem sua altura e
+largura conhecida. Ao renderizar usando OpenGL, devemos usar as
+coordenadas padrão, onde o centro da imagem é a origem e a imagem tem
+sempre 2 de altura e de largura. Isso significa que devemos fazer uma
+última transformação linear para converter a caneta na renderização.
+
+Seja $h$ a altura da imagem em pixels e $w$ sua largura. Isso
+significa que 1 pixel horizontal é $2/w$ e um vertical é $2/h$. Então,
+basta multiplicarmos a matriz de transformação pela matriz diagonal
+com $2/w$ como primeiro valor, $2/h$ como segundo valor na diagonal e
+com o resto da diagonal sendo 1. Além disso, precisamos converter para
+considerar a origem não o centro da imagem, mas o seu canto inferior
+direito. Para isso, basta subtrair 1 tanto horizontal como
+verticalmente da posição da imagem. Por fim, devemos levar em conta a
+coordenada $(x, y)$ que recebemos sobre onde renderizar a caneta na
+imagem. Esta coordenada, em pixels, ao ser convertida para as
+coordenadas em OpenGL fica $(2x/w, 2y/h)$. Isos é o quanto devemos
+translacionar a caneta antes de desenhar.
+
+As operações descritas acima são representadas pela seguinte
+multiplicação de matrizes $M$:
+
+$$
+\left[{{a \atop c}\atop
+      {0\atop f}}{{b \atop d}\atop {0 \atop
+      g}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
+      1}}\right]
+\left[{{2/w \atop 0}\atop
+      {0\atop 2x/w-1}}{{0 \atop 2/h}\atop {0 \atop
+      2y/h-1}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
+      1}}\right]=
+\left[{{2a/w \atop 2c/w}\atop
+      {0\atop (2f+2x)/w-1}}{{2b/h \atop 2d/h}\atop {0 \atop
+      (2g+2y)/h-1}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
+      1}}\right]
+$$
+
+Renderizar a caneta então significa renderizar seus polígonos
+triangulados após multiplicar sua matriz de transformação pela matriz
+acima. Depois de renderizar, devemos restaturar sua matriz de
+transformação para o valor anterior:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+void drawpoint(struct pen_variable *pen, struct picture_variable *pic,
+               float x, float y){
+  float gl_matrix[16];
+  gl_matrix[0] = (2 * pen -> gl_matrix[0]) /  pic -> width;
+  gl_matrix[1] = (2 * pen -> gl_matrix[1]) /  pic -> height;
+  gl_matrix[2] = 0.0; gl_matrix[3] = 0.0;
+  gl_matrix[4] = (2 * pen -> gl_matrix[4]) /  pic -> width;
+  gl_matrix[5] = (2 * pen -> gl_matrix[5]) /  pic -> height;
+  gl_matrix[6] = 0.0; gl_matrix[7] = 0.0; gl_matrix[8] = 0.0;
+  gl_matrix[9] = 0.0; gl_matrix[10] = 1.0; gl_matrix[11] = 0.0;
+  gl_matrix[12] = 2 * (pen -> gl_matrix[12] + x) /  pic -> width - 1.0;
+  gl_matrix[13] = 2 * (pen -> gl_matrix[13] + y) /  pic -> width - 1.0;
+  gl_matrix[14] = 0.0; gl_matrix[15] = 1.0;
+  glViewport(0, 0, pic -> width, pic -> height);
+  glBindBuffer(GL_ARRAY_BUFFER, pen -> gl_vbo);
+  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void *) 0);
+  glEnableVertexAttribArray(0);
+  //glUseProgram(pen_program); // TODO: Create
+  glUniformMatrix4fv(uniform_matrix, 1, true, gl_matrix);
+  // glUniform4f(pen_color, 0.0, 0.0, 0.0, 1.0); // TODO: Create
+  glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 }
 @
 \fimcodigo

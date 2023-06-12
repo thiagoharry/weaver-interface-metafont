@@ -10199,6 +10199,11 @@ void assign_picture_variable(struct metafont *mf,
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
   glBindTexture(GL_TEXTURE_2D, 0);
   glDeleteFramebuffers(1, &temporary_framebuffer);
+  if(target ==
+         &(mf -> internal_picture_variables[INTERNAL_PICTURE_CURRENTPICTURE])){
+    // The code below will be defined on Subsection 10.2:
+    //@<Create new 'currentpicture'@>
+  }
 }
 @
 \fimcodigo
@@ -12638,7 +12643,28 @@ else if(((struct generic_token *) begin_token_list) -> type == TYPE_FI){
 \secao{10. The \monoespaco{draw} Command}
 
 Finally we can begin specifying one of the most important command in
-the language. The command that uses a pen to draw a path in an image.
+the language. The command that uses a pen to draw a path in an
+image. The command syntax is:
+
+\linhaverbatim
+<Command> -> <'draw' Command> | ...
+<'draw' Command> -> draw <Path Expression>
+\alinhanormal
+
+Which requires a new token type and a new reserved word:
+
+\iniciocodigo
+@<METAFONT: Symbolic Token Definition@>+=
+TYPE_DRAW,  // O token simbólico 'draw'
+@
+\fimcodigo
+
+\iniciocodigo
+@<List of Keywords@>+=
+"draw",
+@
+\fimcodigo
+
 
 \subsecao{10.1. Triangulation}
 
@@ -12751,6 +12777,7 @@ bool triangulate_pen(struct pen_variable *pen){
   @<Triangulation: Convex Polygon@>
   @<Triangulation: Circle@>
   @<Triangulation: Convex Shape@>
+  @<Triangulation: Concave Shape@>
 }
 @
 \fimcodigo
@@ -13068,6 +13095,21 @@ if((pen -> flags & FLAG_CONVEX)){
 @
 \fimcodigo
 
+For now, we will not support concave shapes, but this may change in
+the future:
+
+\iniciocodigo
+@<Triangulation: Concave Shape@>=
+if(!(pen -> flags & FLAG_CONVEX)){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: Concave pens still not supported.\n");
+#endif
+  return false;
+}
+@
+\fimcodigo
+
+\subsecao{10.2. Drawing Paths}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
