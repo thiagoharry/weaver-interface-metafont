@@ -1220,6 +1220,7 @@ bool eval_list_of_statements(struct metafont *mf, struct context *cx,
   bool ret = true;
   struct generic_token *begin, *end = NULL;
   begin = (struct generic_token *) begin_token_list;
+  @<Antes de Avaliar Código@>
   while(begin != NULL){
     while(begin != NULL && begin -> type == TYPE_SEMICOLON){
       if(begin != end_token_list)
@@ -1241,6 +1242,7 @@ bool eval_list_of_statements(struct metafont *mf, struct context *cx,
       begin = end -> next;
     }
   }
+  @<Depois de Avaliar Código@>
   return ret;
 }
 @
@@ -10321,17 +10323,19 @@ void assign_picture_variable(struct metafont *mf,
                              struct picture_variable *target,
                              struct picture_variable *source){
   GLuint temporary_framebuffer;
+  GLint previous_framebuffer;
   float model_view_matrix[16] = {1.0, 0.0, 0.0, 0.0,
                                0.0, 1.0, 0.0, 0.0,
                                0.0, 0.0, 1.0, 0.0,
                                0.0, 0.0, 0.0, 1.0};
   if(target -> texture != 0)
     glDeleteTextures(1, &(target -> texture));
+  glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &previous_framebuffer);
   get_new_framebuffer(&temporary_framebuffer, &(target -> texture),
                       source -> width, source -> height);
   render_picture(source, model_view_matrix, source -> width, source -> height, true);
   // Finalizando
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glBindFramebuffer(GL_FRAMEBUFFER, previous_framebuffer);
   glBindTexture(GL_TEXTURE_2D, 0);
   glDeleteFramebuffers(1, &temporary_framebuffer);
   if(target ==
@@ -10519,12 +10523,14 @@ subtração:
 @<Expressão de Imagem: Soma ou Subtração@>=
 // Alocando e declarando dados, gerando imagem vazia inicial
 GLuint temporary_framebuffer = 0;
+GLint previous_framebuffer;
 float model_view_matrix[16] = {1.0, 0.0, 0.0, 0.0,
                                0.0, 1.0, 0.0, 0.0,
                                0.0, 0.0, 1.0, 0.0,
                                0.0, 0.0, 0.0, 1.0};
 result -> width = ((a.width >= b.width)?(a.width):(b.width));
 result -> height = ((a.height >= b.height)?(a.height):(b.height));
+glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &previous_framebuffer);
 get_new_framebuffer(&temporary_framebuffer, &(result -> texture),
                     result -> width, result -> height);
 // Renderizando imagem 'a'
@@ -10556,7 +10562,7 @@ else{ // Soma
   glDisable(GL_BLEND);
 }
 // Finalizando
-glBindFramebuffer(GL_FRAMEBUFFER, 0);
+glBindFramebuffer(GL_FRAMEBUFFER, previous_framebuffer);
 glBindTexture(GL_TEXTURE_2D, 0);
 glDeleteFramebuffers(1, &temporary_framebuffer);
 @
@@ -11026,6 +11032,7 @@ bool apply_image_transformation(struct metafont *mf,
                                 float *matrix){
   int i;
   GLuint temporary_framebuffer = 0;
+  GLint previous_framebuffer;
   // Para calcular o tamanho final da imagem, armazenaremos as maiores e
   // menores coordenadas que encontrarmos nas extremidades da imagem
   // nos dois eixos após aplicar a matriz de transformação. (Etapa 1)
@@ -11068,18 +11075,14 @@ bool apply_image_transformation(struct metafont *mf,
     matrix[9] = matrix[9] * y_correction;
     matrix[13] = matrix[13] * y_correction;
   }
-  //printf("\nDEBUG:\n%f %f %f %f\n%f %f %f %f\n%f %f %f %f\n%f %f %f %f\n",
-  //matrix[0], matrix[1], matrix[2], matrix[3], matrix[4],
-  //matrix[5], matrix[6], matrix[7], matrix[8], matrix[9],
-  //matrix[10], matrix[11], matrix[12], matrix[13], matrix[14],
-  //matrix[15]);
   // Gerando textura inicial, framebuffer
+  glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &previous_framebuffer);
   get_new_framebuffer(&temporary_framebuffer, &(dst -> texture), dst -> width,
                     dst -> height);
   // Renderizando:
   render_picture(origin, matrix, dst -> width, dst -> height, true);
   // Finalização
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glBindFramebuffer(GL_FRAMEBUFFER, previous_framebuffer);
   glDeleteFramebuffers(1, &temporary_framebuffer);
   return true;
 }
@@ -11175,6 +11178,7 @@ resultado da avaliação.
 \iniciocodigo
 @<Imagem Primária: Variável@>=
 GLuint temporary_framebuffer = 0;
+GLint previous_framebuffer;
 float identity_matrix[16] = {1.0, 0.0, 0.0, 0.0,
                              0.0, 1.0, 0.0, 0.0,
                              0.0, 0.0, 1.0, 0.0,
@@ -11199,12 +11203,13 @@ if(content -> type != TYPE_T_PICTURE){
 // Preparar renderização:
 result -> width = content -> width;
 result -> height = content -> height;
+glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &previous_framebuffer);
 get_new_framebuffer(&temporary_framebuffer, &(result -> texture),
                     result -> width, result -> height);
 // Renderiza:
 render_picture(content, identity_matrix, result -> width, result -> height, true);
 // Finaliza:
-glBindFramebuffer(GL_FRAMEBUFFER, 0);
+glBindFramebuffer(GL_FRAMEBUFFER, previous_framebuffer);
 glDeleteFramebuffers(1, &temporary_framebuffer);
 return true;
 @
@@ -11318,6 +11323,7 @@ como operador (GL\_FUNC\_SUBTRACT):
 @<Imagem Primária: Inverso@>=
 struct picture_variable p;
 GLuint temporary_framebuffer = 0;
+GLint previous_framebuffer;
 float identity_matrix[16] = {1.0, 0.0, 0.0, 0.0,
                              0.0, 1.0, 0.0, 0.0,
                              0.0, 0.0, 1.0, 0.0,
@@ -11334,6 +11340,7 @@ if(!eval_picture_primary(mf, cx, begin_expression -> next, end_expression, &p))
 // Preparar renderização:
 result -> width = p.width;
 result -> height = p.height;
+glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &previous_framebuffer);
 get_new_framebuffer(&temporary_framebuffer, &(result -> texture),
                     result -> width, result -> height);
 // Inicializar nova textura com branco opaco (1, 1, 1, 1)
@@ -11348,7 +11355,7 @@ render_picture(&p, identity_matrix, result -> width, result -> height, false);
 // Finaliza:
 glDisable(GL_BLEND);
 glDeleteTextures(1, &(p.texture));
-glBindFramebuffer(GL_FRAMEBUFFER, 0);
+glBindFramebuffer(GL_FRAMEBUFFER, previous_framebuffer);
 glDeleteFramebuffers(1, &temporary_framebuffer);
 return true;
 @
@@ -11452,10 +11459,12 @@ tamanho e offset:
 @<Subimagem: Extrai Subimagem@>=
 {
   GLuint temporary_framebuffer = 0;
+  GLint previous_framebuffer;
   float render_matrix[16] = {1.0, 0.0, 0.0, 0.0,
                              0.0, 1.0, 0.0, 0.0,
                              0.0, 0.0, 1.0, 0.0,
                              0.0, 0.0, 0.0, 1.0};
+  glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &previous_framebuffer);
   get_new_framebuffer(&temporary_framebuffer, &(result -> texture),
                       subpicture_size.x, subpicture_size.y);
   result -> width = subpicture_size.x;
@@ -11480,7 +11489,7 @@ tamanho e offset:
   // Finaliza:
   glDisable(GL_BLEND);
   glDeleteTextures(1, &(original_picture.texture));
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glBindFramebuffer(GL_FRAMEBUFFER, previous_framebuffer);
   glDeleteFramebuffers(1, &temporary_framebuffer);
   return true;
 }
@@ -11539,6 +11548,7 @@ else if(begin_expression -> type == TYPE_TOTALWEIGHT){
   struct picture_variable p;
   char *data;
   GLuint temporary_framebuffer = 0;
+  GLint previous_framebuffer;
   GLuint temporary_texture = 0;
   float identity_matrix[16] = {1.0, 0.0, 0.0, 0.0,
                                0.0, 1.0, 0.0, 0.0,
@@ -11562,6 +11572,7 @@ else if(begin_expression -> type == TYPE_TOTALWEIGHT){
 #endif
     return false;
   }
+  glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &previous_framebuffer);
   get_new_framebuffer(&temporary_framebuffer, &(temporary_texture),
                     p.width, p.height);
   // Renderiza:
@@ -11595,7 +11606,7 @@ else if(begin_expression -> type == TYPE_TOTALWEIGHT){
     temporary_free(data);
   glDeleteTextures(1, &temporary_texture);
   glDeleteTextures(1, &(p.texture));
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glBindFramebuffer(GL_FRAMEBUFFER, previous_framebuffer);
   glDeleteFramebuffers(1, &temporary_framebuffer);
   return true;
 }
@@ -13297,19 +13308,24 @@ if(!(pen -> flags & FLAG_CONVEX)){
 @
 \fimcodigo
 
-\subsecao{10.2. Desenhando Caminhos}
+\subsecao{10.2. Preparando o Framebuffer}
 
-Agora que temos o código de triangulação, podemos começar o desenho de
-nosso caminho. Para renderizarmos na
-imagem \monoespaco{currentpicture}, vamos precisar criar um framebuffer:
+Para desenhar com uma caneta na imagem \monoespaco{currentpicture},
+nós precisamos de um framebuffer associado com esta imagem. Isso não é
+muito diferente do que quando definimos as operações sobre variáveis
+do tipo imagem. Em boa parte das operações, nós criamos um framebuffer
+novo, salvamos o framebuffer anterior, mudamos para o novo,
+renderizamos, apagamos o framebuffer novo e voltamos ao antigo. Para
+a \monoespaco{currentpicture}, ao invés disso, vamos manter uma
+variável armazenando seu framebuffer:
 
 \iniciocodigo
 @<Variáveis Locais (metafont.c)@>+=
-GLuint currentpicture_fb;
+static GLuint currentpicture_fb;
 @
 \fimcodigo
 
-O qual é inicializado como zero:
+A qual é inicializada como zero:
 
 \iniciocodigo
 @<Inicialização de Weaver Metafont@>+=
@@ -13317,8 +13333,9 @@ currentpicture_fb = 0;
 @
 \fimcodigo
 
-Toda vez que formos desenhar na \monoespaco{currentpicture}, podemos
-usar o código abaixo:
+Antes de renderizar para \monoespaco{currentpicture}, devemos executar
+o código abaixo que checa se o framebuffer está inicializado, e o
+inicializa se não estiver:
 
 \iniciocodigo
 @<Prepara 'currentpicture' para Desenho@>=
@@ -13365,8 +13382,48 @@ para outra imagem, devemos remover o framebuffer anterior:
 @
 \fimcodigo
 
-Terminada a definição da burocracia necessária para desenhar em uma
-imagem, a implementação do comando de desenho é dada abaixo:
+Antes de renderizar para nossa \monoespaco{currentpicture}, nós não
+armazenamos o framebuffer anterior em uma variável. E depois de
+renderizar, nós não restauramos o framebuffer anterior. Ao contrário
+do que fazíamos em outras operações de imagens. Isso ocorre porque
+enquanto estivermos interpretando nosso código, renderizar
+na \monoespaco{currentpicture} é uma operação muito mais comum que
+renderizar em outros lugares. Por causa disso, vamos sempre
+preferencialmente manter o nosso framebuffer atual para o
+da \monoespaco{currentpicture}.
+
+Antes de começar a avaliar código, é quando nós salvamos o framebuffer
+anterior. Para isso usamos a variável abaixo:
+
+\iniciocodigo
+@<Variáveis Locais (metafont.c)@>+=
+static GLint previous_fb;
+@
+\fimcodigo
+
+E aqui é onde salvamos o framebuffer anterior antes de começar a
+executar qualquer código em \monoespaco{eval\_list\_of\_expressions}:
+
+\iniciocodigo
+@<Antes de Avaliar Código@>=
+glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &previous_fb);
+@
+\fimcodigo
+
+E aqui nós restauramos o framebuffer de antes de começarmos a
+interpretar código:
+
+\iniciocodigo
+@<Depois de Avaliar Código@>=
+glBindFramebuffer(GL_FRAMEBUFFER, previous_fb);
+@
+\fimcodigo
+
+
+\subsecao{10.3. Desenhando Caminhos}
+
+Terminada a preparação da triangulação e do framebuffer usado, podemos
+escrever agora o código de desenho em si.
 
 \iniciocodigo
 @<Declaração: Comando@>=
