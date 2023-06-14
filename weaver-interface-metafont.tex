@@ -12829,22 +12829,25 @@ else if(((struct generic_token *) begin_token_list) -> type == TYPE_FI){
 @
 \fimcodigo
 
-\secao{10. O Comando \monoespaco{draw}}
+\secao{10. O Comando \monoespaco{draw} e \monoespaco{erase}}
 
-Finalmente podemos começar a especificar um dos mais importantes
-comandos da linguagem. O comando que usa uma caneta para caminhos
-em uma imagem. A sintaxe do comando é:
+Finalmente podemos começar a especificar dois dos mais importantes
+comandos da linguagem. O comando que usa uma caneta para caminhos em
+uma imagem ou para apagar eles. A sintaxe do comando de desenho e de
+apagar é:
 
 \alinhaverbatim
-<Comando> -> <Comando 'draw'> | ...
+<Comando> -> <Comando 'draw'> | <Comando 'erase'> | ...
 <Comando 'draw'> -> draw <Expressão de Caminho>
+<Comando 'erase'> -> erase <Expressão de Caminho>
 \alinhanormal
 
-O que requer um token e palavra reservada nova para o 'draw:
+Os quais requerem dois tokens e palavras reservada novas:
 
 \iniciocodigo
 @<METAFONT: Definição de Token Simbólico@>+=
-TYPE_DRAW,  // O token simbólico 'draw'
+TYPE_DRAW,   // O token simbólico 'draw'
+TYPE_ERASE,  // O token simbólico 'erase'
 @
 \fimcodigo
 
@@ -13310,14 +13313,14 @@ if(!(pen -> flags & FLAG_CONVEX)){
 
 \subsecao{10.2. Preparando o Framebuffer}
 
-Para desenhar com uma caneta na imagem \monoespaco{currentpicture},
-nós precisamos de um framebuffer associado com esta imagem. Isso não é
-muito diferente do que quando definimos as operações sobre variáveis
-do tipo imagem. Em boa parte das operações, nós criamos um framebuffer
-novo, salvamos o framebuffer anterior, mudamos para o novo,
-renderizamos, apagamos o framebuffer novo e voltamos ao antigo. Para
-a \monoespaco{currentpicture}, ao invés disso, vamos manter uma
-variável armazenando seu framebuffer:
+Para desenhar ou apagar com uma caneta na
+imagem \monoespaco{currentpicture}, nós precisamos de um framebuffer
+associado com esta imagem. Isso não é muito diferente do que quando
+definimos as operações sobre variáveis do tipo imagem. Em boa parte
+das operações, nós criamos um framebuffer novo, salvamos o framebuffer
+anterior, mudamos para o novo, renderizamos, apagamos o framebuffer
+novo e voltamos ao antigo. Para a \monoespaco{currentpicture}, ao
+invés disso, vamos manter uma variável armazenando seu framebuffer:
 
 \iniciocodigo
 @<Variáveis Locais (metafont.c)@>+=
@@ -13419,8 +13422,70 @@ glBindFramebuffer(GL_FRAMEBUFFER, previous_fb);
 @
 \fimcodigo
 
+\subsecao{10.3. Shaders de Desenho}
 
-\subsecao{10.3. Desenhando Caminhos}
+Desenhar e apagar com uma caneta vai exigir um novo shader que
+precisamos definir. Os shaders que definimos anteriormente era para
+fazermos operações envolvendo variáveis de imagem, e eles exigiam que
+enviássemos uma textura. Já o shader para desenhar e apagar não requer
+uma textura, ao invés disso ele requer a cor que devemos usar para
+desenhar. Por hora vamos deixar que a cor sempre seja preto opaco, mas
+isso pode mudar no futuro.
+
+O código de nosso shader de vértice será então:
+
+\iniciocodigo
+@<Variáveis Locais (metafont.c)@>+=
+static const char pen_vertex_shader[] =
+  "#version 100\n"
+  "attribute vec4 vertex_data;\n"
+  "uniform mat4 model_view_matrix;\n"
+  "void main(){\n"
+  "  gl_Position = vec4(vertex_data.xy, 0.0, 1.0) * model_view_matrix;\n"
+  "}\n";
+@
+\fimcodigo
+
+Ele é idêntico ao que já definimos, mas não precisará receber e
+extrair coordenadas de textura. Já o novo shader de fragmento:
+
+\iniciocodigo
+@<Variáveis Locais (metafont.c)@>+=
+static const char pen_fragment_shader[] =
+  "#version 100\n"
+  "precision mediump float;\n"
+  "uniform vec4 color;\n"
+  "void main(){\n"
+  "  gl_FragColor = color;"
+  "}\n";
+static GLuint pen_program; // Armazena o programa após compilar
+static GLint pen_uniform_matrix; // Armazena a posição da matriz no programa
+static GLint pen_uniform_color; // Armazena a posição da cor no programa
+@
+\fimcodigo
+
+Na inicialização nós compilamos estes dois shaders e obtemos a
+localização de suas variáveis uniformes:
+
+\iniciocodigo
+@<Inicialização de Weaver Metafont@>+=
+{
+  pen_program = compile_shader_program(pen_vertex_shader, pen_fragment_shader);
+  pen_uniform_matrix = glGetUniformLocation(pen_program, "model_view_matrix");
+  pen_uniform_color = glGetUniformLocation(pen_program, "color");
+}
+@
+\fimcodigo
+
+E na finalização nós destruimos este programa:
+
+\iniciocodigo
+@<Finalização de Weaver Metafont@>+=
+glDeleteProgram(pen_program);
+@
+\fimcodigo
+
+\subsecao{10.4. Desenhando Caminhos}
 
 Terminada a preparação da triangulação e do framebuffer usado, podemos
 escrever agora o código de desenho em si.

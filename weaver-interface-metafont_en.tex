@@ -12656,31 +12656,33 @@ else if(((struct generic_token *) begin_token_list) -> type == TYPE_FI){
 @
 \fimcodigo
 
-\secao{10. The \monoespaco{draw} Command}
+\secao{10. The \monoespaco{draw} and \monoespaco{erase} Command}
 
-Finally we can begin specifying one of the most important command in
-the language. The command that uses a pen to draw a path in an
-image. The command syntax is:
+Finally we can begin specifying two of the most important command in
+the language. The command that uses a pen to draw a path in a picture
+and the command that erases a path in a picture. The command syntax
+is:
 
 \linhaverbatim
-<Command> -> <'draw' Command> | ...
+<Command> -> <'draw' Command> | <'erase' Command> | ...
 <'draw' Command> -> draw <Path Expression>
+<'erase' Command> -> erase <Path Expression>
 \alinhanormal
 
 Which requires a new token type and a new reserved word:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-TYPE_DRAW,  // O token simbólico 'draw'
+TYPE_DRAW,  // Symbolic token 'draw'
+TYPE_ERASE, // Symbolic token 'erase'
 @
 \fimcodigo
 
 \iniciocodigo
 @<List of Keywords@>+=
-"draw",
+"draw", "erase",
 @
-\fimcodigo
-
+\fimcodigoo
 
 \subsecao{10.1. Triangulation}
 
@@ -13127,14 +13129,14 @@ if(!(pen -> flags & FLAG_CONVEX)){
 
 \subsecao{10.2. Preparing Framebuffer}
 
-To draw with a pen in the picture \monoespaco{currentpicture}, we need
-a framebuffer associated with this picture. This is not much different
-than when we define several operations over picture variables. In
-several of them, we created a new framebuffer, stored the previous
-framebuffer, changed to the new framebuffer, rendered, erased the new
-framebuffer and changed to the old one. But for
-the \monoespaco{currentpicture} framebuffer, we will keep a single
-variable to store it:
+To draw or erase with a pen in the
+picture \monoespaco{currentpicture}, we need a framebuffer associated
+with this picture. This is not much different than when we define
+several operations over picture variables. In several of them, we
+created a new framebuffer, stored the previous framebuffer, changed to
+the new framebuffer, rendered, erased the new framebuffer and changed
+to the old one. But for the \monoespaco{currentpicture} framebuffer,
+we will keep a single variable to store it:
 
 \iniciocodigo
 @<Local Variables (metafont.c)@>+=
@@ -13235,8 +13237,70 @@ glBindFramebuffer(GL_FRAMEBUFFER, previous_fb);
 @
 \fimcodigo
 
+\subsecao{10.3. Drawing Shaders}
 
-\subsecao{10.3. Drawing Paths}
+Drawing and erasing will require a new shader that we will define. The
+previous shaders were defined to perform operations between picture
+variables, and all them required a texture. But for our pen, instead
+of a texture, we will need to pass a drawing color. For now, the color
+will always be opaque black, but if this changes in the future, our
+shader code will be ready.
+
+Our vertex shader code is presented below:
+
+\iniciocodigo
+@<Local Variables (metafont.c)@>+=
+static const char pen_vertex_shader[] =
+  "#version 100\n"
+  "attribute vec4 vertex_data;\n"
+  "uniform mat4 model_view_matrix;\n"
+  "void main(){\n"
+  "  gl_Position = vec4(vertex_data.xy, 0.0, 1.0) * model_view_matrix;\n"
+  "}\n";
+@
+\fimcodigo
+
+It is identical the previous vertex shader, except by the fact that
+this one does not receive nor try to extract values from a
+texture. The new fragment shader is:
+
+\iniciocodigo
+@<Local Variables (metafont.c)@>+=
+static const char pen_fragment_shader[] =
+  "#version 100\n"
+  "precision mediump float;\n"
+  "uniform vec4 color;\n"
+  "void main(){\n"
+  "  gl_FragColor = color;"
+  "}\n";
+static GLuint pen_program; // Stores the program after compilation
+static GLint pen_uniform_matrix; // Stores matrix position in the program
+static GLint pen_uniform_color; // Stores the color position in the program
+@
+\fimcodigo
+
+During initialization, we compile these shaders and get the uniform
+locations:
+
+\iniciocodigo
+@<Weaver Metafont Initialization@>+=
+{
+  pen_program = compile_shader_program(pen_vertex_shader, pen_fragment_shader);
+  pen_uniform_matrix = glGetUniformLocation(pen_program, "model_view_matrix");
+  pen_uniform_color = glGetUniformLocation(pen_program, "color");
+}
+@
+\fimcodigo
+
+And in the finalization we destroy this program:
+
+\iniciocodigo
+@<Weaver Metafont Finalization@>+=
+glDeleteProgram(pen_program);
+@
+\fimcodigo
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
