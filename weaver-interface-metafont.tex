@@ -13487,25 +13487,39 @@ glDeleteProgram(pen_program);
 
 \subsecao{10.4. Desenhando Caminhos}
 
-Terminada a preparação da triangulação e do framebuffer usado, podemos
-escrever agora o código de desenho em si.
+Terminada a preparação da triangulação, do framebuffer e do shader
+usado, podemos escrever agora o código de desenho em si.
 
 \iniciocodigo
 @<Declaração: Comando@>=
 else if(((struct generic_token *) begin_token_list) -> type ==
-        TYPE_DRAW){
+        TYPE_DRAW || ((struct generic_token *) begin_token_list) -> type ==
+        TYPE_ERASE){
   int i, j;
   struct path_variable path;
+  // Parte 1: Inicialização
+  bool erasing = (((struct generic_token *) begin_token_list) -> type ==
+    TYPE_ERASE);
   struct pen_variable *currentpen = &(mf -> internal_pen_variables[0]);
   struct picture_variable *currentpicture =
                                         &(mf -> internal_picture_variables[0]);
+  // Parte 2: Avaliar a expressão de caminho
   if(!eval_path_expression(mf, cx,
                           ((struct generic_token *) begin_token_list) -> next,
                           (struct generic_token *) *end_token_list,
                            &path))
     return false;
+  // Parte 3: Preparar a caneta, a imagem de destino e parâmetros OpenGL
   triangulate_pen(currentpen);
   @<Prepara 'currentpicture' para Desenho@>
+  if(erasing){
+    glBlendEquation(GL_FUNC_REVERSE_SUBTRACT);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  }
+  else{
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  }
+  // Parte 4: Loop de desenho
   for(i = 0; i < path.length; i ++){
     int distance = 0;
     float dx, dy, dt;
@@ -13529,37 +13543,47 @@ else if(((struct generic_token *) begin_token_list) -> type ==
                 3*(1-t)*(1-t)*t * path.points[i].u_y +
                 3*(1-t)*t*t * path.points[i].v_y +
                 t*t*t * path.points[i + 1].y;
-      drawpoint(currentpen, currentpicture, x, y);
+      drawpoint(mf, currentpen, currentpicture, x, y);
     }
   }
+  // Parte 5: Finalização
   if(temporary_free != NULL)
     path_recursive_free(temporary_free, &path, false);  
 }
 @
 \fimcodigo
 
-O código acima primeiro obtém as variáveis relevantes ao comando
-(\monoespaco{currentpen}, \monoespaco{currentpicture}) e avalia a
-expressão de caminho após o token \monoespaco{draw}. Em seguida, a
-caneta é triangulada e depois iniciamos o loop no qual iremos desenhar
-ponto-a-ponto o nosso caminho usando a função que ainda será
+O código acima na parte 1 obtém as variáveis relevantes ao comando
+(\monoespaco{currentpen}, \monoespaco{currentpicture}) e na parte 2
+avalia a expressão de caminho após o token \monoespaco{draw}.
+
+Em seguida, na parte 3, a caneta é triangulada e inicializamos os
+parâmetros OpenGL específicos deste tipo de desenho, que definimos nas
+Subseções anteriores. A única diferença entre \monoespaco{draw}
+e \monoespaco{erase} aparece nesta parte. Dependendo do comando, nós
+mudamos a operação de como misturamos os pixels novos desenhados com
+os pixels já existentes na imagem de destino. Usamos ou uma soma ou
+uma subtração, sempre ponderando o valor dos pixels com o do canal
+alfa de transparência.
+
+Na parte 4 temos o loop no qual iremos desenhar ponto-a-ponto o nosso
+caminho usando a função que ainda será
 definida \monoespaco{drawpoint}. Para obter casa um dos pontos, usamos
 a fórmula das curvas de Beziér cúbicas $z(t) = (1-t)^3z_1 +
 3(1-t)^2tz_2' + 3(1-t)t^2z_3'+t^3z_4$. E para saber quantos pontos
 intermediários devem ser desenhados entre dois pontos de extremidade,
-nós obtemos a distância entre o primeiro ponto de extremidade, o
-primeiro ponto de controle, somamos à distância entre os dois pontos
-de controle e somamos à distância entre o segundo ponto de controle e
-o segundo ponto de extremidade. Depois de desenhar tudo, desalocamos a
-variável temporária que armazenou o caminho desenhado.
+nós somamos a distância em pixels de todos os pontos envolvidos em
+cada curva: os dois pontos de extremidade e os de controle. Depois de
+desenhar tudo, desalocamos a variável temporária que armazenou o
+caminho desenhado na parte 5.
 
 Resta apenas definir a função \monoespaco{drawpoint}. O seu cabeçalho
 é:
 
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
-void drawpoint(struct pen_variable *pen, struct picture_variable *pic,
-               float x, float y);
+void drawpoint(struct metafont *mf, struct pen_variable *pen,
+               struct picture_variable *pic, float x, float y);
 @
 \fimcodigo
 
@@ -13574,60 +13598,86 @@ Seja $h$ a altura da imagem em pixels e $w$ sua largura. Isso
 significa que 1 pixel horizontal é $2/w$ e um vertical é $2/h$. Então,
 basta multiplicarmos a matriz de transformação pela matriz diagonal
 com $2/w$ como primeiro valor, $2/h$ como segundo valor na diagonal e
-com o resto da diagonal sendo 1. Além disso, precisamos converter para
-considerar a origem não o centro da imagem, mas o seu canto inferior
-direito. Para isso, basta subtrair 1 tanto horizontal como
-verticalmente da posição da imagem. Por fim, devemos levar em conta a
-coordenada $(x, y)$ que recebemos sobre onde renderizar a caneta na
-imagem. Esta coordenada, em pixels, ao ser convertida para as
-coordenadas em OpenGL fica $(2x/w, 2y/h)$. Isos é o quanto devemos
-translacionar a caneta antes de desenhar.
+com o resto da diagonal sendo 1.
 
-As operações descritas acima são representadas pela seguinte
-multiplicação de matrizes $M$:
+O próximo passo seria depois de converter de pixels para coordenadas
+OpenGL, ajustar a matriz de transformação para deslocar cada vértice
+da caneta $x$ e $y$ pixels, o que daria $2x/w$ e $2y/h$ nas
+coordenadas OpenGL. E aí fazemos outro deslocamento para corrigirmos o
+fato do OpenGL tratar o centro da imagem como origem, enquanto nós
+tratamos o canto inferior esquerdo da imagem como origem.
+
+Contudo, existe uma última complicação: na verdade nem sempre tratamos
+o canto inferior esquerdo da imagem como origem. Existe um tipo de
+valor interno $d$ que pode mudar verticalmente a posição do eixo $x$
+que usamos para medir nossas coordenadas. Um valor interno de
+profundidade. Ele é armazenado aqui:
+
+\iniciocodigo
+@<Atributos (struct metafont)@>+=
+int current_depth;
+@
+\fimcodigo
+
+E seu valor inicial é zero:
+
+\iniciocodigo
+@<Inicialização (struct metafont)@>+=
+mf -> current_depth = 0;
+@
+\fimcodigo
+
+Este valor $d$ mostra o quão deslocado para cima está o eixo $x$ em
+quando medimos em pixels (e ele vira $2d/h$ ao ser convertido nas
+coordenadas OpenGL). Se ele é zero, então o eixo $x$ será o limite
+inferior do espaço da imagem e a origem o canto inferior esquerdo da
+imagem. Se for um valor positivo, ele estará deslocado $d$ pixels para
+cima. 
+
+Para fazer todos este ajustes, devemos então multiplicar a matriz de
+transformação da caneta pela seguinte nova matriz:
 
 $$
 \left[{{a \atop c}\atop
-      {0\atop f}}{{b \atop d}\atop {0 \atop
-      g}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
+      {0\atop e}}{{b \atop d}\atop {0 \atop
+      f}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
       1}}\right]
 \left[{{2/w \atop 0}\atop
       {0\atop 2x/w-1}}{{0 \atop 2/h}\atop {0 \atop
-      2y/h-1}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
+      2d/h+2y/w-1}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
       1}}\right]=
 \left[{{2a/w \atop 2c/w}\atop
-      {0\atop (2f+2x)/w-1}}{{2b/h \atop 2d/h}\atop {0 \atop
-      (2g+2y)/h-1}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
+      {0\atop (2e+2x)/w-1}}{{2b/h \atop 2d/h}\atop {0 \atop
+      (2f+2d+2y)/h-1}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
       1}}\right]
 $$
 
-Renderizar a caneta então significa renderizar seus polígonos
-triangulados após multiplicar sua matriz de transformação pela matriz
-acima. Depois de renderizar, devemos restaturar sua matriz de
-transformação para o valor anterior:
+E isso é feito internamente pela função \monoespaco{drawpoint}
+imediatamente antes de desenhar:
 
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
-void drawpoint(struct pen_variable *pen, struct picture_variable *pic,
-               float x, float y){
+void drawpoint(struct metafont *mf, struct pen_variable *pen,
+               struct picture_variable *pic, float x, float y){
   float gl_matrix[16];
-  gl_matrix[0] = (2 * pen -> gl_matrix[0]) /  pic -> width;
-  gl_matrix[1] = (2 * pen -> gl_matrix[1]) /  pic -> height;
+  gl_matrix[0] = (2 * pen -> gl_matrix[0]) /  pic -> width;  // 2a/w
+  gl_matrix[1] = (2 * pen -> gl_matrix[1]) /  pic -> height; // 2b/h
   gl_matrix[2] = 0.0; gl_matrix[3] = 0.0;
-  gl_matrix[4] = (2 * pen -> gl_matrix[4]) /  pic -> width;
-  gl_matrix[5] = (2 * pen -> gl_matrix[5]) /  pic -> height;
+  gl_matrix[4] = (2 * pen -> gl_matrix[4]) /  pic -> width;  // 2c/w
+  gl_matrix[5] = (2 * pen -> gl_matrix[5]) /  pic -> height; // 2d/h
   gl_matrix[6] = 0.0; gl_matrix[7] = 0.0; gl_matrix[8] = 0.0;
   gl_matrix[9] = 0.0; gl_matrix[10] = 1.0; gl_matrix[11] = 0.0;
   gl_matrix[12] = 2 * (pen -> gl_matrix[12] + x) /  pic -> width - 1.0;
-  gl_matrix[13] = 2 * (pen -> gl_matrix[13] + y) /  pic -> width - 1.0;
+  gl_matrix[13] = 2 * (pen -> gl_matrix[13] + mf -> current_depth + y) /
+                  pic -> width - 1.0;
   gl_matrix[14] = 0.0; gl_matrix[15] = 1.0;
   glViewport(0, 0, pic -> width, pic -> height);
   glBindBuffer(GL_ARRAY_BUFFER, pen -> gl_vbo);
   glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void *) 0);
   glEnableVertexAttribArray(0);
-  //glUseProgram(pen_program); // TODO: Create
+  glUseProgram(pen_program);
   glUniformMatrix4fv(uniform_matrix, 1, true, gl_matrix);
-  // glUniform4f(pen_color, 0.0, 0.0, 0.0, 1.0); // TODO: Create
+  glUniform4f(pen_uniform_color, 0.0, 0.0, 0.0, 1.0);
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 }
 @
