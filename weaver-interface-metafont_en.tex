@@ -12802,14 +12802,11 @@ bool triangulate_pen(struct pen_variable *pen){
 The simplest case is when we have a null pen created
 by \monoespaco{nullpen}. These pens never will draw anything, so they
 do not need to be triangulated. Another simple case is the square
-pen. They can draw things, but we do not need to triangulate them
-because we can use the square vertices that we already defined in the
-variable \monoespaco{square} in Subsection 8.6. These two simple cases
-are treated below:
+pen. This simpler case is treated below:
 
 \iniciocodigo
 @<Triangulation: Null or Square Pen@>=
-if((pen -> flags | FLAG_NULL) || (pen -> flags | FLAG_SQUARE))
+if((pen -> flags & FLAG_NULL))
   return true;
 @
 \fimcodigo
@@ -12853,7 +12850,7 @@ if((pen -> flags & FLAG_STRAIGHT) && (pen -> flags & FLAG_CONVEX)){
   }
   glGenBuffers(1, &(pen -> gl_vbo));
   glBindBuffer(GL_ARRAY_BUFFER, pen -> gl_vbo);
-  glBufferData(pen -> gl_vbo, size, data, GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
   if(temporary_free != NULL)
     temporary_free(data);
   return true;
@@ -12930,7 +12927,7 @@ if((pen -> flags & FLAG_CIRCULAR)){
   }
   glGenBuffers(1, &(pen -> gl_vbo));
   glBindBuffer(GL_ARRAY_BUFFER, pen -> gl_vbo);
-  glBufferData(pen -> gl_vbo, size, data, GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
   if(temporary_free != NULL)
     temporary_free(data);
   return true;
@@ -13103,8 +13100,8 @@ if((pen -> flags & FLAG_CONVEX)){
   }
   glGenBuffers(1, &(pen -> gl_vbo));
   glBindBuffer(GL_ARRAY_BUFFER, pen -> gl_vbo);
-  glBufferData(pen -> gl_vbo, number_of_vertices * 2 *
-                              sizeof(float), data, GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, number_of_vertices * 2 *
+                                sizeof(float), data, GL_STATIC_DRAW);
   if(temporary_free != NULL)
     temporary_free(data);
   return true;
@@ -13123,6 +13120,7 @@ if(!(pen -> flags & FLAG_CONVEX)){
 #endif
   return false;
 }
+return false;
 @
 \fimcodigo
 
@@ -13339,30 +13337,31 @@ else if(((struct generic_token *) begin_token_list) -> type ==
     float dx, dy, dt;
     dx = path.points[i].u_x - path.points[i].x;
     dy = path.points[i].u_y - path.points[i].y;
-    distance += (int) sqrt(dx * dx + dy * dy);
+    distance += (int) round(sqrt(dx * dx + dy * dy));
     dx = path.points[i].v_x - path.points[i].u_x;
     dy = path.points[i].v_y - path.points[i].u_y;
-    distance += (int) sqrt(dx * dx + dy * dy);
-    dx = path.points[(i+1) % path.length].v_x - path.points[i].v_x;
-    dy = path.points[(i+1) % path.length].v_y - path.points[i].v_y;
-    distance += (int) sqrt(dx * dx + dy * dy);
+    distance += (int) round(sqrt(dx * dx + dy * dy));
+    dx = path.points[(i+1) % (path.length)].x - path.points[i].v_x;
+    dy = path.points[(i+1) % (path.length)].y - path.points[i].v_y;
+    distance += (int) round(sqrt(dx * dx + dy * dy));
     dt = 1 / ((float) distance);
     for(j = 0; j <= distance; j ++){
       float t = dt * j;
       float x = (1-t)*(1-t)*(1-t) * path.points[i].x +
                 3*(1-t)*(1-t)*t * path.points[i].u_x +
                 3*(1-t)*t*t * path.points[i].v_x +
-                t*t*t * path.points[i + 1].x;
+                t*t*t * path.points[(i + 1) % (path.length)].x;
       float y = (1-t)*(1-t)*(1-t) * path.points[i].y +
                 3*(1-t)*(1-t)*t * path.points[i].u_y +
                 3*(1-t)*t*t * path.points[i].v_y +
-                t*t*t * path.points[i + 1].y;
+                t*t*t * path.points[(i + 1) % (path.length)].y;
       drawpoint(mf, currentpen, currentpicture, x, y);
     }
   }
   // Part 5: Finalization
   if(temporary_free != NULL)
-    path_recursive_free(temporary_free, &path, false);  
+    path_recursive_free(temporary_free, &path, false);
+  return true;
 }
 @
 \fimcodigo
