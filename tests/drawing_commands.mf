@@ -5,6 +5,7 @@ numeric wa;
 
 currentpicture = nullpicture(6, 6);
 currentpen = makepen((0, 0) -- (0, 1) -- (1, 1) -- (1, 0) -- cycle);
+%currentpen = pensquare shifted (0.5, 0.5); // not working
 
 draw (1, 1) -- (4, 1) -- (4, 4) -- (1, 4) -- cycle;
 

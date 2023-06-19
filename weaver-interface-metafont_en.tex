@@ -2379,6 +2379,10 @@ struct pen_variable{
   GLuint gl_vbo; // The OpenGL vertices after triangulation
   int number_of_vertices; // How many vertices we have
   float gl_matrix[16]; // OpenGL matrix transformation
+  // Stores the most external points after triangulation. We will change
+  // and use these variables only in Section 10:
+  float pen_lft, pen_rt, pen_top, pen_bot;
+
 };
 @
 \fimcodigo
@@ -10204,7 +10208,7 @@ void assign_picture_variable(struct metafont *mf,
   glDeleteFramebuffers(1, &temporary_framebuffer);
   if(target ==
          &(mf -> internal_picture_variables[INTERNAL_PICTURE_CURRENTPICTURE])){
-    // The code below will be defined on Subsection 10.2:
+    // The code below will be defined on Subsection 11.2:
     @<Create new 'currentpicture'@>
   }
 }
@@ -12655,41 +12659,65 @@ else if(((struct generic_token *) begin_token_list) -> type == TYPE_FI){
 @
 \fimcodigo
 
-\secao{10. The \monoespaco{draw} and \monoespaco{erase} Command}
+\secao{10. The \monoespaco{pickup} Command}
 
-Finally we can begin specifying two of the most important command in
-the language. The command that uses a pen to draw a path in a picture
-and the command that erases a path in a picture. The command syntax
-is:
+Npw we can begin defining our first command. The syntax for
+command \monoespaco{pickup} is:
 
 \alinhaverbatim
-<Command> -> <'draw' Command> | <'erase' Command> | ...
-<'draw' Command> -> draw <Path Expression>
-<'erase' Command> -> erase <Path Expression>
+<Command> -> <'pickup' Command>
+<'pickup' Command> -> pickup <Pen Expression>
 \alinhanormal
 
-Which requires a new token type and a new reserved word:
+The command requires a new token and reserver keyword:
 
 \iniciocodigo
 @<METAFONT: Symbolic Token Definition@>+=
-TYPE_DRAW,  // Symbolic token 'draw'
-TYPE_ERASE, // Symbolic token 'erase'
+TYPE_PICKUP,  // Symbolic token 'pickup'
 @
 \fimcodigo
 
 \iniciocodigo
 @<List of Keywords@>+=
-"draw", "erase",
+"pickup",
 @
 \fimcodigo
 
-\subsecao{10.1. Triangulation}
+What this command does is store a new value in the
+variable \monoespaco{currentpen}, which we will use to make drawings
+(which we will define in the following Section). Besides this, it will
+store internally 4 other values. Two of them will store the biggest
+and smallest values in the axis $x$ when the pen is rendered and the
+two others will store the smallest and biggest values in the axis
+$y$. Storing these values will be useful to better adjust the points
+that we will draw. For example, we could want to draw with our pen the
+nearest possible to the left lower corner of the image, without the
+pen drawing outside the image area. Such control requires to know the
+pen size.
 
-The first thing that needs to be done is triangulate a pen. Video
-cards and OpenGL works drawing triangles in the screen. Therefore,
-each pen should be transformed in a set of triangles before drawing
-them. This was mentioned in Subsection 7.5. about pen variables. But
-the code for triangulation still needs to be defined.
+As the variable \monoespaco{currentpen} is a global variable, we will
+store the 4 variables related to its size in the global struct:
+
+\iniciocodigo
+@<Attributes (struct metafont)@>+=
+float pen_lft, pen_rt, pen_top, pen_bot;
+@
+\fimcodigo
+
+And as the variable \monoespaco{currentpen} begins
+equal \monoespaco{nullpen}, such values should begin equal zero:
+
+\iniciocodigo
+@<Initialization (struct metafont)@>+=
+mf -> pen_lft = mf -> pen_rt = mf -> pen_top = mf -> pen_bot = 0.0;
+@
+\fimcodigo
+
+Now let's deal with the triangulation code. Video cards and OpenGL
+works drawing triangles in the screen. Therefore, each pen should be
+transformed in a set of triangles before drawing them. This was
+mentioned in Subsection 7.5. about pen variables. But the code for
+triangulation still needs to be defined.
 
 To recap, these are the relevant variables stored inside
 a \monoespaco{struct pen\_variable} that we will use during
@@ -12700,6 +12728,9 @@ triangulation:
 
 * \monoespaco{GLuint gl\_vbo}: References que vertices stored in the
   video card. Will store 0 if the pen was not triangulated.
+
+* \monoespaco{float pen\_lft, pen\_rt, pen\_top, pen\_bot}: The extremity
+  point mentioned above, memorized for this pen.
 
 * \monoespaco{int flags}: Stores information if the above shape is
   null, is concave or convex, it is a polycon or a shape with curves,
@@ -12779,7 +12810,7 @@ The function that will perform the triangulation is:
 
 \iniciocodigo
 @<Local Function Declaration (metafont.c)@>+=
-bool triangulate_pen(struct pen_variable *pen);
+bool triangulate_pen(struct metafont *mf, struct pen_variable *pen);
 @
 \fimcodigo
 
@@ -12787,10 +12818,16 @@ And its implementation:
 
 \iniciocodigo
 @<Auxiliary Local Functions (metafont.c)@>+=
-bool triangulate_pen(struct pen_variable *pen){
-  if(pen -> gl_vbo != 0)
-    return true; // ALready triangulated
-  @<Triangulation: Null or Square Pen@>
+bool triangulate_pen(struct metafont *mf, struct pen_variable *pen){
+  if(pen -> gl_vbo != 0){ // Already triangulated
+    mf -> pen_lft = pen -> pen_lft;
+    mf -> pen_rt = pen -> pen_rt;
+    mf -> pen_top = pen -> pen_top;
+    mf -> pen_bot = pen -> pen_bot;
+    return true;
+  }
+  @<Triangulation: Null Pen@>
+  @<Triangulation: Square Pen@>
   @<Triangulation: Convex Polygon@>
   @<Triangulation: Circle@>
   @<Triangulation: Convex Shape@>
@@ -12805,11 +12842,121 @@ do not need to be triangulated. Another simple case is the square
 pen. This simpler case is treated below:
 
 \iniciocodigo
-@<Triangulation: Null or Square Pen@>=
-if((pen -> flags & FLAG_NULL))
+@<Triangulation: Null Pen@>=
+if((pen -> flags & FLAG_NULL)){
+  mf -> pen_lft = 0.0;
+  mf -> pen_rt = 0.0;
+  mf -> pen_top = 0.0;
+  mf -> pen_bot = 0.0;  
   return true;
+}
 @
 \fimcodigo
+
+The next case is when we need to triangulate a square pen. This kind
+of pen do not need to be triangulated because during initialization we
+will create a single triangulation that will be used for all square
+pen. The vertices will be stored here:
+
+\iniciocodigo
+@<Local Variables (metafont.c)@>+=
+static GLuint pensquare_vbo;
+@
+\fimcodigo
+
+The triangulation code thet will be run in the initialization:
+
+\iniciocodigo
+@<Weaver Metafont Initialization@>+=
+{
+  float square_vertices[16] = {-0.5, -0.5,
+                               +0.5, -0.5,
+                               +0.5, +0.5,
+                               -0.5, +0.5};
+  glGenBuffers(1, &pensquare_vbo);
+  glBindBuffer(GL_ARRAY_BUFFER, pensquare_vbo);
+  glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(float), square_vertices,
+               GL_STATIC_DRAW);
+}
+@
+\fimcodigo
+
+And in the finalization we can remove the vertices:
+
+\iniciocodigo
+@<Finalização de Weaver Metafont@>+=
+glDeleteBuffers(1, &pensquare_vbo);
+@
+\fimcodigo
+
+So, when asked to triangulate a square pen, we do not need to
+triangulate it. Nevertheless, we still need to compute the extremity
+points:
+
+\iniciocodigo
+@<Triangulation: Square Pen@>=
+if((pen -> flags & FLAG_SQUARE)){
+  float square_vertices[16] = {-0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5, 0.5};
+  float max_x = -INFINITY, min_x = INFINITY, max_y = -INFINITY,
+        min_y = INFINITY;
+  int i;
+  for(i = 0; i < 4; i ++){
+    float x = square_vertices[2 * i] * pen -> gl_matrix[0] +
+              square_vertices[2 * i + 1] * pen -> gl_matrix[4] +
+              pen -> gl_matrix[12];
+    float y = square_vertices[2 * i] * pen -> gl_matrix[1] +
+              square_vertices[2 * i + 1] * pen -> gl_matrix[5] +
+              pen -> gl_matrix[13];
+    if(x < min_x) min_x = x;
+    if(x > max_x) max_x = x;
+    if(y < min_y) min_y = y;
+    if(y > max_y) max_y = y;
+  }
+  mf -> pen_lft = pen -> pen_lft = min_x;
+  mf -> pen_rt = pen -> pen_rt = max_x;
+  mf -> pen_top = pen -> pen_top = max_y;
+  mf -> pen_bot = pen -> pen_bot = min_y;  
+  return true;
+}
+@
+\fimcodigo
+
+
+
+\secao{11. The \monoespaco{draw} and \monoespaco{erase} Command}
+
+Finally we can begin specifying two of the most important command in
+the language. The command that uses a pen to draw a path in a picture
+and the command that erases a path in a picture. The command syntax
+is:
+
+\alinhaverbatim
+<Command> -> <'draw' Command> | <'erase' Command> | ...
+<'draw' Command> -> draw <Path Expression>
+<'erase' Command> -> erase <Path Expression>
+\alinhanormal
+
+Which requires a new token type and a new reserved word:
+
+\iniciocodigo
+@<METAFONT: Symbolic Token Definition@>+=
+TYPE_DRAW,  // Symbolic token 'draw'
+TYPE_ERASE, // Symbolic token 'erase'
+@
+\fimcodigo
+
+\iniciocodigo
+@<List of Keywords@>+=
+"draw", "erase",
+@
+\fimcodigo
+
+\subsecao{11.1. Triangulation}
+
+
+
+
+
 
 The next simplest case is when we have a convex polygon. For them, we
 can use a very simple algorithm. We choose any vertex as the pivot and
@@ -13124,7 +13271,7 @@ return false;
 @
 \fimcodigo
 
-\subsecao{10.2. Preparing Framebuffer}
+\subsecao{11.2. Preparing Framebuffer}
 
 To draw or erase with a pen in the
 picture \monoespaco{currentpicture}, we need a framebuffer associated
@@ -13234,7 +13381,7 @@ glBindFramebuffer(GL_FRAMEBUFFER, previous_fb);
 @
 \fimcodigo
 
-\subsecao{10.3. Drawing Shaders}
+\subsecao{11.3. Drawing Shaders}
 
 Drawing and erasing will require a new shader that we will define. The
 previous shaders were defined to perform operations between picture
@@ -13297,7 +13444,7 @@ glDeleteProgram(pen_program);
 @
 \fimcodigo
 
-\subsecao{10.4. Drawing Paths}
+\subsecao{11.4. Drawing Paths}
 
 After finishing preparing the triangulation, the framebuffer and
 shaders, we finally can write the drawing code.
@@ -13322,7 +13469,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
                            &path))
     return false;
   // Part 3: Preparing the pen, destiny picture and OpenGL parameters
-  triangulate_pen(currentpen);
+  triangulate_pen(mf, currentpen);
   @<Prepare 'currentpicture' for Drawing@>
   if(erasing){
     glBlendEquation(GL_FUNC_REVERSE_SUBTRACT);
