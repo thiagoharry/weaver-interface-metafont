@@ -12866,26 +12866,64 @@ valores será útil para que possamos ajustar melhor os pontos que vamos
 desenhar. Por exemplo, podemos querer desenhar com a caneta o mais
 próximo possível do canto inferior esquerdo da imagem, sem que a
 caneta saia para fora da imagem. Tal tipo de controle requer que
-saibamos o tamanho da caneta.
+saibamos o tamanho da caneta. Por isso cada caneta tem como variável
+interna os
+valores \monoespaco{pen\_lft}, \monoespaco{pen\_rt}, \monoespaco{pen\_top}
+e \monoespaco{pen\_bot}.
 
-Como a variável \monoespaco{currentpen} é uma variável global, vamos
-armazenar as quatro variáveis relacionadas ao seu tamanho na estrutura
-global:
+Uma operação muito comum que faremos nesta Seção será, ao gerar novos
+vértices que irão compor o formato da caneta, verificar se geramos um
+ponto mais à esquerda que \monoespaco{pen\_lft}, mais à direita
+que \monoespaco{pen\_rt}, acima de \monoespaco{pen\_top} ou abaixo
+de \monoespaco{pen\_bot}. Em tais casos devemos atualizar a informação
+sobre os pontos de extremidade da caneta.
+
+Para reduzir o tamanho do código, a macro abaixo vai representar o
+código no qual declaramos as variáveis que armazenam a coordenada mais
+à esquerda, direito, acima ou abaixo de um vértice que geramos:
 
 \iniciocodigo
-@<Atributos (struct metafont)@>+=
-float pen_lft, pen_rt, pen_top, pen_bot;
+@<Macros Locais (metafont.c)@>+=
+#define DECLARE_PEN_EXTREMITIES() float _max_x = -INFINITY, _min_x = INFINITY,\
+                                  _max_y = -INFINITY, _min_y = INFINITY;
 @
 \fimcodigo
 
-Como a variável \monoespaco{currentpen} começa igual
-à \monoespaco{nullpen}, tais valores devem começar sendo zero:
+Diante de um novo ponto, vamos usar a macro abaixo para obter sua
+coordenada $(x, y)$, multiplicar por uma amtriz de transformação e
+assim checar se temos algo que deve ser armazenado como um dos menores
+ou maiores pontos da caneta no eixo $x$ ou eixo $y$:
 
 \iniciocodigo
-@<Inicialização (struct metafont)@>+=
-mf -> pen_lft = mf -> pen_rt = mf -> pen_top = mf -> pen_bot = 0.0;
+@<Macros Locais (metafont.c)@>+=
+#define CHECK_PEN_EXTREMITIES(x, y, matrix) {\
+   float _x, _y;\
+   _x = x * matrix[0] + y * matrix[4] + matrix[12];\
+   _y = x * matrix[1] + y * matrix[5] + matrix[13];\
+   if(_x < _min_x) _min_x = _x;\
+   if(_x > _max_x) _max_x = _x;\
+   if(_y < _min_y) _min_y = _y;\
+   if(_y > _max_y) _max_y = _y;\
+  }
 @
 \fimcodigo
+
+Depois de checarmos todos os pontos de uma caneta, podemos então
+atualizar seus pontos de extremidade:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#define UPDATE_PEN_EXTREMITIES(pen) {\
+  pen -> pen_lft = _min_x;\
+  pen -> pen_rt = _max_x;\
+  pen -> pen_top = _max_y;\
+  pen -> pen_bot = _min_y;\
+}
+@
+\fimcodigo
+
+
+\subsecao{10.1. Triangulação}
 
 Vamos agora lidar com o código de triangulação. As placas de vídeo e o
 OpenGL trabalha com triângulos. Nós devemos então triangular um pincel
@@ -12995,13 +13033,8 @@ E a sua implementação é:
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
 bool triangulate_pen(struct metafont *mf, struct pen_variable *pen){
-  if(pen -> gl_vbo != 0){ // Já triangulado
-    mf -> pen_lft = pen -> pen_lft;
-    mf -> pen_rt = pen -> pen_rt;
-    mf -> pen_top = pen -> pen_top;
-    mf -> pen_bot = pen -> pen_bot;
+  if(pen -> gl_vbo != 0) // Já triangulado
     return true;
-  }
   @<Triangulação: Caneta Nula@>
   @<Triangulação: Caneta Quadrada@>
   @<Triangulação: Polígono Convexo@>
@@ -13015,16 +13048,16 @@ bool triangulate_pen(struct metafont *mf, struct pen_variable *pen){
 O caso mais simples é se tentarmos triangular uma caneta nula,
 definida pelo comando \monoespaco{nullpen}. Essas canetas nunca serão
 trianguladas, pois elas não fazem desenho algum. Consideramos elas
-como sendo somente o ponto $(0, 0)$ Este caso mais simples é tratado
+como sendo somente o ponto $(0, 0)$. Embora ela possa ser deslocada
+com uma matriz de transformação. Este caso mais simples é tratado
 abaixo:
 
 \iniciocodigo
 @<Triangulação: Caneta Nula@>=
 if((pen -> flags & FLAG_NULL)){
-  mf -> pen_lft = 0.0;
-  mf -> pen_rt = 0.0;
-  mf -> pen_top = 0.0;
-  mf -> pen_bot = 0.0;  
+  DECLARE_PEN_EXTREMITIES();
+  CHECK_PEN_EXTREMITIES(0, 0, pen -> gl_matrix);
+  UPDATE_PEN_EXTREMITIES(pen);
   return true;
 }
 @
@@ -13074,67 +13107,16 @@ extremidades:
 @<Triangulação: Caneta Quadrada@>=
 if((pen -> flags & FLAG_SQUARE)){
   float square_vertices[16] = {-0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5, 0.5};
-  float max_x = -INFINITY, min_x = INFINITY, max_y = -INFINITY,
-        min_y = INFINITY;
+  DECLARE_PEN_EXTREMITIES();
   int i;
-  for(i = 0; i < 4; i ++){
-    float x = square_vertices[2 * i] * pen -> gl_matrix[0] +
-              square_vertices[2 * i + 1] * pen -> gl_matrix[4] +
-              pen -> gl_matrix[12];
-    float y = square_vertices[2 * i] * pen -> gl_matrix[1] +
-              square_vertices[2 * i + 1] * pen -> gl_matrix[5] +
-              pen -> gl_matrix[13];
-    if(x < min_x) min_x = x;
-    if(x > max_x) max_x = x;
-    if(y < min_y) min_y = y;
-    if(y > max_y) max_y = y;
-  }
-  mf -> pen_lft = pen -> pen_lft = min_x;
-  mf -> pen_rt = pen -> pen_rt = max_x;
-  mf -> pen_top = pen -> pen_top = max_y;
-  mf -> pen_bot = pen -> pen_bot = min_y;  
+  for(i = 0; i < 4; i ++)
+    CHECK_PEN_EXTREMITIES(square_vertices[2 * i], square_vertices[2 * i + 1],
+                          pen -> gl_matrix);
+  UPDATE_PEN_EXTREMITIES(pen);
   return true;
 }
 @
 \fimcodigo
-
-\secao{11. O Comando \monoespaco{draw} e \monoespaco{erase}}
-
-Finalmente podemos começar a especificar dois dos mais importantes
-comandos da linguagem. O comando que usa uma caneta para caminhos em
-uma imagem ou para apagar eles. A sintaxe do comando de desenho e de
-apagar é:
-
-\alinhaverbatim
-<Comando> -> <Comando 'draw'> | <Comando 'erase'> | ...
-<Comando 'draw'> -> draw <Expressão de Caminho>
-<Comando 'erase'> -> erase <Expressão de Caminho>
-\alinhanormal
-
-Os quais requerem dois tokens e palavras reservada novas:
-
-\iniciocodigo
-@<METAFONT: Definição de Token Simbólico@>+=
-TYPE_DRAW,   // O token simbólico 'draw'
-TYPE_ERASE,  // O token simbólico 'erase'
-@
-\fimcodigo
-
-\iniciocodigo
-@<Lista de Palavras Reservadas@>+=
-"draw",
-@
-\fimcodigo
-
-\subsecao{11.1. Triangulação}
-
-
-
----
- 
-
-
-
 
 O próximo caso mais simples é quando temos um polígono convexo. Neste
 caso, podemos usar o algoritmo mais simples. Escolhemos um único
@@ -13152,6 +13134,7 @@ desenhar, é só pedir para o OpenGL usar a triangulação em leque:
 @<Triangulação: Polígono Convexo@>=
 if((pen -> flags & FLAG_STRAIGHT) && (pen -> flags & FLAG_CONVEX)){
   int i, index, increment;
+  DECLARE_PEN_EXTREMITIES();
   GLsizei size = sizeof(float) * 2 * pen -> format -> length;
   float *data = (float *) temporary_alloc(size);
   if(data == NULL){
@@ -13171,6 +13154,7 @@ if((pen -> flags & FLAG_STRAIGHT) && (pen -> flags & FLAG_CONVEX)){
   for(i = 0; i < pen -> format -> length; i ++){
     data[2 * i] = pen -> format -> points[index].x;
     data[2 * i + 1] = pen -> format -> points[index].y;
+    CHECK_PEN_EXTREMITIES(data[2 * i], data[2 * i + 1], pen -> gl_matrix);
     index += increment;
   }
   glGenBuffers(1, &(pen -> gl_vbo));
@@ -13178,6 +13162,7 @@ if((pen -> flags & FLAG_STRAIGHT) && (pen -> flags & FLAG_CONVEX)){
   glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
   if(temporary_free != NULL)
     temporary_free(data);
+  UPDATE_PEN_EXTREMITIES(pen);
   return true;
 }
 @
@@ -13218,6 +13203,7 @@ O código para a triangulação do círculo é:
 \iniciocodigo
 @<Triangulação: Círculo@>=
 if((pen -> flags & FLAG_CIRCULAR)){
+  DECLARE_PEN_EXTREMITIES();
   float radius;
   {
     float x1, y1, x2, y2, x4, y4, side1, side2;
@@ -13251,6 +13237,7 @@ if((pen -> flags & FLAG_CIRCULAR)){
       data[i] = 0.5 * sin(angle);
       i ++;
       data[i] = 0.5 * cos(angle);
+      CHECK_PEN_EXTREMITIES(data[i-1], data[i], pen -> gl_matrix);
       angle += 1/radius;
     }
   }
@@ -13259,6 +13246,7 @@ if((pen -> flags & FLAG_CIRCULAR)){
   glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
   if(temporary_free != NULL)
     temporary_free(data);
+  UPDATE_PEN_EXTREMITIES(pen);
   return true;
 }
 @
@@ -13306,6 +13294,7 @@ O código para triangular uma caneta neste caso é:
 \iniciocodigo
 @<Triangulação: Forma Curva Convexa@>=
 if((pen -> flags & FLAG_CONVEX)){
+  DECLARE_PEN_EXTREMITIES();
   bool counterclockwise = is_pen_counterclockwise(pen);
   int i, number_of_vertices = 1;
   for(i = 0; i < pen -> format -> length - 1; i ++){
@@ -13368,6 +13357,7 @@ if((pen -> flags & FLAG_CONVEX)){
       p0 = &(pen -> format -> points[pen -> format -> length - 1]);
     data[0] = p0 -> x;
     data[1] = p0 -> y;
+    CHECK_PEN_EXTREMITIES(data[0], data[1], pen -> gl_matrix);
     v = 2;
     for(i = 0; i < pen -> format -> length - 1; i ++){
       float b_x, b_y, c_x, c_y, dx, dy, x1, x2, y1, y2;
@@ -13414,6 +13404,7 @@ if((pen -> flags & FLAG_CONVEX)){
       if(distance == (int) sqrt(dx * dx + dy * dy)){
         data[v++] = p1 -> x;
         data[v++] = p1 -> y;
+        CHECK_PEN_EXTREMITIES(data[v-2], data[v-1], pen -> gl_matrix);
       }
       else{
         int j;
@@ -13424,6 +13415,7 @@ if((pen -> flags & FLAG_CONVEX)){
                       3*(1-t)*t*t * c_x + t * t * t * p1 -> x;
           data[v++] = (1-t)*(1-t)*(1-t)* p0 -> y + 3*(1-t)*(1-t)*t * b_y +
                       3*(1-t)*t*t * c_y + t * t * t * p1 -> y;
+          CHECK_PEN_EXTREMITIES(data[v-2], data[v-1], pen -> gl_matrix);
         }
       }
       p0 = p1;
@@ -13435,6 +13427,7 @@ if((pen -> flags & FLAG_CONVEX)){
                                 sizeof(float), data, GL_STATIC_DRAW);
   if(temporary_free != NULL)
     temporary_free(data);
+  UPDATE_PEN_EXTREMITIES(pen);
   return true;
 }
 @
@@ -13455,7 +13448,36 @@ return false;
 @
 \fimcodigo
 
-\subsecao{11.2. Preparando o Framebuffer}
+
+\secao{11. O Comando \monoespaco{draw} e \monoespaco{erase}}
+
+Finalmente podemos começar a especificar dois dos mais importantes
+comandos da linguagem. O comando que usa uma caneta para caminhos em
+uma imagem ou para apagar eles. A sintaxe do comando de desenho e de
+apagar é:
+
+\alinhaverbatim
+<Comando> -> <Comando 'draw'> | <Comando 'erase'> | ...
+<Comando 'draw'> -> draw <Expressão de Caminho>
+<Comando 'erase'> -> erase <Expressão de Caminho>
+\alinhanormal
+
+Os quais requerem dois tokens e palavras reservada novas:
+
+\iniciocodigo
+@<METAFONT: Definição de Token Simbólico@>+=
+TYPE_DRAW,   // O token simbólico 'draw'
+TYPE_ERASE,  // O token simbólico 'erase'
+@
+\fimcodigo
+
+\iniciocodigo
+@<Lista de Palavras Reservadas@>+=
+"draw",
+@
+\fimcodigo
+
+\subsecao{11.1. Preparando o Framebuffer}
 
 Para desenhar ou apagar com uma caneta na
 imagem \monoespaco{currentpicture}, nós precisamos de um framebuffer
@@ -13566,7 +13588,7 @@ glBindFramebuffer(GL_FRAMEBUFFER, previous_fb);
 @
 \fimcodigo
 
-\subsecao{11.3. Shaders de Desenho}
+\subsecao{11.2. Shaders de Desenho}
 
 Desenhar e apagar com uma caneta vai exigir um novo shader que
 precisamos definir. Os shaders que definimos anteriormente era para
@@ -13629,7 +13651,7 @@ glDeleteProgram(pen_program);
 @
 \fimcodigo
 
-\subsecao{11.4. Desenhando Caminhos}
+\subsecao{11.3. Desenhando Caminhos}
 
 Terminada a preparação da triangulação, do framebuffer e do shader
 usado, podemos escrever agora o código de desenho em si.
