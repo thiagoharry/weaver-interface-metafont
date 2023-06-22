@@ -1100,7 +1100,7 @@ struct metafont *init_metafont(void *(*alloc)(size_t),
                               char *filename);
 struct context *init_context(void);
 void destroy_metafont(struct metafont *mf);
-void destroy_context(struct context *cx);
+void destroy_context(struct metafont *mf, struct context *cx);
 @
 \fimcodigo
 
@@ -1144,7 +1144,7 @@ void destroy_metafont(struct metafont *mf){
     mf -> free(mf);
   }
 }
-void destroy_context(struct context *cx){
+void destroy_context(struct metafont *mf, struct context *cx){
   if(temporary_free != NULL){
     @<Finalização (struct context)@>
     temporary_free(cx);
@@ -2428,13 +2428,16 @@ struct pen_variable{
   void *next;
   struct path_variable *format; // O formato como caminho cíclico
   int flags;
-  struct pen_variable *referenced;
-  GLuint gl_vbo; // Os vértices OpenGL após triangulação
-  int number_of_vertices; // Quantos vértices são
+  struct pen_variable *referenced; // Não-nulo só em 'currentpen'
   float gl_matrix[16]; // Matriz de transformação OpenGL
-  // Armazena pontos mais externos da caneta após triangulação. Vamos lidar
-  // com essas variáveis só na Seção 10:
+  // As variáveis abaixo serão manipuladas só na Seção 10.
+  GLuint gl_vbo; // Os vértices OpenGL após triangulação
+  // Estas armazenam os pontos mais extremos do perímetro da caneta
+  // nos eixos x e y:
   float pen_lft, pen_rt, pen_top, pen_bot;
+  // Esta armazena o quão detalhada é a triangulação, necessária para
+  // saber se devemos triangular novamente ou não em alguns casos:
+  float triang_resolution; 
 };
 @
 \fimcodigo
@@ -2503,19 +2506,13 @@ A flag \monoespaco{FLAG\_NULL} armazena se esta é uma caneta
 nula. Neste caso ela nunca precisa ser triangulada, pois ela
 representa um único ponto sem largura nem altura.
 
-A variável \monoespaco{referenced} será não-nula quando estamos
-lidando com uma caneta temporária que não está armazenada em uma
-variável e quando ela referencia uma outra caneta que está armazenada
-em uma variável. Em tais casos, estaremos usando o formato, a
-triangulação e a lista de vértices da variável referenciada sempre que
-for possível, ao invés de ter que gerar tais coisas novamente. Isso
-também significa que caso a variável seja desalocada, não devemos
-destruir o seu formato, e nem pedir para o OpenGL jogar fora a lista
-de vértices.
-
-As variáveis \monoespaco{gl\_vbo} e \monoespaco{number\_of\_vertices}
-representam os vértices caso a caneta já tenha tido a sua triangulação
-feita.
+A variável \monoespaco{referenced} só poderá ter um valor não-nulo
+quando estivermos nos referindo à caneta 'currentpen'. Neste caso, a
+'currentpen' atuará como um ponteiro para outra caneta
+definida. Devemos considerar então que 'currentpen' tem o formato e
+triangulação da caneta apontada, mas a sua matriz de transformação
+(descrita abaixo) na verdade deverá ser considerada como a matriz da
+caneta apontada multiplicada pela matriz de \monoespaco{currentpen}.
 
 A variável \monoespaco{gl\_matrix} armazena a matriz de transformação
 OpenGL. Como as canetas possuem um formato bem-definido e não serão
@@ -2523,6 +2520,20 @@ depois subdivididos ou concatenados como podem ser os subcaminhos,
 então podemos representar eventuais transformações lineares nela por
 meio dessa matriz ao invés de ter que computar novos valores para seus
 pontos.
+
+As demais variáveis serão usadas mais na Seção
+10. A \monoespaco{gl\_vbo} referenciará os vértices da caneta após ela
+ser triangulada para poder ser desenhada. Se a caneta não foi
+triangulada, seu valor será zero. Tais vértices, se existirem, estarão
+armazenados na memória da placa de vídeo. As
+variáveis \monoespaco{pen\_lft}, \monoespaco{pen\_rt}, \monoespaco{pen\_top}
+e
+\monoespaco{pen\_bot} armazenarão respectivamente a menor coordenada $x$, maior
+coordenada $x$, maior coordenada $y$ e menor coordenada $y$ de um
+ponto pertencente à caneta. Por fim, \monoespaco{triang\_resolution}
+será uma medida interna do quão detalhada é a triangulação. Ela
+ajudará a determinar se precisamos criar uma triangulação mais
+detalhada, ou se a que temos já é a suficiente.
 
 Uma variável de caneta declarada, mas ainda não inicializada terá seu
 formato igual ao ponteiro nulo, será não-circular e como ela ainda não
@@ -2558,7 +2569,7 @@ if(v -> type == TYPE_T_PEN){
 \fimcodigo
 
 Se a variável for local ao invés de global, nós fazemos o mesmo usando
-uma função diferente de desalocação:
+uma função diferente de desalocação.
 
 \iniciocodigo
 @<Finaliza Variável Local 'v'@>+=
@@ -2570,6 +2581,7 @@ if(v -> type == TYPE_T_PEN){
     if(pen -> gl_vbo != 0)
       glDeleteBuffers(1, &(pen -> gl_vbo));
   }
+  @<Finalizando Caneta Local 'pen'@>
 }
 @
 \fimcodigo
@@ -2605,17 +2617,15 @@ if(mf -> internal_pen_variables == NULL){
 }
 mf -> internal_pen_variables[0].format = NULL; // A caneta 'currentpen'
 mf -> internal_pen_variables[0].type = TYPE_T_PEN;
-mf -> internal_pen_variables[0].flags = FLAG_CONVEX | FLAG_CIRCULAR;
+mf -> internal_pen_variables[0].flags = FLAG_NULL;
 mf -> internal_pen_variables[0].referenced = NULL;
 mf -> internal_pen_variables[0].gl_vbo = 0;
-mf -> internal_pen_variables[0].number_of_vertices = 0;
 mf -> internal_pen_variables[1].format = NULL; // A caneta 'pensquare'
 mf -> internal_pen_variables[1].type = TYPE_T_PEN;
 mf -> internal_pen_variables[1].flags = FLAG_CONVEX | FLAG_STRAIGHT |
                                         FLAG_SQUARE;
 mf -> internal_pen_variables[1].referenced = NULL;
 mf -> internal_pen_variables[1].gl_vbo = 0;
-mf -> internal_pen_variables[1].number_of_vertices = 0;
 { // Inicializando a matriz de transformação de ambas
   int i, j;
   for(j = 0; j < 2; j ++)
@@ -2664,6 +2674,26 @@ else if(!strcmp(buffer, "currentpen"))
 else if(!strcmp(buffer, "pensquare"))
   new_token -> var =
           &(mf -> internal_pen_variables[INTERNAL_PEN_PENSQUARE]);
+@
+\fimcodigo
+
+A caneta '\monoespaco{currentpen}' é especial por ser a única caneta
+que pode ao invés de ter um conteúdo próprio, referenciar o conteúdo
+de outra caneta como um ponteiro. Mas o que acontece se desalocamos
+uma caneta que era uma variável local, mas que era referenciada
+pela \monoespaco{currentepen}? Fácil. Neste caso,
+a \monoespaco{currentpen} volta a ter seu valor padrão e ser uma
+caneta nula:
+
+\iniciocodigo
+@<Finalizando Caneta Local 'pen'@>=
+if(mf -> internal_pen_variables[INTERNAL_PEN_CURRENTPEN].referenced == pen){
+  mf -> internal_pen_variables[INTERNAL_PEN_CURRENTPEN].format = NULL;
+  mf -> internal_pen_variables[INTERNAL_PEN_CURRENTPEN].type = TYPE_T_PEN;
+  mf -> internal_pen_variables[INTERNAL_PEN_CURRENTPEN].flags = FLAG_NULL;
+  mf -> internal_pen_variables[INTERNAL_PEN_CURRENTPEN].referenced = NULL;
+  mf -> internal_pen_variables[INTERNAL_PEN_CURRENTPEN].gl_vbo = 0;
+}
 @
 \fimcodigo
 
@@ -8970,7 +9000,6 @@ void assign_pen_variable(struct metafont *mf,
   target -> type = TYPE_T_PEN;
   if(! (source -> flags & (FLAG_CIRCULAR | FLAG_SQUARE | FLAG_NULL)))
     recursive_copy_points(alloc, &(target -> format), source -> format, true);
-  target -> number_of_vertices = 0;
   target -> gl_vbo = 0;
   target -> referenced = NULL;
 }
@@ -9591,7 +9620,6 @@ result -> format = NULL;
 result -> flags = FLAG_CONVEX | FLAG_CIRCULAR;
 result -> referenced = false;
 result -> gl_vbo = 0;
-result -> number_of_vertices = 0;
 result -> gl_matrix[0] = result -> gl_matrix[5] = result -> gl_matrix[10] =
                          result -> gl_matrix[15] = 1.0; 
 result -> gl_matrix[1] = result -> gl_matrix[2] = result -> gl_matrix[3] = 
@@ -9657,7 +9685,6 @@ if(!(result -> format -> cyclic)){
 result -> flags = read_flags(result -> format); // Função a ser implemementada
 result -> referenced = NULL;
 result -> gl_vbo = 0;
-result -> number_of_vertices = 0;
 result -> gl_matrix[0] = result -> gl_matrix[5] = result -> gl_matrix[10] =
                          result -> gl_matrix[15] = 1.0; 
 result -> gl_matrix[1] = result -> gl_matrix[2] = result -> gl_matrix[3] = 

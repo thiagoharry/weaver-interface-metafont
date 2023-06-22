@@ -1072,7 +1072,7 @@ struct metafont *init_metafont(void *(*alloc)(size_t),
                               char *filename);
 struct context *init_context(void);
 void destroy_metafont(struct metafont *mf);
-void destroy_context(struct context *cx);
+void destroy_context(struct metafont *mf, struct context *cx);
 @
 \fimcodigo
 
@@ -1117,7 +1117,7 @@ void destroy_metafont(struct metafont *mf){
     mf -> free(mf);
   }
 }
-void destroy_context(struct context *cx){
+void destroy_context(struct metafont *mf, struct context *cx){
   if(temporary_free != NULL){
     @<Finalization (struct context)@>
     temporary_free(cx);
@@ -2375,14 +2375,15 @@ struct pen_variable{
   void *next;
   struct path_variable *format; // The format as a cyclic path
   int flags;
-  struct pen_variable *referenced;
-  GLuint gl_vbo; // The OpenGL vertices after triangulation
-  int number_of_vertices; // How many vertices we have
+  struct pen_variable *referenced; // Not null only in 'currentpen'
   float gl_matrix[16]; // OpenGL matrix transformation
-  // Stores the most external points after triangulation. We will change
-  // and use these variables only in Section 10:
+  // The variables below will be manipulated only in Section 10
+  GLuint gl_vbo; // The OpenGL vertices after triangulation
+  // These will store the extremity points in axis x and y in the pen perimeter
   float pen_lft, pen_rt, pen_top, pen_bot;
-
+  // This will store how detailed is our triangulation, which will help us
+  // to decide if we need a retriangulation in some cases:
+  float triang_resolution;
 };
 @
 \fimcodigo
@@ -2452,19 +2453,30 @@ than the referenced pen variable. This also means that if the pen is
 deallocated, we should not destroy its format nor throw away the
 triangulation vertices.
 
-The variables \monoespaco{gl\_vbo}
-and \monoespaco{number\_of\_vertices} represent the vertices if the
-pen were already triangulated.
-
 The variable \monoespaco{gl\_matrix} stores the OpenGL matrix
 transformation. As the pens will have a more definitive format which
 will not be subdivided nor concatenated as in the subpath operations,
 then we can represent their linear transformations using this matrix
 instead of updating manually their points.
 
+The other variables will me used more on Section 10. The
+variable \monoespaco{gl\_vbo} will reference the pen vertices after
+the triangulation, when the pen is ready to be drawn. Such vertices,
+if they exist, will be stored in the video card. Otherwise, this
+variable will be equal 0. The
+variables \monoespaco{pen\_lft}, \monoespaco{pen\_rt}, \monoespaco{pen\_top}
+and
+\monoespaco{pen\_bot} will store respectively the maximum coordinate $x$,
+minimum coordinate $x$, maximum coordinate $y$ and minimum coordinate
+$y$ for all the points in the
+pen. Finally, \monoespaco{triang\_resolution} will store an internal
+measure of how detailed is the pen triangulation. It will help us to
+choose if we need a more detailed triangulation or if what we have is
+enough.
+
 A pen variable that was declared but not initialized will have its
-format set as the null pointer, will be non-circular and if it were
-not yet triangulated, its vertex ID will be zero:
+format set as the null pointer, will be non-circular and not
+triangulated:
 
 \iniciocodigo
 @<Initializing New Variable@>+=
@@ -2508,6 +2520,7 @@ if(v -> type == TYPE_T_PEN){
     if(pen -> gl_vbo != 0)
       glDeleteBuffers(1, &(pen -> gl_vbo));
   }
+  @<Finalize Local Pen 'pen'@>
 }
 @
 \fimcodigo
@@ -2544,17 +2557,15 @@ if(mf -> internal_pen_variables == NULL){
 }
 mf -> internal_pen_variables[0].format = NULL; // The pen 'currentpen'
 mf -> internal_pen_variables[0].type = TYPE_T_PEN;
-mf -> internal_pen_variables[0].flags = FLAG_CONVEX | FLAG_CIRCULAR;
+mf -> internal_pen_variables[0].flags = FLAG_NULL;
 mf -> internal_pen_variables[0].referenced = NULL;
 mf -> internal_pen_variables[0].gl_vbo = 0;
-mf -> internal_pen_variables[0].number_of_vertices = 0;
 mf -> internal_pen_variables[1].format = NULL; // A caneta 'pensquare'
 mf -> internal_pen_variables[1].type = TYPE_T_PEN;
 mf -> internal_pen_variables[1].flags = FLAG_CONVEX | FLAG_STRAIGHT |
                                         FLAG_SQUARE;
 mf -> internal_pen_variables[1].referenced = NULL;
 mf -> internal_pen_variables[1].gl_vbo = 0;
-mf -> internal_pen_variables[1].number_of_vertices = 0;
 { // Inicializando a matriz de transformação de ambas
   int i, j;
   for(j = 0; j < 2; j ++)
@@ -2604,6 +2615,25 @@ else if(!strcmp(buffer, "currentpen"))
 else if(!strcmp(buffer, "pensquare"))
   new_token -> var =
           &(mf -> internal_pen_variables[INTERNAL_PEN_PENSQUARE]);
+@
+\fimcodigo
+
+The pen '\monoespaco{currentpen}' is special because it can store a
+pointer for other pen instead of its own content. But what happens if
+we free the memory of a local pen variable that was pointed
+by \monoespaco{currentepen}? Easy. In this
+case, \monoespaco{currentpen} bacomes a null pen again, restoring its
+default values:
+
+\iniciocodigo
+@<Finalize Local Pen 'pen'@>=
+if(mf -> internal_pen_variables[INTERNAL_PEN_CURRENTPEN].referenced == pen){
+  mf -> internal_pen_variables[INTERNAL_PEN_CURRENTPEN].format = NULL;
+  mf -> internal_pen_variables[INTERNAL_PEN_CURRENTPEN].type = TYPE_T_PEN;
+  mf -> internal_pen_variables[INTERNAL_PEN_CURRENTPEN].flags = FLAG_NULL;
+  mf -> internal_pen_variables[INTERNAL_PEN_CURRENTPEN].referenced = NULL;
+  mf -> internal_pen_variables[INTERNAL_PEN_CURRENTPEN].gl_vbo = 0;
+}
 @
 \fimcodigo
 
@@ -8847,7 +8877,6 @@ void assign_pen_variable(struct metafont *mf,
   target -> type = TYPE_T_PEN;
   if(! (source -> flags & (FLAG_CIRCULAR | FLAG_SQUARE | FLAG_NULL)))
     recursive_copy_points(alloc, &(target -> format), source -> format, true);
-  target -> number_of_vertices = 0;
   target -> gl_vbo = 0;
   target -> referenced = NULL;
 }
@@ -9459,7 +9488,6 @@ result -> format = NULL;
 result -> flags = FLAG_CONVEX | FLAG_CIRCULAR;
 result -> referenced = false;
 result -> gl_vbo = 0;
-result -> number_of_vertices = 0;
 result -> gl_matrix[0] = result -> gl_matrix[5] = result -> gl_matrix[10] =
                          result -> gl_matrix[15] = 1.0; 
 result -> gl_matrix[1] = result -> gl_matrix[2] = result -> gl_matrix[3] = 
@@ -9524,7 +9552,6 @@ if(!(result -> format -> cyclic)){
 result -> flags = read_flags(result -> format); // To be implemented
 result -> referenced = NULL;
 result -> gl_vbo = 0;
-result -> number_of_vertices = 0;
 result -> gl_matrix[0] = result -> gl_matrix[5] = result -> gl_matrix[10] =
                          result -> gl_matrix[15] = 1.0; 
 result -> gl_matrix[1] = result -> gl_matrix[2] = result -> gl_matrix[3] = 

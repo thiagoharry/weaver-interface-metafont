@@ -74,8 +74,8 @@ void test_empty_programs(void){
   p = lexer(mf, malloc, free, "tests/empty_statements.mf");
   ret = eval_program(mf, cx, p);
   free_token_list(free, p);
+  destroy_context(mf, cx);
   destroy_metafont(mf);
-  destroy_context(cx);
   assert("Testing program with empty statements", ret);
 }
 
@@ -92,8 +92,8 @@ void test_compound_statements(void){
   p = lexer(mf, malloc, free, "tests/compound_wrong.mf");
   ret = eval_program(mf, cx, p);
   free_token_list(free, p);
+  destroy_context(mf, cx);
   destroy_metafont(mf);
-  destroy_context(cx);
   assert("Detecting wrong compound statements", !ret);
 }
 
@@ -130,8 +130,8 @@ void test_variables(void){
            0.0, 3.0, p -> x, p -> y);
   }
   free_token_list(free, tok);
+  destroy_context(mf, cx);
   destroy_metafont(mf);
-  destroy_context(cx);
 }
 
 void test_assignments(void){
@@ -144,8 +144,8 @@ void test_assignments(void){
   ret = eval_program(mf, cx, p);
   assert("Detecting wrong assignment", !ret);
   free_token_list(free, p);
+  destroy_context(mf, cx);
   destroy_metafont(mf);
-  destroy_context(cx);
 }
 
 void test_lexer(void){
@@ -333,8 +333,8 @@ void test_lexer(void){
   ok = eval_program(mf, cx, token_pointer);
   assert("Wrong program not parsed", !ok);
   free_token_list(free, token_pointer);
+  destroy_context(mf, cx);
   destroy_metafont(mf);
-  destroy_context(cx);
 }
 
 void test_path_expressions(void){
@@ -954,8 +954,8 @@ void test_path_expressions(void){
 	 ALMOST_EQUAL(get_point(path_m, 3) -> y, 12.0) &&
 	 path_m -> cyclic == true);
   free_token_list(free, p);
+  destroy_context(mf, cx);
   destroy_metafont(mf);
-  destroy_context(cx);
 }
 
 void test_pen_expressions(void){
@@ -1008,22 +1008,22 @@ void test_pen_expressions(void){
 	 pen_p1 -> format == NULL &&
 	 pen_p1 -> flags == (FLAG_CONVEX | FLAG_SQUARE | FLAG_STRAIGHT) &&
 	 pen_p1 -> referenced == NULL &&
-	 pen_p1 -> number_of_vertices == 0); // Not triangulated
+	 pen_p1 -> gl_vbo == 0); // Not triangulated
   assert("Assigning nullpen",
 	 pen_p2 -> format == NULL &&
 	 pen_p2 -> flags == FLAG_NULL &&
 	 pen_p2 -> referenced == NULL &&
-	 pen_p2 -> number_of_vertices == 0);
+	 pen_p2 -> gl_vbo == 0);
   assert("Assigning pencircle",
 	 pen_p3 -> format == NULL &&
 	 pen_p3 -> flags == (FLAG_CONVEX | FLAG_CIRCULAR) &&
 	 pen_p3 -> referenced == NULL &&
-	 pen_p3 -> number_of_vertices == 0);
+	 pen_p3 -> gl_vbo == 0);
   assert("Pen expression with parenthesis",
 	 pen_p4 -> format == NULL &&
 	 pen_p4 -> flags == (FLAG_CONVEX | FLAG_CIRCULAR) &&
 	 pen_p4 -> referenced == NULL &&
-	 pen_p4 -> number_of_vertices == 0 &&
+	 pen_p4 -> gl_vbo == 0 &&
 	 ALMOST_EQUAL(pen_p4 -> gl_matrix[0], 1.0) &&
 	 ALMOST_EQUAL(pen_p4 -> gl_matrix[1], 0.0) &&
 	 ALMOST_EQUAL(pen_p4 -> gl_matrix[2], 0.0) &&
@@ -1265,8 +1265,8 @@ void test_pen_expressions(void){
 	 	      -0.5 * pen_p14 -> gl_matrix[5] +
 	 	      1.0 * pen_p14 -> gl_matrix[13]));
   free_token_list(free, p);
+  destroy_context(mf, cx);
   destroy_metafont(mf);
-  destroy_context(cx);
 }
 
 void test_numeric_expressions(void){
@@ -1308,8 +1308,8 @@ void test_numeric_expressions(void){
 	 ALMOST_EQUAL(numeric_g -> value, 5.0) &&
 	 ALMOST_EQUAL(numeric_h -> value, 6.0));
   free_token_list(free, p);
+  destroy_context(mf, cx);
   destroy_metafont(mf);
-  destroy_context(cx);
 }
 
 void test_pair_expressions(void){
@@ -1329,8 +1329,8 @@ void test_pair_expressions(void){
 	 ALMOST_EQUAL(pair_a -> x, 20.0) &&
 	 ALMOST_EQUAL(pair_a -> y, 27.0));
   free_token_list(free, p);
+  destroy_context(mf, cx);
   destroy_metafont(mf);
-  destroy_context(cx);
 }
 
 
@@ -1439,8 +1439,8 @@ void test_transform_expressions(void){
 	 ALMOST_EQUAL(transform_j -> value[4], -0.4) &&
 	 ALMOST_EQUAL(transform_j -> value[5], 0.2));
   free_token_list(free, p);
+  destroy_context(mf, cx);
   destroy_metafont(mf);
-  destroy_context(cx);
 }
 
 void test_picture_expressions(void){
@@ -1555,8 +1555,8 @@ void test_picture_expressions(void){
    	 picture_m -> width == 3 && picture_m -> height == 1 &&
   	 ALMOST_EQUAL(numeric_wm -> value, 1.0));
   free_token_list(free, p);
+  destroy_context(mf, cx);
   destroy_metafont(mf);
-  destroy_context(cx);
 }
 
 void test_boolean_expressions(void){
@@ -1652,8 +1652,8 @@ void test_boolean_expressions(void){
   assert("Testing 'odd' operator", (!boolean_c6 -> value) && boolean_d6 -> value);
   assert("Testing 'cycle' operator", boolean_e6 -> value && !(boolean_f6 -> value));
   free_token_list(free, p);
+  destroy_context(mf, cx);
   destroy_metafont(mf);
-  destroy_context(cx);
 }
 
 void test_if_statements(void){
@@ -1677,8 +1677,8 @@ void test_if_statements(void){
 	 numeric_a -> value == 2 && numeric_b -> value == 11 &&
 	 numeric_c -> value == 17);
   free_token_list(free, p);
+  destroy_context(mf, cx);
   destroy_metafont(mf);
-  destroy_context(cx);
 }
 
 void test_drawing_commands(void){
@@ -1701,8 +1701,8 @@ void test_drawing_commands(void){
 	 picture_a -> width == 6 && picture_a -> height == 6 &&
   	 ALMOST_EQUAL(numeric_wa -> value, 12.0));
   free_token_list(free, p);
+  destroy_context(mf, cx);
   destroy_metafont(mf);
-  destroy_context(cx);
 }
 
 
