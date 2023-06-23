@@ -2558,12 +2558,10 @@ vértices:
 @<Finaliza Variável Global 'v'@>=
 if(v -> type == TYPE_T_PEN){
   struct pen_variable *pen = (struct pen_variable *) v;
-  if(pen -> referenced == NULL){
-    if(pen -> format != NULL && mf -> free != NULL)
-      path_recursive_free(mf -> free, pen -> format, true);
-    if(pen -> gl_vbo != 0)
-      glDeleteBuffers(1, &(pen -> gl_vbo));
-  }
+  if(pen -> format != NULL && mf -> free != NULL)
+    path_recursive_free(mf -> free, pen -> format, true);
+  if(pen -> gl_vbo != 0)
+    glDeleteBuffers(1, &(pen -> gl_vbo));
 }
 @
 \fimcodigo
@@ -2575,12 +2573,10 @@ uma função diferente de desalocação.
 @<Finaliza Variável Local 'v'@>+=
 if(v -> type == TYPE_T_PEN){
   struct pen_variable *pen = (struct pen_variable *) v;
-  if(pen -> referenced == NULL){
-    if(pen -> format != NULL && temporary_free != NULL)
-      path_recursive_free(temporary_free, pen -> format, true);
-    if(pen -> gl_vbo != 0)
-      glDeleteBuffers(1, &(pen -> gl_vbo));
-  }
+  if(pen -> format != NULL && temporary_free != NULL)
+    path_recursive_free(temporary_free, pen -> format, true);
+  if(pen -> gl_vbo != 0)
+    glDeleteBuffers(1, &(pen -> gl_vbo));
   @<Finalizando Caneta Local 'pen'@>
 }
 @
@@ -8954,8 +8950,7 @@ else if(type == TYPE_T_PEN){
     var = (struct symbolic_token *) (var -> next);
     var = (struct symbolic_token *) (var -> next);
   }
-  if(temporary_free != NULL && result.format !=  NULL &&
-     result.referenced == NULL)
+  if(temporary_free != NULL && result.format !=  NULL)
     path_recursive_free(temporary_free, result.format, true);
   if(result.gl_vbo != 0 && result.referenced == NULL)
     glDeleteBuffers(1, &(result.gl_vbo));
@@ -8990,12 +8985,10 @@ void assign_pen_variable(struct metafont *mf,
     disalloc = temporary_free;
     alloc = temporary_alloc;
   }
-  if(target -> referenced == NULL){
-    if(target -> format != NULL && disalloc != NULL)
-      path_recursive_free(disalloc, target -> format, true);
-    if(target -> gl_vbo != 0)
-      glDeleteBuffers(1, &(target -> gl_vbo));
-  }
+  if(target -> format != NULL && disalloc != NULL)
+    path_recursive_free(disalloc, target -> format, true);
+  if(target -> gl_vbo != 0)
+    glDeleteBuffers(1, &(target -> gl_vbo));
   memcpy(target, source, sizeof(struct pen_variable));
   target -> type = TYPE_T_PEN;
   if(! (source -> flags & (FLAG_CIRCULAR | FLAG_SQUARE | FLAG_NULL)))
@@ -9200,11 +9193,7 @@ $$
 
 Então, para aumentar ou diminuir a escala de uma caneta, devemos
 multiplicar a matriz de transformação OpenGL pela matriz
-acima. Contudo, quando mudamos o tamanho de uma caneta será necessário
-retriangulá-la caso ela não seja composta somente por linhas
-retas. Por isso também removemos seus triângulos anteriores enviados
-ao OpenGL e zeramos tal variável fazendo com que os triângulos sejam
-recomputados futuramente se necessário.
+acima.
 
 \iniciocodigo
 @<Secundário de Caneta: Escala@>=
@@ -9221,17 +9210,6 @@ pen -> gl_matrix[8] = temp_matrix[8] * a.value;
 pen -> gl_matrix[9] = temp_matrix[9] * a.value;
 pen -> gl_matrix[12] = temp_matrix[12] * a.value;
 pen -> gl_matrix[13] = temp_matrix[13] * a.value;
-// Requer retriangular a caneta:
-if(!(pen -> flags & (FLAG_STRAIGHT | FLAG_NULL)) && a.value != 1.0){
-  if(pen -> referenced != NULL){
-    recursive_copy_points(temporary_alloc, &(pen -> format),
-                          pen -> referenced -> format, true);
-    pen -> referenced = NULL;
-  }
-  else if(pen -> gl_vbo != 0)
-    glDeleteBuffers(1, &(pen -> gl_vbo));  
-  pen -> gl_vbo = 0;
-}
 return true;
 @
 \fimcodigo
@@ -9294,17 +9272,6 @@ pen -> gl_matrix[0] = temp_matrix[0] + a.value * temp_matrix[1];
 pen -> gl_matrix[4] = temp_matrix[4] + a.value * temp_matrix[5];
 pen -> gl_matrix[8] = temp_matrix[8] + a.value * temp_matrix[9];
 pen -> gl_matrix[12] = temp_matrix[12] + a.value  * temp_matrix[13];
-// Requer retriangular a caneta:
-if(!(pen -> flags & (FLAG_STRAIGHT | FLAG_NULL)) && a.value != 0.0){
-  if(pen -> referenced != NULL){
-    recursive_copy_points(temporary_alloc, &(pen  -> format),
-                          pen  -> referenced -> format, true);
-    pen -> referenced = NULL;
-  }
-  else if(pen -> gl_vbo != 0)
-    glDeleteBuffers(1, &(pen  -> gl_vbo));  
-  pen -> gl_vbo = 0;
-}
 return true;
 @
 \fimcodigo
@@ -9334,17 +9301,6 @@ pen -> gl_matrix[0] = temp_matrix[0] * a.value;
 pen -> gl_matrix[4] = temp_matrix[4] * a.value;
 pen -> gl_matrix[8] = temp_matrix[8] * a.value;
 pen -> gl_matrix[12] = temp_matrix[12] * a.value;
-// Requer retriangular a caneta:
-if(!(pen -> flags & (FLAG_STRAIGHT | FLAG_NULL)) && a.value != 1.0){
-  if(pen -> referenced != NULL){
-    recursive_copy_points(temporary_alloc, &(pen -> format),
-                          pen -> referenced -> format, true);
-    pen -> referenced = NULL;
-  }
-  else if(pen -> gl_vbo != 0)
-    glDeleteBuffers(1, &(pen -> gl_vbo));  
-  pen -> gl_vbo = 0;
-}
 return true;
 @
 \fimcodigo
@@ -9371,17 +9327,6 @@ pen -> gl_matrix[1] = temp_matrix[1] * a.value;
 pen -> gl_matrix[5] = temp_matrix[5] * a.value;
 pen -> gl_matrix[9] = temp_matrix[9] * a.value;
 pen -> gl_matrix[13] = temp_matrix[13] * a.value;
-// Requer retriangular a caneta:
-if(!(pen -> flags & (FLAG_STRAIGHT | FLAG_NULL)) && a.value != 1.0){
-  if(pen -> referenced != NULL){
-    recursive_copy_points(temporary_alloc, &(pen -> format),
-                          pen -> referenced -> format, true);
-    pen -> referenced = NULL;
-  }
-  else if(pen -> gl_vbo != 0)
-    glDeleteBuffers(1, &(pen -> gl_vbo));  
-  pen -> gl_vbo = 0;
-}
 return true;
 @
 \fimcodigo
@@ -9420,16 +9365,6 @@ pen -> gl_matrix[8] = temp_matrix[8] * p.x - temp_matrix[9] * p.y;
 pen -> gl_matrix[9] = temp_matrix[8] * p.y + temp_matrix[9] * p.x;
 pen -> gl_matrix[12] = temp_matrix[12] * p.x - temp_matrix[13] * p.y;
 pen -> gl_matrix[13] = temp_matrix[12] * p.y + temp_matrix[13] * p.x;
-if(!(pen -> flags & (FLAG_STRAIGHT | FLAG_NULL))){ // Requer retriangular a caneta:
-  if(pen -> referenced != NULL){
-    recursive_copy_points(temporary_alloc, &(pen -> format),
-                          pen -> referenced -> format, true);
-    pen -> referenced = NULL;
-  }
-  else if(pen -> gl_vbo != 0)
-    glDeleteBuffers(1, &(pen -> gl_vbo));  
-  pen -> gl_vbo = 0;
-}
 return true;
 @
 \fimcodigo
@@ -9465,16 +9400,6 @@ pen -> gl_matrix[12] = temp_matrix[12] * t.value[2] + temp_matrix[13] * t.value[
                       temp_matrix[15] * t.value[0];
 pen -> gl_matrix[13] = temp_matrix[12] * t.value[4] + temp_matrix[13] * t.value[5] +
                        temp_matrix[15] * t.value[1];
-if(!(pen -> flags & (FLAG_STRAIGHT | FLAG_NULL))){ // Requer retriangular a caneta:
-  if(pen -> referenced != NULL){
-    recursive_copy_points(temporary_alloc, &(pen -> format),
-                          pen -> referenced -> format, true);
-    pen -> referenced = NULL;
-  }
-  else if(pen -> gl_vbo != 0)
-    glDeleteBuffers(1, &(pen -> gl_vbo));  
-  pen -> gl_vbo = 0;
-}
 return true;
 @
 \fimcodigo
@@ -9559,15 +9484,15 @@ bool eval_pen_primary(struct metafont *mf, struct context *cx,
 \fimcodigo
 
 Se a expressão avaliar para uma variável, devemos copiar o conteúdo da
-variável. Mas em um primeiro momento não precisamos criar um novo
-vértice ou alocar espaço para o novo caminho. A nossa nova variável
-obtida pela avaliação irá inicialmente apenas referenciar tais
-informações:
+variável. Se avaliar para uma variável que aponta para outra (o caso
+do \monoespaco{currentpen}), devemos ao invés disso copiar o conteúdo
+da variável referenciada. Mas depois disso devemos multiplicar a
+matriz da variável que aponta pela matriz obtida copiada.
 
 \iniciocodigo
 @<Caneta Primária: Variável@>=
 struct symbolic_token *v = (struct symbolic_token *) begin_expression;
-struct pen_variable *content = v -> var;
+struct pen_variable *content = v -> var, *to_copy = v -> var;
 if(content == NULL){
 #if defined(W_DEBUG_METAFONT)
   fprintf(stderr, "METAFONT: Error: %s:%d: Using unknown variable '%s'.\n",
@@ -9582,8 +9507,30 @@ if(content -> type != TYPE_T_PEN){
 #endif
   return false;
 }
-memcpy(result, content, sizeof(struct pen_variable));
-result -> referenced = content;
+if(content -> referenced != NULL)
+  to_copy = content -> referenced;
+memcpy(result, to_copy, sizeof(struct pen_variable));
+if(to_copy -> format != NULL)
+  recursive_copy_points(temporary_alloc, &(result -> format),
+                        to_copy -> format, true);
+if(to_copy != content){
+  float tmp[16];
+  memcpy(tmp, result -> gl_matrix, 16 * sizeof(float));
+  result -> gl_matrix[0] = result -> gl_matrix[0] * tmp[0] +
+                           result -> gl_matrix[1] * tmp[4];
+  result -> gl_matrix[1] = result -> gl_matrix[0] * tmp[1] +
+                           result -> gl_matrix[1] * tmp[5];
+  result -> gl_matrix[4] = result -> gl_matrix[4] * tmp[0] +
+                           result -> gl_matrix[5] * tmp[4];
+  result -> gl_matrix[5] = result -> gl_matrix[4] * tmp[1] +
+                           result -> gl_matrix[5] * tmp[5];
+  result -> gl_matrix[12] = result -> gl_matrix[12] * tmp[0] +
+                           result -> gl_matrix[13] * tmp[4] +
+                           tmp[12];
+  result -> gl_matrix[13] = result -> gl_matrix[12] * tmp[1] +
+                           result -> gl_matrix[13] * tmp[5] +
+                           tmp[13];
+}
 return true;
 @
 \fimcodigo
@@ -9596,7 +9543,7 @@ nunca será triangulada e nunca produzirá qualquer desenho:
 @<Caneta Primária: Caneta Nula@>=
 result -> format = NULL;
 result -> flags = FLAG_NULL;
-result -> referenced = false;
+result -> referenced = NULL;
 result -> gl_vbo = 0;
 result -> gl_matrix[0] = result -> gl_matrix[5] = result -> gl_matrix[10] =
                          result -> gl_matrix[15] = 1.0; 
@@ -9618,7 +9565,7 @@ matriz de transformação como sendo a matriz identidade:
 @<Caneta Primária: Caneta Circular@>=
 result -> format = NULL;
 result -> flags = FLAG_CONVEX | FLAG_CIRCULAR;
-result -> referenced = false;
+result -> referenced = NULL;
 result -> gl_vbo = 0;
 result -> gl_matrix[0] = result -> gl_matrix[5] = result -> gl_matrix[10] =
                          result -> gl_matrix[15] = 1.0; 
@@ -9957,14 +9904,9 @@ Por fim, se estivermos diante de uma caneta com formato personalizado,
 então nós já temos uma representação de seu formato na forma de um
 caminho e nós só temos que copiá-la:
 
-
 \iniciocodigo
 @<'makepath': Formato Personalizado@>=
-if(tmp.referenced == NULL)
-  recursive_copy_points(temporary_alloc, &result, tmp.format, false);
-else
-  recursive_copy_points(temporary_alloc, &result, tmp.referenced -> format,
-                        false);
+recursive_copy_points(temporary_alloc, &result, tmp.format, false);
 if(temporary_free != NULL && tmp.referenced == NULL)
   temporary_free(tmp.format);
 @
@@ -12866,7 +12808,11 @@ comando \monoespaco{pickup} é dada por:
 
 \alinhaverbatim
 <Comando> -> <Comando 'pickup'>
-<Comando 'pickup'> -> pickup <Expressão de Caneta>
+<Comando 'pickup'> -> pickup <Variável de Caneta ou 'nullpen'>
+                             <Transformadores Opcionais>
+<Variável de Caneta ou 'nullpen'> -> nullpen | <Variável de Caneta>
+<Transformadores Opcionais> -> <Vazio> |
+                               <Transformador> <Transformadores Opcionais>
 \alinhanormal
 
 O comando requer que criemos um novo token e palavra reservada:
@@ -12972,6 +12918,11 @@ pen\_variable}:
 * \monoespaco{float pen\_lft, pen\_rt, pen\_top, pen\_bot}: Os pontos de
   extremidade mencionados acima, memorizados para a caneta.
 
+* \monoespaco{float triang\_resolution}: Uma medida interna do nível
+  de detalhamento de nossa triangulação. Relevante para saber se devemos
+  retriangular uma caneta curva ou circular para podermos mostrar mais
+  detalhes dela quando seu tamanho muda.
+
 * \monoespaco{int flags}: Possui informação se o caminho acima define
   uma forma convexa ou côncava, um polígono ou uma figura com curvas,
   se é um quadrado, um círculo ou um polígono nulo sem lados. Além
@@ -13060,7 +13011,7 @@ E a sua implementação é:
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
 bool triangulate_pen(struct metafont *mf, struct pen_variable *pen){
-  if(pen -> gl_vbo != 0) // Já triangulado
+  if((pen -> gl_vbo != 0) && (pen -> flags & FLAG_STRAIGHT)) // Já triangulado
     return true;
   @<Triangulação: Caneta Nula@>
   @<Triangulação: Caneta Quadrada@>
