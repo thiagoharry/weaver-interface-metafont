@@ -18,65 +18,65 @@ extern"C"{
 #line 178 "weaver-interface-metafont_en.tex"
 
 
-/*46:*/
-#line 1041 "weaver-interface-metafont_en.tex"
+/*47:*/
+#line 1067 "weaver-interface-metafont_en.tex"
 
 struct context{
-/*59:*/
-#line 1340 "weaver-interface-metafont_en.tex"
+/*60:*/
+#line 1366 "weaver-interface-metafont_en.tex"
 
 int nesting_level;
 struct generic_token*end_token_stack;
-/*:59*//*75:*/
-#line 1675 "weaver-interface-metafont_en.tex"
+/*:60*//*76:*/
+#line 1701 "weaver-interface-metafont_en.tex"
 
 void*variables;
-/*:75*/
-#line 1043 "weaver-interface-metafont_en.tex"
+/*:76*/
+#line 1069 "weaver-interface-metafont_en.tex"
 
 };
-/*:46*//*47:*/
-#line 1055 "weaver-interface-metafont_en.tex"
+/*:47*//*48:*/
+#line 1081 "weaver-interface-metafont_en.tex"
 
 struct metafont{
 char*file;
 void*(*alloc)(size_t);
 void(*free)(void*);
-/*71:*/
-#line 1613 "weaver-interface-metafont_en.tex"
+/*72:*/
+#line 1639 "weaver-interface-metafont_en.tex"
 
 void*named_variables;
 void*global_variables;
-/*:71*//*89:*/
-#line 2006 "weaver-interface-metafont_en.tex"
+/*:72*//*90:*/
+#line 2032 "weaver-interface-metafont_en.tex"
 
 void*internal_numeric_variables;
-/*:89*//*98:*/
-#line 2167 "weaver-interface-metafont_en.tex"
+/*:90*//*99:*/
+#line 2193 "weaver-interface-metafont_en.tex"
 
 struct transform_variable*internal_transform_variables;
-/*:98*//*113:*/
-#line 2535 "weaver-interface-metafont_en.tex"
+/*:99*//*114:*/
+#line 2561 "weaver-interface-metafont_en.tex"
 
 struct pen_variable*internal_pen_variables;
-/*:113*//*123:*/
-#line 2701 "weaver-interface-metafont_en.tex"
+/*:114*//*124:*/
+#line 2723 "weaver-interface-metafont_en.tex"
 
 struct picture_variable*internal_picture_variables;
-/*:123*//*170:*/
-#line 3865 "weaver-interface-metafont_en.tex"
+/*:124*//*171:*/
+#line 3887 "weaver-interface-metafont_en.tex"
 
 bool have_stored_normaldeviate;
 float normaldeviate;
-/*:170*//*489:*/
-#line 13579 "weaver-interface-metafont_en.tex"
+/*:171*//*490:*/
+#line 13604 "weaver-interface-metafont_en.tex"
 
 int current_depth;
-/*:489*/
-#line 1060 "weaver-interface-metafont_en.tex"
+/*:490*/
+#line 1086 "weaver-interface-metafont_en.tex"
 
 };
-/*:47*/
+/*:48*/
 #line 180 "weaver-interface-metafont_en.tex"
 
 /*1:*/

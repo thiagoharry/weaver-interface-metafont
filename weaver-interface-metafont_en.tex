@@ -220,6 +220,50 @@ with this header, its structure is:
 All the code presented in this document will be placed in one of these
 two files. Besides them, no other file will be created.
 
+\secao{X. General Auxiliary Code}
+
+The code presented in this Section will be an introduction about how
+we define code in this article. All code here will be widely used in
+the next Sections and all code will be independant of the specific
+data structure used by Weaver Metafont.
+
+\subsecao{X.Y. Linear Algebra Code}
+
+We will use very frequently matrices $4\times 4$, that usually will
+represent linear transformations over a vector space with 4
+dimensions. Such matrices will be an array of 16 elements,
+representing the matrix content.
+
+The matrix elements will be organized as below, according with how
+they are stored in array M:
+
+$$
+\left[{{M[0] \atop M[4]}\atop
+      {M[8]\atop M[12]}}{{M[1] \atop M[5]}\atop {M[9] \atop
+      M[13]}}{{M[2]\atop M[6]}\atop{M[10] \atop M[14]}}{{M[3] \atop
+      M[7]}\atop{M[11]\atop M[15]}}\right]
+$$
+
+
+We can initialize an identity matrix with:
+
+\iniciocodigo
+@<Local Macros (metafont.c)@>=
+#define INITIALIZE_IDENTITY_MATRIX(I) {\
+  int _i;\
+  for(_i = 0; _i < 16; _i++)\
+    I[_i] = ((_i%5)?(0.0):(1.0));\
+}   
+@
+\fimcodigo
+
+Despite our dealings in a vector space with 4 dimensions, on practice
+all the values we deal will be contained in the plane $\{(x, y, 0,
+1)\}$ with $x$ and $y$ being real numbers. The reason for working in 4
+dimensions is that we want to represent rotations and shiftings as
+linear transforms. This is possible in 4 dimensions, but would not be
+possible with just 2 or 3.
+
 \secao{2. Initialization and Finalization}
 
 First we will define the initialization function. What it will do is
@@ -2040,7 +2084,7 @@ We also will create the following macros to access each one of these
 variables more easily:
 
 \iniciocodigo
-@<Local Macros (metafont.c)@>=
+@<Local Macros (metafont.c)@>+=
 #define INTERNAL_NUMERIC_PT 0
 #define INTERNAL_NUMERIC_CM 1
 #define INTERNAL_NUMERIC_MM 2
@@ -2539,8 +2583,8 @@ struct pen_variable *internal_pen_variables;
 
 During initialization we will allocate space for both and we will
 initialize them. The variable \monoespaco{currentpen} by default will
-begin as a circle with diameter 1 and \monoespaco{pensquare} will be a
-square with side 1:
+begin as an empty pen and \monoespaco{pensquare} will be a square
+with side 1:
 
 \iniciocodigo
 @<Initialization (struct metafont)@>+=
@@ -2563,13 +2607,9 @@ mf -> internal_pen_variables[1].flags = FLAG_CONVEX | FLAG_STRAIGHT |
 mf -> internal_pen_variables[1].referenced = NULL;
 mf -> internal_pen_variables[1].gl_vbo = 0;
 { // Inicializando a matriz de transformação de ambas
-  int i, j;
+  int j;
   for(j = 0; j < 2; j ++)
-    for(i = 0; i < 16; i++)
-      if(i % 5 == 0)
-        mf -> internal_pen_variables[j].gl_matrix[i] = 1.0;
-      else
-        mf -> internal_pen_variables[j].gl_matrix[i] = 0.0;
+    INITIALIZE_IDENTITY_MATRIX(mf -> internal_pen_variables[j].gl_matrix);
 }
 @
 \fimcodigo
@@ -9412,14 +9452,7 @@ result -> format = NULL;
 result -> flags = FLAG_NULL;
 result -> referenced = NULL;
 result -> gl_vbo = 0;
-result -> gl_matrix[0] = result -> gl_matrix[5] = result -> gl_matrix[10] =
-                         result -> gl_matrix[15] = 1.0; 
-result -> gl_matrix[1] = result -> gl_matrix[2] = result -> gl_matrix[3] = 
-                         result -> gl_matrix[4] = result -> gl_matrix[6] =
-                         result -> gl_matrix[7] = result -> gl_matrix[8] = 
-                         result -> gl_matrix[9] = result -> gl_matrix[11] =
-                         result -> gl_matrix[12] = result -> gl_matrix[13] =
-                         result -> gl_matrix[14] = 0.0;
+INITIALIZE_IDENTITY_MATRIX(result -> gl_matrix);
 return true;
 @
 \fimcodigo
@@ -9434,14 +9467,7 @@ result -> format = NULL;
 result -> flags = FLAG_CONVEX | FLAG_CIRCULAR;
 result -> referenced = NULL;
 result -> gl_vbo = 0;
-result -> gl_matrix[0] = result -> gl_matrix[5] = result -> gl_matrix[10] =
-                         result -> gl_matrix[15] = 1.0; 
-result -> gl_matrix[1] = result -> gl_matrix[2] = result -> gl_matrix[3] = 
-                         result -> gl_matrix[4] = result -> gl_matrix[6] =
-                         result -> gl_matrix[7] = result -> gl_matrix[8] = 
-                         result -> gl_matrix[9] = result -> gl_matrix[11] =
-                         result -> gl_matrix[12] = result -> gl_matrix[13] =
-                         result -> gl_matrix[14] = 0.0;
+INITIALIZE_IDENTITY_MATRIX(result -> gl_matrix);
 return true;
 @
 \fimcodigo
@@ -9498,14 +9524,7 @@ if(!(result -> format -> cyclic)){
 result -> flags = read_flags(result -> format); // To be implemented
 result -> referenced = NULL;
 result -> gl_vbo = 0;
-result -> gl_matrix[0] = result -> gl_matrix[5] = result -> gl_matrix[10] =
-                         result -> gl_matrix[15] = 1.0; 
-result -> gl_matrix[1] = result -> gl_matrix[2] = result -> gl_matrix[3] = 
-                         result -> gl_matrix[4] = result -> gl_matrix[6] =
-                         result -> gl_matrix[7] = result -> gl_matrix[8] = 
-                         result -> gl_matrix[9] = result -> gl_matrix[11] =
-                         result -> gl_matrix[12] = result -> gl_matrix[13] =
-                         result -> gl_matrix[14] = 0.0;
+INITIALIZE_IDENTITY_MATRIX(result -> gl_matrix);
 return true;
 @
 \fimcodigo
@@ -10446,13 +10465,8 @@ became true only if the matrix is changed during secondary evaluation.
 @<Picture: Evaluate Secondary Expression in 'sec'@>=
 {
   float matrix[16];
-  int i;
   bool modified = false;
-  for(i = 0; i < 16; i ++)
-    if(i % 5 == 0)
-      matrix[i] = 1.0;
-    else
-      matrix[i] = 0.0;
+  INITIALIZE_IDENTITY_MATRIX(matrix);
   if(last_operator == NULL){
      if(!eval_picture_secondary(mf, cx, begin_expression, end_expression, sec,
                              matrix, &modified))
@@ -12827,7 +12841,8 @@ The function that will perform the triangulation is:
 
 \iniciocodigo
 @<Local Function Declaration (metafont.c)@>+=
-bool triangulate_pen(struct metafont *mf, struct pen_variable *pen);
+bool triangulate_pen(struct metafont *mf, struct pen_variable *pen,
+                     float *transform_matrix);
 @
 \fimcodigo
 
@@ -12835,7 +12850,8 @@ And its implementation:
 
 \iniciocodigo
 @<Auxiliary Local Functions (metafont.c)@>+=
-bool triangulate_pen(struct metafont *mf, struct pen_variable *pen){
+bool triangulate_pen(struct metafont *mf, struct pen_variable *pen,
+                     float *transform_matrix){
   // Already triangulated:
   if((pen -> gl_vbo != 0) && (pen -> flags & FLAG_STRAIGHT))
     return true;
@@ -12859,7 +12875,7 @@ other position. We deal with this simplest case below:
 @<Triangulation: Null Pen@>=
 if((pen -> flags & FLAG_NULL)){
   DECLARE_PEN_EXTREMITIES();
-  CHECK_PEN_EXTREMITIES(0, 0, pen -> gl_matrix);
+  CHECK_PEN_EXTREMITIES(0, 0, transform_matrix);
   UPDATE_PEN_EXTREMITIES(pen);
   return true;
 }
@@ -12914,7 +12930,7 @@ if((pen -> flags & FLAG_SQUARE)){
   int i;
   for(i = 0; i < 4; i ++)
     CHECK_PEN_EXTREMITIES(square_vertices[2 * i], square_vertices[2 * i + 1],
-                          pen -> gl_matrix);
+                          transform_matrix);
   UPDATE_PEN_EXTREMITIES(pen);
   return true;
 }
@@ -12957,7 +12973,7 @@ if((pen -> flags & FLAG_STRAIGHT) && (pen -> flags & FLAG_CONVEX)){
   for(i = 0; i < pen -> format -> length; i ++){
     data[2 * i] = pen -> format -> points[index].x;
     data[2 * i + 1] = pen -> format -> points[index].y;
-    CHECK_PEN_EXTREMITIES(data[2 * i], data[2 * i + 1], pen -> gl_matrix);
+    CHECK_PEN_EXTREMITIES(data[2 * i], data[2 * i + 1], transform_matrix);
     index += increment;
   }
   glGenBuffers(1, &(pen -> gl_vbo));
@@ -12997,6 +13013,13 @@ matrix. Therefore, we will get a suitable upper bound for the radius,
 considering that our circle could have been transformed in a ellipse
 after the linear transformation.
 
+This biggest side of the rectangle where our circle is inscribed after
+the linear transformation is also how we compute the resolution of a
+circle triangulation. If our circle is already triangulated and we
+need to draw using a smaller circle, then we do not need to
+triangulate it again. But if we need to draw a bigger circle, then we
+need to triangulate, even if we already had a triangulation before.
+
 The code to triangulate the circle is:
 
 \iniciocodigo
@@ -13004,21 +13027,29 @@ The code to triangulate the circle is:
 if((pen -> flags & FLAG_CIRCULAR)){
   DECLARE_PEN_EXTREMITIES();
   float radius;
-  {
+  { // Measuring needed resolution for triangulation
     float x1, y1, x2, y2, x4, y4, side1, side2;
     // (x1, y1) = (-0.5, -0.5)
-    x1 = -0.5 * pen -> gl_matrix[0] - 0.5 * pen -> gl_matrix[4];
-    y1 = -0.5 * pen -> gl_matrix[1] - 0.5 * pen -> gl_matrix[5];
+    x1 = -0.5 * transform_matrix[0] - 0.5 * transform_matrix[4];
+    y1 = -0.5 * transform_matrix[1] - 0.5 * transform_matrix[5];
     // (x2, y2) = (-0.5, 0.5)
-    x2 = -0.5 * pen -> gl_matrix[0] + 0.5 * pen -> gl_matrix[4];
-    y2 = -0.5 * pen -> gl_matrix[1] + 0.5 * pen -> gl_matrix[5];
+    x2 = -0.5 * transform_matrix[0] + 0.5 * transform_matrix[4];
+    y2 = -0.5 * transform_matrix[1] + 0.5 * transform_matrix[5];
     // (x4, y4) = (0.5, -0.5)
-    x4 = 0.5 * pen -> gl_matrix[0] - 0.5 * pen -> gl_matrix[4];
-    y4 = 0.5 * pen -> gl_matrix[1] - 0.5 * pen -> gl_matrix[5];
+    x4 = 0.5 * transform_matrix[0] - 0.5 * transform_matrix[4];
+    y4 = 0.5 * transform_matrix[1] - 0.5 * transform_matrix[5];
     side1 = sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));
     side2 = sqrt((x4-x1)*(x4-x1)+(y4-y1)*(y4-y1));
     radius = ((side1 >= side2)?(side1):(side2))/ 2.0;
   }
+  // Check  if retriangulation is necessary:
+  if(pen -> gl_vbo != 0){
+    if(radius > pen -> triang_resolution)
+      return true;
+    else
+      glDeleteBuffers(1, &(pen -> gl_vbo));
+  }
+  pen -> triang_resolution = radius;
   GLsizei size = sizeof(float) * 2 * (((int) (2 * M_PI * radius)) + 2);
   float *data = (float *) temporary_alloc(size);
   if(data == NULL){
@@ -13036,7 +13067,7 @@ if((pen -> flags & FLAG_CIRCULAR)){
       data[i] = 0.5 * sin(angle);
       i ++;
       data[i] = 0.5 * cos(angle);
-      CHECK_PEN_EXTREMITIES(data[i-1], data[i], pen -> gl_matrix);
+      CHECK_PEN_EXTREMITIES(data[i-1], data[i], transform_matrix);
       angle += 1/radius;
     }
   }
@@ -13066,8 +13097,14 @@ reasonable values, except when our curve crosses itself. However, we
 do not support pens with non-simple forms, therefore we should not
 care about this unsupported case.
 
+The sum of all the distances, when we iterate over the pen curves is
+how we measure the pen triangulation resolution. If we are
+triangulating an already triangulated pen and the resolution is lesser
+or equal than the current triangulation, we do not need to triangulate
+the pen again.
+
 If the sum of the distances $AB+BC+CD$ is equal the distance $AD$,
-then we have a straight line. IN this case, we just need to consider
+then we have a straight line. In this case, we just need to consider
 the vertices for the extremity points, not the intermediate points.
 
 After deciding the number of vertices that should be generated, if we
@@ -13136,6 +13173,12 @@ if((pen -> flags & FLAG_CONVEX)){
       number_of_vertices ++; // Linha reta
     else
       number_of_vertices += distance;
+  }
+  if(pen -> gl_vbo != 0){
+    if(number_of_vertices <= pen -> triang_resolution)
+      return true; // No need to triangulate again
+    else
+      glDeleteBuffers(1, &(pen -> gl_vbo)); // Need to retriangulate
   }
   float *data = (float *) temporary_alloc(number_of_vertices * 2 *
                                           sizeof(float));
@@ -13473,7 +13516,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
                            &path))
     return false;
   // Part 3: Preparing the pen, destiny picture and OpenGL parameters
-  triangulate_pen(mf, currentpen);
+  triangulate_pen(mf, currentpen, currentpen -> gl_matrix);
   @<Prepare 'currentpicture' for Drawing@>
   if(erasing){
     glBlendEquation(GL_FUNC_REVERSE_SUBTRACT);
