@@ -20,6 +20,10 @@
 \def\iniciocodigo{\lineskip=0pt\parskip=0pt}
 \def\fimcodigo{\twelve\parskip=0pt plus 1pt\lineskip=1pt}
 
+\def\matrix#1#2#3#4#5#6#7#8#9{\left[{{#1 \atop #4}\atop
+      {\scriptstyle #7}}{{#2 \atop #5}\atop {\scriptstyle #8}}{{#3\atop
+      #6}\atop{\scriptstyle #9}}\right]}
+
 \long\def\abstract#1{\parshape 10 0.8cm 13.4cm 0.8cm 13.4cm
 0.8cm 13.4cm 0.8cm 13.4cm 0.8cm 13.4cm 0.8cm 13.4cm 0.8cm 13.4cm
 0.8cm 13.4cm 0.8cm 13.4cm 0.8cm 13.4cm
@@ -250,19 +254,16 @@ defini-lo como uma introdução, antes do código mais específico.
 
 \subsecao{X.Y. Código de Álgebra Linear}
 
-Iremos usar com uma frequência muito grande matrizes $4\times 4$, que
+Iremos usar com uma frequência muito grande matrizes $3\times 3$, que
 serão usadas tipicamente para representar transformações lineares em
-um espaço vetorial de 4 dimensões. Tais matrizes serão simplesmente um
-array de 16 elementos, representando os elementos da matriz.
+um espaço vetorial de 3 dimensões. Tais matrizes serão simplesmente um
+array de 9 elementos, representando os elementos da matriz.
 
 Os valores da matriz estarão dispostos da seguinte forma, de acordo
 como os armazenamos no array M:
 
 $$
-\left[{{M[0] \atop M[4]}\atop
-      {M[8]\atop M[12]}}{{M[1] \atop M[5]}\atop {M[9] \atop
-      M[13]}}{{M[2]\atop M[6]}\atop{M[10] \atop M[14]}}{{M[3] \atop
-      M[7]}\atop{M[11]\atop M[15]}}\right]
+\matrix{M[0]}{M[1]}{M[2]}{M[3]}{M[4]}{M[5]}{M[6]}{M[7]}{M[8]}
 $$
 
 Sendo assim, podemos inicializar uma matriz identidade com:
@@ -271,18 +272,124 @@ Sendo assim, podemos inicializar uma matriz identidade com:
 @<Macros Locais (metafont.c)@>=
 #define INITIALIZE_IDENTITY_MATRIX(I) {\
   int _i;\
-  for(_i = 0; _i < 16; _i++)\
-    I[_i] = ((_i%5)?(0.0):(1.0));\
+  for(_i = 0; _i < 9; _i++)\
+    I[_i] = ((_i%4)?(0.0):(1.0));\
 }   
 @
 \fimcodigo
 
-Apesar de nossas matrizes lidarem com espaço vetorial de 4 dimensões,
-na prática todos os valores que usaremos, estarão contidos no plano
-$\{(x, y, 0, 1)\}$. tal que $x$ e $y$ são números reais. O motivo de
-trabalharmos no espaço de 4 dimensões é poder representar coisas como
-rotação e deslocamento como transformações lineares. Isso não seria
-possível se mantivéssemos apenas duas ou três dimensões.
+Apesar de nossas matrizes lidarem com espaço vetorial de 3 dimensões,
+na prática todos os valores que usaremos estarão contidos no plano
+$\{(x, y, 1)\}$. tal que $x$ e $y$ são números reais. O motivo de
+trabalharmos no espaço de 3 dimensões é poder representar a translação
+(ou deslocamento) de pontos como transformações lineares, algo que só
+se torna possível no espaço 2D se o tratarmos como inscrito dentro de
+um espaço vetorial 3D.
+
+Dado um vetor de 3 dimensões $(x, y, 1)$, podemos transformá-lo em um
+novo vetor $(x', y', 1)$ aplicando a transformação linear representada
+por uma matriz abaixo:
+
+$$\left[x\; y\; 1\right]
+\matrix{M[0]}{M[1]}{0}{M[3]}{M[4]}{0}{M[6]}{M[7]}{1}
+=\left[x'\;\; y'\;\; 1\right]
+$$
+
+As novas coordenadas $(x', y')$ do novo vetor podem ser calculadas com
+ajuda das macros abaixo:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#define LINEAR_TRANSFORM_X(x, y, M) (x * M[0] + y * M[3] + M[6])
+#define LINEAR_TRANSFORM_Y(x, y, M) (x * M[1] + y * M[4] + M[7])
+@
+\fimcodigo
+
+A multiplicação de matrizes tem a propriedade de associatividade
+abaixo:
+
+$$
+\left((x, y, 1)\cdot A\right) \cdot B = (x, y, 1)\cdot \left(A \cdot B\right)
+$$
+
+Isso quer dizer que podemos acumular várias transformações em uma só
+matriz. Aplicar a transformaçao $AB$ sobre um vetor é o mesmo que
+aplicar primeiro a transformação $A$ e depois a transformação $B$. O
+código abaixo acumula duas transformações lineares, calculando $AB$ e
+armazenando o resultado em $A$. Note que o código sempre assume que a
+última coluna de toda matriz é $(0, 0, 1)^{T}$:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#define MATRIX_MULTIPLICATION(A, B) {\
+  float _a0 = A[0], _a1 = A[1], _a3 = A[3], _a4 = A[4], _a6 = A[6],\
+        _a7 = A[7];\
+  A[0] = _a0 * B[0] + _a1 * B[3];\
+  A[1] = _a0 * B[1] + _a1 * B[4];\
+  A[3] = _a3 * B[0] + _a4 * B[3];\
+  A[4] = _a3 * B[1] + _a4 * B[4];\
+  A[6] = _a6 * B[0] + _a7 * B[3] + B[6];\
+  A[7] = _a6 * B[1] + _a7 * B[4] + B[7];\
+}
+@
+\fimcodigo
+
+Existem algumas transformações lineares que são muito mais comuns do
+que outras. Para realizá-las mais facilmente vamos criar macros
+especiais para elas. Por exemplo, rotacionar um vetor $(x, y, 1)$ em
+relação ao ponto $(0, 0, 1)$ um ângulo $\theta$ é feito multiplicando
+pela matriz:
+
+$$\left[x\; y\; 1\right]
+\matrix{cos(\theta)}{sin(\theta)}{0}{-\sin(\theta)}{cos(\theta)}{0}{0}{0}{1}
+=\left[x\cdot cos(\theta) - y\cdot sin(\theta)\;\; x\cdot sin(\theta)
++ y\cdot cos(\theta)\;\; 1\right]
+$$
+
+Acumular a transformação acima sobre uma matriz é feito com a macro
+seguinte:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#define TRANSFORM_ROTATE(M, theta) {\
+  float _m0 = M[0], _m1 = M[1], _m3 = M[3], _m4 = M[4], _m6 = M[6],\
+        _m7 = M[7];\
+  double _cos_theta, _sin_theta;\
+  _sin_theta = sin(theta);\
+  _cos_theta = cos(theta);\
+  M[0] = _m0 * cos_theta - _m1 * sin_theta;\
+  M[1] = _m0 * sin_theta + _m1 * cos_theta;\
+  M[3] = _m3 * cos_theta - _m4 * sin_theta;\
+  M[4] = _m3 * sin_theta + _m4 * cos_theta;\
+  M[6] = _m6 * cos_theta - _m7 * sin_theta;\
+  M[7] = _m6 * sin_theta + _m7 * cos_theta;\
+}
+@
+\fimcodigo
+
+Outra transformação relevante é ampliar ou reduzir vetores,
+multiplicando eles por um fator de escala $s$:
+
+$$\left[x\; y\; 1\right]
+\matrix{s}{0}{0}{0}{s}{0}{0}{0}{1}
+=\left[sx\;\; sy\;\; 1\right]
+$$
+
+Fazer esta operação sobre uma matriz é feito com o código abaixo:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#define TRANSFORM_SCALE(M, s) {\
+  M[0] = M[0] * s;\
+  M[1] = M[1] * s;\
+  M[3] = M[3] * s;\
+  M[4] = M[4] * s;\
+  M[6] = M[6] * s;\
+  M[7] = M[7] * s;\
+}
+@
+\fimcodigo
+
 
 \secao{2. Inicialização e Finalização}
 
@@ -2199,11 +2306,9 @@ diferentes. Sejam os valores $(a, b, c, d, e, f)$, o que eles
 representam é uma transformação linear na qual o par $(x, y)$ é
 transformado em $(x', y')$ da seguinte forma:
 
-$$\left[x\; y\; 0\; 1\right]\left[{{c \atop d}\atop
-      {0\atop a}}{{e \atop f}\atop {0 \atop
-      b}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
-      1}}\right]=\left[x'\;\;
-      y'\;\; 0\;\; 1\right]
+$$\left[x\; y\;
+      1\right]\matrix{c}{e}{0}{d}{f}{0}{a}{b}{1}=\left[x'\;\; y'\;\;
+      1\right]
 $$
 
 Ou: $(x', y') = (a+cx+dy, b+ex+fy)$.
@@ -2212,8 +2317,8 @@ A ordem em que os elementos são representados pode parecer estranha,
 mas é feito assim como compatibilidade com a linguagem METAFONT
 original criada por Knuth.
 
-Uma variável de transformação então simplesmente deve armazenar os
-seis valores diferentes:
+Uma variável de transformação então simplesmente deve armazenar uma
+transformação linear na forma de uma matriz:
 
 \iniciocodigo
 @<Estrutura de Dados Locais (metafont.c)@>+=
@@ -2221,7 +2326,7 @@ struct transform_variable{
   int type; // Deve ser 'TYPE_T_TRANSFORM'
   int nesting_level;
   void *next;
-  float value[6];
+  float value[9];
 };
 @
 \fimcodigo
@@ -2268,12 +2373,7 @@ if(mf -> internal_transform_variables == NULL){
 }
 // A transformação 'identity':
 mf -> internal_transform_variables[0].type = TYPE_T_TRANSFORM;
-mf -> internal_transform_variables[0].value[0] = 0.0;
-mf -> internal_transform_variables[0].value[1] = 0.0;
-mf -> internal_transform_variables[0].value[2] = 1.0;
-mf -> internal_transform_variables[0].value[3] = 0.0;
-mf -> internal_transform_variables[0].value[4] = 0.0;
-mf -> internal_transform_variables[0].value[5] = 1.0;
+INITIALIZE_IDENTITY_MATRIX(mf -> internal_transform_variables[0].value);
 @
 \fimcodigo
 
@@ -2472,7 +2572,7 @@ struct pen_variable{
   struct path_variable *format; // O formato como caminho cíclico
   int flags;
   struct pen_variable *referenced; // Não-nulo só em 'currentpen'
-  float gl_matrix[16]; // Matriz de transformação OpenGL
+  float gl_matrix[9]; // Matriz de transformação OpenGL
   // As variáveis abaixo serão manipuladas só na Seção 10.
   GLuint gl_vbo; // Os vértices OpenGL após triangulação
   // Estas armazenam os pontos mais extremos do perímetro da caneta
@@ -5133,7 +5233,6 @@ bool eval_transform_secondary(struct metafont *mf, struct context *cx,
     return eval_transform_primary(mf, cx, begin_expression, end_expression,
                                   result);
   else{
-    struct transform_variable a;
     if(end_secondary == NULL){
 #if defined(W_DEBUG_METAFONT)
       fprintf(stderr, "METAFONT: Error: %s:%d: Transform expression began "
@@ -5141,7 +5240,8 @@ bool eval_transform_secondary(struct metafont *mf, struct context *cx,
 #endif
       return false;
     }
-    if(!eval_transform_secondary(mf, cx, begin_expression, end_secondary, &a))
+    if(!eval_transform_secondary(mf, cx, begin_expression, end_secondary,
+                                 result))
       return false;
     @<Aplica Operador Secundário de Transformação@>
 #if defined(W_DEBUG_METAFONT)
@@ -5156,76 +5256,29 @@ bool eval_transform_secondary(struct metafont *mf, struct context *cx,
 
 Vamos agora aplicar os diferentes transformadores sobre as nossas
 variáveis e resultados de transformação. O primeiro tipo de
-transformador é a rotação, que é equivalente a multiplicar a
-transformação $(a, b, c, d, e, f)$ como abaixo:
-
-$$\left[{{c \atop d}\atop
-      {0\atop a}}{{e \atop f}\atop {0 \atop
-      b}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
-      1}}\right]
-\left[{{\cos(\theta) \atop -\sin(\theta)}\atop
-      {0\atop 0}}{{\sin(\theta) \atop \cos(\theta)}\atop {0 \atop
-      0}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
-      1}}\right]=
-\left[{{c\cdot \cos(\theta) - e\cdot \sin(\theta) \atop
-        d\cdot \cos(\theta) - f\cdot \sin(\theta)} \atop
-      {0\atop a\cdot \cos(\theta) - b\cdot \sin(\theta)}}
-      {{c\cdot \sin(\theta) + e\cdot \cos(\theta) \atop
-      d\cdot \sin(\theta) + f\cdot \cos(\theta)}\atop
-      {0 \atop a\cdot \sin(\theta) + b\cdot \cos(\theta)}}
-      {{0\atop 0}\atop{1 \atop 0}}
-      {{0 \atop 0}\atop{0\atop 1}}\right]
-$$
-
-Sendo assim, aplicar a rotação sobre o transformador é feito com o
+transformador é a rotação, que aplicamos sobre um transformador com o
 código abaixo:
+
 
 \iniciocodigo
 @<Aplica Operador Secundário de Transformação@>=
 if(last_transform -> type == TYPE_ROTATED){
-  double cos_theta, sin_theta;
   struct numeric_variable theta;
+  double angle_radian;
   if(!eval_numeric_primary(mf, cx, last_transform -> next, end_expression,
                            &theta))
     return false;
   // 1 grau = 0,0174533 radianos
-  sin_theta = sin(theta.value * 0.0174533);
-  cos_theta = cos(theta.value * 0.0174533);
-  // a' = a cos(t) - b sin(t)
-  result -> value[0] = a.value[0] * cos_theta - a.value[1] * sin_theta;
-  // b' = a sin(t) + b cos(t)
-  result -> value[1] = a.value[0] * sin_theta + a.value[1] * cos_theta;
-  // c' = c cos(t) - e sin(t)
-  result -> value[2] = a.value[2] * cos_theta - a.value[4] * sin_theta;
-  // d' = d cos(t) - f sin(t)
-  result -> value[3] = a.value[3] * cos_theta - a.value[5] * sin_theta;
-  // e' = c sin(t) + e cos(t)
-  result -> value[4] = a.value[2] * sin_theta + a.value[4] * cos_theta;
-  // f' = d sin(t) + f cos(t)
-  result -> value[5] = a.value[3] * sin_theta + a.value[5] * cos_theta;
+  angle_radian = theta.value * 0.0174533;
+  TRANSFORM_ROTATE(result -> value, angle_radian);
   return true;
 }
 @
 \fimcodigo
 
-Já mudar a escala de um transformador, ampliando ele $s$ vezes, é
-equivalente a fazer a multiplicação de matrizes abaixo:
 
-$$\left[{{c \atop d}\atop
-      {0\atop a}}{{e \atop f}\atop {0 \atop
-      b}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
-      1}}\right]
-\left[{{s \atop 0}\atop
-      {0\atop 0}}{{0 \atop s}\atop {0 \atop
-      0}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
-      1}}\right]=
-\left[{{cs \atop ds} \atop  {0\atop as}}
-      {{es \atop fs}\atop   {0 \atop bs}}{{0\atop 0}\atop{1 \atop 0}}
-      {{0 \atop 0}\atop{0\atop 1}}\right]
-$$
-
-Então o código que aplica essa mudança de escala sobre transformações
-é:
+Já mudar a escala de um transformador, ampliando ele $s$ vezes é feito
+pelo código:
 
 \iniciocodigo
 @<Aplica Operador Secundário de Transformação@>+=
@@ -5234,12 +5287,7 @@ else if(last_transform -> type == TYPE_SCALED){
   if(!eval_numeric_primary(mf, cx, last_transform -> next, end_expression,
                            &scale))
     return false;
-  result -> value[0] = a.value[0] * scale.value;
-  result -> value[1] = a.value[1] * scale.value;
-  result -> value[2] = a.value[2] * scale.value;
-  result -> value[3] = a.value[3] * scale.value;
-  result -> value[4] = a.value[4] * scale.value;
-  result -> value[5] = a.value[5] * scale.value;
+  TRANSFORM_SCALE(result -> value, scale.value);
   return true;
 }
 @
