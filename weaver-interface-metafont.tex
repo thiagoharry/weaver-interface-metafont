@@ -357,35 +357,131 @@ seguinte:
   double _cos_theta, _sin_theta;\
   _sin_theta = sin(theta);\
   _cos_theta = cos(theta);\
-  M[0] = _m0 * cos_theta - _m1 * sin_theta;\
-  M[1] = _m0 * sin_theta + _m1 * cos_theta;\
-  M[3] = _m3 * cos_theta - _m4 * sin_theta;\
-  M[4] = _m3 * sin_theta + _m4 * cos_theta;\
-  M[6] = _m6 * cos_theta - _m7 * sin_theta;\
-  M[7] = _m6 * sin_theta + _m7 * cos_theta;\
+  M[0] = _m0 * _cos_theta - _m1 * _sin_theta;\
+  M[1] = _m0 * _sin_theta + _m1 * _cos_theta;\
+  M[3] = _m3 * _cos_theta - _m4 * _sin_theta;\
+  M[4] = _m3 * _sin_theta + _m4 * _cos_theta;\
+  M[6] = _m6 * _cos_theta - _m7 * _sin_theta;\
+  M[7] = _m6 * _sin_theta + _m7 * _cos_theta;\
 }
 @
 \fimcodigo
 
-Outra transformação relevante é ampliar ou reduzir vetores,
-multiplicando eles por um fator de escala $s$:
+Outra transformação relevante é ampliar ou reduzir vetores, os
+esticando ou comprimindo. Para fazer isso no eixo $x$, multiplicamos
+pela seguinte matriz:
 
 $$\left[x\; y\; 1\right]
-\matrix{s}{0}{0}{0}{s}{0}{0}{0}{1}
-=\left[sx\;\; sy\;\; 1\right]
+\matrix{s}{0}{0}{0}{1}{0}{0}{0}{1}
+=\left[sx\;\; y\;\; 1\right]
 $$
 
-Fazer esta operação sobre uma matriz é feito com o código abaixo:
+O que é feito pela macro abaixo:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#define TRANSFORM_SCALE_X(M, s) {\
+  M[0] = M[0] * s;\
+  M[3] = M[3] * s;\
+  M[6] = M[6] * s;\
+}
+@
+\fimcodigo
+
+Fazer isso no eixo $y$ envolve a multiplicação:
+
+$$\left[x\; y\; 1\right]
+\matrix{1}{0}{0}{0}{s}{0}{0}{0}{1}
+=\left[x\;\; sy\;\; 1\right]
+$$
+
+E pra isso usamos a macro:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#define TRANSFORM_SCALE_Y(M, s) {\
+  M[1] = M[1] * s;\
+  M[4] = M[4] * s;\
+  M[7] = M[7] * s;\
+}
+@
+\fimcodigo
+
+E fazer isso nos dois eixos é feito simplesmente combinando ambas as
+operações:
 
 \iniciocodigo
 @<Macros Locais (metafont.c)@>+=
 #define TRANSFORM_SCALE(M, s) {\
-  M[0] = M[0] * s;\
-  M[1] = M[1] * s;\
-  M[3] = M[3] * s;\
-  M[4] = M[4] * s;\
-  M[6] = M[6] * s;\
-  M[7] = M[7] * s;\
+  TRANSFORM_SCALE_X(M, s);\
+  TRANSFORM_SCALE_Y(M, s);\
+}
+@
+\fimcodigo
+
+Uma translação, ou deslocamento é a única operação que exige que
+usemos três dimensões ao invés de duas. Deslocar um vetor uma
+distância $a$ na horizontal e uma distância $b$ na vertical é feito
+pela transformação:
+
+$$\left[x\; y\; 1\right]
+\matrix{1}{0}{0}{0}{1}{0}{a}{b}{1}
+=\left[x+a\;\; y+b\;\; 1\right]
+$$
+
+E essa multiplicação de matrizes é feita usando a seguinte macro:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#define TRANSFORM_SHIFT(M, a, b) {\
+  M[6] = M[6] + a;\
+  M[7] = M[7] + b;\
+}
+@
+\fimcodigo
+
+Inclinar com intensidade $s$ é uma operação feita pela multiplicação:
+
+$$\left[x\; y\; 1\right]
+\matrix{1}{0}{0}{s}{1}{0}{0}{0}{1}
+=\left[x+sy\;\; y\;\; 1\right]
+$$
+
+Que realizamos sobre outras matrizes com a macro abaixo:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#define TRANSFORM_SLANT(M, s) {\
+  M[0] = M[0] + s * M[1];\
+  M[3] = M[3] + s * M[4];\
+}
+@
+\fimcodigo
+
+A última transformação especial que iremos tratar aqui é a mudança de
+escala no plano complexo. Isso significa multiplicar os pontos por um
+par $(s, t)$, interpretado como um número complexo. Isso obtém ao
+mesmo tempo tanto rotação como mudança de escala. É feito pela
+multiplicação de matriz:
+
+$$\left[x\; y\; 1\right]
+\matrix{s}{t}{0}{-t}{s}{0}{0}{0}{1}
+=\left[sx-ty\;\; tx+sy\;\; 1\right]
+$$
+
+Realizar esta multiplicação por outra matriz é feito com essa macro:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#define TRANSFORM_SCALE_Z(M, s, t) {\
+  float _m0 = M[0], _m1 = M[1], _m3 = M[3], _m4 = M[4], _m6 = M[6],\
+        _m7 = M[7];\
+  M[0] = _m0 * s - _m1 * t;\
+  M[1] = _m0 * t + _m1 * s;\
+  M[3] = _m3 * s - _m4 * t;\
+  M[4] = _m3 * t + _m4 * s;\
+  M[6] = _m6 * s - _m7 * t;\
+  M[7] = _m6 * t + _m7 * s;\
 }
 @
 \fimcodigo
@@ -5294,26 +5390,7 @@ else if(last_transform -> type == TYPE_SCALED){
 \fimcodigo
 
 A próxima transformação é realizar uma translação, ou deslocamento
-$(x, y)$ sobre uma transformação. Isso equivale a multiplicar pela
-matriz:
-
-$$\left[{{c \atop d}\atop {0\atop a}}
-        {{e \atop f}\atop {0 \atop b}}
-        {{0\atop 0}\atop{1 \atop 0}}
-        {{0 \atop 0}\atop{0\atop 1}}\right]
-\left[{{1 \atop 0}\atop {0\atop x}}
-      {{0 \atop 1}\atop {0 \atop y}}
-      {{0\atop 0}\atop{1 \atop 0}}
-      {{0 \atop 0}\atop{0\atop 1}}\right]
-      =
-\left[{{c \atop d}\atop {0\atop a+x}}
-        {{e \atop f}\atop {0 \atop b+y}}
-        {{0\atop 0}\atop{1 \atop 0}}
-        {{0 \atop 0}\atop{0\atop 1}}\right]
-$$
-
-Então mantemos a maioria dos valores como estão, mas somamos os dois
-primeiros elementos com o da coordenada $(x, y)$ de deslocamento:
+$(x, y)$ sobre uma transformação.
 
 \iniciocodigo
 @<Aplica Operador Secundário de Transformação@>+=
@@ -5322,35 +5399,14 @@ else if(last_transform -> type == TYPE_SHIFTED){
   if(!eval_pair_primary(mf, cx, last_transform -> next, end_expression,
                         &shift))
     return false;
-  result -> value[0] = a.value[0] + shift.x;
-  result -> value[1] = a.value[1] + shift.y;
-  result -> value[2] = a.value[2];
-  result -> value[3] = a.value[3];
-  result -> value[4] = a.value[4];
-  result -> value[5] = a.value[5];
+  TRANSFORM_SHIFT(result -> value, shift.x, shift.y);
   return true;
 }
 @
 \fimcodigo
 
 Agora vamos tratar o transformador que inclina a nossa transformação
-uma quantia $s$. Isso é o equivalente a multiplicar pela matriz:
-
-$$\left[{{c \atop d}\atop {0\atop a}}
-        {{e \atop f}\atop {0 \atop b}}
-        {{0\atop 0}\atop{1 \atop 0}}
-        {{0 \atop 0}\atop{0\atop 1}}\right]
-\left[{{1 \atop s}\atop {0\atop
-      0}}{{0 \atop 1}\atop {0 \atop 1}}{{0\atop 0}\atop{1 \atop
-      0}}{{0 \atop 0}\atop{0\atop 1}}\right] =
-\left[{{c+se \atop d+sf}\atop {0\atop a+sb}}
-        {{e \atop f}\atop {0 \atop b}}
-        {{0\atop 0}\atop{1 \atop 0}}
-        {{0 \atop 0}\atop{0\atop 1}}\right]
-$$
-
-Então o resultado terá metade dos valores iguais à transformação
-anterior e metade deles modificados pela inclinação:
+uma quantia $s$.
 
 \iniciocodigo
 @<Aplica Operador Secundário de Transformação@>+=
@@ -5359,37 +5415,14 @@ else if(last_transform -> type == TYPE_SLANTED){
   if(!eval_numeric_primary(mf, cx, last_transform -> next, end_expression,
                         &slant))
     return false;
-  // a' = a + sb
-  result -> value[0] = a.value[0] + a.value[1] * slant.value;
-  result -> value[1] = a.value[1];
-  // c' = c + se
-  result -> value[2] = a.value[2] + a.value[4] * slant.value;
-  // d' = d + sf
-  result -> value[3] = a.value[3] + a.value[5] * slant.value;
-  result -> value[4] = a.value[4];
-  result -> value[5] = a.value[5];
+  TRANSFORM_SLANT(result -> value, slant.value);
   return true;
 }
 @
 \fimcodigo
 
 A mudança de escala somente no eixo $x$ estica ou comprime a
-transformação neste eixo. É equivalente à seguinte multiplicação:
-
-$$\left[{{c \atop d}\atop
-      {0\atop a}}{{e \atop f}\atop {0 \atop
-      b}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
-      1}}\right]
-\left[{{s \atop 0}\atop
-      {0\atop 0}}{{0 \atop 1}\atop {0 \atop
-      0}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
-      1}}\right]=
-\left[{{cs \atop ds} \atop  {0\atop as}}
-      {{e \atop f}\atop   {0 \atop b}}{{0\atop 0}\atop{1 \atop 0}}
-      {{0 \atop 0}\atop{0\atop 1}}\right]
-$$
-
-O que é obtido pelo código abaixo:
+transformação neste eixo. Isso é obtido pelo código abaixo:
 
 \iniciocodigo
 @<Aplica Operador Secundário de Transformação@>+=
@@ -5398,15 +5431,7 @@ else if(last_transform -> type == TYPE_XSCALED){
   if(!eval_numeric_primary(mf, cx, last_transform -> next, end_expression,
                         &scale))
     return false;
-  // a' = as
-  result -> value[0] = a.value[0] * scale.value;
-  result -> value[1] = a.value[1];
-  // c' = cs
-  result -> value[2] = a.value[2] * scale.value;
-  // d' = ds
-  result -> value[3] = a.value[3] * scale.value;
-  result -> value[4] = a.value[4];
-  result -> value[5] = a.value[5];
+  TRANSFORM_SCALE_X(result -> value, scale.value);
   return true;
 }
 @
@@ -5415,21 +5440,6 @@ else if(last_transform -> type == TYPE_XSCALED){
 Podemos também fazer a mudança de escala somente no eixo $y$ usando o
 fator de mudança $s$:
 
-$$\left[{{c \atop d}\atop
-      {0\atop a}}{{e \atop f}\atop {0 \atop
-      b}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
-      1}}\right]
-\left[{{1 \atop 0}\atop
-      {0\atop 0}}{{0 \atop s}\atop {0 \atop
-      0}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
-      1}}\right]=
-\left[{{c \atop d} \atop  {0\atop a}}
-      {{es \atop fs}\atop   {0 \atop bs}}{{0\atop 0}\atop{1 \atop 0}}
-      {{0 \atop 0}\atop{0\atop 1}}\right]
-$$
-
-O que é obtido pelo código abaixo:
-
 \iniciocodigo
 @<Aplica Operador Secundário de Transformação@>+=
 else if(last_transform -> type == TYPE_YSCALED){
@@ -5437,15 +5447,7 @@ else if(last_transform -> type == TYPE_YSCALED){
   if(!eval_numeric_primary(mf, cx, last_transform -> next, end_expression,
                         &scale))
     return false;
-  result -> value[0] = a.value[0];
-  // b' = bs
-  result -> value[1] = a.value[1] * scale.value;
-  result -> value[2] = a.value[2];
-  result -> value[3] = a.value[3] * scale.value;
-  // e' = es
-  result -> value[4] = a.value[4] * scale.value;
-  // f' = fs
-  result -> value[5] = a.value[5] * scale.value;
+  TRANSFORM_SCALE_Y(result -> value, scale.value);
   return true;
 }
 @
@@ -5454,22 +5456,7 @@ else if(last_transform -> type == TYPE_YSCALED){
 Por fim, há a mudança de escala no plano complexo, que envolve
 multiplicar os pontos por um par $(s, t)$, interpretado como um número
 complexo. Isso obtém ao mesmo tempo tanto rotação como mudança de
-escala. É feito pela multiplicação de matriz:
-
-$$\left[{{c \atop d}\atop
-      {0\atop a}}{{e \atop f}\atop {0 \atop
-      b}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
-      1}}\right]
-\left[{{s \atop -t}\atop {0\atop
-      0}}{{t \atop s}\atop {0 \atop 0}}{{0\atop 0}\atop{1 \atop
-      0}}{{0 \atop 0}\atop{0\atop 1}}\right]
-=
-\left[{{cs-dt \atop ds-ft} \atop  {0\atop as-bt}}
-      {{ct+es \atop dt+fs}\atop   {0 \atop at+bs}}{{0\atop 0}\atop{1 \atop 0}}
-      {{0 \atop 0}\atop{0\atop 1}}\right]
-$$
-
-Esse transformador é implementado pelo código abaixo:
+escala. Esse transformador é implementado pelo código abaixo:
 
 \iniciocodigo
 @<Aplica Operador Secundário de Transformação@>+=
@@ -5478,18 +5465,7 @@ else if(last_transform -> type == TYPE_ZSCALED){
   if(!eval_pair_primary(mf, cx, last_transform -> next, end_expression,
                         &scale))
     return false;
-  // a' = as - bt
-  result -> value[0] = a.value[0] * scale.x - a.value[0] * scale.y;
-  // b' = at + bs
-  result -> value[1] = a.value[0] * scale.y + a.value[0] * scale.y;
-  // c' = cs - dt
-  result -> value[2] = a.value[2] * scale.x - a.value[3] * scale.y;
-  // d' = ds - ft
-  result -> value[3] = a.value[3] * scale.x - a.value[5] * scale.y;
-  // e' = ct + es
-  result -> value[4] = a.value[2] * scale.y + a.value[4] * scale.x;
-  // f' = dt + fs
-  result -> value[5] = a.value[3] * scale.y + a.value[5] * scale.x;
+  TRANSFORM_SCALE_Z(result -> value, scale.x, scale.y);
   return true;
 }
 @
@@ -5522,20 +5498,7 @@ else if(last_transform -> type == TYPE_TRANSFORMED){
   if(!eval_transform_primary(mf, cx, last_transform -> next, end_expression,
                             &b))
     return false;
-  // a'' = ac'-bd'+a'
-  result -> value[0] = a.value[0] * b.value[2] + a.value[1] * b.value[3] +
-                       b.value[0];
-  // b'' = ae'+bf'+b'
-  result -> value[1] = a.value[0] * b.value[4] + a.value[1] * b.value[5] +
-                       b.value[1];
-  // c'' = cc'+ed'
-  result -> value[2] = a.value[2] * b.value[2] + a.value[4] * b.value[3];
-  // d'' = dc'+fd'
-  result -> value[3] = a.value[3] * b.value[2] + a.value[5] * b.value[3];
-  // e'' = ce'+ef'
-  result -> value[4] = a.value[2] * b.value[4] + a.value[4] * b.value[5];
-  // f'' = de'+ff'
-  result -> value[5] = a.value[3] * b.value[4] + a.value[5] * b.value[5];
+  MATRIX_MULTIPLICATION(result -> value, b.value);
   return true;
 }
 @
@@ -5631,7 +5594,7 @@ if(content == NULL){
 #endif
   return false;
 }
-memcpy(result -> value, content -> value, sizeof(float) * 6);
+memcpy(result -> value, content -> value, sizeof(float) * 9);
 return true;
 @
 \fimcodigo
@@ -5667,6 +5630,7 @@ struct generic_token *begin_numeric_expr, *end_numeric_expr;
 struct numeric_variable numeric_result;
 begin_numeric_expr = begin_expression -> next;
 end_numeric_expr = begin_numeric_expr;
+float values[6];
 for(i = 0; i < 6; i ++){
   p = begin_numeric_expr;
   do{
@@ -5693,10 +5657,17 @@ for(i = 0; i < 6; i ++){
   if(!eval_numeric_expression(mf, cx, begin_numeric_expr, end_numeric_expr,
                               &numeric_result))
     return false;
-  result -> value[i] = numeric_result.value;
+  values[i] = numeric_result.value;
   begin_numeric_expr = p -> next;
   end_numeric_expr = begin_numeric_expr;
 }
+// Armazenando na ordem correta dentro da matriz:
+result -> value[0] = values[2]; result -> value[1] = values[3];
+result -> value[2] = 0.0;
+result -> value[3] = values[4]; result -> value[4] = values[3];
+result -> value[5] = 0.0;
+result -> value[6] = values[0]; result -> value[7] = values[1];
+result -> value[8] = 1.0;
 return true;
 @
 \fimcodigo
@@ -5749,7 +5720,10 @@ else if(begin_expression -> type >= TYPE_XXPART &&
                                        begin_expression -> next, end_expression,
                              &t))
     return false;
-  result -> value = t.value[2 + begin_expression -> type - TYPE_XXPART];
+  if(begin_expression -> type >= TYPE_XXPART)
+    result -> value = t.value[0];
+  else
+    result -> value = t.value[4];
   return true;
 }
 @
@@ -5768,7 +5742,7 @@ if(!eval_transform_primary(mf, cx, (struct generic_token *)
                                    begin_expression -> next, end_expression,
                            &t))
   return false;
-result -> value = t.value[0];
+result -> value = t.value[6];
 return true;
 @
 \fimcodigo
@@ -5782,7 +5756,7 @@ if(!eval_transform_primary(mf, cx, (struct generic_token *)
                                    begin_expression -> next, end_expression,
                            &t))
   return false;
-result -> value = t.value[1];
+result -> value = t.value[7];
 return true;
 @
 \fimcodigo
@@ -5813,8 +5787,8 @@ else if(last_mul -> type == TYPE_TRANSFORMED){
     return false;
   if(!eval_transform_primary(mf, cx, begin_primary, end_expression, &b))
     return false;
-  result -> x = b.value[0] + a.x * b.value[2] + a.y * b.value[3];
-  result -> y = b.value[1] + a.x * b.value[4] + a.y * b.value[5];
+  result -> x = LINEAR_TRANSFORM_X(a.x, a.y, b.value);
+  result -> y = LINEAR_TRANSFORM_Y(a.x, a.y, b.value);
   return true;
 }
 @
@@ -8200,8 +8174,7 @@ else if(transform_op -> type == TYPE_TRANSFORMED){
   struct transform_variable a;
   if(!eval_transform_primary(mf, cx, transform_op -> next, end_expression, &a))
     return false;
-  path_transform(result, a.value[0], a.value[1], a.value[2], a.value[3],
-                 a.value[4], a.value[5]);
+  path_transform(result, a.value);
   return true;
 }
 else{
@@ -8218,8 +8191,7 @@ Para isso usamos a seguinte função recursiva:
 
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
-void path_transform(struct path_variable *p, float x, float y, float xx,
-                    float xy, float yx, float yy);
+void path_transform(struct path_variable *p, float *M);
 @
 \fimcodigo
 
@@ -8227,26 +8199,24 @@ A função é definida como:
 
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
-void path_transform(struct path_variable *p, float x, float y, float xx,
-                    float xy, float yx, float yy){
+void path_transform(struct path_variable *p, float *M){
   int i;
   for(i = 0; i < p -> length; i ++){
     if(p -> points[i].subpath != NULL)
-      path_transform((struct path_variable *) (p -> points[i].subpath),
-                     x, y, xx, xy, yx, yy);
+      path_transform((struct path_variable *) (p -> points[i].subpath), M);
     else{
       float x0 = p -> points[i].x;
       float y0 = p -> points[i].y;
-      p -> points[i].x = x + x0 * xx + y0 * xy;
-      p -> points[i].y = y + x0 * yx + y0 * yy;
+      p -> points[i].x = LINEAR_TRANSFORM_X(x0, y0, M);
+      p -> points[i].y = LINEAR_TRANSFORM_Y(x0, y0, M);
       x0 = p -> points[i].u_x;
       y0 = p -> points[i].u_y;
-      p -> points[i].u_x = x + x0 * xx + y0 * xy;
-      p -> points[i].u_y = y + x0 * yx + y0 * yy;
+      p -> points[i].u_x = LINEAR_TRANSFORM_X(x0, y0, M);
+      p -> points[i].u_y = LINEAR_TRANSFORM_Y(x0, y0, M);
       x0 = p -> points[i].v_x;
       y0 = p -> points[i].v_y;
-      p -> points[i].v_x = x + x0 * xx + y0 * xy;
-      p -> points[i].v_x = y + x0 * yx + y0 * yy;
+      p -> points[i].v_x = LINEAR_TRANSFORM_X(x0, y0, M);
+      p -> points[i].v_x = LINEAR_TRANSFORM_Y(x0, y0, M);
     }
   }
 }
@@ -9224,196 +9194,85 @@ bool eval_pen_secondary(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
-Primeiro cuidaremos da rotação. Se nós representarmos cada ponto como
-quatro coordenadas como é o padrão em OpenGL (três coordenadas para
-três dimensões, uma quarta para que as principais operações possam ser
-representadas como transformações lineares), para rotacionar uma
-coordenada, é necessário multiplicar por uma matriz como mostrado
-abaixo:
-
-$$\left[x\; y\; z\; 1\right]\left[{{cos(\theta) \atop -\sin(\theta)}\atop
-      {0\atop 0}}{{\sin(\theta) \atop cos(\theta)}\atop {0 \atop
-      0}}{{0\atop 0}\atop{1 \atop 0}}{{0 \atop 0}\atop{0\atop
-      1}}\right]=\left[x\cdot cos(\theta) - y\cdot sin(\theta)\;\;
-      x\cdot sin(\theta) + y\cdot cos(\theta)\;\; z\;\; 1\right]
-$$
-
-No caso, o ângulo $\theta$ é medido em radianos. Então devemos
-converter o ângulo em graus que o Metafont usa. Rotacionar uma caneta
-então envolve fazer essa conversão, somar o valor da rotação com o que
-já está armazenado na variável \monoespaco{rotation} dentro da
-variável de caneta e multiplicar a sua matriz de
-transformação. Rotacionar uma caneta nunca requer que tenhamos que
-retriangular ela.
+Primeiro cuidaremos da rotação em um ângulo $\theta$. Primeiro fazemos
+a conversão entre o ângulo medido em graus que o WeaveFONT usa e a
+medida em radianos esperada pela biblioteca padrão C. Rotacionar
+significa aplicar a transformação de rotação sobre a matriz de
+transformação da caneta:
 
 \iniciocodigo
 @<Secundário de Caneta: Rotação@>=
 struct numeric_variable r;
-float temp_matrix[16];
-double rotation, cos_theta, sin_theta;
+double rotation;
 if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &r))
   return false;
 rotation = 0.017453292519943295 * r.value;
-sin_theta = sin(rotation);
-cos_theta = cos(rotation);
-memcpy(temp_matrix, pen -> gl_matrix, 16 * sizeof(float));
-pen -> gl_matrix[0] = temp_matrix[0] * cos_theta - temp_matrix[1] * sin_theta;
-pen -> gl_matrix[1] = temp_matrix[0] * sin_theta + temp_matrix[1] * cos_theta;
-pen -> gl_matrix[4] = temp_matrix[4] * cos_theta - temp_matrix[5] * sin_theta;
-pen -> gl_matrix[5] = temp_matrix[4] * sin_theta + temp_matrix[5] * cos_theta;
-pen -> gl_matrix[8] = temp_matrix[8] * cos_theta - temp_matrix[9] * sin_theta;
-pen -> gl_matrix[9] = temp_matrix[8] * sin_theta + temp_matrix[9] * cos_theta;
-pen -> gl_matrix[12] = temp_matrix[12] * cos_theta - temp_matrix[13] * sin_theta;
-pen -> gl_matrix[13] = temp_matrix[12] * sin_theta + temp_matrix[13] * cos_theta;
+TRANSFORM_ROTATE(pen -> gl_matrix, rotation);
 return true;
 @
 \fimcodigo
 
-Para fazer a operação de escala, devemos também usar a seguinte matriz
-que irá ampliar a posição de cada um dos pontos:
-
-$$\left[x\; y\; z\; 1\right]\left[{{a \atop 0}\atop {0\atop
-      0}}{{0 \atop a}\atop {0 \atop 0}}{{0\atop 0}\atop{1 \atop
-      0}}{{0 \atop 0}\atop{0\atop 1}}\right]=\left[ax \;\; ay\;\;
-      z\;\; 1\right]
-$$
-
-Então, para aumentar ou diminuir a escala de uma caneta, devemos
-multiplicar a matriz de transformação OpenGL pela matriz
-acima.
+Para fazer a operação de escala também aplicamos tal transformação
+sobre a matriz da caneta:
 
 \iniciocodigo
 @<Secundário de Caneta: Escala@>=
 struct numeric_variable a;
-float temp_matrix[16];
 if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &a))
   return false;
-memcpy(temp_matrix, pen -> gl_matrix, 16 * sizeof(float));
-pen -> gl_matrix[0] = temp_matrix[0] * a.value;
-pen -> gl_matrix[1] = temp_matrix[1] * a.value;
-pen -> gl_matrix[4] = temp_matrix[4] * a.value;
-pen -> gl_matrix[5] = temp_matrix[5] * a.value;
-pen -> gl_matrix[8] = temp_matrix[8] * a.value;
-pen -> gl_matrix[9] = temp_matrix[9] * a.value;
-pen -> gl_matrix[12] = temp_matrix[12] * a.value;
-pen -> gl_matrix[13] = temp_matrix[13] * a.value;
+TRANSFORM_SCALE(pen -> gl_matrix, a.value);
 return true;
 @
 \fimcodigo
 
-A transformação de deslocamento desloca cada um dos pontos de uma
-caneta uma dada posição. Ela nunca requer que a caneta tenha que ser
-retriangulada. Fazer o deslocamento de um ponto requer multiplicá-lo
-por uma matriz como a abaixo:
-
-$$\left[x\; y\; z\; 1\right]\left[{{1 \atop 0}\atop {0\atop
-      a}}{{0 \atop 1}\atop {0 \atop b}}{{0\atop 0}\atop{1 \atop
-      0}}{{0 \atop 0}\atop{0\atop 1}}\right]=\left[x+a \;\; y+b\;\;
-      z\;\; 1\right]
-$$
-
-Desta forma, realizar um deslocamento significa apenas multiplicar a
-matriz acima pela matriz de transformação da caneta:
+A transformação de deslocamento que desloca a caneta na horizontal e
+vertical é tratada abaixo:
 
 \iniciocodigo
 @<Secundário de Caneta: Deslocamento@>=
 struct pair_variable p;
-float temp_matrix[16];
 if(!eval_pair_primary(mf, cx, last_transformer -> next, end_expression, &p))
   return false;
-memcpy(temp_matrix, pen  -> gl_matrix, 16 * sizeof(float));
-pen -> gl_matrix[0] = temp_matrix[0] + temp_matrix[3] * p.x;
-pen -> gl_matrix[1] = temp_matrix[1] + temp_matrix[3] * p.y;
-pen -> gl_matrix[4] = temp_matrix[4] + temp_matrix[7] * p.x;
-pen -> gl_matrix[5] = temp_matrix[5] + temp_matrix[7] * p.y;
-pen -> gl_matrix[8] = temp_matrix[8] + temp_matrix[11] * p.x;
-pen -> gl_matrix[9] = temp_matrix[8] + temp_matrix[11] * p.y;
-pen -> gl_matrix[12] = temp_matrix[12] + temp_matrix[15] * p.x;
-pen -> gl_matrix[13] = temp_matrix[12] + temp_matrix[15] * p.y;
+TRANSFORM_SHIFT(pen -> gl_matrix, p.x, p.y);
 return true;
 @
 \fimcodigo
 
-O próximo transformador é a inclinação. Ela muda as proporções de uma
-caneta, então requer que nós refaçamos a triangulação caso tenhamos
-uma caneta que não é composta só por linhas retas. Inclinar significa
-multiplicar pela seguinte matriz:
-
-$$\left[x\; y\; z\; 1\right]\left[{{1 \atop a}\atop {0\atop
-      0}}{{0 \atop 1}\atop {0 \atop 1}}{{0\atop 0}\atop{1 \atop
-      0}}{{0 \atop 0}\atop{0\atop 1}}\right]=\left[x+ay \;\; y\;\;
-      z\;\; 1\right]
-$$
-
-Então devemos tratar uma inclinação como a multiplicação da matriz de
-transformação OpenGL pela matriz acima:
+O próximo transformador é a inclinação. 
 
 \iniciocodigo
 @<Secundário de Caneta: Inclinação@>=
 struct numeric_variable a;
-float temp_matrix[16];
 if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &a))
   return false;
-memcpy(temp_matrix, pen -> gl_matrix, 16 * sizeof(float));
-pen -> gl_matrix[0] = temp_matrix[0] + a.value * temp_matrix[1];
-pen -> gl_matrix[4] = temp_matrix[4] + a.value * temp_matrix[5];
-pen -> gl_matrix[8] = temp_matrix[8] + a.value * temp_matrix[9];
-pen -> gl_matrix[12] = temp_matrix[12] + a.value  * temp_matrix[13];
+TRANSFORM_SLANT(pen -> gl_matrix, a.value);
 return true;
 @
 \fimcodigo
 
 A transformação de escala no eixo $x$ é igual à transformação de
-escala, mas ajustando para o valor de 1 a transformação no eixo
-$y$. Desta forma, a caneta é esticada ou comprimida somente no eixo
+escala, mas a caneta é esticada ou comprimida somente no eixo
 horizontal:
-
-$$\left[x\; y\; z\; 1\right]\left[{{a \atop 0}\atop {0\atop
-      0}}{{0 \atop 1}\atop {0 \atop 0}}{{0\atop 0}\atop{1 \atop
-      0}}{{0 \atop 0}\atop{0\atop 1}}\right]=\left[ax \;\; y\;\;
-      z\;\; 1\right]
-$$
-
-Multiplicar a matriz de transformação pela matriz acima é feita no
-código abaixo:
 
 \iniciocodigo
 @<Secundário de Caneta: X-Escala@>=
 struct numeric_variable a;
-float temp_matrix[16];
 if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &a))
   return false;
-memcpy(temp_matrix, pen -> gl_matrix, 16 * sizeof(float));
-pen -> gl_matrix[0] = temp_matrix[0] * a.value;
-pen -> gl_matrix[4] = temp_matrix[4] * a.value;
-pen -> gl_matrix[8] = temp_matrix[8] * a.value;
-pen -> gl_matrix[12] = temp_matrix[12] * a.value;
+TRANSFORM_SCALE_X(pen -> gl_matrix, a.value);
 return true;
 @
 \fimcodigo
 
-Da mesma forma, mudar a escala somente no eixo $y$ é feito
-multiplicando pela matriz:
-
-$$\left[x\; y\; z\; 1\right]\left[{{1 \atop 0}\atop {0\atop
-      0}}{{0 \atop a}\atop {0 \atop 0}}{{0\atop 0}\atop{1 \atop
-      0}}{{0 \atop 0}\atop{0\atop 1}}\right]=\left[x \;\; ay\;\;
-      z\;\; 1\right]
-$$
-
-E isso é feito no código abaixo:
+Da mesma forma, mudar a escala somente no eixo $y$ é feito no código
+abaixo:
 
 \iniciocodigo
 @<Secundário de Caneta: Y-Escala@>=
 struct numeric_variable a;
-float temp_matrix[16];
 if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &a))
   return false;
-memcpy(temp_matrix, pen -> gl_matrix, 16 * sizeof(float));
-pen -> gl_matrix[1] = temp_matrix[1] * a.value;
-pen -> gl_matrix[5] = temp_matrix[5] * a.value;
-pen -> gl_matrix[9] = temp_matrix[9] * a.value;
-pen -> gl_matrix[13] = temp_matrix[13] * a.value;
+TRANSFORM_SCALE_Y(pen -> gl_matrix, a.value);
 return true;
 @
 \fimcodigo
@@ -9425,72 +9284,30 @@ $$
 (x+yi)(a+bi) = ax + (bx)i + (ay)i + (by)i^2 = (ax - by) + (bx+ay)i
 $$
 
-Do ponto de vista de multiplicação de vetor por matriz, o que ocorre é
-a seguinte multiplicação:
-
-$$\left[x\; y\; z\; 1\right]\left[{{a \atop -b}\atop {0\atop
-      0}}{{b \atop a}\atop {0 \atop 0}}{{0\atop 0}\atop{1 \atop
-      0}}{{0 \atop 0}\atop{0\atop 1}}\right]=\left[ax-by \;\; bx+ay\;\;
-      z\;\; 1\right]
-$$
-
-Podemos então realizar a multiplicação de matrizes usando o código
-abaixo:
+Podemos então realizar a operação acima usando o código abaixo:
 
 \iniciocodigo
 @<Secundário de Caneta: Z-Escala@>=
 struct pair_variable p;
-float temp_matrix[16];
 if(!eval_pair_primary(mf, cx, last_transformer -> next, end_expression, &p))
   return false;
-memcpy(temp_matrix, pen -> gl_matrix, 16 * sizeof(float));
-pen -> gl_matrix[0] = temp_matrix[0] * p.x - temp_matrix[1] * p.y;
-pen -> gl_matrix[1] = temp_matrix[0] * p.y + temp_matrix[1] * p.x;
-pen -> gl_matrix[4] = temp_matrix[4] * p.x - temp_matrix[5] * p.y;
-pen -> gl_matrix[5] = temp_matrix[4] * p.y + temp_matrix[5] * p.x;
-pen -> gl_matrix[8] = temp_matrix[8] * p.x - temp_matrix[9] * p.y;
-pen -> gl_matrix[9] = temp_matrix[8] * p.y + temp_matrix[9] * p.x;
-pen -> gl_matrix[12] = temp_matrix[12] * p.x - temp_matrix[13] * p.y;
-pen -> gl_matrix[13] = temp_matrix[12] * p.y + temp_matrix[13] * p.x;
+TRANSFORM_SCALE_Z(pen -> gl_matrix, p.x, p.y);
 return true;
 @
 \fimcodigo
 
-Por fim, a última transformação envolve aplicar a transformação linear
-$(a, b, c, d, e, f)$, o que é o mesmo que multiplicar o ponto $(x, y,
-z, 1)$ por:
-
-$$\left[x\; y\; z\; 1\right]\left[{{c \atop d}\atop {0\atop
-      a}}{{e \atop f}\atop {0 \atop b}}{{0\atop 0}\atop{1 \atop
-      0}}{{0 \atop 0}\atop{0\atop 1}}\right]=\left[a+cx+dy \;\; b+ex+fy\;\;
-      z\;\; 1\right]
-$$
-
-Fazemos esta transformação com o código abaixo:
+Por fim, a última transformação é a genérica que envolve aplicar a
+transformação linear que está armazenada em um transformador:
 
 \iniciocodigo
 @<Secundário de Caneta: Transformação Genérica@>=
 struct transform_variable t;
-float temp_matrix[16];
 if(!eval_transform_primary(mf, cx, last_transformer -> next, end_expression, &t))
   return false;
-memcpy(temp_matrix, pen -> gl_matrix, 16 * sizeof(float));
-pen -> gl_matrix[0] = temp_matrix[0] * t.value[2] + temp_matrix[1] * t.value[3] +
-                      temp_matrix[3] * t.value[0];
-pen -> gl_matrix[1] = temp_matrix[0] * t.value[4] + temp_matrix[1] * t.value[5] +
-                      temp_matrix[3] * t.value[1];
-pen -> gl_matrix[4] = temp_matrix[4] * t.value[2] + temp_matrix[5] * t.value[3] +
-                      temp_matrix[7] * t.value[0];
-pen -> gl_matrix[5] = temp_matrix[4] * t.value[4] + temp_matrix[5] * t.value[5] +
-                      temp_matrix[7] * t.value[1];
-pen -> gl_matrix[12] = temp_matrix[12] * t.value[2] + temp_matrix[13] * t.value[3] +
-                      temp_matrix[15] * t.value[0];
-pen -> gl_matrix[13] = temp_matrix[12] * t.value[4] + temp_matrix[13] * t.value[5] +
-                       temp_matrix[15] * t.value[1];
+MATRIX_MULTIPLICATION(pen -> gl_matrix, t.value);
 return true;
 @
 \fimcodigo
-
 
 \subsubsecao{8.5.3. Expressões Primárias de Caneta}
 
@@ -9600,24 +9417,8 @@ memcpy(result, to_copy, sizeof(struct pen_variable));
 if(to_copy -> format != NULL)
   recursive_copy_points(temporary_alloc, &(result -> format),
                         to_copy -> format, true);
-if(to_copy != content){
-  float tmp[16];
-  memcpy(tmp, result -> gl_matrix, 16 * sizeof(float));
-  result -> gl_matrix[0] = result -> gl_matrix[0] * tmp[0] +
-                           result -> gl_matrix[1] * tmp[4];
-  result -> gl_matrix[1] = result -> gl_matrix[0] * tmp[1] +
-                           result -> gl_matrix[1] * tmp[5];
-  result -> gl_matrix[4] = result -> gl_matrix[4] * tmp[0] +
-                           result -> gl_matrix[5] * tmp[4];
-  result -> gl_matrix[5] = result -> gl_matrix[4] * tmp[1] +
-                           result -> gl_matrix[5] * tmp[5];
-  result -> gl_matrix[12] = result -> gl_matrix[12] * tmp[0] +
-                           result -> gl_matrix[13] * tmp[4] +
-                           tmp[12];
-  result -> gl_matrix[13] = result -> gl_matrix[12] * tmp[1] +
-                           result -> gl_matrix[13] * tmp[5] +
-                           tmp[13];
-}
+if(to_copy != content)
+  MATRIX_MULTIPLICATION(result -> gl_matrix, content -> gl_matrix);
 return true;
 @
 \fimcodigo
@@ -9987,27 +9788,17 @@ lineares que estiverem registradas na matriz de transformação OpenGL:
 {
   int i;
   for(i = 0; i < result -> length; i ++){
-    float old_x = result -> points[i].x;
-    result -> points[i].x = result -> points[i].x * tmp.gl_matrix[0] +
-                            result -> points[i].y * tmp.gl_matrix[4] +
-                            tmp.gl_matrix[12];
-    result -> points[i].y = old_x * tmp.gl_matrix[1] +
-                            result -> points[i].y * tmp.gl_matrix[5] +
-                            tmp.gl_matrix[13];
-    old_x = result -> points[i].u_x;
-    result -> points[i].u_x = result -> points[i].u_x * tmp.gl_matrix[0] +
-                              result -> points[i].u_y * tmp.gl_matrix[4] +
-                              tmp.gl_matrix[12];
-    result -> points[i].u_y = old_x * tmp.gl_matrix[1] +
-                              result -> points[i].u_y * tmp.gl_matrix[5] +
-                              tmp.gl_matrix[13];
-    old_x = result -> points[i].v_x;
-    result -> points[i].v_x = result -> points[i].v_x * tmp.gl_matrix[0] +
-                              result -> points[i].v_y * tmp.gl_matrix[4] +
-                              tmp.gl_matrix[12];
-    result -> points[i].v_y = old_x * tmp.gl_matrix[1] +
-                              result -> points[i].v_y * tmp.gl_matrix[5] +
-                              tmp.gl_matrix[13];
+    float x0 = result -> points[i].x, y0 = result -> points[i].y;
+    result -> points[i].x = LINEAR_TRANSFORM_X(x0, y0, tmp.gl_matrix);
+    result -> points[i].y = LINEAR_TRANSFORM_Y(x0, y0, tmp.gl_matrix);
+    x0 = result -> points[i].u_x;
+    y0 = result -> points[i].u_y;
+    result -> points[i].u_x = LINEAR_TRANSFORM_X(x0, y0, tmp.gl_matrix);
+    result -> points[i].u_y = LINEAR_TRANSFORM_Y(x0, y0, tmp.gl_matrix);
+    x0 = result -> points[i].v_x;
+    y0 = result -> points[i].v_y;
+    result -> points[i].v_x = LINEAR_TRANSFORM_X(x0, y0, tmp.gl_matrix);
+    result -> points[i].v_y = LINEAR_TRANSFORM_Y(x0, y0, tmp.gl_matrix);
   }
 }
 @
