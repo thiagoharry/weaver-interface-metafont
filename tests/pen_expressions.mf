@@ -7,7 +7,7 @@ pen p5, p6, p7, p8;
 path p9, p10, p11, p12;
 pen p13;
 path p13_path;
-pen p14;
+pen p14, p15, p16, p17, p18, p19;
 
 p1 = pensquare;
 p2 = nullpen;
@@ -38,5 +38,10 @@ p12 = makepath p6;
 p13 = p1 rotated 30;
 p13_path = makepath p13;
 p14 = p1 transformed (3, 4, 5, 6, 7, 8);
+p15 = p1 shifted (1, 2);
+p16 = p1 shifted (1, 2) scaled 0.5;
+p17 = p1 shifted (1, 2) scaled 0.5 xscaled 3;
+p18 = p1 shifted (1, 2) scaled 0.5 xscaled 3 yscaled 4;
+p19 = p1 shifted (1, 2) scaled 0.5 xscaled 3 yscaled 4 slanted 0.1;
 
 end

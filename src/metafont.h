@@ -19,61 +19,61 @@ extern"C"{
 
 
 /*56:*/
-#line 1285 "weaver-interface-metafont_en.tex"
+#line 1286 "weaver-interface-metafont_en.tex"
 
 struct context{
 /*69:*/
-#line 1584 "weaver-interface-metafont_en.tex"
+#line 1585 "weaver-interface-metafont_en.tex"
 
 int nesting_level;
 struct generic_token*end_token_stack;
 /*:69*//*85:*/
-#line 1919 "weaver-interface-metafont_en.tex"
+#line 1920 "weaver-interface-metafont_en.tex"
 
 void*variables;
 /*:85*/
-#line 1287 "weaver-interface-metafont_en.tex"
+#line 1288 "weaver-interface-metafont_en.tex"
 
 };
 /*:56*//*57:*/
-#line 1299 "weaver-interface-metafont_en.tex"
+#line 1300 "weaver-interface-metafont_en.tex"
 
 struct metafont{
 char*file;
 void*(*alloc)(size_t);
 void(*free)(void*);
 /*81:*/
-#line 1857 "weaver-interface-metafont_en.tex"
+#line 1858 "weaver-interface-metafont_en.tex"
 
 void*named_variables;
 void*global_variables;
 /*:81*//*99:*/
-#line 2250 "weaver-interface-metafont_en.tex"
+#line 2251 "weaver-interface-metafont_en.tex"
 
 void*internal_numeric_variables;
 /*:99*//*108:*/
-#line 2409 "weaver-interface-metafont_en.tex"
+#line 2410 "weaver-interface-metafont_en.tex"
 
 struct transform_variable*internal_transform_variables;
 /*:108*//*123:*/
-#line 2772 "weaver-interface-metafont_en.tex"
+#line 2773 "weaver-interface-metafont_en.tex"
 
 struct pen_variable*internal_pen_variables;
 /*:123*//*133:*/
-#line 2934 "weaver-interface-metafont_en.tex"
+#line 2935 "weaver-interface-metafont_en.tex"
 
 struct picture_variable*internal_picture_variables;
 /*:133*//*180:*/
-#line 4098 "weaver-interface-metafont_en.tex"
+#line 4099 "weaver-interface-metafont_en.tex"
 
 bool have_stored_normaldeviate;
 float normaldeviate;
 /*:180*//*499:*/
-#line 13462 "weaver-interface-metafont_en.tex"
+#line 13334 "weaver-interface-metafont_en.tex"
 
 int current_depth;
 /*:499*/
-#line 1304 "weaver-interface-metafont_en.tex"
+#line 1305 "weaver-interface-metafont_en.tex"
 
 };
 /*:57*/
