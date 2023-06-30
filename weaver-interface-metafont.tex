@@ -12913,14 +12913,14 @@ if((pen -> flags & FLAG_CIRCULAR)){
   { // Medindo resolução necessária de triangulação
     float x1, y1, x2, y2, x4, y4, side1, side2;
     // (x1, y1) = (-0.5, -0.5)
-    x1 = -0.5 * transform_matrix[0] - 0.5 * transform_matrix[4];
-    y1 = -0.5 * transform_matrix[1] - 0.5 * transform_matrix[5];
+    x1 = LINEAR_TRANSFORM_X(-0.5, -0.5, transform_matrix);
+    y1 = LINEAR_TRANSFORM_Y(-0.5, -0.5, transform_matrix);
     // (x2, y2) = (-0.5, 0.5)
-    x2 = -0.5 * transform_matrix[0] + 0.5 * transform_matrix[4];
-    y2 = -0.5 * transform_matrix[1] + 0.5 * transform_matrix[5];
+    x2 = LINEAR_TRANSFORM_X(-0.5, 0.5, transform_matrix);
+    y2 = LINEAR_TRANSFORM_Y(-0.5, 0.5, transform_matrix);
     // (x4, y4) = (0.5, -0.5)
-    x4 = 0.5 * transform_matrix[0] - 0.5 * transform_matrix[4];
-    y4 = 0.5 * transform_matrix[1] - 0.5 * transform_matrix[5];
+    x4 = LINEAR_TRANSFORM_X(0.5, 0.5, transform_matrix);
+    y4 = LINEAR_TRANSFORM_Y(0.5, 0.5, transform_matrix);
     side1 = sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));
     side2 = sqrt((x4-x1)*(x4-x1)+(y4-y1)*(y4-y1));
     radius = ((side1 >= side2)?(side1):(side2))/ 2.0;
@@ -13018,43 +13018,41 @@ if((pen -> flags & FLAG_CONVEX)){
   bool counterclockwise = is_pen_counterclockwise(pen);
   int i, number_of_vertices = 1;
   for(i = 0; i < pen -> format -> length - 1; i ++){
-    int distance = 0, x1, y1, x2, y2;
+    int distance = 0, x0, y0, x1, y1, x2, y2;
     float dx, dy;
-    x1 =  pen -> format -> points[i].x * pen -> gl_matrix[0] +
-          pen -> format -> points[i].y * pen -> gl_matrix[4];
-    y1 =  pen -> format -> points[i].x * pen -> gl_matrix[1] +
-          pen -> format -> points[i].y * pen -> gl_matrix[5];
-    x2 =  pen -> format -> points[i].u_x * pen -> gl_matrix[0] +
-          pen -> format -> points[i].u_y * pen -> gl_matrix[4];
-    y2 =  pen -> format -> points[i].u_x * pen -> gl_matrix[1] +
-          pen -> format -> points[i].u_y * pen -> gl_matrix[5];
+    x0 = LINEAR_TRANSFORM_X(pen -> format -> points[i].x,
+                            pen -> format -> points[i].y, transform_matrix);
+    y0 = LINEAR_TRANSFORM_Y(pen -> format -> points[i].x,
+                            pen -> format -> points[i].y, transform_matrix);
+    x2 = LINEAR_TRANSFORM_X(pen -> format -> points[i].u_x,
+                            pen -> format -> points[i].u_y, transform_matrix);
+    y2 = LINEAR_TRANSFORM_Y(pen -> format -> points[i].u_x,
+                            pen -> format -> points[i].u_y, transform_matrix);
+    dx = x2 - x0;
+    dy = y2 - y0;
+    distance += (int) sqrt(dx * dx + dy * dy);
+    x1 = x2;
+    y1 = y2;
+    x2 = LINEAR_TRANSFORM_X(pen -> format -> points[i].v_x,
+                            pen -> format -> points[i].v_y, transform_matrix);
+    y2 = LINEAR_TRANSFORM_Y(pen -> format -> points[i].v_x,
+                            pen -> format -> points[i].v_y, transform_matrix);
     dx = x2 - x1;
     dy = y2 - y1;
     distance += (int) sqrt(dx * dx + dy * dy);
     x1 = x2;
     y1 = y2;
-    x2 =  pen -> format -> points[i].v_x * pen -> gl_matrix[0] +
-          pen -> format -> points[i].v_y * pen -> gl_matrix[4];
-    y2 =  pen -> format -> points[i].v_x * pen -> gl_matrix[1] +
-          pen -> format -> points[i].v_y * pen -> gl_matrix[5];
+    x2 = LINEAR_TRANSFORM_X(pen -> format -> points[i + 1].x,
+                            pen -> format -> points[i + 1].y,
+                            transform_matrix);
+    y2 = LINEAR_TRANSFORM_Y(pen -> format -> points[i + 1].x,
+                            pen -> format -> points[i + 1].y,
+                            transform_matrix);
     dx = x2 - x1;
     dy = y2 - y1;
     distance += (int) sqrt(dx * dx + dy * dy);
-    x1 = x2;
-    y1 = y2;
-    x2 =  pen -> format -> points[i + 1].x * pen -> gl_matrix[0] +
-          pen -> format -> points[i + 1].y * pen -> gl_matrix[4];
-    y2 =  pen -> format -> points[i + 1].x * pen -> gl_matrix[1] +
-          pen -> format -> points[i + 1].y * pen -> gl_matrix[5];
-    dx = x2 - x1;
-    dy = y2 - y1;
-    distance += (int) sqrt(dx * dx + dy * dy);
-    x1 =  pen -> format -> points[i].x * pen -> gl_matrix[0] +
-          pen -> format -> points[i].y * pen -> gl_matrix[4];
-    y1 =  pen -> format -> points[i].x * pen -> gl_matrix[1] +
-          pen -> format -> points[i].y * pen -> gl_matrix[5];
-    dx = x2 - x1;
-    dy = y2 - y1;
+    dx = x2 - x0;
+    dy = y2 - y0;
     if(distance == (int) sqrt(dx * dx + dy * dy))
       number_of_vertices ++; // Linha reta
     else
@@ -13087,7 +13085,7 @@ if((pen -> flags & FLAG_CONVEX)){
     CHECK_PEN_EXTREMITIES(data[0], data[1], pen -> gl_matrix);
     v = 2;
     for(i = 0; i < pen -> format -> length - 1; i ++){
-      float b_x, b_y, c_x, c_y, dx, dy, x1, x2, y1, y2;
+      float b_x, b_y, c_x, c_y, dx, dy, x0, y0, x1, x2, y1, y2;
       int distance = 0;
       if(counterclockwise){
         p1 = &(pen -> format -> points[1 + i]);
@@ -13103,31 +13101,29 @@ if((pen -> flags & FLAG_CONVEX)){
         c_x = p1 -> u_x;
         c_y = p1 -> u_y;
       }
-      x1 =  p0 -> x * pen -> gl_matrix[0] + p0 -> y * pen -> gl_matrix[4];
-      y1 =  p0 -> x * pen -> gl_matrix[1] + p0 -> y * pen -> gl_matrix[5];
-      x2 =  b_x * pen -> gl_matrix[0] + b_y * pen -> gl_matrix[4];
-      y2 =  b_x * pen -> gl_matrix[1] + b_y * pen -> gl_matrix[5];
+      x0 = LINEAR_TRANSFORM_X(p0 -> x, p0 -> y, transform_matrix);
+      y0 = LINEAR_TRANSFORM_Y(p0 -> x, p0 -> y, transform_matrix);
+      x2 = LINEAR_TRANSFORM_X(b_x, b_y, transform_matrix);
+      y2 = LINEAR_TRANSFORM_Y(b_x, b_y, transform_matrix);
+      dx = x2 - x0;
+      dy = y2 - y0;
+      distance += (int) sqrt(dx * dx + dy * dy);
+      x1 = x2;
+      y1 = y2;
+      x2 = LINEAR_TRANSFORM_X(c_x, c_y, transform_matrix);
+      y2 = LINEAR_TRANSFORM_Y(c_x, c_y, transform_matrix);
       dx = x2 - x1;
       dy = y2 - y1;
       distance += (int) sqrt(dx * dx + dy * dy);
       x1 = x2;
       y1 = y2;
-      x2 =  c_x * pen -> gl_matrix[0] + c_y * pen -> gl_matrix[4];
-      y2 =  c_x * pen -> gl_matrix[1] + c_y * pen -> gl_matrix[5];
+      x2 = LINEAR_TRANSFORM_X(p1 -> x, p1 -> y, transform_matrix);
+      y2 = LINEAR_TRANSFORM_Y(p1 -> x, p1 -> y, transform_matrix);
       dx = x2 - x1;
       dy = y2 - y1;
       distance += (int) sqrt(dx * dx + dy * dy);
-      x1 = x2;
-      y1 = y2;
-      x2 =  p1 -> x * pen -> gl_matrix[0] + p1 -> y * pen -> gl_matrix[4];
-      y2 =  p1 -> x * pen -> gl_matrix[1] + p1 -> y * pen -> gl_matrix[5];
-      dx = x2 - x1;
-      dy = y2 - y1;
-      distance += (int) sqrt(dx * dx + dy * dy);
-      x1 =  p0 -> x * pen -> gl_matrix[0] + p0 -> y * pen -> gl_matrix[4];
-      y1 =  p0 -> x * pen -> gl_matrix[1] + p0 -> y * pen -> gl_matrix[5];
-      dx = x2 - x1;
-      dy = y2 - y1;
+      dx = x2 - x0;
+      dy = y2 - y0;
       if(distance == (int) sqrt(dx * dx + dy * dy)){
         data[v++] = p1 -> x;
         data[v++] = p1 -> y;
@@ -13142,7 +13138,7 @@ if((pen -> flags & FLAG_CONVEX)){
                       3*(1-t)*t*t * c_x + t * t * t * p1 -> x;
           data[v++] = (1-t)*(1-t)*(1-t)* p0 -> y + 3*(1-t)*(1-t)*t * b_y +
                       3*(1-t)*t*t * c_y + t * t * t * p1 -> y;
-          CHECK_PEN_EXTREMITIES(data[v-2], data[v-1], pen -> gl_matrix);
+          CHECK_PEN_EXTREMITIES(data[v-2], data[v-1], transform_matrix);
         }
       }
       p0 = p1;
@@ -13175,6 +13171,65 @@ return false;
 @
 \fimcodigo
 
+\subsecao{10.2. Lendo o Comando 'pickup'}
+
+Agora vamos ao que efetivamente ocorre quando lemos o
+comando \monoespaco{pickup}.
+
+1) Primeiro lemos o próximo token. Se for \monoespaco{nullpen},
+fazemos com que \monoespaco{currentpen} se torne uma caneta nula. Se
+for uma variável de caneta, fazemos com que ela aponte para essa
+variável. Em ambos os casos, reiniciamos a matriz de transformação
+de \monoespaco{currentpen} para a de uma identidade. Nos demais casos,
+ou se a variável não estiver inicializada, nós retornamos um erro.
+
+\iniciocodigo
+@<Declaração: Comando@>=
+else if(((struct generic_token *) begin_token_list) -> type == TYPE_PICKUP){
+  struct generic_token *next_token =
+                           ((struct generic_token *) begin_token_list) -> next;
+  if(begin_token_list == end_token_list ||
+     (next_token -> type != TYPE_NULLPEN &&
+      next_token -> type != TYPE_SYMBOLIC)){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Expected 'nullpen' or pen "
+                    "variable after 'pickup'. Not an arbitrary "
+                    "expression.\n",
+            mf -> file, begin_expression -> line);
+#endif
+    return false;
+  }
+  if(next_token -> type != TYPE_NULLPEN){
+    mf -> internal_pen_variables[0].flags = FLAG_NULL;
+    mf -> internal_pen_variables[0].referenced = NULL;
+    if(mf -> internal_pen_variables[0].gl_vbo != 0)
+      glDeleteBuffers(1, &(mf -> internal_pen_variables[0].gl_vbo));
+    mf -> internal_pen_variables[0].gl_vbo = 0;
+  }
+  else{
+    struct pen_variable *var = ((struct symbolic_token *) next_token) -> var;
+    if(var == NULL){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: Non-initialized variable after "
+                      "after 'pickup' command.\n",
+              mf -> file, begin_expression -> line);
+#endif
+      return false;
+    }
+    if(var -> type != TYPE_T_PEN){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: Variable '%s' is not a "
+                      "pen variable.\n",
+              mf -> file, begin_expression -> line, next_token -> value);
+#endif
+      return false;
+    }
+    mf -> internal_pen_variables[0].referenced = var;
+  }
+  INITIALIZE_IDENTITY_MATRIX(mf -> internal_pen_variables[0].gl_matrix);
+}
+@
+\fimcodigo
 
 \secao{11. O Comando \monoespaco{draw} e \monoespaco{erase}}
 
