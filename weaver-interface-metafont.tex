@@ -13186,6 +13186,7 @@ ou se a variável não estiver inicializada, nós retornamos um erro.
 \iniciocodigo
 @<Declaração: Comando@>=
 else if(((struct generic_token *) begin_token_list) -> type == TYPE_PICKUP){
+  struct generic_token *end_expression = *end_token_list;
   struct generic_token *next_token =
                            ((struct generic_token *) begin_token_list) -> next;
   if(begin_token_list == end_token_list ||
@@ -13227,6 +13228,104 @@ else if(((struct generic_token *) begin_token_list) -> type == TYPE_PICKUP){
     mf -> internal_pen_variables[0].referenced = var;
   }
   INITIALIZE_IDENTITY_MATRIX(mf -> internal_pen_variables[0].gl_matrix);
+  @<Comando 'pickup': Continuação@>
+}
+@
+\fimcodigo
+
+Depois de saber a forma base da caneta, é hora de ler as
+transformações lineares específicas que vamos aplicar
+à \monoespaco{currentpen}. Enquanto não estivermos no fim da expressão
+a ser interpretada, lemos o próximo token. Ele indicará qual
+transformação linear devemos aplicar à matriz de transformação
+de \monoespaco{nullpen}. Baseado nele, lemos uma expressão numérica,
+de par ou de transformação que descreve a transformação em
+questão. Fazemos isso até chegar ao fim da expressão, quando não
+houver mais transformações a serem feitas.
+
+\iniciocodigo
+@<Comando 'pickup': Continuação@>=
+while(next_token != end_expression){
+  struct generic_token *begin_subexpr, *end_subexpr;
+  DECLARE_NESTING_CONTROL();
+  next_token = next_token -> next;
+  if(next_token == NULL || next_token == end_expression){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable 'pickup' "
+                      "command format.\n",
+              mf -> file, begin_expression -> line);
+#endif
+    return false;
+  }
+  begin_subexpr = next_token -> next;
+  end_subexpr = begin_subexpr;
+  while(end_subexpr != end_expression){
+    struct generic_token *next = end_subexpr -> next;
+    COUNT_NESTING(end_subexpr);
+    if(IS_NOT_NESTED() &&
+       (next -> type == TYPE_ROTATED || next -> type == TYPE_SCALED ||
+        next -> type == TYPE_SHIFTED || next -> type == TYPE_SLANTED ||
+        next -> type == TYPE_XSCALED || next -> type == TYPE_YSCALED ||
+        next -> type == TYPE_ZSCALED || next -> type == TYPE_TRANSFORMED))
+      break;
+    end_subexpr = next;
+  }
+  switch(next_token -> type){
+    struct numeric_variable a;
+    struct pair_variable p;
+    struct transform_variable t;
+  case TYPE_ROTATED:
+    if(!eval_numeric_expression(mf, cx, begin_subexpr, end_subexpr, &a))
+      return false;
+    TRANSFORM_ROTATE(mf -> internal_pen_variables[0].gl_matrix, a.value);
+    break;
+  case TYPE_SCALED:
+    if(!eval_numeric_expression(mf, cx, begin_subexpr, end_subexpr, &a))
+      return false;
+    TRANSFORM_SCALE(mf -> internal_pen_variables[0].gl_matrix, a.value);
+    break;
+  case TYPE_SHIFTED:
+    if(!eval_pair_expression(mf, cx, begin_subexpr, end_subexpr, &p))
+      return false;
+    TRANSFORM_SHIFT(mf -> internal_pen_variables[0].gl_matrix, p.x, p.y);
+    break;
+  case TYPE_SLANTED:
+    if(!eval_numeric_expression(mf, cx, begin_subexpr, end_subexpr, &a))
+      return false;
+    TRANSFORM_SLANT(mf -> internal_pen_variables[0].gl_matrix, a.value);
+    break;
+  case TYPE_XSCALED:
+    if(!eval_numeric_expression(mf, cx, begin_subexpr, end_subexpr, &a))
+      return false;
+    TRANSFORM_SCALE_X(mf -> internal_pen_variables[0].gl_matrix, a.value);
+    break;
+  case TYPE_YSCALED:
+    if(!eval_numeric_expression(mf, cx, begin_subexpr, end_subexpr, &a))
+      return false;
+    TRANSFORM_SCALE_Y(mf -> internal_pen_variables[0].gl_matrix, a.value);
+    break;
+  case TYPE_ZSCALED:
+    if(!eval_pair_expression(mf, cx, begin_subexpr, end_subexpr, &p))
+      return false;
+    TRANSFORM_SCALE_Z(mf -> internal_pen_variables[0].gl_matrix, p.x, p.y);
+    break;
+  case TYPE_TRANSFORMED:
+    if(!eval_transform_expression(mf, cx, begin_subexpr, end_subexpr, &t))
+      return false;
+    MATRIX_MULTIPLICATION(mf -> internal_pen_variables[0].gl_matrix, t.value);
+    break;
+  default:
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable 'pickup' "
+                    "command format.\n",
+            mf -> file, begin_expression -> line);
+#endif
+    return false;  
+  }
+  if(end_subexpr != end_expression)
+    next_token = end_subexpr -> next;
+  else
+    next_token = end_subexpr;
 }
 @
 \fimcodigo

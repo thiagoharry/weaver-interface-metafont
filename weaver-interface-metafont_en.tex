@@ -13010,6 +13010,7 @@ initialized, we return an error.
 \iniciocodigo
 @<Statement: Command@>=
 else if(((struct generic_token *) begin_token_list) -> type == TYPE_PICKUP){
+  struct generic_token *end_expression = *end_token_list;
   struct generic_token *next_token =
                            ((struct generic_token *) begin_token_list) -> next;
   if(begin_token_list == end_token_list ||
@@ -13051,10 +13052,107 @@ else if(((struct generic_token *) begin_token_list) -> type == TYPE_PICKUP){
     mf -> internal_pen_variables[0].referenced = var;
   }
   INITIALIZE_IDENTITY_MATRIX(mf -> internal_pen_variables[0].gl_matrix);
+  @<'pickup' Command: Continue@>
 }
 @
 \fimcodigo
 
+After gettting the pen basis form, now we read the linear transforms
+specific to be applied to the \monoespaco{currentpen}. While we are
+not in the end of the expression, we read the next token, which should
+describe a linear transform
+like \monoespaco{shifted}, \monoespaco{rotated} or something like
+this. Based in the transform, we read and evaluate the following
+tokens as a numeric, pair or transform expression. And finally perform
+the given transform in the \monoespaco{currentpen} matrix. We keep
+doing this until we find no more new transforms to be performed.
+
+\iniciocodigo
+@<'pickup' Command: Continue@>=
+while(next_token != end_expression){
+  struct generic_token *begin_subexpr, *end_subexpr;
+  DECLARE_NESTING_CONTROL();
+  next_token = next_token -> next;
+  if(next_token == NULL || next_token == end_expression){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable 'pickup' "
+                      "command format.\n",
+              mf -> file, begin_expression -> line);
+#endif
+    return false;
+  }
+  begin_subexpr = next_token -> next;
+  end_subexpr = begin_subexpr;
+  while(end_subexpr != end_expression){
+    struct generic_token *next = end_subexpr -> next;
+    COUNT_NESTING(end_subexpr);
+    if(IS_NOT_NESTED() &&
+       (next -> type == TYPE_ROTATED || next -> type == TYPE_SCALED ||
+        next -> type == TYPE_SHIFTED || next -> type == TYPE_SLANTED ||
+        next -> type == TYPE_XSCALED || next -> type == TYPE_YSCALED ||
+        next -> type == TYPE_ZSCALED || next -> type == TYPE_TRANSFORMED))
+      break;
+    end_subexpr = next;
+  }
+  switch(next_token -> type){
+    struct numeric_variable a;
+    struct pair_variable p;
+    struct transform_variable t;
+  case TYPE_ROTATED:
+    if(!eval_numeric_expression(mf, cx, begin_subexpr, end_subexpr, &a))
+      return false;
+    TRANSFORM_ROTATE(mf -> internal_pen_variables[0].gl_matrix, a.value);
+    break;
+  case TYPE_SCALED:
+    if(!eval_numeric_expression(mf, cx, begin_subexpr, end_subexpr, &a))
+      return false;
+    TRANSFORM_SCALE(mf -> internal_pen_variables[0].gl_matrix, a.value);
+    break;
+  case TYPE_SHIFTED:
+    if(!eval_pair_expression(mf, cx, begin_subexpr, end_subexpr, &p))
+      return false;
+    TRANSFORM_SHIFT(mf -> internal_pen_variables[0].gl_matrix, p.x, p.y);
+    break;
+  case TYPE_SLANTED:
+    if(!eval_numeric_expression(mf, cx, begin_subexpr, end_subexpr, &a))
+      return false;
+    TRANSFORM_SLANT(mf -> internal_pen_variables[0].gl_matrix, a.value);
+    break;
+  case TYPE_XSCALED:
+    if(!eval_numeric_expression(mf, cx, begin_subexpr, end_subexpr, &a))
+      return false;
+    TRANSFORM_SCALE_X(mf -> internal_pen_variables[0].gl_matrix, a.value);
+    break;
+  case TYPE_YSCALED:
+    if(!eval_numeric_expression(mf, cx, begin_subexpr, end_subexpr, &a))
+      return false;
+    TRANSFORM_SCALE_Y(mf -> internal_pen_variables[0].gl_matrix, a.value);
+    break;
+  case TYPE_ZSCALED:
+    if(!eval_pair_expression(mf, cx, begin_subexpr, end_subexpr, &p))
+      return false;
+    TRANSFORM_SCALE_Z(mf -> internal_pen_variables[0].gl_matrix, p.x, p.y);
+    break;
+  case TYPE_TRANSFORMED:
+    if(!eval_transform_expression(mf, cx, begin_subexpr, end_subexpr, &t))
+      return false;
+    MATRIX_MULTIPLICATION(mf -> internal_pen_variables[0].gl_matrix, t.value);
+    break;
+  default:
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable 'pickup' "
+                    "command format.\n",
+            mf -> file, begin_expression -> line);
+#endif
+    return false;  
+  }
+  if(end_subexpr != end_expression)
+    next_token = end_subexpr -> next;
+  else
+    next_token = end_subexpr;
+}
+@
+\fimcodigo
 
 \secao{11. The \monoespaco{draw} and \monoespaco{erase} Command}
 
