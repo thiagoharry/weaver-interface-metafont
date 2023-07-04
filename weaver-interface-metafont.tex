@@ -2672,9 +2672,6 @@ struct pen_variable{
   float gl_matrix[9]; // Matriz de transformação OpenGL
   // As variáveis abaixo serão manipuladas só na Seção 10.
   GLuint gl_vbo; // Os vértices OpenGL após triangulação
-  // Estas armazenam os pontos mais extremos do perímetro da caneta
-  // nos eixos x e y:
-  float pen_lft, pen_rt, pen_top, pen_bot;
   // Esta armazena o quão detalhada é a triangulação, necessária para
   // saber se devemos triangular novamente ou não em alguns casos:
   float triang_resolution; 
@@ -2765,15 +2762,11 @@ As demais variáveis serão usadas mais na Seção
 10. A \monoespaco{gl\_vbo} referenciará os vértices da caneta após ela
 ser triangulada para poder ser desenhada. Se a caneta não foi
 triangulada, seu valor será zero. Tais vértices, se existirem, estarão
-armazenados na memória da placa de vídeo. As
-variáveis \monoespaco{pen\_lft}, \monoespaco{pen\_rt}, \monoespaco{pen\_top}
-e
-\monoespaco{pen\_bot} armazenarão respectivamente a menor coordenada $x$, maior
-coordenada $x$, maior coordenada $y$ e menor coordenada $y$ de um
-ponto pertencente à caneta. Por fim, \monoespaco{triang\_resolution}
-será uma medida interna do quão detalhada é a triangulação. Ela
-ajudará a determinar se precisamos criar uma triangulação mais
-detalhada, ou se a que temos já é a suficiente.
+armazenados na memória da placa de vídeo. Por
+fim, \monoespaco{triang\_resolution} será uma medida interna do quão
+detalhada é a triangulação. Ela ajudará a determinar se precisamos
+criar uma triangulação mais detalhada, ou se a que temos já é a
+suficiente.
 
 Uma variável de caneta declarada, mas ainda não inicializada terá seu
 formato igual ao ponteiro nulo, será não-circular e como ela ainda não
@@ -12526,9 +12519,9 @@ comando \monoespaco{pickup} é dada por:
 
 \alinhaverbatim
 <Comando> -> <Comando 'pickup'>
-<Comando 'pickup'> -> pickup <Variável de Caneta ou 'nullpen'>
+<Comando 'pickup'> -> pickup <Variável de Caneta, 'nullpen' ou 'pencircle'>
                              <Transformadores Opcionais>
-<Variável de Caneta ou 'nullpen'> -> nullpen | <Variável de Caneta>
+<Variável de Caneta ou 'nullpen'> -> nullpen | pencircle | <Variável de Caneta>
 <Transformadores Opcionais> -> <Vazio> |
                                <Transformador> <Transformadores Opcionais>
 \alinhanormal
@@ -12549,18 +12542,39 @@ TYPE_PICKUP,   // O token simbólico 'pickup'
 
 O que este comando faz é armazenar um novo valor na
 variável \monoespaco{currentpen}, a qual usaremos para fazer desenhos
-(conforme definiremos na próxima Seção). Além disso, ela irá armazenar
-4 outros valores internamente. Dois deles para armazenar o menor e
-maior valor na coordenada $x$ que esta caneta gera ao ser renderizada
-e também o menor e maior valor na coordenada $y$. Armazenar tais
-valores será útil para que possamos ajustar melhor os pontos que vamos
-desenhar. Por exemplo, podemos querer desenhar com a caneta o mais
-próximo possível do canto inferior esquerdo da imagem, sem que a
-caneta saia para fora da imagem. Tal tipo de controle requer que
-saibamos o tamanho da caneta. Por isso cada caneta tem como variável
-interna os
+(conforme definiremos na próxima Seção).
+
+\subsecao{10.1. Pontos de Extremidade de Caneta}
+
+Uma coisa que devemos fazer ao recebermos uma caneta com o
+comando \monoespaco{pickup} é armazenar 4 valores internamente. Dois
+deles para armazenar o menor e maior valor na coordenada $x$ que esta
+caneta gera ao ser renderizada e também o menor e maior valor na
+coordenada $y$. Armazenar tais valores será útil para que possamos
+ajustar melhor os pontos que vamos desenhar. Por exemplo, podemos
+querer desenhar com a caneta o mais próximo possível do canto inferior
+esquerdo da imagem, sem que a caneta saia para fora da imagem. Tal
+tipo de controle requer que saibamos o tamanho da caneta. Por isso
+vamos ter que armazenar internamente os
 valores \monoespaco{pen\_lft}, \monoespaco{pen\_rt}, \monoespaco{pen\_top}
-e \monoespaco{pen\_bot}.
+e \monoespaco{pen\_bot}. Como estes valores são sempre referentes
+à \monoespaco{currentpen}, uma variável com escopo global, vamos
+armazenar ela no \monoespaco{struct metafont}:
+
+\iniciocodigo
+@<Atributos (struct metafont)@>+=
+float pen_lft, pen_rt, pen_top, pen_bot;
+@
+\fimcodigo
+
+Estes valores são inicializados como zero porque
+a \monoespaco{currentpen} começa como uma \monoespaco{nullpen}:
+
+\iniciocodigo
+@<Inicialização (struct metafont)@>+=
+mf -> pen_lft = mf -> pen_rt = mf -> pen_top = mf -> pen_bot = 0.0;
+@
+\fimcodigo
 
 Uma operação muito comum que faremos nesta Seção será, ao gerar novos
 vértices que irão compor o formato da caneta, verificar se geramos um
@@ -12596,6 +12610,14 @@ ou maiores pontos da caneta no eixo $x$ ou eixo $y$:
    if(_y < _min_y) _min_y = _y;\
    if(_y > _max_y) _max_y = _y;\
   }
+// Assume que a matriz de transformaçãoé identidade:
+#define CHECK_PEN_EXTREMITIES_I(x, y) {\
+   if(x < _min_x) _min_x = x;\
+   if(x > _max_x) _max_x = x;\
+   if(y < _min_y) _min_y = y;\
+   if(y > _max_y) _max_y = y;\
+  }
+
 @
 \fimcodigo
 
@@ -12604,14 +12626,291 @@ atualizar seus pontos de extremidade:
 
 \iniciocodigo
 @<Macros Locais (metafont.c)@>+=
-#define UPDATE_PEN_EXTREMITIES(pen) {\
-  pen -> pen_lft = _min_x;\
-  pen -> pen_rt = _max_x;\
-  pen -> pen_top = _max_y;\
-  pen -> pen_bot = _min_y;\
+#define UPDATE_PEN_EXTREMITIES() {\
+  mf -> pen_lft = _min_x;\
+  mf -> pen_rt = _max_x;\
+  mf -> pen_top = _max_y;\
+  mf -> pen_bot = _min_y;\
 }
 @
 \fimcodigo
+
+As macros anteriores presumem que iremos iterar sobre cada um dos
+pontos que compõe o perímetro de uma caneta. Fazendo isso, podemos
+chamar \monoespaco{CHECK\_PEN\_EXTREMITIES} em todos os pontos e assim
+obtemos os que forem maiores no eixo $x$ e $y$. Nos casos em que não
+queremos iterar sobre todos os pontos, vamos criar também algumas
+funções para deduzi-los para nós. Por exemplo, caso tenhamos usado o
+comando \monoespaco{pickup} sobre \monoespaco{pencircle} e a nossa
+caneta tenha passado por uma transformação linear representada por uma
+matriz. A função abaixo pode ser usada para obter os pontos de
+extremidade para esta caneta:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+void pencircle_extremity_points(struct metafont *mf, float *matrix);
+@
+\fimcodigo
+
+Um \monoespaco{pencircle} padrão, sem senhuma transformação é uma
+caneta circular de raio $1/2$. O que quer dizer que toda coordenada
+$(x,y)$ atende à seguinte fórmula:
+
+$$
+x^2+y^2= 0.25
+$$
+
+Ou, de maneira equivalente:
+
+$$
+x=\pm\sqrt{0.25-y^2}
+$$
+
+$$
+y=\pm\sqrt{0.25-x^2}
+$$
+
+Dada uma transformação linear definida pela matriz $M$, obtemos os novos
+valores de $x$ e $y$ seguindo a fórmula abaixo:
+
+$$
+f_x(x) = M_{11}x \pm M_{21}\sqrt{0.25-x^2} + M_{31}
+$$
+
+$$
+f_y(y) = M_{22}y \pm M_{12}\sqrt{0.25-y^2} + M_{32}
+$$
+
+Quando $M_{11}$ é igual à 0, os pontos mais extremos no eixo $x$ serão
+a transformação linear dada por $M$ de $(-0.5, 0)$ e $(0.5, 0)$. Se
+$M_{21}$ for igual à zero, os pontos mais extremos serão dados por
+$(0, -0.5)$ e $(0, 0.5)$ transformados por $M$. A mesma lógica se
+aplica aos extremos no eixo $y$ quando $M_{22}$ ou $M_{12}$ é igual à
+zero. Em todos estes casos, o valor depende somente de maximizar ou a
+coordenada $x$ ou $y$.
+
+Para todos os demais casos, achar o ponto de máximo ou de mínimo
+destas funções requer calcular a derivada das fórmulas acima e
+igualamos à zero:
+
+$$
+f_x'(x)=M_{11} \pm (M_{21}x)/(\sqrt{0.25-x^2})=0
+$$
+
+$$
+f_y'(y)=M_{22} \pm (M_{12}y)/(\sqrt{0.25-y^2})=0
+$$
+
+Como não há uma fórmula que nos dê a solução de maneira direta, temos
+que usar métodos iterativos como o Método de Newton. para achar os
+valores $x$ e $y$ que tornam as fórmulas acima corretas. Para poder
+usar o médodo de Newton, começamos calculando a derivada de segunda
+ordem destas fórmulas:
+
+$$
+f_x''(x)= \pm (M_{21}\sqrt{0.25-x^2}+(M_{21}x^2)/(\sqrt{0.25-x^2}))
+$$
+
+$$
+f_y''(y)= \pm (M_{12}\sqrt{0.25-x^2}+(M_{12}x^2)/(\sqrt{0.25-x^2}))
+$$
+
+Pelo Método de Newton, uma vez que tenhamos uma estimativa $x_n$ e
+$y_n$ para o zero da função $f'_x$ e $f'_y$, podemos obter uma
+estimativa melhor calculando:
+
+$$
+x_{n+1} = x_{n} - (f'_x(x_n)/f''_x(x_n))
+$$
+
+$$
+y_{n+1} = y_{n} - (f'_y(y_n)/f''_y(y_n))
+$$
+
+O problema do Método de Newton é que como nossa função $f_x$ e $f_y$
+está definida somente entre -0,5 e +0,5, se o valor que estamos
+buscando estiver muito próximo destas extremidades, ele pode acabar
+nos empurrando para fora do Domínio da função. Caso isso ocorra,
+teremos que recorrer a outro método. No caso, usaremos o mais lento
+Método da Bissecção. Note que $f'_x(-0,5)$ e $f'_x(+0,5)$ tem sinais
+opostos sempre, assumindo que um zero da função exista. Sendo assim,
+este método começa com este intervalo e depois checa o sinal de $f_x$
+no meiio das duas extremidades. Baseado no sinal ele reduz o tamanho
+do intervalo até reduzi-lo à zero e encontrar o valor.
+
+Após revisar toda a teoria, podemos enfim implementar a função que
+obtém os pontos de extremidade de uma caneta redonda:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+void pencircle_extremity_points(struct metafont *mf, float *matrix){
+  DECLARE_PEN_EXTREMITIES();
+  int i, index[4] = {0, 3, 4, 1};
+  for(i = 0; i < 2; i ++){ // i=0 computa eixo x, i=1 computa eixo y
+    // Primeiro os casos mais simples:
+    if((i == 0 && matrix[3] == 0.0) ||
+       (i == 1 && matrix[4] == 0.0)){
+      CHECK_PEN_EXTREMITIES(-0.5, 0.0, matrix);
+      CHECK_PEN_EXTREMITIES(0.5, 0.0, matrix);
+    }
+    else if((i == 0 && matrix[0] == 0.0) ||
+            (i == 1 && matrix[1] == 0.0)){
+      CHECK_PEN_EXTREMITIES(0.0, 0.5, matrix);
+      CHECK_PEN_EXTREMITIES(0.0, -0.5, matrix);
+    }
+    else{
+      // Método de newton
+      float x0 = INFINITY, x1 = 0.0;
+      do{
+        x0 = x1;
+        x1 = x0 - ((matrix[index[2*i]]+(matrix[index[2*i+1]]*
+                  x0/sqrt(0.25-x0*x0))) /
+             (matrix[index[2*i+1]]*sqrt(0.25-x0*x0)+
+                  ((matrix[index[2*i+1]]*x0*x0)/
+             (sqrt(0.25-x0*x0)))));
+        if(x1 <= -0.5 || x1 >= 0.5){
+          // Convergência falhou, usar método da Bissecção
+          float y1;
+          x0 = -0.5;
+          x1 = 0.5;
+          y1 = matrix[2*i]+(matrix[index[2*i]]*x1/sqrt(0.25-x1*x1));
+          while(x0 != x1){
+            float x2 = (x0+x1)/2;
+            float y2 = matrix[index[2*i]]+
+                       (matrix[index[2*i+1]]*x2/sqrt(0.25-x2*x2));
+            if(y2 == 0.0)
+              x0 = x1 = x2;
+            else if(y2 > 0){
+              if(y1 > 0)
+                x1 = x2;
+              else
+                x0 = x2;
+            }
+            else{
+              if(y1 > 0)
+                x0 = x2;
+              else
+                x1 = x2;
+            } 
+          }
+        }
+      } while(x0 != x1);
+      if(i == 0){
+        CHECK_PEN_EXTREMITIES(x0, sqrt(0.25-x0*x0), matrix);
+        CHECK_PEN_EXTREMITIES(x0, -sqrt(0.25-x0*x0), matrix);
+        CHECK_PEN_EXTREMITIES(-x0, sqrt(0.25-x0*x0), matrix);
+        CHECK_PEN_EXTREMITIES(-x0, -sqrt(0.25-x0*x0), matrix);
+      }
+      else{
+        CHECK_PEN_EXTREMITIES(sqrt(0.25-x0*x0), x0, matrix);
+        CHECK_PEN_EXTREMITIES(-sqrt(0.25-x0*x0), x0, matrix);
+        CHECK_PEN_EXTREMITIES(sqrt(0.25-x0*x0), -x0, matrix);
+        CHECK_PEN_EXTREMITIES(-sqrt(0.25-x0*x0), -x0, matrix);
+      }
+    }
+  }
+  UPDATE_PEN_EXTREMITIES();
+}
+@
+\fimcodigo
+
+Também podemos querer achar os pontos de extremidade não para um
+círculo, mas para um caminho definido como curvas de Bézier:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+void path_extremity_points(struct metafont *mf, struct path_variable *p,
+                           float *matrix);
+@
+\fimcodigo
+
+Curiosamente, neste caso as fórmulas são mais simples. Uma curva de
+Bézier cúbica como as que usamos tem a seguinte fórmula, com $t$
+variando entre 0 e 1, com $z_1$ e $z_4$ sendo pontos de extremidade e
+com  $z_2$ e $z_3$ sendo pontos de controle:
+
+$$
+z(t) = (1-t)^3z_1+3(1-t)^2tz_2+3(1-t)t^2z_3+t^3z_4
+$$
+
+A derivada da fuunção é:
+
+$$
+z'(t) = (-3z_1+9z_2-9z_3+3z_4)t^2+(6z_1-12z_2+6z_3)t+(-3z_1+3z_2)
+$$
+
+E a derivada de segunda ordem:
+
+$$
+z''(t) = (-6z_1+18z_2-18z_3+6z_4)t+(6z_1-12z_2+6z_3)
+$$
+
+Achar os pontos de extremidade então será feito iterando sobre os
+pontos do caminho e computando os zeros de $z'(t)$. Se acharmos um
+zero entre 0 e 1, checamos o valor para ver se precisamos
+armazená-lo. Também checamos cada um dos pontos de extremidade. Os
+pontos $z_1, z_2, z_3, z_4$ que usamos são aqueles que estão
+armazenados após passar pela transformação linear da matriz
+correspondente:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+void path_extremity_points(struct metafont *mf, struct path_variable *p,
+                           float *matrix){
+  int i, length = p -> length;
+  DECLARE_PEN_EXTREMITIES();
+  for(i = 0; i < length; i ++){
+    float x0, y0, u_x, u_y, v_x, v_y, x1, y1;
+    CHECK_PEN_EXTREMITIES(p -> points[i].x, p -> points[i].y, matrix);
+    x0 = LINEAR_TRANSFORM_X(p -> points[i].x, p -> points[i].y, matrix);
+    y0 = LINEAR_TRANSFORM_Y(p -> points[i].x, p -> points[i].y, matrix);
+    u_x = LINEAR_TRANSFORM_X(p -> points[i].u_x, p -> points[i].u_y, matrix);
+    u_y = LINEAR_TRANSFORM_Y(p -> points[i].u_x, p -> points[i].u_y, matrix);
+    v_x = LINEAR_TRANSFORM_X(p -> points[i].v_x, p -> points[i].v_y, matrix);
+    v_y = LINEAR_TRANSFORM_Y(p -> points[i].v_x, p -> points[i].v_y, matrix);    
+    x1 = LINEAR_TRANSFORM_X(p -> points[(i+1)%length].x, p -> points[i].y,
+                            matrix);
+    y1 = LINEAR_TRANSFORM_Y(p -> points[(i+1)%length].y, p -> points[i].y,
+                            matrix);
+    // Método de newton (eixo x)
+    float t0 = INFINITY, t1 = 0.5;
+    do{
+      t0 = t1;
+      t1 = t0 -
+       (((-3*x0+9*u_x-9*v_x+3*x1)*t0*t0 + (6*x0-12*u_x+6*v_x)*t0-3*x0+3*u_x)/
+        ((-6*x0+18*u_x-18*v_x+6*x1)*t0+6*x0-12*u_x+6*v_x));
+    } while(t0 != t1);
+    if(t0 > 0.0 && t0 < 1.0){
+      float x, y;
+      x = (1-t0)*(1-t0)*(1-t0)*x0+3*(1-t0)*(1-t0)*t0*u_x+3*(1-t0)*t0*t0*v_x+
+          t0*t0*t0*x1;
+      y = (1-t0)*(1-t0)*(1-t0)*y0+3*(1-t0)*(1-t0)*t0*u_y+3*(1-t0)*t0*t0*v_y+
+          t0*t0*t0*y1;
+      CHECK_PEN_EXTREMITIES_I(x, y);
+    }
+    // Método de newton (eixo y)
+    t0 = INFINITY;
+    t1 = 0.5;
+    do{
+      t0 = t1;
+      t1 = t0 -
+       (((-3*y0+9*u_y-9*v_y+3*y1)*t0*t0 + (6*y0-12*u_y+6*v_y)*t0-3*y0+3*u_y)/
+        ((-6*y0+18*u_y-18*v_y+6*y1)*t0+6*y0-12*u_y+6*v_y));
+    } while(t0 != t1);
+    if(t0 > 0.0 && t0 < 1.0){
+      float x, y;
+      x = (1-t0)*(1-t0)*(1-t0)*x0+3*(1-t0)*(1-t0)*t0*u_x+3*(1-t0)*t0*t0*v_x+
+          t0*t0*t0*x1;
+      y = (1-t0)*(1-t0)*(1-t0)*y0+3*(1-t0)*(1-t0)*t0*u_y+3*(1-t0)*t0*t0*v_y+
+          t0*t0*t0*y1;
+      CHECK_PEN_EXTREMITIES_I(x, y);
+    }    
+  }
+  UPDATE_PEN_EXTREMITIES();
+}
+@
+\fimcodigo
+
 
 
 \subsecao{10.1. Triangulação}
@@ -12731,8 +13030,6 @@ E a sua implementação é:
 @<Funções Auxiliares Locais (metafont.c)@>+=
 bool triangulate_pen(struct metafont *mf, struct pen_variable *pen,
                      float *transform_matrix){
-  if((pen -> gl_vbo != 0) && (pen -> flags & FLAG_STRAIGHT)) // Já triangulado
-    return true;
   @<Triangulação: Caneta Nula@>
   @<Triangulação: Caneta Quadrada@>
   @<Triangulação: Polígono Convexo@>
@@ -12755,7 +13052,7 @@ abaixo:
 if((pen -> flags & FLAG_NULL)){
   DECLARE_PEN_EXTREMITIES();
   CHECK_PEN_EXTREMITIES(0, 0, transform_matrix);
-  UPDATE_PEN_EXTREMITIES(pen);
+  UPDATE_PEN_EXTREMITIES();
   return true;
 }
 @
@@ -12810,7 +13107,7 @@ if((pen -> flags & FLAG_SQUARE)){
   for(i = 0; i < 4; i ++)
     CHECK_PEN_EXTREMITIES(square_vertices[2 * i], square_vertices[2 * i + 1],
                           transform_matrix);
-  UPDATE_PEN_EXTREMITIES(pen);
+  UPDATE_PEN_EXTREMITIES();
   return true;
 }
 @
@@ -12855,12 +13152,14 @@ if((pen -> flags & FLAG_STRAIGHT) && (pen -> flags & FLAG_CONVEX)){
     CHECK_PEN_EXTREMITIES(data[2 * i], data[2 * i + 1], transform_matrix);
     index += increment;
   }
-  glGenBuffers(1, &(pen -> gl_vbo));
-  glBindBuffer(GL_ARRAY_BUFFER, pen -> gl_vbo);
-  glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
+  if(pen -> gl_vbo == 0){
+    glGenBuffers(1, &(pen -> gl_vbo));
+    glBindBuffer(GL_ARRAY_BUFFER, pen -> gl_vbo);
+    glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
+  }
   if(temporary_free != NULL)
     temporary_free(data);
-  UPDATE_PEN_EXTREMITIES(pen);
+  UPDATE_PEN_EXTREMITIES();
   return true;
 }
 @
@@ -12959,7 +13258,7 @@ if((pen -> flags & FLAG_CIRCULAR)){
   glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
   if(temporary_free != NULL)
     temporary_free(data);
-  UPDATE_PEN_EXTREMITIES(pen);
+  UPDATE_PEN_EXTREMITIES();
   return true;
 }
 @
@@ -13150,7 +13449,7 @@ if((pen -> flags & FLAG_CONVEX)){
                                 sizeof(float), data, GL_STATIC_DRAW);
   if(temporary_free != NULL)
     temporary_free(data);
-  UPDATE_PEN_EXTREMITIES(pen);
+  UPDATE_PEN_EXTREMITIES();
   return true;
 }
 @

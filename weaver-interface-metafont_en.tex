@@ -2617,8 +2617,6 @@ struct pen_variable{
   float gl_matrix[9]; // OpenGL matrix transformation
   // The variables below will be manipulated only in Section 10
   GLuint gl_vbo; // The OpenGL vertices after triangulation
-  // These will store the extremity points in axis x and y in the pen perimeter
-  float pen_lft, pen_rt, pen_top, pen_bot;
   // This will store how detailed is our triangulation, which will help us
   // to decide if we need a retriangulation in some cases:
   float triang_resolution;
@@ -12359,9 +12357,9 @@ command \monoespaco{pickup} is:
 
 \alinhaverbatim
 <Command> -> <'pickup' Command>
-<'pickup' Command> -> pickup <Pen Variable or 'nullpen'>
+<'pickup' Command> -> pickup <Pen Variable, 'nullpen' or 'pencircle'>
                              <Optional Transformers>
-<Pen Variable or 'nullpen'> -> nullpen | <Variável de Caneta>
+<Pen Variable or 'nullpen'> -> nullpen | pencircle | <Pen Variable>
 <Optional Transformers> -> <Empty> |
                            <Transformer><Optional Transformers>
 \alinhanormal
@@ -12382,17 +12380,37 @@ TYPE_PICKUP,  // Symbolic token 'pickup'
 
 What this command does is store a new value in the
 variable \monoespaco{currentpen}, which we will use to make drawings
-(which we will define in the following Section). Besides this, it will
-store internally 4 other values. Two of them will store the biggest
-and smallest values in the axis $x$ when the pen is rendered and the
-two others will store the smallest and biggest values in the axis
-$y$. Storing these values will be useful to better adjust the points
-that we will draw. For example, we could want to draw with our pen the
-nearest possible to the left lower corner of the image, without the
-pen drawing outside the image area. Such control requires to know the
-pen size. Because of this, each pen stores internally the
-variables \monoespaco{pen\_lft}, \monoespaco{pen\_rt}, \monoespaco{pen\_top}
-e \monoespaco{pen\_bot}.
+(which we will define in the following Section).
+
+\subsecao{10.1. Extremity Points in Pens}
+
+When we pick a pen, we will store internally 4 values related to the
+pen. Two of them will store the biggest and smallest values in the
+axis $x$ when the pen is rendered and the two others will store the
+smallest and biggest values in the axis $y$. Storing these values will
+be useful to better adjust the points that we will draw. For example,
+we could want to draw with our pen the nearest possible to the left
+lower corner of the image, without the pen drawing outside the image
+area. Such control requires to know the pen size. Because of this, we
+will store globally such information
+in \monoespaco{pen\_lft}, \monoespaco{pen\_rt}, \monoespaco{pen\_top}
+e \monoespaco{pen\_bot}. We store globally in \monoespaco{struct
+metafont} because \monoespaco{currentpen} has a global scope:
+
+\iniciocodigo
+@<Attributes (struct metafont)@>+=
+float pen_lft, pen_rt, pen_top, pen_bot;
+@
+\fimcodigo
+
+These values begin as zero, because \monoespaco{currentpen} begins as
+a \monoespaco{nullpen}:
+
+\iniciocodigo
+@<Initialization (struct metafont)@>+=
+mf -> pen_lft = mf -> pen_rt = mf -> pen_top = mf -> pen_bot = 0.0;
+@
+\fimcodigo
 
 An operation very common in this Section will be update these 4
 variables in a pen when we are preparing their points. Assume that we
@@ -12428,6 +12446,14 @@ found a point with the biggest or smallest value in axis $x$ or $y$:
    if(_y < _min_y) _min_y = _y;\
    if(_y > _max_y) _max_y = _y;\
   }
+// If the matrix is the identity, we can use this:
+#define CHECK_PEN_EXTREMITIES_I(x, y) {\
+   if(x < _min_x) _min_x = x;\
+   if(x > _max_x) _max_x = x;\
+   if(y < _min_y) _min_y = y;\
+   if(y > _max_y) _max_y = y;\
+  }
+
 @
 \fimcodigo
 
@@ -12436,11 +12462,283 @@ which are its extremity coordinates:
 
 \iniciocodigo
 @<Local Macros (metafont.c)@>+=
-#define UPDATE_PEN_EXTREMITIES(pen) {\
-  pen -> pen_lft = _min_x;\
-  pen -> pen_rt = _max_x;\
-  pen -> pen_top = _max_y;\
-  pen -> pen_bot = _min_y;\
+#define UPDATE_PEN_EXTREMITIES() {\
+  mf -> pen_lft = _min_x;\
+  mf -> pen_rt = _max_x;\
+  mf -> pen_top = _max_y;\
+  mf -> pen_bot = _min_y;\
+}
+@
+\fimcodigo
+
+The previous macros is enough if we will iterate over each point in
+the pen perimeter. Doing this, we can
+call \monoespaco{CHECK\_PEN\_EXTREMITIES} in all points and then we
+get who has the biggest and smallest value in each axis. But in cases
+when we will not iterate over each point, we will need more functions
+to deduce their values. For example, if we are using
+a \monoespaco{pickup} command over \monoespaco{pencircle} with a
+linear transform stored in a matrix. The function below can be used to
+get this pen extremity points:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+void pencircle_extremity_points(struct metafont *mf, float *matrix);
+@
+\fimcodigo
+
+A default \monoespaco{pencircle}, with no linear transform is a
+circular pen with radius $1/2$. Which means that every pen coordinate
+$(x, y)$ follows the formula:
+
+$$
+x^2+y^2= 0.25
+$$
+
+Or, equivalently:
+
+$$
+x=\pm\sqrt{0.25-y^2}
+$$
+
+$$
+y=\pm\sqrt{0.25-x^2}
+$$
+
+Given a linear transform defined by matrix $N$, we get new values
+$(x,y)$ using th formulas:
+
+$$
+f_x(x) = M_{11}x \pm M_{21}\sqrt{0.25-x^2} + M_{31}
+$$
+
+$$
+f_y(y) = M_{22}y \pm M_{12}\sqrt{0.25-y^2} + M_{32}
+$$
+
+When $M_{11}=0$, the most extreme points in axis $x$ will be $(-0.5,
+0)$ and $(0.5, 0)$ after passing by the linear transform defined by
+our matrix. When $M_{21}=0$, the most extreme points in axis $x$ will
+be $(0, -0.5)$ and $(0, 0.5)$ after applying the linear transform. The
+same logic applies for the axis $y$ if $M_{22}=0$ or $M_{12}=0$. In
+all these cases, we get the biggest and smallest values maximizing or
+minimizing a single coordinate.
+
+For all other cases, finding the maximum and minimum values in these
+functions requires getting the derivative of the function and
+equalizing to zero:
+
+$$
+f_x'(x)=M_{11} \pm (M_{21}x)/(\sqrt{0.25-x^2})=0
+$$
+
+$$
+f_y'(y)=M_{22} \pm (M_{12}y)/(\sqrt{0.25-y^2})=0
+$$
+
+As there is no closed formula to compute the soluction directly, we
+need to employ an interactive method to find the solution. We will
+first try the Newton Method. To use this method, we need to compute
+the second order derivative for the functions:
+
+$$
+f_x''(x)= \pm (M_{21}\sqrt{0.25-x^2}+(M_{21}x^2)/(\sqrt{0.25-x^2}))
+$$
+
+$$
+f_y''(y)= \pm (M_{12}\sqrt{0.25-x^2}+(M_{12}x^2)/(\sqrt{0.25-x^2}))
+$$
+
+And using these values, by the Newton method, if we have a good guess
+$x_n$ or $y_n$ for the solution, we can find an even better guess
+$x_{n+1}$ or $y_{n+1}$ computing:
+
+$$
+x_{n+1} = x_{n} - (f'_x(x_n)/f''_x(x_n))
+$$
+
+$$
+y_{n+1} = y_{n} - (f'_y(y_n)/f''_y(y_n))
+$$
+
+The problem of Newton Method in this function is that it is defined
+only in the interval between -0.5 and +0.5. If the value that we are
+searching is near the extremity, it is possible that we step outside
+the function Domain. If this happens, we will change to another
+method. We will use the slowerBissection Method. For this method,
+notice that $f'(-0.5)$ and $f'(+0.5)$ has opposite signals. The root
+of this functions is in this interval. Next, we make the interval
+slower computing $f'$ in the middle of the interval and checking the
+signal. And we repeat until we find the value or the interval becames
+too small.
+
+After reviewing the theory, we finally can write the function that
+gets the extremity points for \monoespaco{pencircle}:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+void pencircle_extremity_points(struct metafont *mf, float *matrix){
+  DECLARE_PEN_EXTREMITIES();
+  int i, index[4] = {0, 3, 4, 1};
+  for(i = 0; i < 2; i ++){ // i=0 computes axis x, i=1 computes axis y
+    // Primeiro os casos mais simples:
+    if((i == 0 && matrix[3] == 0.0) ||
+       (i == 1 && matrix[4] == 0.0)){
+      CHECK_PEN_EXTREMITIES(-0.5, 0.0, matrix);
+      CHECK_PEN_EXTREMITIES(0.5, 0.0, matrix);
+    }
+    else if((i == 0 && matrix[0] == 0.0) ||
+            (i == 1 && matrix[1] == 0.0)){
+      CHECK_PEN_EXTREMITIES(0.0, 0.5, matrix);
+      CHECK_PEN_EXTREMITIES(0.0, -0.5, matrix);
+    }
+    else{
+      // Newton Method
+      float x0 = INFINITY, x1 = 0.0;
+      do{
+        x0 = x1;
+        x1 = x0 - ((matrix[index[2*i]]+(matrix[index[2*i+1]]*
+                  x0/sqrt(0.25-x0*x0))) /
+             (matrix[index[2*i+1]]*sqrt(0.25-x0*x0)+
+                  ((matrix[index[2*i+1]]*x0*x0)/
+             (sqrt(0.25-x0*x0)))));
+        if(x1 <= -0.5 || x1 >= 0.5){
+          // Failed, using Bissection Method
+          float y1;
+          x0 = -0.5;
+          x1 = 0.5;
+          y1 = matrix[2*i]+(matrix[index[2*i]]*x1/sqrt(0.25-x1*x1));
+          while(x0 != x1){
+            float x2 = (x0+x1)/2;
+            float y2 = matrix[index[2*i]]+
+                       (matrix[index[2*i+1]]*x2/sqrt(0.25-x2*x2));
+            if(y2 == 0.0)
+              x0 = x1 = x2;
+            else if(y2 > 0){
+              if(y1 > 0)
+                x1 = x2;
+              else
+                x0 = x2;
+            }
+            else{
+              if(y1 > 0)
+                x0 = x2;
+              else
+                x1 = x2;
+            } 
+          }
+        }
+      } while(x0 != x1);
+      if(i == 0){
+        CHECK_PEN_EXTREMITIES(x0, sqrt(0.25-x0*x0), matrix);
+        CHECK_PEN_EXTREMITIES(x0, -sqrt(0.25-x0*x0), matrix);
+        CHECK_PEN_EXTREMITIES(-x0, sqrt(0.25-x0*x0), matrix);
+        CHECK_PEN_EXTREMITIES(-x0, -sqrt(0.25-x0*x0), matrix);
+      }
+      else{
+        CHECK_PEN_EXTREMITIES(sqrt(0.25-x0*x0), x0, matrix);
+        CHECK_PEN_EXTREMITIES(-sqrt(0.25-x0*x0), x0, matrix);
+        CHECK_PEN_EXTREMITIES(sqrt(0.25-x0*x0), -x0, matrix);
+        CHECK_PEN_EXTREMITIES(-sqrt(0.25-x0*x0), -x0, matrix);
+      }
+    }
+  }
+  UPDATE_PEN_EXTREMITIES();
+}
+@
+\fimcodigo
+
+We also could want to find the extremity points in a pen defined as a
+list of Bézier Curves:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+void path_extremity_points(struct metafont *mf, struct path_variable *p,
+                           float *matrix);
+@
+\fimcodigo
+
+Curiously, in this case, the formulas are simpler. A cubic Bézier
+Curve like the ones that we use have the following formula, with $t$
+ranging between 0 and 1 and with $z_1$, $z_4$ being the extremity
+points and with $z_2$ and $z_3$ being the control points:
+
+$$
+z(t) = (1-t)^3z_1+3(1-t)^2tz_2+3(1-t)t^2z_3+t^3z_4
+$$
+
+The function derivative is:
+
+$$
+z'(t) = (-3z_1+9z_2-9z_3+3z_4)t^2+(6z_1-12z_2+6z_3)t+(-3z_1+3z_2)
+$$
+
+And the second order derivative:
+
+$$
+z''(t) = (-6z_1+18z_2-18z_3+6z_4)t+(6z_1-12z_2+6z_3)
+$$
+
+Finding the extremity points will be done iterating over the extremity
+points and computing the roots of $z'(t)$. If we find a root between 0
+and 1, we check the value if it is an extremity point. The points
+$z_1, z_2, z_3, z_4$ that we use are the stored ones in the pen, after
+applying the linear transform of the corresponding matrix:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+void path_extremity_points(struct metafont *mf, struct path_variable *p,
+                           float *matrix){
+  int i, length = p -> length;
+  DECLARE_PEN_EXTREMITIES();
+  for(i = 0; i < length; i ++){
+    float x0, y0, u_x, u_y, v_x, v_y, x1, y1;
+    CHECK_PEN_EXTREMITIES(p -> points[i].x, p -> points[i].y, matrix);
+    x0 = LINEAR_TRANSFORM_X(p -> points[i].x, p -> points[i].y, matrix);
+    y0 = LINEAR_TRANSFORM_Y(p -> points[i].x, p -> points[i].y, matrix);
+    u_x = LINEAR_TRANSFORM_X(p -> points[i].u_x, p -> points[i].u_y, matrix);
+    u_y = LINEAR_TRANSFORM_Y(p -> points[i].u_x, p -> points[i].u_y, matrix);
+    v_x = LINEAR_TRANSFORM_X(p -> points[i].v_x, p -> points[i].v_y, matrix);
+    v_y = LINEAR_TRANSFORM_Y(p -> points[i].v_x, p -> points[i].v_y, matrix);    
+    x1 = LINEAR_TRANSFORM_X(p -> points[(i+1)%length].x, p -> points[i].y,
+                            matrix);
+    y1 = LINEAR_TRANSFORM_Y(p -> points[(i+1)%length].y, p -> points[i].y,
+                            matrix);
+    // Newton Method (axis x)
+    float t0 = INFINITY, t1 = 0.5;
+    do{
+      t0 = t1;
+      t1 = t0 -
+       (((-3*x0+9*u_x-9*v_x+3*x1)*t0*t0 + (6*x0-12*u_x+6*v_x)*t0-3*x0+3*u_x)/
+        ((-6*x0+18*u_x-18*v_x+6*x1)*t0+6*x0-12*u_x+6*v_x));
+    } while(t0 != t1);
+    if(t0 > 0.0 && t0 < 1.0){
+      float x, y;
+      x = (1-t0)*(1-t0)*(1-t0)*x0+3*(1-t0)*(1-t0)*t0*u_x+3*(1-t0)*t0*t0*v_x+
+          t0*t0*t0*x1;
+      y = (1-t0)*(1-t0)*(1-t0)*y0+3*(1-t0)*(1-t0)*t0*u_y+3*(1-t0)*t0*t0*v_y+
+          t0*t0*t0*y1;
+      CHECK_PEN_EXTREMITIES_I(x, y);
+    }
+    // Newton Method (axis y)
+    t0 = INFINITY;
+    t1 = 0.5;
+    do{
+      t0 = t1;
+      t1 = t0 -
+       (((-3*y0+9*u_y-9*v_y+3*y1)*t0*t0 + (6*y0-12*u_y+6*v_y)*t0-3*y0+3*u_y)/
+        ((-6*y0+18*u_y-18*v_y+6*y1)*t0+6*y0-12*u_y+6*v_y));
+    } while(t0 != t1);
+    if(t0 > 0.0 && t0 < 1.0){
+      float x, y;
+      x = (1-t0)*(1-t0)*(1-t0)*x0+3*(1-t0)*(1-t0)*t0*u_x+3*(1-t0)*t0*t0*v_x+
+          t0*t0*t0*x1;
+      y = (1-t0)*(1-t0)*(1-t0)*y0+3*(1-t0)*(1-t0)*t0*u_y+3*(1-t0)*t0*t0*v_y+
+          t0*t0*t0*y1;
+      CHECK_PEN_EXTREMITIES_I(x, y);
+    }    
+  }
+  UPDATE_PEN_EXTREMITIES();
 }
 @
 \fimcodigo
@@ -12562,9 +12860,6 @@ And its implementation:
 @<Auxiliary Local Functions (metafont.c)@>+=
 bool triangulate_pen(struct metafont *mf, struct pen_variable *pen,
                      float *transform_matrix){
-  // Already triangulated:
-  if((pen -> gl_vbo != 0) && (pen -> flags & FLAG_STRAIGHT))
-    return true;
   @<Triangulation: Null Pen@>
   @<Triangulation: Square Pen@>
   @<Triangulation: Convex Polygon@>
@@ -12586,7 +12881,7 @@ other position. We deal with this simplest case below:
 if((pen -> flags & FLAG_NULL)){
   DECLARE_PEN_EXTREMITIES();
   CHECK_PEN_EXTREMITIES(0, 0, transform_matrix);
-  UPDATE_PEN_EXTREMITIES(pen);
+  UPDATE_PEN_EXTREMITIES();
   return true;
 }
 @
@@ -12641,7 +12936,7 @@ if((pen -> flags & FLAG_SQUARE)){
   for(i = 0; i < 4; i ++)
     CHECK_PEN_EXTREMITIES(square_vertices[2 * i], square_vertices[2 * i + 1],
                           transform_matrix);
-  UPDATE_PEN_EXTREMITIES(pen);
+  UPDATE_PEN_EXTREMITIES();
   return true;
 }
 @
@@ -12686,12 +12981,14 @@ if((pen -> flags & FLAG_STRAIGHT) && (pen -> flags & FLAG_CONVEX)){
     CHECK_PEN_EXTREMITIES(data[2 * i], data[2 * i + 1], transform_matrix);
     index += increment;
   }
-  glGenBuffers(1, &(pen -> gl_vbo));
-  glBindBuffer(GL_ARRAY_BUFFER, pen -> gl_vbo);
-  glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
+  if(pen -> gl_vbo == 0){
+    glGenBuffers(1, &(pen -> gl_vbo));
+    glBindBuffer(GL_ARRAY_BUFFER, pen -> gl_vbo);
+    glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
+  }
   if(temporary_free != NULL)
     temporary_free(data);
-  UPDATE_PEN_EXTREMITIES(pen);
+  UPDATE_PEN_EXTREMITIES();
   return true;
 }
 @
@@ -12786,7 +13083,7 @@ if((pen -> flags & FLAG_CIRCULAR)){
   glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
   if(temporary_free != NULL)
     temporary_free(data);
-  UPDATE_PEN_EXTREMITIES(pen);
+  UPDATE_PEN_EXTREMITIES();
   return true;
 }
 @
@@ -12974,7 +13271,7 @@ if((pen -> flags & FLAG_CONVEX)){
                                 sizeof(float), data, GL_STATIC_DRAW);
   if(temporary_free != NULL)
     temporary_free(data);
-  UPDATE_PEN_EXTREMITIES(pen);
+  UPDATE_PEN_EXTREMITIES();
   return true;
 }
 @
