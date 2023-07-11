@@ -69,11 +69,11 @@ struct picture_variable*internal_picture_variables;
 bool have_stored_normaldeviate;
 float normaldeviate;
 /*:180*//*467:*/
-#line 12401 "weaver-interface-metafont_en.tex"
+#line 12432 "weaver-interface-metafont_en.tex"
 
 float pen_lft,pen_rt,pen_top,pen_bot;
 /*:467*//*507:*/
-#line 13786 "weaver-interface-metafont_en.tex"
+#line 13799 "weaver-interface-metafont_en.tex"
 
 int current_depth;
 /*:507*/

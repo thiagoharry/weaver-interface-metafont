@@ -9219,6 +9219,11 @@ struct numeric_variable a;
 if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &a))
   return false;
 TRANSFORM_SCALE(pen -> gl_matrix, a.value);
+// Canetas curvas devem ser retrianguladas se aumentam de tamanho:
+if(pen -> gl_vbo != 0 && a.value > 1.0 && !(pen -> flags & FLAG_STRAIGHT)){
+  glDeleteBuffers(1, &(pen -> gl_vbo));
+  pen -> gl_vbo = 0;
+}
 return true;
 @
 \fimcodigo
@@ -9244,6 +9249,12 @@ struct numeric_variable a;
 if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &a))
   return false;
 TRANSFORM_SLANT(pen -> gl_matrix, a.value);
+// Inclinar canetas curvas não-circulares requer retriangulação:
+if(pen -> gl_vbo != 0 && !(pen -> flags & FLAG_STRAIGHT) &&
+   !(pen -> flags & FLAG_CIRCULAR)){
+  glDeleteBuffers(1, &(pen -> gl_vbo));
+  pen -> gl_vbo = 0;
+}
 return true;
 @
 \fimcodigo
@@ -9258,6 +9269,11 @@ struct numeric_variable a;
 if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &a))
   return false;
 TRANSFORM_SCALE_X(pen -> gl_matrix, a.value);
+// Canetas curvas devem ser retrianguladas se aumentam de tamanho:
+if(pen -> gl_vbo != 0 && a.value > 1.0 && !(pen -> flags & FLAG_STRAIGHT)){
+  glDeleteBuffers(1, &(pen -> gl_vbo));
+  pen -> gl_vbo = 0;
+}
 return true;
 @
 \fimcodigo
@@ -9271,6 +9287,11 @@ struct numeric_variable a;
 if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &a))
   return false;
 TRANSFORM_SCALE_Y(pen -> gl_matrix, a.value);
+// Canetas curvas devem ser retrianguladas se aumentam de tamanho:
+if(pen -> gl_vbo != 0 && a.value > 1.0 && !(pen -> flags & FLAG_STRAIGHT)){
+  glDeleteBuffers(1, &(pen -> gl_vbo));
+  pen -> gl_vbo = 0;
+}
 return true;
 @
 \fimcodigo
@@ -9290,6 +9311,11 @@ struct pair_variable p;
 if(!eval_pair_primary(mf, cx, last_transformer -> next, end_expression, &p))
   return false;
 TRANSFORM_SCALE_Z(pen -> gl_matrix, p.x, p.y);
+// Canetas curvas devem ser retrianguladas neste caso:
+if(pen -> gl_vbo != 0 && !(pen -> flags & FLAG_STRAIGHT)){
+  glDeleteBuffers(1, &(pen -> gl_vbo));
+  pen -> gl_vbo = 0;
+}
 return true;
 @
 \fimcodigo
@@ -9303,6 +9329,11 @@ struct transform_variable t;
 if(!eval_transform_primary(mf, cx, last_transformer -> next, end_expression, &t))
   return false;
 MATRIX_MULTIPLICATION(pen -> gl_matrix, t.value);
+// Canetas curvas devem ser retrianguladas neste caso:
+if(pen -> gl_vbo != 0 && !(pen -> flags & FLAG_STRAIGHT)){
+  glDeleteBuffers(1, &(pen -> gl_vbo));
+  pen -> gl_vbo = 0;
+}
 return true;
 @
 \fimcodigo
@@ -12610,14 +12641,13 @@ ou maiores pontos da caneta no eixo $x$ ou eixo $y$:
    if(_y < _min_y) _min_y = _y;\
    if(_y > _max_y) _max_y = _y;\
   }
-// Assume que a matriz de transformaçãoé identidade:
+// Se a matriz é a identidade, podemos usar esta macro:
 #define CHECK_PEN_EXTREMITIES_I(x, y) {\
    if(x < _min_x) _min_x = x;\
    if(x > _max_x) _max_x = x;\
    if(y < _min_y) _min_y = y;\
    if(y > _max_y) _max_y = y;\
   }
-
 @
 \fimcodigo
 
@@ -12833,17 +12863,14 @@ $$
 z(t) = (1-t)^3z_1+3(1-t)^2tz_2+3(1-t)t^2z_3+t^3z_4
 $$
 
-A derivada da fuunção é:
+A derivada da função é:
 
 $$
 z'(t) = (-3z_1+9z_2-9z_3+3z_4)t^2+(6z_1-12z_2+6z_3)t+(-3z_1+3z_2)
 $$
 
-E a derivada de segunda ordem:
-
-$$
-z''(t) = (-6z_1+18z_2-18z_3+6z_4)t+(6z_1-12z_2+6z_3)
-$$
+Descobrir em quais valores isso é igual à zero requer meramente usar a
+fórmula de Bháskara.
 
 Achar os pontos de extremidade então será feito iterando sobre os
 pontos do caminho e computando os zeros de $z'(t)$. Se acharmos um
@@ -12857,7 +12884,7 @@ correspondente:
 @<Funções Auxiliares Locais (metafont.c)@>+=
 void path_extremity_points(struct metafont *mf, struct path_variable *p,
                            float *matrix){
-  int i, length = p -> length;
+  int i, j, length = p -> length;
   DECLARE_PEN_EXTREMITIES();
   for(i = 0; i < length; i ++){
     float x0, y0, u_x, u_y, v_x, v_y, x1, y1;
@@ -12872,48 +12899,46 @@ void path_extremity_points(struct metafont *mf, struct path_variable *p,
                             matrix);
     y1 = LINEAR_TRANSFORM_Y(p -> points[(i+1)%length].y, p -> points[i].y,
                             matrix);
-    // Método de newton (eixo x)
-    float t0 = INFINITY, t1 = 0.5;
-    do{
-      t0 = t1;
-      t1 = t0 -
-       (((-3*x0+9*u_x-9*v_x+3*x1)*t0*t0 + (6*x0-12*u_x+6*v_x)*t0-3*x0+3*u_x)/
-        ((-6*x0+18*u_x-18*v_x+6*x1)*t0+6*x0-12*u_x+6*v_x));
-    } while(t0 != t1);
-    if(t0 > 0.0 && t0 < 1.0){
-      float x, y;
-      x = (1-t0)*(1-t0)*(1-t0)*x0+3*(1-t0)*(1-t0)*t0*u_x+3*(1-t0)*t0*t0*v_x+
-          t0*t0*t0*x1;
-      y = (1-t0)*(1-t0)*(1-t0)*y0+3*(1-t0)*(1-t0)*t0*u_y+3*(1-t0)*t0*t0*v_y+
-          t0*t0*t0*y1;
-      CHECK_PEN_EXTREMITIES_I(x, y);
+    // Fórmula de Bháskara (eixo x)
+    float a, b, c, deltah, t;
+    a = (-3*x0+9*u_x-9*v_x+3*x1);
+    b = (6*x0-12*u_x+6*v_x);
+    c = (-3*x0+3*u_x);
+    deltah = b * b - 4 * a * c;
+    for(j = -1; j < 2; j += 2){
+      t = (-b + j * sqrt(deltah)) / (2 * a);
+      if(t > 0.0 && t < 1.0){
+        float x, y;
+        x = (1-t)*(1-t)*(1-t)*x0+3*(1-t)*(1-t)*t*u_x+3*(1-t)*t*t*v_x+
+            t*t*t*x1;
+        y = (1-t)*(1-t)*(1-t)*y0+3*(1-t)*(1-t)*t*u_y+3*(1-t)*t*t*v_y+
+            t*t*t*y1;
+        CHECK_PEN_EXTREMITIES_I(x, y);
+      }
     }
-    // Método de newton (eixo y)
-    t0 = INFINITY;
-    t1 = 0.5;
-    do{
-      t0 = t1;
-      t1 = t0 -
-       (((-3*y0+9*u_y-9*v_y+3*y1)*t0*t0 + (6*y0-12*u_y+6*v_y)*t0-3*y0+3*u_y)/
-        ((-6*y0+18*u_y-18*v_y+6*y1)*t0+6*y0-12*u_y+6*v_y));
-    } while(t0 != t1);
-    if(t0 > 0.0 && t0 < 1.0){
-      float x, y;
-      x = (1-t0)*(1-t0)*(1-t0)*x0+3*(1-t0)*(1-t0)*t0*u_x+3*(1-t0)*t0*t0*v_x+
-          t0*t0*t0*x1;
-      y = (1-t0)*(1-t0)*(1-t0)*y0+3*(1-t0)*(1-t0)*t0*u_y+3*(1-t0)*t0*t0*v_y+
-          t0*t0*t0*y1;
-      CHECK_PEN_EXTREMITIES_I(x, y);
-    }    
+    // Fórmula de Bháskara (eixo y)
+    a = (-3*y0+9*u_y-9*v_y+3*y1);
+    b = (6*y0-12*u_y+6*v_y);
+    c = (-3*y0+3*u_y);
+    deltah = b * b - 4 * a * c;
+    for(j = -1; j < 2; j += 2){
+      t = (-b + j * sqrt(b * b - 4 * a * c)) / (2 * a);
+      if(t > 0.0 && t < 1.0){
+        float x, y;
+        x = (1-t)*(1-t)*(1-t)*x0+3*(1-t)*(1-t)*t*u_x+3*(1-t)*t*t*v_x+
+            t*t*t*x1;
+        y = (1-t)*(1-t)*(1-t)*y0+3*(1-t)*(1-t)*t*u_y+3*(1-t)*t*t*v_y+
+            t*t*t*y1;
+        CHECK_PEN_EXTREMITIES_I(x, y);
+      }
+    }
   }
   UPDATE_PEN_EXTREMITIES();
 }
 @
 \fimcodigo
 
-
-
-\subsecao{10.1. Triangulação}
+\subsecao{10.2. Triangulação}
 
 Vamos agora lidar com o código de triangulação. As placas de vídeo e o
 OpenGL trabalha com triângulos. Nós devemos então triangular um pincel
@@ -12931,9 +12956,6 @@ pen\_variable}:
 
 * \monoespaco{GLuint gl\_vbo}: Referência para os vértices armazenados
   na placa de vídeo. Será 0 se a caneta ainda não foi triangulada.
-
-* \monoespaco{float pen\_lft, pen\_rt, pen\_top, pen\_bot}: Os pontos de
-  extremidade mencionados acima, memorizados para a caneta.
 
 * \monoespaco{float triang\_resolution}: Uma medida interna do nível
   de detalhamento de nossa triangulação. Relevante para saber se devemos
@@ -13207,29 +13229,22 @@ O código para a triangulação do círculo é:
 \iniciocodigo
 @<Triangulação: Círculo@>=
 if((pen -> flags & FLAG_CIRCULAR)){
-  DECLARE_PEN_EXTREMITIES();
   float radius;
-  { // Medindo resolução necessária de triangulação
-    float x1, y1, x2, y2, x4, y4, side1, side2;
-    // (x1, y1) = (-0.5, -0.5)
-    x1 = LINEAR_TRANSFORM_X(-0.5, -0.5, transform_matrix);
-    y1 = LINEAR_TRANSFORM_Y(-0.5, -0.5, transform_matrix);
-    // (x2, y2) = (-0.5, 0.5)
-    x2 = LINEAR_TRANSFORM_X(-0.5, 0.5, transform_matrix);
-    y2 = LINEAR_TRANSFORM_Y(-0.5, 0.5, transform_matrix);
-    // (x4, y4) = (0.5, -0.5)
-    x4 = LINEAR_TRANSFORM_X(0.5, 0.5, transform_matrix);
-    y4 = LINEAR_TRANSFORM_Y(0.5, 0.5, transform_matrix);
-    side1 = sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));
-    side2 = sqrt((x4-x1)*(x4-x1)+(y4-y1)*(y4-y1));
+  // Obter pontos de extremidade:
+  pencircle_extremity_points(mf, transform_matrix);
+  // Checando resolução (raio):
+  {
+    float side1, side2;
+    side1 = abs(mf -> pen_rt - mf -> pen_lft);
+    side2 = abs(mf -> pen_top - mf -> pen_bot);
     radius = ((side1 >= side2)?(side1):(side2))/ 2.0;
   }
-  // Checar se retriangulação é necessária:
+  // Só retriangula se raio for maior que resolução já triangulada:
   if(pen -> gl_vbo != 0){
     if(radius > pen -> triang_resolution)
-      return true;
-    else
       glDeleteBuffers(1, &(pen -> gl_vbo));
+    else
+      return true;
   }
   pen -> triang_resolution = radius;
   GLsizei size = sizeof(float) * 2 * (((int) (2 * M_PI * radius)) + 2);
@@ -13249,7 +13264,6 @@ if((pen -> flags & FLAG_CIRCULAR)){
       data[i] = 0.5 * sin(angle);
       i ++;
       data[i] = 0.5 * cos(angle);
-      CHECK_PEN_EXTREMITIES(data[i-1], data[i], transform_matrix);
       angle += 1/radius;
     }
   }
@@ -13258,7 +13272,6 @@ if((pen -> flags & FLAG_CIRCULAR)){
   glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
   if(temporary_free != NULL)
     temporary_free(data);
-  UPDATE_PEN_EXTREMITIES();
   return true;
 }
 @
@@ -13313,9 +13326,10 @@ O código para triangular uma caneta neste caso é:
 \iniciocodigo
 @<Triangulação: Forma Curva Convexa@>=
 if((pen -> flags & FLAG_CONVEX)){
-  DECLARE_PEN_EXTREMITIES();
   bool counterclockwise = is_pen_counterclockwise(pen);
   int i, number_of_vertices = 1;
+  // Obtém pontos de extremidade:
+  path_extremity_points(mf, pen -> format, transform_matrix);
   for(i = 0; i < pen -> format -> length - 1; i ++){
     int distance = 0, x0, y0, x1, y1, x2, y2;
     float dx, dy;
@@ -13381,7 +13395,6 @@ if((pen -> flags & FLAG_CONVEX)){
       p0 = &(pen -> format -> points[pen -> format -> length - 1]);
     data[0] = p0 -> x;
     data[1] = p0 -> y;
-    CHECK_PEN_EXTREMITIES(data[0], data[1], pen -> gl_matrix);
     v = 2;
     for(i = 0; i < pen -> format -> length - 1; i ++){
       float b_x, b_y, c_x, c_y, dx, dy, x0, y0, x1, x2, y1, y2;
@@ -13426,7 +13439,6 @@ if((pen -> flags & FLAG_CONVEX)){
       if(distance == (int) sqrt(dx * dx + dy * dy)){
         data[v++] = p1 -> x;
         data[v++] = p1 -> y;
-        CHECK_PEN_EXTREMITIES(data[v-2], data[v-1], pen -> gl_matrix);
       }
       else{
         int j;
@@ -13437,7 +13449,6 @@ if((pen -> flags & FLAG_CONVEX)){
                       3*(1-t)*t*t * c_x + t * t * t * p1 -> x;
           data[v++] = (1-t)*(1-t)*(1-t)* p0 -> y + 3*(1-t)*(1-t)*t * b_y +
                       3*(1-t)*t*t * c_y + t * t * t * p1 -> y;
-          CHECK_PEN_EXTREMITIES(data[v-2], data[v-1], transform_matrix);
         }
       }
       p0 = p1;
@@ -13449,7 +13460,6 @@ if((pen -> flags & FLAG_CONVEX)){
                                 sizeof(float), data, GL_STATIC_DRAW);
   if(temporary_free != NULL)
     temporary_free(data);
-  UPDATE_PEN_EXTREMITIES();
   return true;
 }
 @
@@ -13470,7 +13480,7 @@ return false;
 @
 \fimcodigo
 
-\subsecao{10.2. Lendo o Comando 'pickup'}
+\subsecao{10.3. Lendo o Comando 'pickup'}
 
 Agora vamos ao que efetivamente ocorre quando lemos o
 comando \monoespaco{pickup}.
