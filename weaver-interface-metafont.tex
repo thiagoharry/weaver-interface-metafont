@@ -13486,9 +13486,10 @@ Agora vamos ao que efetivamente ocorre quando lemos o
 comando \monoespaco{pickup}.
 
 1) Primeiro lemos o próximo token. Se for \monoespaco{nullpen},
-fazemos com que \monoespaco{currentpen} se torne uma caneta nula. Se
-for uma variável de caneta, fazemos com que ela aponte para essa
-variável. Em ambos os casos, reiniciamos a matriz de transformação
+fazemos com que \monoespaco{currentpen} se torne uma caneta nula e se
+for um \monoespaco{pencircle} se torna uma caneta circular. Se for uma
+variável de caneta, fazemos com que ela aponte para essa variável. Em
+ambos os casos, reiniciamos a matriz de transformação
 de \monoespaco{currentpen} para a de uma identidade. Nos demais casos,
 ou se a variável não estiver inicializada, nós retornamos um erro.
 
@@ -13509,11 +13510,16 @@ else if(((struct generic_token *) begin_token_list) -> type == TYPE_PICKUP){
 #endif
     return false;
   }
+  if(mf -> internal_pen_variables[0].gl_vbo != 0)
+    glDeleteBuffers(1, &(mf -> internal_pen_variables[0].gl_vbo));
   if(next_token -> type != TYPE_NULLPEN){
     mf -> internal_pen_variables[0].flags = FLAG_NULL;
     mf -> internal_pen_variables[0].referenced = NULL;
-    if(mf -> internal_pen_variables[0].gl_vbo != 0)
-      glDeleteBuffers(1, &(mf -> internal_pen_variables[0].gl_vbo));
+    mf -> internal_pen_variables[0].gl_vbo = 0;
+  }
+  else if(next_token -> type != TYPE_PENCIRCLE){
+    mf -> internal_pen_variables[0].flags = FLAG_CONVEX | FLAG_CIRCULAR;
+     mf -> internal_pen_variables[0].referenced = NULL;
     mf -> internal_pen_variables[0].gl_vbo = 0;
   }
   else{
@@ -13592,6 +13598,14 @@ while(next_token != end_expression){
     if(!eval_numeric_expression(mf, cx, begin_subexpr, end_subexpr, &a))
       return false;
     TRANSFORM_SCALE(mf -> internal_pen_variables[0].gl_matrix, a.value);
+    // Curved pens need retriangulation if the size increase:
+    if(mf -> internal_pen_variables[0].referenced){
+      struct pen_variable *v = mf -> internal_pen_variables[0].referenced;
+      if(v -> gl_vbo != 0 && a.value > 1.0 && !(v -> flags & FLAG_STRAIGHT)){
+        glDeleteBuffers(1, &(v -> gl_vbo));
+        v -> gl_vbo = 0;
+      }
+    }
     break;
   case TYPE_SHIFTED:
     if(!eval_pair_expression(mf, cx, begin_subexpr, end_subexpr, &p))
@@ -13602,26 +13616,67 @@ while(next_token != end_expression){
     if(!eval_numeric_expression(mf, cx, begin_subexpr, end_subexpr, &a))
       return false;
     TRANSFORM_SLANT(mf -> internal_pen_variables[0].gl_matrix, a.value);
+    // Slant non-circular curved pens always require retriangulation:
+    if(mf -> internal_pen_variables[0].referenced){
+      struct pen_variable *v = mf -> internal_pen_variables[0].referenced;
+      if(v -> gl_vbo != 0 && a.value > 1.0 && !(v -> flags & FLAG_STRAIGHT) &&
+         !(v -> flags & FLAG_CIRCULAR)){
+        glDeleteBuffers(1, &(v -> gl_vbo));
+        v -> gl_vbo = 0;
+      }
+    }
     break;
   case TYPE_XSCALED:
     if(!eval_numeric_expression(mf, cx, begin_subexpr, end_subexpr, &a))
       return false;
     TRANSFORM_SCALE_X(mf -> internal_pen_variables[0].gl_matrix, a.value);
+    // Curved pens need retriangulation if the size increase:
+    if(mf -> internal_pen_variables[0].referenced){
+      struct pen_variable *v = mf -> internal_pen_variables[0].referenced;
+      if(v -> gl_vbo != 0 && a.value > 1.0 && !(v -> flags & FLAG_STRAIGHT)){
+        glDeleteBuffers(1, &(v -> gl_vbo));
+        v -> gl_vbo = 0;
+      }
+    }
     break;
   case TYPE_YSCALED:
     if(!eval_numeric_expression(mf, cx, begin_subexpr, end_subexpr, &a))
       return false;
     TRANSFORM_SCALE_Y(mf -> internal_pen_variables[0].gl_matrix, a.value);
+    // Curved pens need retriangulation if the size increase:
+    if(mf -> internal_pen_variables[0].referenced){
+      struct pen_variable *v = mf -> internal_pen_variables[0].referenced;
+      if(v -> gl_vbo != 0 && a.value > 1.0 && !(v -> flags & FLAG_STRAIGHT)){
+        glDeleteBuffers(1, &(v -> gl_vbo));
+        v -> gl_vbo = 0;
+      }
+    }
     break;
   case TYPE_ZSCALED:
     if(!eval_pair_expression(mf, cx, begin_subexpr, end_subexpr, &p))
       return false;
     TRANSFORM_SCALE_Z(mf -> internal_pen_variables[0].gl_matrix, p.x, p.y);
+    // Curved pens need retriangulation in this case:
+    if(mf -> internal_pen_variables[0].referenced){
+      struct pen_variable *v = mf -> internal_pen_variables[0].referenced;
+      if(v -> gl_vbo != 0 && a.value > 1.0 && !(v -> flags & FLAG_STRAIGHT)){
+        glDeleteBuffers(1, &(v -> gl_vbo));
+        v -> gl_vbo = 0;
+      }
+    }
     break;
   case TYPE_TRANSFORMED:
     if(!eval_transform_expression(mf, cx, begin_subexpr, end_subexpr, &t))
       return false;
     MATRIX_MULTIPLICATION(mf -> internal_pen_variables[0].gl_matrix, t.value);
+    // Curved pens need retriangulation in this case:
+    if(mf -> internal_pen_variables[0].referenced){
+      struct pen_variable *v = mf -> internal_pen_variables[0].referenced;
+      if(v -> gl_vbo != 0 && a.value > 1.0 && !(v -> flags & FLAG_STRAIGHT)){
+        glDeleteBuffers(1, &(v -> gl_vbo));
+        v -> gl_vbo = 0;
+      }
+    }
     break;
   default:
 #if defined(W_DEBUG_METAFONT)

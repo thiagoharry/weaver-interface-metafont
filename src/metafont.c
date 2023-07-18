@@ -419,7 +419,7 @@ TYPE_COLON,
 
 TYPE_PICKUP,
 /*:465*//*492:*/
-#line 13483 "weaver-interface-metafont_en.tex"
+#line 13538 "weaver-interface-metafont_en.tex"
 
 TYPE_DRAW,
 TYPE_ERASE,
@@ -680,7 +680,7 @@ static char*list_of_keywords[]= {
 
 "pickup",
 /*:466*//*493:*/
-#line 13490 "weaver-interface-metafont_en.tex"
+#line 13545 "weaver-interface-metafont_en.tex"
 
 "draw","erase",
 /*:493*/
@@ -750,15 +750,15 @@ static GLint uniform_inv_matrix;
 
 static GLuint pensquare_vbo;
 /*:482*//*494:*/
-#line 13508 "weaver-interface-metafont_en.tex"
+#line 13563 "weaver-interface-metafont_en.tex"
 
 static GLuint currentpicture_fb;
 /*:494*//*498:*/
-#line 13584 "weaver-interface-metafont_en.tex"
+#line 13639 "weaver-interface-metafont_en.tex"
 
 static GLint previous_fb;
 /*:498*//*501:*/
-#line 13618 "weaver-interface-metafont_en.tex"
+#line 13673 "weaver-interface-metafont_en.tex"
 
 static const char pen_vertex_shader[]= 
 "#version 100\n"
@@ -770,7 +770,7 @@ static const char pen_vertex_shader[]=
 "  gl_Position = vec4(coord.x, coord.y, 0.0, 1.0);\n"
 "}\n";
 /*:501*//*502:*/
-#line 13636 "weaver-interface-metafont_en.tex"
+#line 13691 "weaver-interface-metafont_en.tex"
 
 static const char pen_fragment_shader[]= 
 "#version 100\n"
@@ -1175,7 +1175,7 @@ bool is_pen_counterclockwise(struct pen_variable*pen);
 bool triangulate_pen(struct metafont*mf,struct pen_variable*pen,
 float*transform_matrix);
 /*:479*//*506:*/
-#line 13765 "weaver-interface-metafont_en.tex"
+#line 13820 "weaver-interface-metafont_en.tex"
 
 void drawpoint(struct metafont*mf,struct pen_variable*pen,
 struct picture_variable*pic,float x,float y);
@@ -1799,7 +1799,7 @@ mf->have_stored_normaldeviate= false;
 
 mf->pen_lft= mf->pen_rt= mf->pen_top= mf->pen_bot= 0.0;
 /*:468*//*508:*/
-#line 13807 "weaver-interface-metafont_en.tex"
+#line 13862 "weaver-interface-metafont_en.tex"
 
 mf->current_depth= 0;
 /*:508*/
@@ -2015,7 +2015,7 @@ bool ret= true;
 struct generic_token*begin,*end= NULL;
 begin= (struct generic_token*)begin_token_list;
 /*499:*/
-#line 13593 "weaver-interface-metafont_en.tex"
+#line 13648 "weaver-interface-metafont_en.tex"
 
 glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING,&previous_fb);
 /*:499*/
@@ -2043,7 +2043,7 @@ begin= end->next;
 }
 }
 /*500:*/
-#line 13601 "weaver-interface-metafont_en.tex"
+#line 13656 "weaver-interface-metafont_en.tex"
 
 glBindFramebuffer(GL_FRAMEBUFFER,previous_fb);
 /*:500*/
@@ -2549,7 +2549,7 @@ return true;
 #line 1543 "weaver-interface-metafont_en.tex"
 
 /*490:*/
-#line 13321 "weaver-interface-metafont_en.tex"
+#line 13322 "weaver-interface-metafont_en.tex"
 
 else if(((struct generic_token*)begin_token_list)->type==TYPE_PICKUP){
 struct generic_token*end_expression= *end_token_list;
@@ -2566,11 +2566,16 @@ mf->file,begin_expression->line);
 #endif
 return false;
 }
+if(mf->internal_pen_variables[0].gl_vbo!=0)
+glDeleteBuffers(1,&(mf->internal_pen_variables[0].gl_vbo));
 if(next_token->type!=TYPE_NULLPEN){
 mf->internal_pen_variables[0].flags= FLAG_NULL;
 mf->internal_pen_variables[0].referenced= NULL;
-if(mf->internal_pen_variables[0].gl_vbo!=0)
-glDeleteBuffers(1,&(mf->internal_pen_variables[0].gl_vbo));
+mf->internal_pen_variables[0].gl_vbo= 0;
+}
+else if(next_token->type!=TYPE_PENCIRCLE){
+mf->internal_pen_variables[0].flags= FLAG_CONVEX|FLAG_CIRCULAR;
+mf->internal_pen_variables[0].referenced= NULL;
 mf->internal_pen_variables[0].gl_vbo= 0;
 }
 else{
@@ -2595,7 +2600,7 @@ mf->internal_pen_variables[0].referenced= var;
 }
 INITIALIZE_IDENTITY_MATRIX(mf->internal_pen_variables[0].gl_matrix);
 /*491:*/
-#line 13381 "weaver-interface-metafont_en.tex"
+#line 13387 "weaver-interface-metafont_en.tex"
 
 while(next_token!=end_expression){
 struct generic_token*begin_subexpr,*end_subexpr;
@@ -2635,6 +2640,14 @@ case TYPE_SCALED:
 if(!eval_numeric_expression(mf,cx,begin_subexpr,end_subexpr,&a))
 return false;
 TRANSFORM_SCALE(mf->internal_pen_variables[0].gl_matrix,a.value);
+
+if(mf->internal_pen_variables[0].referenced){
+struct pen_variable*v= mf->internal_pen_variables[0].referenced;
+if(v->gl_vbo!=0&&a.value> 1.0&&!(v->flags&FLAG_STRAIGHT)){
+glDeleteBuffers(1,&(v->gl_vbo));
+v->gl_vbo= 0;
+}
+}
 break;
 case TYPE_SHIFTED:
 if(!eval_pair_expression(mf,cx,begin_subexpr,end_subexpr,&p))
@@ -2645,26 +2658,67 @@ case TYPE_SLANTED:
 if(!eval_numeric_expression(mf,cx,begin_subexpr,end_subexpr,&a))
 return false;
 TRANSFORM_SLANT(mf->internal_pen_variables[0].gl_matrix,a.value);
+
+if(mf->internal_pen_variables[0].referenced){
+struct pen_variable*v= mf->internal_pen_variables[0].referenced;
+if(v->gl_vbo!=0&&a.value> 1.0&&!(v->flags&FLAG_STRAIGHT)&&
+!(v->flags&FLAG_CIRCULAR)){
+glDeleteBuffers(1,&(v->gl_vbo));
+v->gl_vbo= 0;
+}
+}
 break;
 case TYPE_XSCALED:
 if(!eval_numeric_expression(mf,cx,begin_subexpr,end_subexpr,&a))
 return false;
 TRANSFORM_SCALE_X(mf->internal_pen_variables[0].gl_matrix,a.value);
+
+if(mf->internal_pen_variables[0].referenced){
+struct pen_variable*v= mf->internal_pen_variables[0].referenced;
+if(v->gl_vbo!=0&&a.value> 1.0&&!(v->flags&FLAG_STRAIGHT)){
+glDeleteBuffers(1,&(v->gl_vbo));
+v->gl_vbo= 0;
+}
+}
 break;
 case TYPE_YSCALED:
 if(!eval_numeric_expression(mf,cx,begin_subexpr,end_subexpr,&a))
 return false;
 TRANSFORM_SCALE_Y(mf->internal_pen_variables[0].gl_matrix,a.value);
+
+if(mf->internal_pen_variables[0].referenced){
+struct pen_variable*v= mf->internal_pen_variables[0].referenced;
+if(v->gl_vbo!=0&&a.value> 1.0&&!(v->flags&FLAG_STRAIGHT)){
+glDeleteBuffers(1,&(v->gl_vbo));
+v->gl_vbo= 0;
+}
+}
 break;
 case TYPE_ZSCALED:
 if(!eval_pair_expression(mf,cx,begin_subexpr,end_subexpr,&p))
 return false;
 TRANSFORM_SCALE_Z(mf->internal_pen_variables[0].gl_matrix,p.x,p.y);
+
+if(mf->internal_pen_variables[0].referenced){
+struct pen_variable*v= mf->internal_pen_variables[0].referenced;
+if(v->gl_vbo!=0&&a.value> 1.0&&!(v->flags&FLAG_STRAIGHT)){
+glDeleteBuffers(1,&(v->gl_vbo));
+v->gl_vbo= 0;
+}
+}
 break;
 case TYPE_TRANSFORMED:
 if(!eval_transform_expression(mf,cx,begin_subexpr,end_subexpr,&t))
 return false;
 MATRIX_MULTIPLICATION(mf->internal_pen_variables[0].gl_matrix,t.value);
+
+if(mf->internal_pen_variables[0].referenced){
+struct pen_variable*v= mf->internal_pen_variables[0].referenced;
+if(v->gl_vbo!=0&&a.value> 1.0&&!(v->flags&FLAG_STRAIGHT)){
+glDeleteBuffers(1,&(v->gl_vbo));
+v->gl_vbo= 0;
+}
+}
 break;
 default:
 #if defined(W_DEBUG_METAFONT)
@@ -2680,11 +2734,11 @@ else
 next_token= end_subexpr;
 }
 /*:491*/
-#line 13365 "weaver-interface-metafont_en.tex"
+#line 13371 "weaver-interface-metafont_en.tex"
 
 }
 /*:490*//*505:*/
-#line 13677 "weaver-interface-metafont_en.tex"
+#line 13732 "weaver-interface-metafont_en.tex"
 
 else if(((struct generic_token*)begin_token_list)->type==
 TYPE_DRAW||((struct generic_token*)begin_token_list)->type==
@@ -2706,7 +2760,7 @@ return false;
 
 triangulate_pen(mf,currentpen,currentpen->gl_matrix);
 /*496:*/
-#line 13526 "weaver-interface-metafont_en.tex"
+#line 13581 "weaver-interface-metafont_en.tex"
 
 {
 if(currentpicture_fb==0){
@@ -2733,7 +2787,7 @@ else
 glBindFramebuffer(GL_FRAMEBUFFER,currentpicture_fb);
 }
 /*:496*/
-#line 13697 "weaver-interface-metafont_en.tex"
+#line 13752 "weaver-interface-metafont_en.tex"
 
 if(erasing){
 glBlendEquation(GL_FUNC_REVERSE_SUBTRACT);
@@ -7289,7 +7343,7 @@ if(target==
 &(mf->internal_picture_variables[INTERNAL_PICTURE_CURRENTPICTURE])){
 
 /*497:*/
-#line 13558 "weaver-interface-metafont_en.tex"
+#line 13613 "weaver-interface-metafont_en.tex"
 
 {
 if(currentpicture_fb!=0){
@@ -8965,7 +9019,7 @@ return false;
 
 }
 /*:480*//*509:*/
-#line 13841 "weaver-interface-metafont_en.tex"
+#line 13896 "weaver-interface-metafont_en.tex"
 
 void drawpoint(struct metafont*mf,struct pen_variable*pen,
 struct picture_variable*pic,float x,float y){
@@ -9043,11 +9097,11 @@ glBufferData(GL_ARRAY_BUFFER,8*sizeof(float),square_vertices,
 GL_STATIC_DRAW);
 }
 /*:483*//*495:*/
-#line 13516 "weaver-interface-metafont_en.tex"
+#line 13571 "weaver-interface-metafont_en.tex"
 
 currentpicture_fb= 0;
 /*:495*//*503:*/
-#line 13654 "weaver-interface-metafont_en.tex"
+#line 13709 "weaver-interface-metafont_en.tex"
 
 {
 pen_program= compile_shader_program(pen_vertex_shader,pen_fragment_shader);
@@ -9076,7 +9130,7 @@ glDeleteProgram(program);
 
 glDeleteProgram(inv_program);
 /*:409*//*504:*/
-#line 13666 "weaver-interface-metafont_en.tex"
+#line 13721 "weaver-interface-metafont_en.tex"
 
 glDeleteProgram(pen_program);
 /*:504*/
