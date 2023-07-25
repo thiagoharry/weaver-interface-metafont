@@ -8929,6 +8929,10 @@ void assign_pen_variable(struct metafont *mf,
     recursive_copy_points(alloc, &(target -> format), source -> format, true);
   target -> gl_vbo = 0;
   target -> referenced = NULL;
+  // If we are assigning to 'currentpen', then we need to retriangulate
+  // the pen, as will be described in Section 10:
+  if(target == &(mf -> internal_pen_variables[INTERNAL_PEN_CURRENTPEN]))
+    triangulate_pen(mf, target, target -> gl_matrix);
 }
 @
 \fimcodigo
@@ -13515,6 +13519,41 @@ while(next_token != end_expression){
     next_token = end_subexpr -> next;
   else
     next_token = end_subexpr;
+}
+@
+\fimcodigo
+
+After getting the new current pen shape, if it is a pointer for an
+existing pen or not, and its linear transform represented as a matrix,
+we just need to triangulate the current pen if needed. For this, we
+need to obtain the final transform matrix: if the current pen is a
+pointer for another pen, then the final transform matrix is obtained
+multiplicating the \monoespaco{currentpen} matrix by the pointed pen
+matrix. Otherwise, the final transform matrix is just the current pen
+matrix, After getting the final transform matrix, we just pass it to
+the triangulation function:
+
+\iniciocodigo
+@<'pickup' Command: Continue@>+=
+{
+  float final_transform_matrix[9];
+  if(mf -> internal_pen_variables[0].referenced == NULL){
+    memcpy(final_transform_matrix, mf -> internal_pen_variables[0].gl_matrix,
+           9 * sizeof(float));
+    if(!triangulate_pen(mf, &(mf -> internal_pen_variables[0]),
+                        final_transform_matrix))
+      return false;
+  }
+  else{
+    memcpy(final_transform_matrix,
+           mf -> internal_pen_variables[0].referenced -> gl_matrix,
+           9 * sizeof(float));
+    MATRIX_MULTIPLICATION(final_transform_matrix,
+                          mf -> internal_pen_variables[0].gl_matrix);
+    if(!triangulate_pen(mf, mf -> internal_pen_variables[0].referenced,
+                        final_transform_matrix))
+      return false;
+  }
 }
 @
 \fimcodigo

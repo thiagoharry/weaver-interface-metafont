@@ -9050,6 +9050,10 @@ void assign_pen_variable(struct metafont *mf,
     recursive_copy_points(alloc, &(target -> format), source -> format, true);
   target -> gl_vbo = 0;
   target -> referenced = NULL;
+  // Se estamos atribuindo para 'currentpen', devemos retriangular a caneta.
+  // Conforme descrito na Seção 10.
+  if(target == &(mf -> internal_pen_variables[INTERNAL_PEN_CURRENTPEN]))
+    triangulate_pen(mf, target, target -> gl_matrix);
 }
 @
 \fimcodigo
@@ -13690,6 +13694,40 @@ while(next_token != end_expression){
     next_token = end_subexpr -> next;
   else
     next_token = end_subexpr;
+}
+@
+\fimcodigo
+
+Depois de termos obtido tanto o formato da caneta nova, se ela é um
+ponteiro e qual a sua transformação linear, enfim iremos à etapa de
+triangular a caneta. Para isso, se a caneta atual ter sido ajustada
+para um ponteiro, sua transformação é a multiplicação da matriz
+armazenada na \monoespaco{currentpen} pela matriz da caneta para a
+qual ela aponta. Ou, se não for um ponteiro, é apenas a matriz
+armazenada em \monoespaco{currentpen}. Após obter a matriz final de
+transformação, a passamos para a função que fará a triangulação:
+
+\iniciocodigo
+@<Comando 'pickup': Continuação@>+=
+{
+  float final_transform_matrix[9];
+  if(mf -> internal_pen_variables[0].referenced == NULL){
+    memcpy(final_transform_matrix, mf -> internal_pen_variables[0].gl_matrix,
+           9 * sizeof(float));
+    if(!triangulate_pen(mf, &(mf -> internal_pen_variables[0]),
+                        final_transform_matrix))
+      return false;
+  }
+  else{
+    memcpy(final_transform_matrix,
+           mf -> internal_pen_variables[0].referenced -> gl_matrix,
+           9 * sizeof(float));
+    MATRIX_MULTIPLICATION(final_transform_matrix,
+                          mf -> internal_pen_variables[0].gl_matrix);
+    if(!triangulate_pen(mf, mf -> internal_pen_variables[0].referenced,
+                        final_transform_matrix))
+      return false;
+  }
 }
 @
 \fimcodigo

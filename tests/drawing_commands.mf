@@ -2,10 +2,15 @@
 
 picture a;
 numeric wa;
+picture b;
+numeric wb;
+pen p;
 
 currentpicture = nullpicture(6, 6);
-currentpen = makepen((0, 0) -- (0, 1) -- (1, 1) -- (1, 0) -- cycle);
+p = makepen((0, 0) -- (0, 1) -- (1, 1) -- (1, 0) -- cycle);
+currentpen = p;
 %currentpen = pensquare shifted (0.5, 0.5); // not working
+% 'draw' command do not support 'pensquare' yet.
 
 draw (1, 1) -- (4, 1) -- (4, 4) -- (1, 4) -- cycle;
 
