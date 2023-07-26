@@ -4908,7 +4908,7 @@ $c$, interpretá-las e retornar $a(b+c)$:
 
 \iniciocodigo
 @<Primário de Par: Regra 4@>=
-if(end_expression -> type == TYPE_CLOSE_BRACKETS){
+else if(end_expression -> type == TYPE_CLOSE_BRACKETS){
   struct generic_token *begin_a, *end_a, *begin_b, *end_b, *begin_c,
                        *end_c;
   struct numeric_variable a;
@@ -13728,6 +13728,119 @@ transformação, a passamos para a função que fará a triangulação:
                         final_transform_matrix))
       return false;
   }
+}
+@
+\fimcodigo
+
+\subsecao{10.4. Os Operadores \monoespaco{bot}, \monoespaco{top}, \monoespaco{lft},
+\monoespaco{rt}}
+
+Embora tenhamos definido quase todos os operadores de pares na
+Subseção 8.2, existem quatro operadores primários que deixamos para
+definir aqui. A gramática deles é:
+
+\alinhaverbatim
+<Primário de Par> -> bot <Primário de Par> | top <Primário de Par> |
+                     lft <Primário de Par> | rt <Primário de Par>
+\alinhanormal
+
+Isso requer adicionar 4 novos tokens para tais operadores:
+
+\iniciocodigo
+@<METAFONT: Definição de Token Simbólico@>+=
+TYPE_BOT,  // O token simbólico 'bot'
+TYPE_TOP,  // O token simbólico 'top'
+TYPE_LFT,  // O token simbólico 'lft'
+TYPE_RT,   // O token simbólico 'rt'
+@
+\fimcodigo
+
+E também adicionar o nome dos tokens como palavras reservadas:
+
+\iniciocodigo
+@<Lista de Palavras Reservadas@>+=
+"bot", "top", "lft", "rt",
+@
+\fimcodigo
+
+O que estes operadores fazem é deslocar um par uma distância que
+depende do tamanho da caneta atual que estamos usando. O
+operador \monoespaco{bot} desloca o par para baixo uma quantidade
+equivalente à menor coordenada $y$ que o contorno da caneta atual
+tem. Assumindo que o centro da caneta esteja em $(0, 0)$, sua menor
+coordenada é negativa e o efeito disso é que quando pedimos para
+desenhar em \monoespaco{bot (x, y)}, o que ocorre é que desenharemos
+com a caneta centralizada no eixo $x$, e deslocada para cima de tal
+forma que a parte de baixo dela está no eixo $y$:
+
+\iniciocodigo
+@<Primário de Par: Outras Regras a Definir Depois@>+=
+else if(begin_expression -> type == TYPE_BOT){
+  if(!eval_pair_primary(mf, cx, (struct generic_token *)
+                                begin_expression -> next,
+                        end_expression, result))
+    return false;
+  result -> y -= mf -> pen_bot;
+  return true;
+}
+@
+\fimcodigo
+
+O operador \monoespaco{top} desloca o par para baixo uma quantidade
+equivalente à maior coordenada $y$ da caneta. Se a caneta está
+centralizada em $(0, 0)$, este será um valor positivo e a caneta será
+abaixada de modo que ao desenhar ela em \monoespaco{top (x, y)}, seu
+topo estará encostando na coordenada $y$ indicada:
+
+\iniciocodigo
+@<Primário de Par: Outras Regras a Definir Depois@>+=
+else if(begin_expression -> type == TYPE_TOP){
+  if(!eval_pair_primary(mf, cx, (struct generic_token *)
+                                begin_expression -> next,
+                        end_expression, result))
+    return false;
+  result -> y -= mf -> pen_top;
+  return true;
+}
+@
+\fimcodigo
+
+
+O operador \monoespaco{lft} desloca o par à esquerda uma quantidade
+igual à menor coordenada $x$ da caneta. Novamente, se a caneta está
+centralizada em $(0, 0)$, este será um valor negativo e o efeito é que
+se usada para desenhar na coordenada deslocada, a caneta será ajustada
+para a direita de modo que sua extremidade esquerda esteja na posição
+indicada pelo par:
+
+\iniciocodigo
+@<Primário de Par: Outras Regras a Definir Depois@>+=
+else if(begin_expression -> type == TYPE_LFT){
+  if(!eval_pair_primary(mf, cx, (struct generic_token *)
+                                begin_expression -> next,
+                        end_expression, result))
+    return false;
+  result -> x -= mf -> pen_lft;
+  return true;
+}
+@
+\fimcodigo
+
+Por fim, o operador \monoespaco{rt} desloca o par para a esquerda uma
+quantidade equivalente à maior coordenada $x$ da caneta atual, de modo
+que se as coordenadas da caneta estão centralizadas em $(0, 0)$, então
+a posição indicada pelo par é onde a caneta deve ser centralizada para
+que sua extremidade direita fique na coordenada $x$ indicada pelo par:
+
+\iniciocodigo
+@<Primário de Par: Outras Regras a Definir Depois@>+=
+else if(begin_expression -> type == TYPE_RT){
+  if(!eval_pair_primary(mf, cx, (struct generic_token *)
+                                begin_expression -> next,
+                        end_expression, result))
+    return false;
+  result -> x -= mf -> pen_rt;
+  return true;
 }
 @
 \fimcodigo

@@ -4839,7 +4839,7 @@ type $a[b,c]$. Our task is separate the three parts $a$, $b$ and $c$, evaluate t
 
 \iniciocodigo
 @<Pair Primary: Rule 4@>=
-if(end_expression -> type == TYPE_CLOSE_BRACKETS){
+else if(end_expression -> type == TYPE_CLOSE_BRACKETS){
   struct generic_token *begin_a, *end_a, *begin_b, *end_b, *begin_c,
                        *end_c;
   struct numeric_variable a;
@@ -13557,6 +13557,118 @@ the triangulation function:
 }
 @
 \fimcodigo
+
+\subsecao{10.4. Operators \monoespaco{bot}, \monoespaco{top}, \monoespaco{lft},
+\monoespaco{rt}}
+
+We defined most pair operators in Subsection 8.2, but there are still
+4 missing operators that we will define here. Their grammar is:
+
+\alinhaverbatim
+<Pair Primary> -> bot <Pair Primary> | top <Pair Primary> |
+                  lft <Pair Primary> | rt <Pair Primary>
+\alinhanormal
+
+This requires 4 new tokens for such operators:
+
+\iniciocodigo
+@<METAFONT: Symbolic Token Definition@>+=
+TYPE_BOT,  // Symbolic token 'bot'
+TYPE_TOP,  // Symbolic token 'top'
+TYPE_LFT,  // Symbolic token 'lft'
+TYPE_RT,   // Symbolic token 'rt'
+@
+\fimcodigo
+
+And we also need to add the token names to the list of reserved
+keywords:
+
+\iniciocodigo
+@<List of Keywords@>+=
+"bot", "top", "lft", "rt",
+@
+\fimcodigo
+
+These operators shift a pair for a distance that depends on the
+current pen size. The operator \monoespaco{bot} shifts the pair down a
+distance equivalent to the smallest coordinate $y$ found in the
+current pen perimeter. Assuming that the pen is centered in the
+origin, its smallest coordinate is negative and this means that
+drawing in \monoespaco{bot (x, y)} is centering the pen in the given
+coordinate $x$ while shifting up the pen such that its bottom is
+placed in the given coordinate $y$:
+
+\iniciocodigo
+@<Pair Primary: Other Rules to Be Defined Later@>+=
+else if(begin_expression -> type == TYPE_BOT){
+  if(!eval_pair_primary(mf, cx, (struct generic_token *)
+                                begin_expression -> next,
+                        end_expression, result))
+    return false;
+  result -> y -= mf -> pen_bot;
+  return true;
+}
+@
+\fimcodigo
+
+The operator \monoespaco{top} shifts down a quantity equal to the
+biggest coordinate $y$ in the current pen perimeter. If the pen is
+centered in the origin, this value is positive and the pen will be
+shifted such that if we draw in \monoespaco{top (x, y)}, its top will
+be placed in the given coordinate $y$:
+
+\iniciocodigo
+@<Pair Primary: Other Rules to Be Defined Later@>+=
+else if(begin_expression -> type == TYPE_TOP){
+  if(!eval_pair_primary(mf, cx, (struct generic_token *)
+                                begin_expression -> next,
+                        end_expression, result))
+    return false;
+  result -> y -= mf -> pen_top;
+  return true;
+}
+@
+\fimcodigo
+
+The operator \monoespaco{lft} shifts left a quantity equal the
+smallest coordinate $x$ in the current pen perimeter. Again, if the
+pen is centered in the origin, this will be a negative value that in
+fact shifts right the pen such that its leftmost par is placed in the
+coordinate $x$ given by the pair:
+
+\iniciocodigo
+@<Pair Primary: Other Rules to Be Defined Later@>+=
+else if(begin_expression -> type == TYPE_LFT){
+  if(!eval_pair_primary(mf, cx, (struct generic_token *)
+                                begin_expression -> next,
+                        end_expression, result))
+    return false;
+  result -> x -= mf -> pen_lft;
+  return true;
+}
+@
+\fimcodigo
+
+The last operator, \monoespaco{rt}, shifts left the pair a quantity
+equivalent to the rightmost coordinate in the pen perimeter. Such that
+if the current pen is centered in the origin, the coordinate is
+shifted such that if the pen is drawn in the shifted position, its
+rightmost part is placed in the $x$ coordinate given by the pair
+before the shifting:
+
+\iniciocodigo
+@<Pair Primary: Other Rules to Be Defined Later@>+=
+else if(begin_expression -> type == TYPE_RT){
+  if(!eval_pair_primary(mf, cx, (struct generic_token *)
+                                begin_expression -> next,
+                        end_expression, result))
+    return false;
+  result -> x -= mf -> pen_rt;
+  return true;
+}
+@
+\fimcodigo
+
 
 \secao{11. The \monoespaco{draw} and \monoespaco{erase} Command}
 
