@@ -1,20 +1,26 @@
 % Testing some drawing commands
 
-picture a;
-numeric wa;
-picture b;
-numeric wb;
+picture a, b;
+numeric wa, wb;
 pen p;
 
+% Drawing a square with a square pen with a single pixel
 currentpicture = nullpicture(6, 6);
-p = makepen((0, 0) -- (0, 1) -- (1, 1) -- (1, 0) -- cycle);
+p = pensquare shifted (0.5, 0.5);
 currentpen = p;
-%currentpen = pensquare shifted (0.5, 0.5); // not working
-% 'draw' command do not support 'pensquare' yet.
 
 draw (1, 1) -- (4, 1) -- (4, 4) -- (1, 4) -- cycle;
 
 a = currentpicture;
 wa = totalweight a;
+
+% Drawing the same square, but this time using 'pickup' command
+currentpicture = nullpicture(6, 6);
+pickup p;
+
+draw (1, 1) -- (4, 1) -- (4, 4) -- (1, 4) -- cycle;
+
+b = currentpicture;
+wb = totalweight a;
 
 end

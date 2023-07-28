@@ -9867,14 +9867,19 @@ else if(type == TYPE_T_PICTURE){
         glDeleteTextures(1, &(pic -> texture));
       memcpy(pic, &result, sizeof(struct picture_variable));
       pic -> type = TYPE_T_PICTURE;
+      // Se atribuindo para 'currentpicture', precisamos de código adicional
+      if(pic ==
+         &(mf -> internal_picture_variables[INTERNAL_PICTURE_CURRENTPICTURE])){
+        // O código abaixo será definido na Subseção 11.2:
+        @<Gera nova 'currentpicture'@>
+      }
     }
     else 
       assign_picture_variable(mf, (struct picture_variable *) var -> var,
                               &result);
     var = (struct symbolic_token *) (var -> next);
     var = (struct symbolic_token *) (var -> next);
-  }
-  
+  }  
 }
 @
 \fimcodigo
@@ -10195,8 +10200,8 @@ void assign_picture_variable(struct metafont *mf,
                       source -> width, source -> height);
   render_picture(source, model_view_matrix, source -> width, source -> height, true);
   // Finalizando
-  glBindFramebuffer(GL_FRAMEBUFFER, previous_framebuffer);
   glBindTexture(GL_TEXTURE_2D, 0);
+  glBindFramebuffer(GL_FRAMEBUFFER, previous_framebuffer);
   glDeleteFramebuffers(1, &temporary_framebuffer);
   if(target ==
          &(mf -> internal_picture_variables[INTERNAL_PICTURE_CURRENTPICTURE])){
@@ -13510,7 +13515,7 @@ else if(((struct generic_token *) begin_token_list) -> type == TYPE_PICKUP){
     fprintf(stderr, "METAFONT: Error: %s:%d: Expected 'nullpen' or pen "
                     "variable after 'pickup'. Not an arbitrary "
                     "expression.\n",
-            mf -> file, begin_expression -> line);
+            mf -> file, next_token -> line);
 #endif
     return false;
   }
@@ -13532,7 +13537,7 @@ else if(((struct generic_token *) begin_token_list) -> type == TYPE_PICKUP){
 #if defined(W_DEBUG_METAFONT)
       fprintf(stderr, "METAFONT: Error: %s:%d: Non-initialized variable after "
                       "after 'pickup' command.\n",
-              mf -> file, begin_expression -> line);
+              mf -> file, next_token -> line);
 #endif
       return false;
     }
@@ -13540,7 +13545,8 @@ else if(((struct generic_token *) begin_token_list) -> type == TYPE_PICKUP){
 #if defined(W_DEBUG_METAFONT)
       fprintf(stderr, "METAFONT: Error: %s:%d: Variable '%s' is not a "
                       "pen variable.\n",
-              mf -> file, begin_expression -> line, next_token -> value);
+              mf -> file, next_token -> line,
+              ((struct symbolic_token *) next_token) -> value);
 #endif
       return false;
     }
@@ -13548,6 +13554,7 @@ else if(((struct generic_token *) begin_token_list) -> type == TYPE_PICKUP){
   }
   INITIALIZE_IDENTITY_MATRIX(mf -> internal_pen_variables[0].gl_matrix);
   @<Comando 'pickup': Continuação@>
+  return true;
 }
 @
 \fimcodigo
@@ -13572,7 +13579,7 @@ while(next_token != end_expression){
 #if defined(W_DEBUG_METAFONT)
       fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable 'pickup' "
                       "command format.\n",
-              mf -> file, begin_expression -> line);
+              mf -> file, next_token -> line);
 #endif
     return false;
   }
@@ -13686,7 +13693,7 @@ while(next_token != end_expression){
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable 'pickup' "
                     "command format.\n",
-            mf -> file, begin_expression -> line);
+            mf -> file, next_token -> line);
 #endif
     return false;  
   }
@@ -13869,7 +13876,7 @@ TYPE_ERASE,  // O token simbólico 'erase'
 
 \iniciocodigo
 @<Lista de Palavras Reservadas@>+=
-"draw",
+"draw", "erase",
 @
 \fimcodigo
 
@@ -13924,6 +13931,12 @@ inicializa se não estiver:
     glBindFramebuffer(GL_FRAMEBUFFER, currentpicture_fb);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
                            texture, 0);
+    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: OpenGL cannot create framebuffer!\n");
+#endif
+      return false;
+    }
   }
   else
     glBindFramebuffer(GL_FRAMEBUFFER, currentpicture_fb);
@@ -14061,6 +14074,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
         TYPE_ERASE){
   int i, j;
   struct path_variable path;
+  float transform_matrix[9];
   // Parte 1: Inicialização
   bool erasing = (((struct generic_token *) begin_token_list) -> type ==
     TYPE_ERASE);
@@ -14074,7 +14088,14 @@ else if(((struct generic_token *) begin_token_list) -> type ==
                            &path))
     return false;
   // Parte 3: Preparar a caneta, a imagem de destino e parâmetros OpenGL
-  triangulate_pen(mf, currentpen, currentpen -> gl_matrix);
+  if(currentpen -> referenced != NULL){
+    memcpy(transform_matrix, currentpen -> referenced -> gl_matrix,
+           9 * sizeof(float));
+    MATRIX_MULTIPLICATION(transform_matrix, currentpen -> gl_matrix);
+    currentpen = currentpen -> referenced;
+  }
+  else
+    memcpy(transform_matrix, currentpen -> gl_matrix, 9 * sizeof(float));
   @<Prepara 'currentpicture' para Desenho@>
   if(erasing){
     glBlendEquation(GL_FUNC_REVERSE_SUBTRACT);
@@ -14107,7 +14128,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
                 3*(1-t)*(1-t)*t * path.points[i].u_y +
                 3*(1-t)*t*t * path.points[i].v_y +
                 t*t*t * path.points[(i + 1) % (path.length)].y;
-      drawpoint(mf, currentpen, currentpicture, x, y);
+      drawpoint(mf, currentpen, currentpicture, x, y, transform_matrix);
     }
   }
   // Parte 5: Finalização
@@ -14148,7 +14169,7 @@ Resta apenas definir a função \monoespaco{drawpoint}. O seu cabeçalho
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
 void drawpoint(struct metafont *mf, struct pen_variable *pen,
-               struct picture_variable *pic, float x, float y);
+               struct picture_variable *pic, float x, float y, float *matrix);
 @
 \fimcodigo
 
@@ -14223,20 +14244,25 @@ imediatamente antes de desenhar:
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
 void drawpoint(struct metafont *mf, struct pen_variable *pen,
-               struct picture_variable *pic, float x, float y){
+               struct picture_variable *pic, float x, float y, float *matrix){
   float gl_matrix[9];
-  gl_matrix[0] = (2 * pen -> gl_matrix[0]) /  pic -> width;  // 2a/w
-  gl_matrix[1] = (2 * pen -> gl_matrix[1]) /  pic -> height; // 2b/h
+  gl_matrix[0] = (2 * matrix[0]) /  pic -> width;  // 2a/w
+  gl_matrix[1] = (2 * matrix[1]) /  pic -> height; // 2b/h
   gl_matrix[2] = 0.0;
-  gl_matrix[3] = (2 * pen -> gl_matrix[3]) /  pic -> width;  // 2c/w
-  gl_matrix[4] = (2 * pen -> gl_matrix[4]) /  pic -> height; // 2d/h
+  gl_matrix[3] = (2 * matrix[3]) /  pic -> width;  // 2c/w
+  gl_matrix[4] = (2 * matrix[4]) /  pic -> height; // 2d/h
   gl_matrix[5] = 0.0;
-  gl_matrix[6] = 2 * (pen -> gl_matrix[6] + x) /  pic -> width - 1.0;
-  gl_matrix[7] = 2 * (pen -> gl_matrix[7] + mf -> current_depth + y) /
-                  pic -> width - 1.0;
+  gl_matrix[6] = 2 * (matrix[6] + x) /  pic -> width - 1.0;
+  gl_matrix[7] = 2 * (matrix[7] + mf -> current_depth + y) / pic -> width -
+                 1.0;
   gl_matrix[8] = 1.0;
   glViewport(0, 0, pic -> width, pic -> height);
-  glBindBuffer(GL_ARRAY_BUFFER, pen -> gl_vbo);
+  // Se a caneta for quadrada, usamos a triangulação padrão de quadrado.
+  // Se não for, usamos a triangulação da própria caneta.
+  if(pen -> flags & FLAG_SQUARE)
+    glBindBuffer(GL_ARRAY_BUFFER, pensquare_vbo);
+  else 
+    glBindBuffer(GL_ARRAY_BUFFER, pen -> gl_vbo);
   glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void *) 0);
   glEnableVertexAttribArray(0);
   glUseProgram(pen_program);

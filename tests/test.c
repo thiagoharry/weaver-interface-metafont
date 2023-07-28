@@ -1746,21 +1746,28 @@ void test_drawing_commands(void){
   struct metafont *mf;
   struct context *cx;
   bool ret;
-  struct named_variable *a, *wa;
-  struct picture_variable *picture_a;
-  struct numeric_variable *numeric_wa;
+  struct named_variable *a, *wa, *b, *wb;
+  struct picture_variable *picture_a, *picture_b;
+  struct numeric_variable *numeric_wa, *numeric_wb;
   mf = init_metafont(malloc, free, "tests/drawing_commands.mf");
   cx = init_context();
   void *p = lexer(mf, malloc, free, "tests/drawing_commands.mf");
   ret = eval_program(mf, cx, p);
   a = (struct named_variable *) mf -> named_variables;
-  wa = (struct named_variable *) (a -> next);
+  b = (struct named_variable *) (a -> next);
+  wa = (struct named_variable *) (b -> next);
+  wb = (struct named_variable *) (wa -> next);
   picture_a = (struct picture_variable *) a -> var;
+  picture_b = (struct picture_variable *) b -> var;
   numeric_wa = (struct numeric_variable *) wa -> var;
+  numeric_wb = (struct numeric_variable *) wb -> var;
   assert("Interpreting program with drawing commands", ret);
   assert("Drawing a simple square",
 	 picture_a -> width == 6 && picture_a -> height == 6 &&
   	 ALMOST_EQUAL(numeric_wa -> value, 12.0));
+  assert("Using 'pickup' command pointing to a pen",
+	 picture_b -> width == 6 && picture_b -> height == 6 &&
+  	 ALMOST_EQUAL(numeric_wb -> value, 12.0));
   free_token_list(free, p);
   destroy_context(mf, cx);
   destroy_metafont(mf);
