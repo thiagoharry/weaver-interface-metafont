@@ -783,6 +783,14 @@ static const char pen_vertex_shader[]=
 /*:508*//*509:*/
 #line 13850 "weaver-interface-metafont_en.tex"
 
+static const char pen_erase_fragment_shader[]= 
+"#version 100\n"
+"precision mediump float;\n"
+"uniform vec4 color;\n"
+"void main(){\n"
+"  gl_FragColor = vec4(1.0 - color.r, 1.0 - color.g, 1.0 - color.b, \n"
+"                      color.a);\n"
+"}\n";
 static const char pen_fragment_shader[]= 
 "#version 100\n"
 "precision mediump float;\n"
@@ -790,9 +798,9 @@ static const char pen_fragment_shader[]=
 "void main(){\n"
 "  gl_FragColor = color;"
 "}\n";
-static GLuint pen_program;
-static GLint pen_uniform_matrix;
-static GLint pen_uniform_color;
+static GLuint pen_program,pen_erase_program;
+static GLint pen_uniform_matrix,pen_erase_uniform_matrix;
+static GLint pen_uniform_color,pen_erase_uniform_color;
 /*:509*/
 #line 218 "weaver-interface-metafont_en.tex"
 
@@ -1186,10 +1194,11 @@ bool is_pen_counterclockwise(struct pen_variable*pen);
 bool triangulate_pen(struct metafont*mf,struct pen_variable*pen,
 float*transform_matrix);
 /*:479*//*513:*/
-#line 13987 "weaver-interface-metafont_en.tex"
+#line 14003 "weaver-interface-metafont_en.tex"
 
 void drawpoint(struct metafont*mf,struct pen_variable*pen,
-struct picture_variable*pic,float x,float y,float*matrix);
+struct picture_variable*pic,float x,float y,float*matrix,
+bool erasing);
 /*:513*/
 #line 219 "weaver-interface-metafont_en.tex"
 
@@ -1810,7 +1819,7 @@ mf->have_stored_normaldeviate= false;
 
 mf->pen_lft= mf->pen_rt= mf->pen_top= mf->pen_bot= 0.0;
 /*:468*//*515:*/
-#line 14029 "weaver-interface-metafont_en.tex"
+#line 14046 "weaver-interface-metafont_en.tex"
 
 mf->current_depth= 0;
 /*:515*/
@@ -2598,12 +2607,12 @@ return false;
 }
 if(mf->internal_pen_variables[0].gl_vbo!=0)
 glDeleteBuffers(1,&(mf->internal_pen_variables[0].gl_vbo));
-if(next_token->type!=TYPE_NULLPEN){
+if(next_token->type==TYPE_NULLPEN){
 mf->internal_pen_variables[0].flags= FLAG_NULL;
 mf->internal_pen_variables[0].referenced= NULL;
 mf->internal_pen_variables[0].gl_vbo= 0;
 }
-else if(next_token->type!=TYPE_PENCIRCLE){
+else if(next_token->type==TYPE_PENCIRCLE){
 mf->internal_pen_variables[0].flags= FLAG_CONVEX|FLAG_CIRCULAR;
 mf->internal_pen_variables[0].referenced= NULL;
 mf->internal_pen_variables[0].gl_vbo= 0;
@@ -2793,7 +2802,7 @@ return false;
 return true;
 }
 /*:490*//*512:*/
-#line 13891 "weaver-interface-metafont_en.tex"
+#line 13905 "weaver-interface-metafont_en.tex"
 
 else if(((struct generic_token*)begin_token_list)->type==
 TYPE_DRAW||((struct generic_token*)begin_token_list)->type==
@@ -2850,7 +2859,7 @@ else
 glBindFramebuffer(GL_FRAMEBUFFER,currentpicture_fb);
 }
 /*:503*/
-#line 13919 "weaver-interface-metafont_en.tex"
+#line 13933 "weaver-interface-metafont_en.tex"
 
 if(erasing){
 glBlendEquation(GL_FUNC_REVERSE_SUBTRACT);
@@ -2883,7 +2892,8 @@ float y= (1-t)*(1-t)*(1-t)*path.points[i].y+
 3*(1-t)*(1-t)*t*path.points[i].u_y+
 3*(1-t)*t*t*path.points[i].v_y+
 t*t*t*path.points[(i+1)%(path.length)].y;
-drawpoint(mf,currentpen,currentpicture,x,y,transform_matrix);
+drawpoint(mf,currentpen,currentpicture,x,y,transform_matrix,
+erasing);
 }
 }
 
@@ -9130,10 +9140,11 @@ return false;
 
 }
 /*:480*//*516:*/
-#line 14063 "weaver-interface-metafont_en.tex"
+#line 14081 "weaver-interface-metafont_en.tex"
 
 void drawpoint(struct metafont*mf,struct pen_variable*pen,
-struct picture_variable*pic,float x,float y,float*matrix){
+struct picture_variable*pic,float x,float y,float*matrix,
+bool erasing){
 float gl_matrix[9];
 gl_matrix[0]= (2*matrix[0])/pic->width;
 gl_matrix[1]= (2*matrix[1])/pic->height;
@@ -9153,10 +9164,17 @@ glBindBuffer(GL_ARRAY_BUFFER,pensquare_vbo);
 else
 glBindBuffer(GL_ARRAY_BUFFER,pen->gl_vbo);
 glVertexAttribPointer(0,2,GL_FLOAT,GL_FALSE,0,(void*)0);
-glEnableVertexAttribArray(0);
+if(erasing){
+glUseProgram(pen_erase_program);
+glUniformMatrix3fv(pen_erase_uniform_matrix,1,true,gl_matrix);
+glUniform4f(pen_erase_uniform_color,0.0,0.0,0.0,1.0);
+}
+else{
 glUseProgram(pen_program);
-glUniformMatrix3fv(uniform_matrix,1,true,gl_matrix);
+glUniformMatrix3fv(pen_uniform_matrix,1,true,gl_matrix);
 glUniform4f(pen_uniform_color,0.0,0.0,0.0,1.0);
+}
+glEnableVertexAttribArray(0);
 glDrawArrays(GL_TRIANGLE_FAN,0,4);
 }
 /*:516*/
@@ -9217,12 +9235,17 @@ GL_STATIC_DRAW);
 
 currentpicture_fb= 0;
 /*:502*//*510:*/
-#line 13868 "weaver-interface-metafont_en.tex"
+#line 13876 "weaver-interface-metafont_en.tex"
 
 {
 pen_program= compile_shader_program(pen_vertex_shader,pen_fragment_shader);
 pen_uniform_matrix= glGetUniformLocation(pen_program,"model_view_matrix");
 pen_uniform_color= glGetUniformLocation(pen_program,"color");
+pen_erase_program= compile_shader_program(pen_vertex_shader,
+pen_erase_fragment_shader);
+pen_erase_uniform_matrix= glGetUniformLocation(pen_erase_program,
+"model_view_matrix");
+pen_erase_uniform_color= glGetUniformLocation(pen_erase_program,"color");
 }
 /*:510*/
 #line 501 "weaver-interface-metafont_en.tex"
@@ -9246,9 +9269,10 @@ glDeleteProgram(program);
 
 glDeleteProgram(inv_program);
 /*:409*//*511:*/
-#line 13880 "weaver-interface-metafont_en.tex"
+#line 13893 "weaver-interface-metafont_en.tex"
 
 glDeleteProgram(pen_program);
+glDeleteProgram(pen_erase_program);
 /*:511*/
 #line 514 "weaver-interface-metafont_en.tex"
 

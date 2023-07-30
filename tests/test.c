@@ -1746,28 +1746,39 @@ void test_drawing_commands(void){
   struct metafont *mf;
   struct context *cx;
   bool ret;
-  struct named_variable *a, *wa, *b, *wb;
-  struct picture_variable *picture_a, *picture_b;
-  struct numeric_variable *numeric_wa, *numeric_wb;
+  struct named_variable *a, *wa, *b, *wb, *c, *wc;
+  struct picture_variable *picture_a, *picture_b, *picture_c;
+  struct numeric_variable *numeric_wa, *numeric_wb, *numeric_wc;
   mf = init_metafont(malloc, free, "tests/drawing_commands.mf");
   cx = init_context();
   void *p = lexer(mf, malloc, free, "tests/drawing_commands.mf");
   ret = eval_program(mf, cx, p);
   a = (struct named_variable *) mf -> named_variables;
   b = (struct named_variable *) (a -> next);
-  wa = (struct named_variable *) (b -> next);
+  c = (struct named_variable *) (b -> next);
+  wa = (struct named_variable *) (c -> next);
   wb = (struct named_variable *) (wa -> next);
+  wc = (struct named_variable *) (wb -> next);
   picture_a = (struct picture_variable *) a -> var;
   picture_b = (struct picture_variable *) b -> var;
+  picture_c = (struct picture_variable *) c -> var;
   numeric_wa = (struct numeric_variable *) wa -> var;
   numeric_wb = (struct numeric_variable *) wb -> var;
+  numeric_wc = (struct numeric_variable *) wc -> var;
   assert("Interpreting program with drawing commands", ret);
+  //print_picture(picture_a);
   assert("Drawing a simple square",
 	 picture_a -> width == 6 && picture_a -> height == 6 &&
   	 ALMOST_EQUAL(numeric_wa -> value, 12.0));
+  //printf("b: %f\n", numeric_wb -> value);
+  //print_picture(picture_b);
   assert("Using 'pickup' command pointing to a pen",
 	 picture_b -> width == 6 && picture_b -> height == 6 &&
   	 ALMOST_EQUAL(numeric_wb -> value, 12.0));
+  //print_picture(picture_c);
+  assert("Using 'erase' command",
+	 picture_c -> width == 6 && picture_c -> height == 6 &&
+  	 ALMOST_EQUAL(numeric_wc -> value, 0.0));
   free_token_list(free, p);
   destroy_context(mf, cx);
   destroy_metafont(mf);

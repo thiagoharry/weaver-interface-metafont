@@ -13521,12 +13521,12 @@ else if(((struct generic_token *) begin_token_list) -> type == TYPE_PICKUP){
   }
   if(mf -> internal_pen_variables[0].gl_vbo != 0)
     glDeleteBuffers(1, &(mf -> internal_pen_variables[0].gl_vbo));
-  if(next_token -> type != TYPE_NULLPEN){
+  if(next_token -> type == TYPE_NULLPEN){
     mf -> internal_pen_variables[0].flags = FLAG_NULL;
     mf -> internal_pen_variables[0].referenced = NULL;
     mf -> internal_pen_variables[0].gl_vbo = 0;
   }
-  else if(next_token -> type != TYPE_PENCIRCLE){
+  else if(next_token -> type == TYPE_PENCIRCLE){
     mf -> internal_pen_variables[0].flags = FLAG_CONVEX | FLAG_CIRCULAR;
      mf -> internal_pen_variables[0].referenced = NULL;
     mf -> internal_pen_variables[0].gl_vbo = 0;
@@ -13999,13 +13999,13 @@ glBindFramebuffer(GL_FRAMEBUFFER, previous_fb);
 
 \subsecao{11.2. Shaders de Desenho}
 
-Desenhar e apagar com uma caneta vai exigir um novo shader que
-precisamos definir. Os shaders que definimos anteriormente era para
-fazermos operações envolvendo variáveis de imagem, e eles exigiam que
-enviássemos uma textura. Já o shader para desenhar e apagar não requer
-uma textura, ao invés disso ele requer a cor que devemos usar para
-desenhar. Por hora vamos deixar que a cor sempre seja preto opaco, mas
-isso pode mudar no futuro.
+Desenhar e apagar com uma caneta vai exigir dois novos shaders (um
+para cada operação) que precisamos definir. Os shaders que definimos
+anteriormente era para fazermos operações envolvendo variáveis de
+imagem, e eles exigiam que enviássemos uma textura. Já o shader para
+desenhar e apagar não requer uma textura, ao invés disso ele requer a
+cor que devemos usar para desenhar. Por hora vamos deixar que a cor
+sempre seja preto opaco, mas isso pode mudar no futuro.
 
 O código de nosso shader de vértice será então:
 
@@ -14024,10 +14024,18 @@ static const char pen_vertex_shader[] =
 \fimcodigo
 
 Ele é idêntico ao que já definimos, mas não precisará receber e
-extrair coordenadas de textura. Já o novo shader de fragmento:
+extrair coordenadas de textura. Já os dois novos shaders de fragmento:
 
 \iniciocodigo
 @<Variáveis Locais (metafont.c)@>+=
+static const char pen_erase_fragment_shader[] =
+  "#version 100\n"
+  "precision mediump float;\n"
+  "uniform vec4 color;\n"
+  "void main(){\n"
+  "  gl_FragColor = vec4(1.0 - color.r, 1.0 - color.g, 1.0 - color.b, \n"
+  "                      color.a);\n"
+  "}\n";
 static const char pen_fragment_shader[] =
   "#version 100\n"
   "precision mediump float;\n"
@@ -14035,9 +14043,9 @@ static const char pen_fragment_shader[] =
   "void main(){\n"
   "  gl_FragColor = color;"
   "}\n";
-static GLuint pen_program; // Armazena o programa após compilar
-static GLint pen_uniform_matrix; // Armazena a posição da matriz no programa
-static GLint pen_uniform_color; // Armazena a posição da cor no programa
+static GLuint pen_program, pen_erase_program; // O programa após compilar
+static GLint pen_uniform_matrix, pen_erase_uniform_matrix; // Matriz
+static GLint pen_uniform_color, pen_erase_uniform_color; // Cor
 @
 \fimcodigo
 
@@ -14050,15 +14058,21 @@ localização de suas variáveis uniformes:
   pen_program = compile_shader_program(pen_vertex_shader, pen_fragment_shader);
   pen_uniform_matrix = glGetUniformLocation(pen_program, "model_view_matrix");
   pen_uniform_color = glGetUniformLocation(pen_program, "color");
+  pen_erase_program = compile_shader_program(pen_vertex_shader,
+                                            pen_erase_fragment_shader);
+  pen_erase_uniform_matrix = glGetUniformLocation(pen_erase_program,
+                                                  "model_view_matrix");
+  pen_erase_uniform_color = glGetUniformLocation(pen_erase_program, "color");
 }
 @
 \fimcodigo
 
-E na finalização nós destruimos este programa:
+E na finalização nós destruimos estes programas:
 
 \iniciocodigo
 @<Finalização de Weaver Metafont@>+=
 glDeleteProgram(pen_program);
+glDeleteProgram(pen_erase_program);
 @
 \fimcodigo
 
@@ -14097,12 +14111,14 @@ else if(((struct generic_token *) begin_token_list) -> type ==
   else
     memcpy(transform_matrix, currentpen -> gl_matrix, 9 * sizeof(float));
   @<Prepara 'currentpicture' para Desenho@>
+  glEnable(GL_BLEND);
   if(erasing){
-    glBlendEquation(GL_FUNC_REVERSE_SUBTRACT);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBlendFunc(GL_ONE, GL_ONE);
+    glBlendEquationSeparate(GL_MAX, GL_FUNC_REVERSE_SUBTRACT);
   }
   else{
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBlendEquation(GL_FUNC_ADD);
   }
   // Parte 4: Loop de desenho
   for(i = 0; i < path.length; i ++){
@@ -14128,10 +14144,12 @@ else if(((struct generic_token *) begin_token_list) -> type ==
                 3*(1-t)*(1-t)*t * path.points[i].u_y +
                 3*(1-t)*t*t * path.points[i].v_y +
                 t*t*t * path.points[(i + 1) % (path.length)].y;
-      drawpoint(mf, currentpen, currentpicture, x, y, transform_matrix);
+      drawpoint(mf, currentpen, currentpicture, x, y, transform_matrix,
+                erasing);
     }
   }
   // Parte 5: Finalização
+  glDisable(GL_BLEND);
   if(temporary_free != NULL)
     path_recursive_free(temporary_free, &path, false);
   return true;
@@ -14143,14 +14161,15 @@ O código acima na parte 1 obtém as variáveis relevantes ao comando
 (\monoespaco{currentpen}, \monoespaco{currentpicture}) e na parte 2
 avalia a expressão de caminho após o token \monoespaco{draw}.
 
-Em seguida, na parte 3, a caneta é triangulada e inicializamos os
-parâmetros OpenGL específicos deste tipo de desenho, que definimos nas
-Subseções anteriores. A única diferença entre \monoespaco{draw}
+Em seguida, na parte 3, obtemos qual caneta que devemos usar, a
+triangulamos e inicializamos os parâmetros OpenGL específicos deste
+tipo de desenho, que definimos nas Subseções anteriores. Um dos dois
+únicos lugares em que tratamos de forma diferente o \monoespaco{draw}
 e \monoespaco{erase} aparece nesta parte. Dependendo do comando, nós
 mudamos a operação de como misturamos os pixels novos desenhados com
-os pixels já existentes na imagem de destino. Usamos ou uma soma ou
-uma subtração, sempre ponderando o valor dos pixels com o do canal
-alfa de transparência.
+os pixels já existentes na imagem de destino. As escolhas feitas são
+análogas às que fizemos quando definimos a soma e subtração de
+imagens.
 
 Na parte 4 temos o loop no qual iremos desenhar ponto-a-ponto o nosso
 caminho usando a função que ainda será
@@ -14169,7 +14188,8 @@ Resta apenas definir a função \monoespaco{drawpoint}. O seu cabeçalho
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
 void drawpoint(struct metafont *mf, struct pen_variable *pen,
-               struct picture_variable *pic, float x, float y, float *matrix);
+               struct picture_variable *pic, float x, float y, float *matrix,
+               bool erasing);
 @
 \fimcodigo
 
@@ -14239,12 +14259,15 @@ $$
 $$
 
 E isso é feito internamente pela função \monoespaco{drawpoint}
-imediatamente antes de desenhar:
+imediatamente antes de desenhar. Depois de ajustar a matriz, só temos
+que renderizar o resultado, e aqui também devemos usar programas de
+shaders diferentes se estamos desenhando ou apagando:
 
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
 void drawpoint(struct metafont *mf, struct pen_variable *pen,
-               struct picture_variable *pic, float x, float y, float *matrix){
+               struct picture_variable *pic, float x, float y, float *matrix,
+               bool erasing){
   float gl_matrix[9];
   gl_matrix[0] = (2 * matrix[0]) /  pic -> width;  // 2a/w
   gl_matrix[1] = (2 * matrix[1]) /  pic -> height; // 2b/h
@@ -14264,10 +14287,17 @@ void drawpoint(struct metafont *mf, struct pen_variable *pen,
   else 
     glBindBuffer(GL_ARRAY_BUFFER, pen -> gl_vbo);
   glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void *) 0);
+  if(erasing){
+    glUseProgram(pen_erase_program);
+    glUniformMatrix3fv(pen_erase_uniform_matrix, 1, true, gl_matrix);
+    glUniform4f(pen_erase_uniform_color, 0.0, 0.0, 0.0, 1.0);
+  }
+  else{
+    glUseProgram(pen_program);
+    glUniformMatrix3fv(pen_uniform_matrix, 1, true, gl_matrix);
+    glUniform4f(pen_uniform_color, 0.0, 0.0, 0.0, 1.0);
+  }
   glEnableVertexAttribArray(0);
-  glUseProgram(pen_program);
-  glUniformMatrix3fv(uniform_matrix, 1, true, gl_matrix);
-  glUniform4f(pen_uniform_color, 0.0, 0.0, 0.0, 1.0);
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 }
 @
