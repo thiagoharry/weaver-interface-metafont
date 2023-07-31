@@ -1,7 +1,7 @@
 % Testing some drawing commands
 
-picture a, b, c;
-numeric wa, wb, wc;
+picture a, b, c, d;
+numeric wa, wb, wc, wd;
 pen p;
 
 % Drawing a square with a square pen with a single pixel
@@ -29,6 +29,16 @@ erase (1, 1) -- (4, 1) -- (4, 4) -- (1, 4) -- cycle;
 
 c = currentpicture;
 wc = totalweight c;
+
+% Drawing a point with a circular pen
+currentpicture = nullpicture(12, 12);
+
+pickup pencircle scaled 12;
+
+draw (6, 6);
+
+d = currentpicture;
+wd = totalweight d;
 
 
 end

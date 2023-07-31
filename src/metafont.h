@@ -56,24 +56,24 @@ void*internal_numeric_variables;
 
 struct transform_variable*internal_transform_variables;
 /*:108*//*123:*/
-#line 2771 "weaver-interface-metafont_en.tex"
+#line 2773 "weaver-interface-metafont_en.tex"
 
 struct pen_variable*internal_pen_variables;
 /*:123*//*133:*/
-#line 2933 "weaver-interface-metafont_en.tex"
+#line 2938 "weaver-interface-metafont_en.tex"
 
 struct picture_variable*internal_picture_variables;
 /*:133*//*180:*/
-#line 4097 "weaver-interface-metafont_en.tex"
+#line 4102 "weaver-interface-metafont_en.tex"
 
 bool have_stored_normaldeviate;
 float normaldeviate;
 /*:180*//*467:*/
-#line 12442 "weaver-interface-metafont_en.tex"
+#line 12457 "weaver-interface-metafont_en.tex"
 
 float pen_lft,pen_rt,pen_top,pen_bot;
 /*:467*//*514:*/
-#line 14038 "weaver-interface-metafont_en.tex"
+#line 14063 "weaver-interface-metafont_en.tex"
 
 int current_depth;
 /*:514*/

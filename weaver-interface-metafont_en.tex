@@ -2617,6 +2617,7 @@ struct pen_variable{
   float gl_matrix[9]; // OpenGL matrix transformation
   // The variables below will be manipulated only in Section 10
   GLuint gl_vbo; // The OpenGL vertices after triangulation
+  GLsizei indices; // Number of vertices stored above
   // This will store how detailed is our triangulation, which will help us
   // to decide if we need a retriangulation in some cases:
   float triang_resolution;
@@ -2719,6 +2720,7 @@ triangulated:
 if(type == TYPE_T_PEN){
   ((struct pen_variable *) var) -> format = NULL;
   ((struct pen_variable *) var) -> gl_vbo = 0;
+  ((struct pen_variable *) var) -> indices = 0;
   ((struct pen_variable *) var) -> flags = false;
   ((struct pen_variable *) var) -> referenced = NULL;
 }
@@ -2792,12 +2794,14 @@ mf -> internal_pen_variables[0].type = TYPE_T_PEN;
 mf -> internal_pen_variables[0].flags = FLAG_NULL;
 mf -> internal_pen_variables[0].referenced = NULL;
 mf -> internal_pen_variables[0].gl_vbo = 0;
+mf -> internal_pen_variables[0].indices = 0;
 mf -> internal_pen_variables[1].format = NULL; // A caneta 'pensquare'
 mf -> internal_pen_variables[1].type = TYPE_T_PEN;
 mf -> internal_pen_variables[1].flags = FLAG_CONVEX | FLAG_STRAIGHT |
                                         FLAG_SQUARE;
 mf -> internal_pen_variables[1].referenced = NULL;
 mf -> internal_pen_variables[1].gl_vbo = 0;
+mf -> internal_pen_variables[1].indices = 4;
 { // Inicializando a matriz de transformação de ambas
   int j;
   for(j = 0; j < 2; j ++)
@@ -2861,6 +2865,7 @@ if(mf -> internal_pen_variables[INTERNAL_PEN_CURRENTPEN].referenced == pen){
   mf -> internal_pen_variables[INTERNAL_PEN_CURRENTPEN].flags = FLAG_NULL;
   mf -> internal_pen_variables[INTERNAL_PEN_CURRENTPEN].referenced = NULL;
   mf -> internal_pen_variables[INTERNAL_PEN_CURRENTPEN].gl_vbo = 0;
+  mf -> internal_pen_variables[INTERNAL_PEN_CURRENTPEN].indices = 0;
 }
 @
 \fimcodigo
@@ -8928,6 +8933,7 @@ void assign_pen_variable(struct metafont *mf,
   if(! (source -> flags & (FLAG_CIRCULAR | FLAG_SQUARE | FLAG_NULL)))
     recursive_copy_points(alloc, &(target -> format), source -> format, true);
   target -> gl_vbo = 0;
+  target -> indices = 0;
   target -> referenced = NULL;
   // If we are assigning to 'currentpen', then we need to retriangulate
   // the pen, as will be described in Section 10:
@@ -9104,6 +9110,7 @@ TRANSFORM_SCALE(pen -> gl_matrix, a.value);
 if(pen -> gl_vbo != 0 && a.value > 1.0 && !(pen -> flags & FLAG_STRAIGHT)){
   glDeleteBuffers(1, &(pen -> gl_vbo));
   pen -> gl_vbo = 0;
+  pen -> indices = 0;
 }
 return true;
 @
@@ -9135,6 +9142,7 @@ if(pen -> gl_vbo != 0 && !(pen -> flags & FLAG_STRAIGHT) &&
    !(pen -> flags & FLAG_CIRCULAR)){
   glDeleteBuffers(1, &(pen -> gl_vbo));
   pen -> gl_vbo = 0;
+  pen -> indices = 0;
 }
 return true;
 @
@@ -9153,6 +9161,7 @@ TRANSFORM_SCALE_X(pen -> gl_matrix, a.value);
 if(pen -> gl_vbo != 0 && a.value > 1.0 && !(pen -> flags & FLAG_STRAIGHT)){
   glDeleteBuffers(1, &(pen -> gl_vbo));
   pen -> gl_vbo = 0;
+  pen -> indices = 0;
 }
 return true;
 @
@@ -9171,6 +9180,7 @@ TRANSFORM_SCALE_Y(pen -> gl_matrix, a.value);
 if(pen -> gl_vbo != 0 && a.value > 1.0 && !(pen -> flags & FLAG_STRAIGHT)){
   glDeleteBuffers(1, &(pen -> gl_vbo));
   pen -> gl_vbo = 0;
+  pen -> indices = 0;
 }
 return true;
 @
@@ -9195,6 +9205,7 @@ TRANSFORM_SCALE_Z(pen -> gl_matrix, p.x, p.y);
 if(pen -> gl_vbo != 0 && !(pen -> flags & FLAG_STRAIGHT)){
   glDeleteBuffers(1, &(pen -> gl_vbo));
   pen -> gl_vbo = 0;
+  pen -> indices = 0;
 }
 return true;
 @
@@ -9213,6 +9224,7 @@ MATRIX_MULTIPLICATION(pen -> gl_matrix, t.value);
 if(pen -> gl_vbo != 0 && !(pen -> flags & FLAG_STRAIGHT)){
   glDeleteBuffers(1, &(pen -> gl_vbo));
   pen -> gl_vbo = 0;
+  pen -> indices = 0;
 }
 return true;
 @
@@ -9340,6 +9352,7 @@ result -> format = NULL;
 result -> flags = FLAG_NULL;
 result -> referenced = NULL;
 result -> gl_vbo = 0;
+result -> indices = 0;
 INITIALIZE_IDENTITY_MATRIX(result -> gl_matrix);
 return true;
 @
@@ -9355,6 +9368,7 @@ result -> format = NULL;
 result -> flags = FLAG_CONVEX | FLAG_CIRCULAR;
 result -> referenced = NULL;
 result -> gl_vbo = 0;
+result -> indices = 0;
 INITIALIZE_IDENTITY_MATRIX(result -> gl_matrix);
 return true;
 @
@@ -9412,6 +9426,7 @@ if(!(result -> format -> cyclic)){
 result -> flags = read_flags(result -> format); // To be implemented
 result -> referenced = NULL;
 result -> gl_vbo = 0;
+result -> indices = 0;
 INITIALIZE_IDENTITY_MATRIX(result -> gl_matrix);
 return true;
 @
@@ -12914,6 +12929,7 @@ other position. We deal with this simplest case below:
 \iniciocodigo
 @<Triangulation: Null Pen@>=
 if((pen -> flags & FLAG_NULL)){
+  pen -> indices = 0;
   DECLARE_PEN_EXTREMITIES();
   CHECK_PEN_EXTREMITIES(0, 0, transform_matrix);
   UPDATE_PEN_EXTREMITIES();
@@ -12966,6 +12982,7 @@ points:
 @<Triangulation: Square Pen@>=
 if((pen -> flags & FLAG_SQUARE)){
   float square_vertices[8] = {-0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5, 0.5};
+  pen -> indices = 4;
   DECLARE_PEN_EXTREMITIES();
   int i;
   for(i = 0; i < 4; i ++)
@@ -13020,6 +13037,7 @@ if((pen -> flags & FLAG_STRAIGHT) && (pen -> flags & FLAG_CONVEX)){
     glGenBuffers(1, &(pen -> gl_vbo));
     glBindBuffer(GL_ARRAY_BUFFER, pen -> gl_vbo);
     glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
+    pen -> indices = pen -> format -> length;
   }
   if(temporary_free != NULL)
     temporary_free(data);
@@ -13085,7 +13103,7 @@ if((pen -> flags & FLAG_CIRCULAR)){
       return true;
   }
   pen -> triang_resolution = radius;
-  GLsizei size = sizeof(float) * 2 * (((int) (2 * M_PI * radius)) + 2);
+  GLsizei size = sizeof(float) * 2 * (((int) (2 * M_PI * radius)) + 4);
   float *data = (float *) temporary_alloc(size);
   if(data == NULL){
 #if defined(W_DEBUG_METAFONT)
@@ -13098,7 +13116,7 @@ if((pen -> flags & FLAG_CIRCULAR)){
     float angle = 0.0;
     data[0] = 0.0;
     data[1] = 0.0; // Circle center
-    for(i = 2; i < size; i ++){
+    for(i = 2; i < (size / sizeof(float)); i ++){
       data[i] = 0.5 * sin(angle);
       i ++;
       data[i] = 0.5 * cos(angle);
@@ -13108,6 +13126,7 @@ if((pen -> flags & FLAG_CIRCULAR)){
   glGenBuffers(1, &(pen -> gl_vbo));
   glBindBuffer(GL_ARRAY_BUFFER, pen -> gl_vbo);
   glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
+  pen -> indices = (size / (2 * sizeof(float)));
   if(temporary_free != NULL)
     temporary_free(data);
   return true;
@@ -13293,6 +13312,7 @@ if((pen -> flags & FLAG_CONVEX)){
   glBindBuffer(GL_ARRAY_BUFFER, pen -> gl_vbo);
   glBufferData(GL_ARRAY_BUFFER, number_of_vertices * 2 *
                                 sizeof(float), data, GL_STATIC_DRAW);
+  pen -> indices = number_of_vertices;
   if(temporary_free != NULL)
     temporary_free(data);
   return true;
@@ -13336,7 +13356,8 @@ else if(((struct generic_token *) begin_token_list) -> type == TYPE_PICKUP){
                            ((struct generic_token *) begin_token_list) -> next;
   if(begin_token_list == end_token_list ||
      (next_token -> type != TYPE_NULLPEN &&
-      next_token -> type != TYPE_SYMBOLIC)){
+      next_token -> type != TYPE_SYMBOLIC &&
+      next_token -> type != TYPE_PENCIRCLE)){
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr, "METAFONT: Error: %s:%d: Expected 'nullpen' or pen "
                     "variable after 'pickup'. Not an arbitrary "
@@ -13939,7 +13960,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   }
   // Part 4: Drawing loop
-  for(i = 0; i < path.length; i ++){
+  for(i = 0; i < path.length - 1; i ++){
     int distance = 0;
     float dx, dy, dt;
     dx = path.points[i].u_x - path.points[i].x;
@@ -13966,6 +13987,10 @@ else if(((struct generic_token *) begin_token_list) -> type ==
                 erasing);
     }
   }
+  // When it is a single point and the loop above was not executed:
+  if(path.length == 1)
+    drawpoint(mf, currentpen, currentpicture, path.points[0].x,
+              path.points[0].y, transform_matrix, erasing);
   // Part 5: Finalization
   if(temporary_free != NULL)
     path_recursive_free(temporary_free, &path, false);
@@ -14112,7 +14137,7 @@ void drawpoint(struct metafont *mf, struct pen_variable *pen,
     glUniform4f(pen_uniform_color, 0.0, 0.0, 0.0, 1.0);
   }
   glEnableVertexAttribArray(0);
-  glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+  glDrawArrays(GL_TRIANGLE_FAN, 0, pen -> indices);
 }
 @
 \fimcodigo
