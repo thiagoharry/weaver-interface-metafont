@@ -419,14 +419,14 @@ TYPE_COLON,
 
 TYPE_PICKUP,
 /*:465*//*493:*/
-#line 13604 "weaver-interface-metafont_en.tex"
+#line 13601 "weaver-interface-metafont_en.tex"
 
 TYPE_BOT,
 TYPE_TOP,
 TYPE_LFT,
 TYPE_RT,
 /*:493*//*499:*/
-#line 13718 "weaver-interface-metafont_en.tex"
+#line 13715 "weaver-interface-metafont_en.tex"
 
 TYPE_DRAW,
 TYPE_ERASE,
@@ -688,11 +688,11 @@ static char*list_of_keywords[]= {
 
 "pickup",
 /*:466*//*494:*/
-#line 13616 "weaver-interface-metafont_en.tex"
+#line 13613 "weaver-interface-metafont_en.tex"
 
 "bot","top","lft","rt",
 /*:494*//*500:*/
-#line 13725 "weaver-interface-metafont_en.tex"
+#line 13722 "weaver-interface-metafont_en.tex"
 
 "draw","erase",
 /*:500*/
@@ -762,15 +762,15 @@ static GLint uniform_inv_matrix;
 
 static GLuint pensquare_vbo;
 /*:482*//*501:*/
-#line 13743 "weaver-interface-metafont_en.tex"
+#line 13740 "weaver-interface-metafont_en.tex"
 
 static GLuint currentpicture_fb;
 /*:501*//*505:*/
-#line 13819 "weaver-interface-metafont_en.tex"
+#line 13816 "weaver-interface-metafont_en.tex"
 
 static GLint previous_fb;
 /*:505*//*508:*/
-#line 13853 "weaver-interface-metafont_en.tex"
+#line 13850 "weaver-interface-metafont_en.tex"
 
 static const char pen_vertex_shader[]= 
 "#version 100\n"
@@ -782,7 +782,7 @@ static const char pen_vertex_shader[]=
 "  gl_Position = vec4(coord.x, coord.y, 0.0, 1.0);\n"
 "}\n";
 /*:508*//*509:*/
-#line 13871 "weaver-interface-metafont_en.tex"
+#line 13868 "weaver-interface-metafont_en.tex"
 
 static const char pen_erase_fragment_shader[]= 
 "#version 100\n"
@@ -1195,7 +1195,7 @@ bool is_pen_counterclockwise(struct pen_variable*pen);
 bool triangulate_pen(struct metafont*mf,struct pen_variable*pen,
 float*transform_matrix);
 /*:479*//*513:*/
-#line 14028 "weaver-interface-metafont_en.tex"
+#line 14025 "weaver-interface-metafont_en.tex"
 
 void drawpoint(struct metafont*mf,struct pen_variable*pen,
 struct picture_variable*pic,float x,float y,float*matrix,
@@ -1822,7 +1822,7 @@ mf->have_stored_normaldeviate= false;
 
 mf->pen_lft= mf->pen_rt= mf->pen_top= mf->pen_bot= 0.0;
 /*:468*//*515:*/
-#line 14071 "weaver-interface-metafont_en.tex"
+#line 14068 "weaver-interface-metafont_en.tex"
 
 mf->current_depth= 0;
 /*:515*/
@@ -2039,7 +2039,7 @@ bool ret= true;
 struct generic_token*begin,*end= NULL;
 begin= (struct generic_token*)begin_token_list;
 /*506:*/
-#line 13828 "weaver-interface-metafont_en.tex"
+#line 13825 "weaver-interface-metafont_en.tex"
 
 glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING,&previous_fb);
 /*:506*/
@@ -2067,7 +2067,7 @@ begin= end->next;
 }
 }
 /*507:*/
-#line 13836 "weaver-interface-metafont_en.tex"
+#line 13833 "weaver-interface-metafont_en.tex"
 
 glBindFramebuffer(GL_FRAMEBUFFER,previous_fb);
 /*:507*/
@@ -2539,7 +2539,7 @@ if(pic==
 &(mf->internal_picture_variables[INTERNAL_PICTURE_CURRENTPICTURE])){
 
 /*504:*/
-#line 13793 "weaver-interface-metafont_en.tex"
+#line 13790 "weaver-interface-metafont_en.tex"
 
 {
 if(currentpicture_fb!=0){
@@ -2592,7 +2592,7 @@ return true;
 #line 1543 "weaver-interface-metafont_en.tex"
 
 /*490:*/
-#line 13352 "weaver-interface-metafont_en.tex"
+#line 13349 "weaver-interface-metafont_en.tex"
 
 else if(((struct generic_token*)begin_token_list)->type==TYPE_PICKUP){
 struct generic_token*end_expression= *end_token_list;
@@ -2645,7 +2645,7 @@ mf->internal_pen_variables[0].referenced= var;
 }
 INITIALIZE_IDENTITY_MATRIX(mf->internal_pen_variables[0].gl_matrix);
 /*491:*/
-#line 13420 "weaver-interface-metafont_en.tex"
+#line 13417 "weaver-interface-metafont_en.tex"
 
 while(next_token!=end_expression){
 struct generic_token*begin_subexpr,*end_subexpr;
@@ -2779,7 +2779,7 @@ else
 next_token= end_subexpr;
 }
 /*:491*//*492:*/
-#line 13566 "weaver-interface-metafont_en.tex"
+#line 13563 "weaver-interface-metafont_en.tex"
 
 {
 float final_transform_matrix[9];
@@ -2802,12 +2802,12 @@ return false;
 }
 }
 /*:492*/
-#line 13403 "weaver-interface-metafont_en.tex"
+#line 13400 "weaver-interface-metafont_en.tex"
 
 return true;
 }
 /*:490*//*512:*/
-#line 13926 "weaver-interface-metafont_en.tex"
+#line 13923 "weaver-interface-metafont_en.tex"
 
 else if(((struct generic_token*)begin_token_list)->type==
 TYPE_DRAW||((struct generic_token*)begin_token_list)->type==
@@ -2837,7 +2837,7 @@ currentpen= currentpen->referenced;
 else
 memcpy(transform_matrix,currentpen->gl_matrix,9*sizeof(float));
 /*503:*/
-#line 13761 "weaver-interface-metafont_en.tex"
+#line 13758 "weaver-interface-metafont_en.tex"
 
 {
 if(currentpicture_fb==0){
@@ -2864,7 +2864,7 @@ else
 glBindFramebuffer(GL_FRAMEBUFFER,currentpicture_fb);
 }
 /*:503*/
-#line 13954 "weaver-interface-metafont_en.tex"
+#line 13951 "weaver-interface-metafont_en.tex"
 
 if(erasing){
 glBlendEquation(GL_FUNC_REVERSE_SUBTRACT);
@@ -4402,7 +4402,7 @@ path_recursive_free(temporary_free,&b,false);
 return true;
 }
 /*:354*//*495:*/
-#line 13631 "weaver-interface-metafont_en.tex"
+#line 13628 "weaver-interface-metafont_en.tex"
 
 else if(begin_expression->type==TYPE_BOT){
 if(!eval_pair_primary(mf,cx,(struct generic_token*)
@@ -4413,7 +4413,7 @@ result->y-= mf->pen_bot;
 return true;
 }
 /*:495*//*496:*/
-#line 13650 "weaver-interface-metafont_en.tex"
+#line 13647 "weaver-interface-metafont_en.tex"
 
 else if(begin_expression->type==TYPE_TOP){
 if(!eval_pair_primary(mf,cx,(struct generic_token*)
@@ -4424,7 +4424,7 @@ result->y-= mf->pen_top;
 return true;
 }
 /*:496*//*497:*/
-#line 13669 "weaver-interface-metafont_en.tex"
+#line 13666 "weaver-interface-metafont_en.tex"
 
 else if(begin_expression->type==TYPE_LFT){
 if(!eval_pair_primary(mf,cx,(struct generic_token*)
@@ -4435,7 +4435,7 @@ result->x-= mf->pen_lft;
 return true;
 }
 /*:497*//*498:*/
-#line 13689 "weaver-interface-metafont_en.tex"
+#line 13686 "weaver-interface-metafont_en.tex"
 
 else if(begin_expression->type==TYPE_RT){
 if(!eval_pair_primary(mf,cx,(struct generic_token*)
@@ -7484,7 +7484,7 @@ if(target==
 &(mf->internal_picture_variables[INTERNAL_PICTURE_CURRENTPICTURE])){
 
 /*504:*/
-#line 13793 "weaver-interface-metafont_en.tex"
+#line 13790 "weaver-interface-metafont_en.tex"
 
 {
 if(currentpicture_fb!=0){
@@ -9015,42 +9015,39 @@ int i,number_of_vertices= 1;
 
 path_extremity_points(mf,pen->format,transform_matrix);
 for(i= 0;i<pen->format->length-1;i++){
-int distance= 0,x0,y0,x1,y1,x2,y2;
+int distance= 0;
+float x0,y0,u_x,u_y,v_x,v_y,x1,y1;
 float dx,dy;
 x0= LINEAR_TRANSFORM_X(pen->format->points[i].x,
 pen->format->points[i].y,transform_matrix);
 y0= LINEAR_TRANSFORM_Y(pen->format->points[i].x,
 pen->format->points[i].y,transform_matrix);
-x2= LINEAR_TRANSFORM_X(pen->format->points[i].u_x,
+u_x= LINEAR_TRANSFORM_X(pen->format->points[i].u_x,
 pen->format->points[i].u_y,transform_matrix);
-y2= LINEAR_TRANSFORM_Y(pen->format->points[i].u_x,
+u_y= LINEAR_TRANSFORM_Y(pen->format->points[i].u_x,
 pen->format->points[i].u_y,transform_matrix);
-dx= x2-x0;
-dy= y2-y0;
-distance+= (int)sqrt(dx*dx+dy*dy);
-x1= x2;
-y1= y2;
-x2= LINEAR_TRANSFORM_X(pen->format->points[i].v_x,
+dx= u_x-x0;
+dy= u_y-y0;
+distance+= (int)round(sqrt(dx*dx+dy*dy));
+v_x= LINEAR_TRANSFORM_X(pen->format->points[i].v_x,
 pen->format->points[i].v_y,transform_matrix);
-y2= LINEAR_TRANSFORM_Y(pen->format->points[i].v_x,
+v_y= LINEAR_TRANSFORM_Y(pen->format->points[i].v_x,
 pen->format->points[i].v_y,transform_matrix);
-dx= x2-x1;
-dy= y2-y1;
-distance+= (int)sqrt(dx*dx+dy*dy);
-x1= x2;
-y1= y2;
-x2= LINEAR_TRANSFORM_X(pen->format->points[i+1].x,
+dx= v_x-u_x;
+dy= v_y-u_y;
+distance+= (int)round(sqrt(dx*dx+dy*dy));
+x1= LINEAR_TRANSFORM_X(pen->format->points[i+1].x,
 pen->format->points[i+1].y,
 transform_matrix);
-y2= LINEAR_TRANSFORM_Y(pen->format->points[i+1].x,
+y1= LINEAR_TRANSFORM_Y(pen->format->points[i+1].x,
 pen->format->points[i+1].y,
 transform_matrix);
-dx= x2-x1;
-dy= y2-y1;
-distance+= (int)sqrt(dx*dx+dy*dy);
-dx= x2-x0;
-dy= y2-y0;
-if(distance==(int)sqrt(dx*dx+dy*dy))
+dx= x1-v_x;
+dy= y1-v_y;
+distance+= (int)round(sqrt(dx*dx+dy*dy));
+dx= x1-x0;
+dy= y1-y0;
+if(distance==(int)round(sqrt(dx*dx+dy*dy)))
 number_of_vertices++;
 else
 number_of_vertices+= distance;
@@ -9103,24 +9100,24 @@ x2= LINEAR_TRANSFORM_X(b_x,b_y,transform_matrix);
 y2= LINEAR_TRANSFORM_Y(b_x,b_y,transform_matrix);
 dx= x2-x0;
 dy= y2-y0;
-distance+= (int)sqrt(dx*dx+dy*dy);
+distance+= (int)round(sqrt(dx*dx+dy*dy));
 x1= x2;
 y1= y2;
 x2= LINEAR_TRANSFORM_X(c_x,c_y,transform_matrix);
 y2= LINEAR_TRANSFORM_Y(c_x,c_y,transform_matrix);
 dx= x2-x1;
 dy= y2-y1;
-distance+= (int)sqrt(dx*dx+dy*dy);
+distance+= (int)round(sqrt(dx*dx+dy*dy));
 x1= x2;
 y1= y2;
 x2= LINEAR_TRANSFORM_X(p1->x,p1->y,transform_matrix);
 y2= LINEAR_TRANSFORM_Y(p1->x,p1->y,transform_matrix);
 dx= x2-x1;
 dy= y2-y1;
-distance+= (int)sqrt(dx*dx+dy*dy);
+distance+= (int)round(sqrt(dx*dx+dy*dy));
 dx= x2-x0;
 dy= y2-y0;
-if(distance==(int)sqrt(dx*dx+dy*dy)){
+if(distance==(int)round(sqrt(dx*dx+dy*dy))){
 data[v++]= p1->x;
 data[v++]= p1->y;
 }
@@ -9151,7 +9148,7 @@ return true;
 #line 12917 "weaver-interface-metafont_en.tex"
 
 /*489:*/
-#line 13327 "weaver-interface-metafont_en.tex"
+#line 13324 "weaver-interface-metafont_en.tex"
 
 if(!(pen->flags&FLAG_CONVEX)){
 #if defined(W_DEBUG_METAFONT)
@@ -9165,7 +9162,7 @@ return false;
 
 }
 /*:480*//*516:*/
-#line 14106 "weaver-interface-metafont_en.tex"
+#line 14103 "weaver-interface-metafont_en.tex"
 
 void drawpoint(struct metafont*mf,struct pen_variable*pen,
 struct picture_variable*pic,float x,float y,float*matrix,
@@ -9256,11 +9253,11 @@ glBufferData(GL_ARRAY_BUFFER,8*sizeof(float),square_vertices,
 GL_STATIC_DRAW);
 }
 /*:483*//*502:*/
-#line 13751 "weaver-interface-metafont_en.tex"
+#line 13748 "weaver-interface-metafont_en.tex"
 
 currentpicture_fb= 0;
 /*:502*//*510:*/
-#line 13897 "weaver-interface-metafont_en.tex"
+#line 13894 "weaver-interface-metafont_en.tex"
 
 {
 pen_program= compile_shader_program(pen_vertex_shader,pen_fragment_shader);
@@ -9294,7 +9291,7 @@ glDeleteProgram(program);
 
 glDeleteProgram(inv_program);
 /*:409*//*511:*/
-#line 13914 "weaver-interface-metafont_en.tex"
+#line 13911 "weaver-interface-metafont_en.tex"
 
 glDeleteProgram(pen_program);
 glDeleteProgram(pen_erase_program);

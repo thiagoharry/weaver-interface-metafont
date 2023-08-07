@@ -1,8 +1,9 @@
 % Testing some drawing commands
 
-picture a, b, c, d;
-numeric wa, wb, wc, wd;
+picture a, b, c, d, e;
+numeric wa, wb, wc, wd, we;
 pen p;
+path tmp;
 
 % Drawing a square with a square pen with a single pixel
 currentpicture = nullpicture(6, 6);
@@ -39,6 +40,25 @@ draw (6, 6);
 
 d = currentpicture;
 wd = totalweight d;
+
+% Replacing the circular pen with a similar pen built from a path
+currentpicture = nullpicture(12, 12);
+tmp = 
+  (0.5, 0)
+  .. controls (0.5, 0.13261) and (0.44733, 0.2598) ..
+  (0.35356, 0.35356)
+  .. controls (0.2598, 0.44733) and (0.13261, 0.5) ..
+  (0, 0.5);
+tmp = tmp & tmp rotated 90;
+tmp = tmp & tmp rotated 180 & cycle;
+p = makepen tmp;
+
+pickup p scaled 12;
+
+draw (6, 6);
+
+e = currentpicture;
+we = totalweight e;
 
 
 end

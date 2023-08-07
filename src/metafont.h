@@ -73,7 +73,7 @@ float normaldeviate;
 
 float pen_lft,pen_rt,pen_top,pen_bot;
 /*:467*//*514:*/
-#line 14063 "weaver-interface-metafont_en.tex"
+#line 14060 "weaver-interface-metafont_en.tex"
 
 int current_depth;
 /*:514*/

@@ -13185,42 +13185,39 @@ if((pen -> flags & FLAG_CONVEX)){
   // Get extremity points:
   path_extremity_points(mf, pen -> format, transform_matrix);
   for(i = 0; i < pen -> format -> length - 1; i ++){
-    int distance = 0, x0, y0, x1, y1, x2, y2;
+    int distance = 0;
+    float x0, y0, u_x, u_y, v_x, v_y, x1, y1;
     float dx, dy;
     x0 = LINEAR_TRANSFORM_X(pen -> format -> points[i].x,
                             pen -> format -> points[i].y, transform_matrix);
     y0 = LINEAR_TRANSFORM_Y(pen -> format -> points[i].x,
                             pen -> format -> points[i].y, transform_matrix);
-    x2 = LINEAR_TRANSFORM_X(pen -> format -> points[i].u_x,
+    u_x = LINEAR_TRANSFORM_X(pen -> format -> points[i].u_x,
                             pen -> format -> points[i].u_y, transform_matrix);
-    y2 = LINEAR_TRANSFORM_Y(pen -> format -> points[i].u_x,
+    u_y = LINEAR_TRANSFORM_Y(pen -> format -> points[i].u_x,
                             pen -> format -> points[i].u_y, transform_matrix);
-    dx = x2 - x0;
-    dy = y2 - y0;
-    distance += (int) sqrt(dx * dx + dy * dy);
-    x1 = x2;
-    y1 = y2;
-    x2 = LINEAR_TRANSFORM_X(pen -> format -> points[i].v_x,
+    dx = u_x - x0;
+    dy = u_y - y0;
+    distance += (int) round(sqrt(dx * dx + dy * dy));
+    v_x = LINEAR_TRANSFORM_X(pen -> format -> points[i].v_x,
                             pen -> format -> points[i].v_y, transform_matrix);
-    y2 = LINEAR_TRANSFORM_Y(pen -> format -> points[i].v_x,
+    v_y = LINEAR_TRANSFORM_Y(pen -> format -> points[i].v_x,
                             pen -> format -> points[i].v_y, transform_matrix);
-    dx = x2 - x1;
-    dy = y2 - y1;
-    distance += (int) sqrt(dx * dx + dy * dy);
-    x1 = x2;
-    y1 = y2;
-    x2 = LINEAR_TRANSFORM_X(pen -> format -> points[i + 1].x,
+    dx = v_x - u_x;
+    dy = v_y - u_y;
+    distance += (int) round(sqrt(dx * dx + dy * dy));
+    x1 = LINEAR_TRANSFORM_X(pen -> format -> points[i + 1].x,
                             pen -> format -> points[i + 1].y,
                             transform_matrix);
-    y2 = LINEAR_TRANSFORM_Y(pen -> format -> points[i + 1].x,
+    y1 = LINEAR_TRANSFORM_Y(pen -> format -> points[i + 1].x,
                             pen -> format -> points[i + 1].y,
                             transform_matrix);
-    dx = x2 - x1;
-    dy = y2 - y1;
-    distance += (int) sqrt(dx * dx + dy * dy);
-    dx = x2 - x0;
-    dy = y2 - y0;
-    if(distance == (int) sqrt(dx * dx + dy * dy))
+    dx = x1 - v_x;
+    dy = y1 - v_y;
+    distance += (int) round(sqrt(dx * dx + dy * dy));
+    dx = x1 - x0;
+    dy = y1 - y0;
+    if(distance == (int) round(sqrt(dx * dx + dy * dy)))
       number_of_vertices ++; // Linha reta
     else
       number_of_vertices += distance;
@@ -13273,24 +13270,24 @@ if((pen -> flags & FLAG_CONVEX)){
       y2 = LINEAR_TRANSFORM_Y(b_x, b_y, transform_matrix);
       dx = x2 - x0;
       dy = y2 - y0;
-      distance += (int) sqrt(dx * dx + dy * dy);
+      distance += (int) round(sqrt(dx * dx + dy * dy));
       x1 = x2;
       y1 = y2;
       x2 = LINEAR_TRANSFORM_X(c_x, c_y, transform_matrix);
       y2 = LINEAR_TRANSFORM_Y(c_x, c_y, transform_matrix);
       dx = x2 - x1;
       dy = y2 - y1;
-      distance += (int) sqrt(dx * dx + dy * dy);
+      distance += (int) round(sqrt(dx * dx + dy * dy));
       x1 = x2;
       y1 = y2;
       x2 = LINEAR_TRANSFORM_X(p1 -> x, p1 -> y, transform_matrix);
       y2 = LINEAR_TRANSFORM_Y(p1 -> x, p1 -> y, transform_matrix);
       dx = x2 - x1;
       dy = y2 - y1;
-      distance += (int) sqrt(dx * dx + dy * dy);
+      distance += (int) round(sqrt(dx * dx + dy * dy));
       dx = x2 - x0;
       dy = y2 - y0;
-      if(distance == (int) sqrt(dx * dx + dy * dy)){
+      if(distance == (int) round(sqrt(dx * dx + dy * dy))){
         data[v++] = p1 -> x;
         data[v++] = p1 -> y;
       }

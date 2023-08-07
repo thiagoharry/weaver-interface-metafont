@@ -1746,9 +1746,11 @@ void test_drawing_commands(void){
   struct metafont *mf;
   struct context *cx;
   bool ret;
-  struct named_variable *a, *wa, *b, *wb, *c, *wc, *d, *wd;
-  struct picture_variable *picture_a, *picture_b, *picture_c, *picture_d;
-  struct numeric_variable *numeric_wa, *numeric_wb, *numeric_wc, *numeric_wd;
+  struct named_variable *a, *wa, *b, *wb, *c, *wc, *d, *wd, *e, *we;
+  struct picture_variable *picture_a, *picture_b, *picture_c, *picture_d,
+    *picture_e;
+  struct numeric_variable *numeric_wa, *numeric_wb, *numeric_wc, *numeric_wd,
+    *numeric_we;
   mf = init_metafont(malloc, free, "tests/drawing_commands.mf");
   cx = init_context();
   void *p = lexer(mf, malloc, free, "tests/drawing_commands.mf");
@@ -1757,18 +1759,22 @@ void test_drawing_commands(void){
   b = (struct named_variable *) (a -> next);
   c = (struct named_variable *) (b -> next);
   d = (struct named_variable *) (c -> next);
-  wa = (struct named_variable *) (d -> next);
+  e = (struct named_variable *) (d -> next);
+  wa = (struct named_variable *) (e -> next);
   wb = (struct named_variable *) (wa -> next);
   wc = (struct named_variable *) (wb -> next);
   wd = (struct named_variable *) (wc -> next);
+  we = (struct named_variable *) (wd -> next);
   picture_a = (struct picture_variable *) a -> var;
   picture_b = (struct picture_variable *) b -> var;
   picture_c = (struct picture_variable *) c -> var;
   picture_d = (struct picture_variable *) d -> var;
+  picture_e = (struct picture_variable *) e -> var;
   numeric_wa = (struct numeric_variable *) wa -> var;
   numeric_wb = (struct numeric_variable *) wb -> var;
   numeric_wc = (struct numeric_variable *) wc -> var;
   numeric_wd = (struct numeric_variable *) wd -> var;
+  numeric_we = (struct numeric_variable *) we -> var;
   assert("Interpreting program with drawing commands", ret);
   //print_picture(picture_a);
   assert("Drawing a simple square",
@@ -1788,6 +1794,11 @@ void test_drawing_commands(void){
   assert("Drawing dot with circular pen",
 	 picture_d -> width == 12 && picture_d -> height == 12 &&
   	 ALMOST_EQUAL(numeric_wd -> value, 112.0));
+  //printf("e: %f\n", numeric_we -> value);
+  //print_picture(picture_e);
+  assert("Drawing dot with custom curved pen",
+	 picture_e -> width == 12 && picture_e -> height == 12 &&
+  	 ALMOST_EQUAL(numeric_we -> value, 112.0));
   free_token_list(free, p);
   destroy_context(mf, cx);
   destroy_metafont(mf);
