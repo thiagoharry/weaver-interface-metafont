@@ -1746,11 +1746,13 @@ void test_drawing_commands(void){
   struct metafont *mf;
   struct context *cx;
   bool ret;
-  struct named_variable *a, *wa, *b, *wb, *c, *wc, *d, *wd, *e, *we;
+  struct named_variable *a, *wa, *b, *wb, *c, *wc, *d, *wd, *e, *we, *f, *wf,
+    *g, *wg, *pa1, *pa2;
   struct picture_variable *picture_a, *picture_b, *picture_c, *picture_d,
-    *picture_e;
+    *picture_e, *picture_f, *picture_g;
   struct numeric_variable *numeric_wa, *numeric_wb, *numeric_wc, *numeric_wd,
-    *numeric_we;
+    *numeric_we, *numeric_wf, *numeric_wg;
+  struct pair_variable *pair_pa1, *pair_pa2;
   mf = init_metafont(malloc, free, "tests/drawing_commands.mf");
   cx = init_context();
   void *p = lexer(mf, malloc, free, "tests/drawing_commands.mf");
@@ -1760,26 +1762,50 @@ void test_drawing_commands(void){
   c = (struct named_variable *) (b -> next);
   d = (struct named_variable *) (c -> next);
   e = (struct named_variable *) (d -> next);
-  wa = (struct named_variable *) (e -> next);
+  f = (struct named_variable *) (e -> next);
+  g = (struct named_variable *) (f -> next);
+  wa = (struct named_variable *) (g -> next);
   wb = (struct named_variable *) (wa -> next);
   wc = (struct named_variable *) (wb -> next);
   wd = (struct named_variable *) (wc -> next);
   we = (struct named_variable *) (wd -> next);
+  wf = (struct named_variable *) (we -> next);
+  wg = (struct named_variable *) (wf -> next);
+  pa1 = (struct named_variable *) (wg -> next);
+  pa2 = (struct named_variable *) (pa1 -> next);
   picture_a = (struct picture_variable *) a -> var;
   picture_b = (struct picture_variable *) b -> var;
   picture_c = (struct picture_variable *) c -> var;
   picture_d = (struct picture_variable *) d -> var;
   picture_e = (struct picture_variable *) e -> var;
+  picture_f = (struct picture_variable *) f -> var;
+  picture_g = (struct picture_variable *) g -> var;
   numeric_wa = (struct numeric_variable *) wa -> var;
   numeric_wb = (struct numeric_variable *) wb -> var;
   numeric_wc = (struct numeric_variable *) wc -> var;
   numeric_wd = (struct numeric_variable *) wd -> var;
   numeric_we = (struct numeric_variable *) we -> var;
+  numeric_wf = (struct numeric_variable *) wf -> var;
+  numeric_wg = (struct numeric_variable *) wg -> var;
+  pair_pa1 = (struct pair_variable *) pa1 -> var;
+  pair_pa2 = (struct pair_variable *) pa2 -> var;
   assert("Interpreting program with drawing commands", ret);
   //print_picture(picture_a);
+  //printf("pa1: %f %f\n", pair_pa1 -> x, pair_pa1  -> y);
+  //printf("pa2: %f %f\n", pair_pa2 -> x, pair_pa2  -> y);
   assert("Drawing a simple square",
 	 picture_a -> width == 6 && picture_a -> height == 6 &&
-  	 ALMOST_EQUAL(numeric_wa -> value, 12.0));
+  	 ALMOST_EQUAL(numeric_wa -> value, 12.0) &&
+	 // O valor abaixo é produzido com:
+	 // pickup pensquare shifted (0.5, 0.5);
+	 // message decimal xpart top lft (0, 0);
+	 // message decimal ypart top lft (0, 0);
+	 // message decimal xpart bot rt (0, 0);
+	 // message decimal ypart bot rt (0, 0);
+	 ALMOST_EQUAL(pair_pa1 -> x, 0.0) &&
+	 ALMOST_EQUAL(pair_pa1 -> y, 1.0) &&
+	 ALMOST_EQUAL(pair_pa2 -> x, 1.0) &&
+	 ALMOST_EQUAL(pair_pa2 -> y, 0.0));
   //printf("b: %f\n", numeric_wb -> value);
   //print_picture(picture_b);
   assert("Using 'pickup' command pointing to a pen",
@@ -1799,6 +1825,14 @@ void test_drawing_commands(void){
   assert("Drawing dot with custom curved pen",
 	 picture_e -> width == 12 && picture_e -> height == 12 &&
   	 ALMOST_EQUAL(numeric_we -> value, 112.0));
+  assert("Drawing a square with custom polygonal pen",
+	 picture_f -> width == 6 && picture_f -> height == 6 &&
+  	 ALMOST_EQUAL(numeric_wf -> value, 12.0));
+  //printf("g: %f\n", numeric_wg -> value);
+  //print_picture(picture_g);
+  assert("nullpen does not produce drawing",
+	 picture_g -> width == 6 && picture_g -> height == 6 &&
+  	 ALMOST_EQUAL(numeric_wg -> value, 0.0));
   free_token_list(free, p);
   destroy_context(mf, cx);
   destroy_metafont(mf);

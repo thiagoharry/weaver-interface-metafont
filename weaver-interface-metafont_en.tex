@@ -13616,12 +13616,12 @@ keywords:
 \fimcodigo
 
 These operators shift a pair for a distance that depends on the
-current pen size. The operator \monoespaco{bot} shifts the pair down a
+current pen size. The operator \monoespaco{bot} shifts the pair up a
 distance equivalent to the smallest coordinate $y$ found in the
 current pen perimeter. Assuming that the pen is centered in the
 origin, its smallest coordinate is negative and this means that
 drawing in \monoespaco{bot (x, y)} is centering the pen in the given
-coordinate $x$ while shifting up the pen such that its bottom is
+coordinate $x$ while shifting down the pen such that its top is
 placed in the given coordinate $y$:
 
 \iniciocodigo
@@ -13631,7 +13631,7 @@ else if(begin_expression -> type == TYPE_BOT){
                                 begin_expression -> next,
                         end_expression, result))
     return false;
-  result -> y -= mf -> pen_bot;
+  result -> y += mf -> pen_bot;
   return true;
 }
 @
@@ -13650,7 +13650,7 @@ else if(begin_expression -> type == TYPE_TOP){
                                 begin_expression -> next,
                         end_expression, result))
     return false;
-  result -> y -= mf -> pen_top;
+  result -> y += mf -> pen_top;
   return true;
 }
 @
@@ -13669,7 +13669,7 @@ else if(begin_expression -> type == TYPE_LFT){
                                 begin_expression -> next,
                         end_expression, result))
     return false;
-  result -> x -= mf -> pen_lft;
+  result -> x += mf -> pen_lft;
   return true;
 }
 @
@@ -13689,7 +13689,7 @@ else if(begin_expression -> type == TYPE_RT){
                                 begin_expression -> next,
                         end_expression, result))
     return false;
-  result -> x -= mf -> pen_rt;
+  result -> x += mf -> pen_rt;
   return true;
 }
 @

@@ -4409,7 +4409,7 @@ if(!eval_pair_primary(mf,cx,(struct generic_token*)
 begin_expression->next,
 end_expression,result))
 return false;
-result->y-= mf->pen_bot;
+result->y+= mf->pen_bot;
 return true;
 }
 /*:495*//*496:*/
@@ -4420,7 +4420,7 @@ if(!eval_pair_primary(mf,cx,(struct generic_token*)
 begin_expression->next,
 end_expression,result))
 return false;
-result->y-= mf->pen_top;
+result->y+= mf->pen_top;
 return true;
 }
 /*:496*//*497:*/
@@ -4431,7 +4431,7 @@ if(!eval_pair_primary(mf,cx,(struct generic_token*)
 begin_expression->next,
 end_expression,result))
 return false;
-result->x-= mf->pen_lft;
+result->x+= mf->pen_lft;
 return true;
 }
 /*:497*//*498:*/
@@ -4442,7 +4442,7 @@ if(!eval_pair_primary(mf,cx,(struct generic_token*)
 begin_expression->next,
 end_expression,result))
 return false;
-result->x-= mf->pen_rt;
+result->x+= mf->pen_rt;
 return true;
 }
 /*:498*/

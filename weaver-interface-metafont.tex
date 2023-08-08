@@ -13789,14 +13789,12 @@ E também adicionar o nome dos tokens como palavras reservadas:
 \fimcodigo
 
 O que estes operadores fazem é deslocar um par uma distância que
-depende do tamanho da caneta atual que estamos usando. O
-operador \monoespaco{bot} desloca o par para baixo uma quantidade
-equivalente à menor coordenada $y$ que o contorno da caneta atual
-tem. Assumindo que o centro da caneta esteja em $(0, 0)$, sua menor
-coordenada é negativa e o efeito disso é que quando pedimos para
-desenhar em \monoespaco{bot (x, y)}, o que ocorre é que desenharemos
-com a caneta centralizada no eixo $x$, e deslocada para cima de tal
-forma que a parte de baixo dela está no eixo $y$:
+depende do tamanho da caneta atual que estamos usando.
+O operador \monoespaco{bot} desloca o par para baixo uma quantidade
+equivalente à maior coordenada $y$ da caneta. Se a caneta está
+centralizada em $(0, 0)$, este será um valor positivo e a caneta será
+abaixada de modo que ao desenhar ela em \monoespaco{bot (x, y)}, seu
+topo estará encostando na coordenada $y$ indicada:
 
 \iniciocodigo
 @<Primário de Par: Outras Regras a Definir Depois@>+=
@@ -13805,7 +13803,7 @@ else if(begin_expression -> type == TYPE_BOT){
                                 begin_expression -> next,
                         end_expression, result))
     return false;
-  result -> y -= mf -> pen_bot;
+  result -> y += mf -> pen_bot;
   return true;
 }
 @
@@ -13824,7 +13822,7 @@ else if(begin_expression -> type == TYPE_TOP){
                                 begin_expression -> next,
                         end_expression, result))
     return false;
-  result -> y -= mf -> pen_top;
+  result -> y += mf -> pen_top;
   return true;
 }
 @
@@ -13845,7 +13843,7 @@ else if(begin_expression -> type == TYPE_LFT){
                                 begin_expression -> next,
                         end_expression, result))
     return false;
-  result -> x -= mf -> pen_lft;
+  result -> x += mf -> pen_lft;
   return true;
 }
 @
@@ -13864,7 +13862,7 @@ else if(begin_expression -> type == TYPE_RT){
                                 begin_expression -> next,
                         end_expression, result))
     return false;
-  result -> x -= mf -> pen_rt;
+  result -> x += mf -> pen_rt;
   return true;
 }
 @

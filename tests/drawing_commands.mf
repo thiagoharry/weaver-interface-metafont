@@ -1,7 +1,8 @@
 % Testing some drawing commands
 
-picture a, b, c, d, e;
-numeric wa, wb, wc, wd, we;
+picture a, b, c, d, e, f, g;
+numeric wa, wb, wc, wd, we, wf, wg;
+pair pa1, pa2;
 pen p;
 path tmp;
 
@@ -9,6 +10,9 @@ path tmp;
 currentpicture = nullpicture(6, 6);
 p = pensquare shifted (0.5, 0.5);
 currentpen = p;
+
+pa1 = top lft (0, 0);
+pa2 = bot rt (0, 0);
 
 draw (1, 1) -- (4, 1) -- (4, 4) -- (1, 4) -- cycle;
 
@@ -59,6 +63,27 @@ draw (6, 6);
 
 e = currentpicture;
 we = totalweight e;
+
+% Drawing the same square than before, but creating a polygonal pen
+
+currentpicture = nullpicture(6, 6);
+tmp = (0, 0)--(0, 1)--(1, 1)--(1, 0)--cycle;
+p = makepen tmp;
+pickup p shifted (-0.5, 0);
+
+draw (1, 1) -- (4, 1) -- (4, 4) -- (1, 4) -- cycle;
+
+f = currentpicture;
+wf = totalweight b;
+
+% Drawing with nullpen, which should not produce a drawing
+currentpicture = nullpicture(6, 6);
+pickup nullpen shifted (1, 1);
+
+draw (1, 1) -- (4, 1) -- (4, 4) -- (1, 4) -- cycle;
+
+g = currentpicture;
+wg = totalweight g;
 
 
 end
