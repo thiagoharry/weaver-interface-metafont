@@ -12663,12 +12663,13 @@ void pencircle_extremity_points(struct metafont *mf, float *matrix){
           float y1;
           x0 = -0.5;
           x1 = 0.5;
-          y1 = matrix[2*i]+(matrix[index[2*i]]*x1/sqrt(0.25-x1*x1));
+          y1 = matrix[3-i*2] * sqrt(0.25-x1*x1) +
+               (matrix[index[3-i*2]]*x1/sqrt(0.25-x1*x1));
           while(x0 != x1){
             float x2 = (x0+x1)/2;
-            float y2 = matrix[index[2*i]]+
-                       (matrix[index[2*i+1]]*x2/sqrt(0.25-x2*x2));
-            if(y2 == 0.0)
+            float y2 = matrix[index[3-i*2]] * sqrt(0.25-x2*x2) +
+                       (matrix[index[3-i*2]]*x2/sqrt(0.25-x2*x2));
+            if(y2 == 0.0 || x0 == x2 || x1 == x2)
               x0 = x1 = x2;
             else if(y2 > 0){
               if(y1 > 0)
@@ -13541,10 +13542,7 @@ while(next_token != end_expression){
 #endif
     return false;  
   }
-  if(end_subexpr != end_expression)
-    next_token = end_subexpr -> next;
-  else
-    next_token = end_subexpr;
+  next_token = end_subexpr;
 }
 @
 \fimcodigo

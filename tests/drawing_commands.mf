@@ -2,7 +2,7 @@
 
 picture a, b, c, d, e, f, g;
 numeric wa, wb, wc, wd, we, wf, wg;
-pair pa1, pa2;
+pair pa1, pa2, pb1, pb2, pd1, pd2;
 pen p;
 path tmp;
 
@@ -23,6 +23,9 @@ wa = totalweight a;
 currentpicture = nullpicture(6, 6);
 pickup p;
 
+pb1 = top lft (0, 0);
+pb2 = bot rt (0, 0);
+
 draw (1, 1) -- (4, 1) -- (4, 4) -- (1, 4) -- cycle;
 
 b = currentpicture;
@@ -38,7 +41,10 @@ wc = totalweight c;
 % Drawing a point with a circular pen
 currentpicture = nullpicture(12, 12);
 
-pickup pencircle scaled 12;
+pickup pencircle scaled 12 rotated 20;
+
+pd1 = top lft (0, 0);
+pd2 = bot rt (0, 0);
 
 draw (6, 6);
 

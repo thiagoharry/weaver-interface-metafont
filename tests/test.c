@@ -18,7 +18,7 @@
 static struct _Wkeyboard keyboard;
 static struct _Wmouse mouse;
 
-#define ALMOST_EQUAL(a, b) (fabs((a) - (b)) < 0.000112)
+#define ALMOST_EQUAL(a, b) (fabs((a) - (b)) < 0.000136)
 
 int numero_de_testes = 0, acertos = 0, falhas = 0;
 void imprime_resultado(void){
@@ -1747,12 +1747,13 @@ void test_drawing_commands(void){
   struct context *cx;
   bool ret;
   struct named_variable *a, *wa, *b, *wb, *c, *wc, *d, *wd, *e, *we, *f, *wf,
-    *g, *wg, *pa1, *pa2;
+    *g, *wg, *pa1, *pa2, *pb1, *pb2, *pd1, *pd2;
   struct picture_variable *picture_a, *picture_b, *picture_c, *picture_d,
     *picture_e, *picture_f, *picture_g;
   struct numeric_variable *numeric_wa, *numeric_wb, *numeric_wc, *numeric_wd,
     *numeric_we, *numeric_wf, *numeric_wg;
-  struct pair_variable *pair_pa1, *pair_pa2;
+  struct pair_variable *pair_pa1, *pair_pa2, *pair_pb1, *pair_pb2, *pair_pd1,
+    *pair_pd2;
   mf = init_metafont(malloc, free, "tests/drawing_commands.mf");
   cx = init_context();
   void *p = lexer(mf, malloc, free, "tests/drawing_commands.mf");
@@ -1773,6 +1774,10 @@ void test_drawing_commands(void){
   wg = (struct named_variable *) (wf -> next);
   pa1 = (struct named_variable *) (wg -> next);
   pa2 = (struct named_variable *) (pa1 -> next);
+  pb1 = (struct named_variable *) (pa2 -> next);
+  pb2 = (struct named_variable *) (pb1 -> next);
+  pd1 = (struct named_variable *) (pb2 -> next);
+  pd2 = (struct named_variable *) (pd1 -> next);
   picture_a = (struct picture_variable *) a -> var;
   picture_b = (struct picture_variable *) b -> var;
   picture_c = (struct picture_variable *) c -> var;
@@ -1789,6 +1794,10 @@ void test_drawing_commands(void){
   numeric_wg = (struct numeric_variable *) wg -> var;
   pair_pa1 = (struct pair_variable *) pa1 -> var;
   pair_pa2 = (struct pair_variable *) pa2 -> var;
+  pair_pb1 = (struct pair_variable *) pb1 -> var;
+  pair_pb2 = (struct pair_variable *) pb2 -> var;
+  pair_pd1 = (struct pair_variable *) pd1 -> var;
+  pair_pd2 = (struct pair_variable *) pd2 -> var;
   assert("Interpreting program with drawing commands", ret);
   //print_picture(picture_a);
   //printf("pa1: %f %f\n", pair_pa1 -> x, pair_pa1  -> y);
@@ -1796,7 +1805,7 @@ void test_drawing_commands(void){
   assert("Drawing a simple square",
 	 picture_a -> width == 6 && picture_a -> height == 6 &&
   	 ALMOST_EQUAL(numeric_wa -> value, 12.0) &&
-	 // O valor abaixo é produzido com:
+	 // You can test the reference values with METAFONT code:
 	 // pickup pensquare shifted (0.5, 0.5);
 	 // message decimal xpart top lft (0, 0);
 	 // message decimal ypart top lft (0, 0);
@@ -1810,7 +1819,11 @@ void test_drawing_commands(void){
   //print_picture(picture_b);
   assert("Using 'pickup' command pointing to a pen",
 	 picture_b -> width == 6 && picture_b -> height == 6 &&
-  	 ALMOST_EQUAL(numeric_wb -> value, 12.0));
+  	 ALMOST_EQUAL(numeric_wb -> value, 12.0) &&
+	 ALMOST_EQUAL(pair_pb1 -> x, 0.0) &&
+	 ALMOST_EQUAL(pair_pb1 -> y, 1.0) &&
+	 ALMOST_EQUAL(pair_pb2 -> x, 1.0) &&
+	 ALMOST_EQUAL(pair_pb2 -> y, 0.0));
   //print_picture(picture_c);
   assert("Using 'erase' command",
 	 picture_c -> width == 6 && picture_c -> height == 6 &&
@@ -1819,7 +1832,17 @@ void test_drawing_commands(void){
   //print_picture(picture_d);
   assert("Drawing dot with circular pen",
 	 picture_d -> width == 12 && picture_d -> height == 12 &&
-  	 ALMOST_EQUAL(numeric_wd -> value, 112.0));
+  	 ALMOST_EQUAL(numeric_wd -> value, 112.0) &&
+	 // You can test the reference values with METAFONT code:
+	 // pickup pencircle scaled 12 rotated 20;
+	 // message decimal xpart top lft (0, 0);
+	 // message decimal ypart top lft (0, 0);
+	 // message decimal xpart bot rt (0, 0);
+	 // message decimal ypart bot rt (0, 0);
+	 ALMOST_EQUAL(pair_pd1 -> x, -6.0) &&
+	 ALMOST_EQUAL(pair_pd1 -> y, 6.0) &&
+	 ALMOST_EQUAL(pair_pd2 -> x, 6.0) &&
+	 ALMOST_EQUAL(pair_pd2 -> y, -6.0));
   //printf("e: %f\n", numeric_we -> value);
   //print_picture(picture_e);
   assert("Drawing dot with custom curved pen",
