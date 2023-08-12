@@ -2,7 +2,7 @@
 
 picture a, b, c, d, e, f, g;
 numeric wa, wb, wc, wd, we, wf, wg;
-pair pa1, pa2, pb1, pb2, pd1, pd2;
+pair pa1, pa2, pb1, pb2, pd1, pd2, pe1, pe2, pf1, pf2, pg1, pg2;
 pen p;
 path tmp;
 
@@ -63,7 +63,10 @@ tmp = tmp & tmp rotated 90;
 tmp = tmp & tmp rotated 180 & cycle;
 p = makepen tmp;
 
-pickup p scaled 12;
+pickup p scaled 12 rotated 30;
+
+pe1 = top lft (0, 0);
+pe2 = bot rt (0, 0);
 
 draw (6, 6);
 
@@ -77,6 +80,9 @@ tmp = (0, 0)--(0, 1)--(1, 1)--(1, 0)--cycle;
 p = makepen tmp;
 pickup p shifted (-0.5, 0);
 
+pf1 = top lft (0, 0);
+pf2 = bot rt (0, 0);
+
 draw (1, 1) -- (4, 1) -- (4, 4) -- (1, 4) -- cycle;
 
 f = currentpicture;
@@ -85,6 +91,9 @@ wf = totalweight b;
 % Drawing with nullpen, which should not produce a drawing
 currentpicture = nullpicture(6, 6);
 pickup nullpen shifted (1, 1);
+
+pg1 = top lft (0, 0);
+pg2 = bot rt (0, 0);
 
 draw (1, 1) -- (4, 1) -- (4, 4) -- (1, 4) -- cycle;
 

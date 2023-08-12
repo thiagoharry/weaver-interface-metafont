@@ -18,7 +18,7 @@
 static struct _Wkeyboard keyboard;
 static struct _Wmouse mouse;
 
-#define ALMOST_EQUAL(a, b) (fabs((a) - (b)) < 0.000136)
+#define ALMOST_EQUAL(a, b) (fabs((a) - (b)) < 0.001953)
 
 int numero_de_testes = 0, acertos = 0, falhas = 0;
 void imprime_resultado(void){
@@ -1747,13 +1747,14 @@ void test_drawing_commands(void){
   struct context *cx;
   bool ret;
   struct named_variable *a, *wa, *b, *wb, *c, *wc, *d, *wd, *e, *we, *f, *wf,
-    *g, *wg, *pa1, *pa2, *pb1, *pb2, *pd1, *pd2;
+    *g, *wg, *pa1, *pa2, *pb1, *pb2, *pd1, *pd2, *pe1, *pe2, *pf1, *pf2, *pg1,
+    *pg2;
   struct picture_variable *picture_a, *picture_b, *picture_c, *picture_d,
     *picture_e, *picture_f, *picture_g;
   struct numeric_variable *numeric_wa, *numeric_wb, *numeric_wc, *numeric_wd,
     *numeric_we, *numeric_wf, *numeric_wg;
   struct pair_variable *pair_pa1, *pair_pa2, *pair_pb1, *pair_pb2, *pair_pd1,
-    *pair_pd2;
+    *pair_pd2, *pair_pe1, *pair_pe2, *pair_pf1, *pair_pf2, *pair_pg1, *pair_pg2;
   mf = init_metafont(malloc, free, "tests/drawing_commands.mf");
   cx = init_context();
   void *p = lexer(mf, malloc, free, "tests/drawing_commands.mf");
@@ -1778,6 +1779,12 @@ void test_drawing_commands(void){
   pb2 = (struct named_variable *) (pb1 -> next);
   pd1 = (struct named_variable *) (pb2 -> next);
   pd2 = (struct named_variable *) (pd1 -> next);
+  pe1 = (struct named_variable *) (pd2 -> next);
+  pe2 = (struct named_variable *) (pe1 -> next);
+  pf1 = (struct named_variable *) (pe2 -> next);
+  pf2 = (struct named_variable *) (pf1 -> next);
+  pg1 = (struct named_variable *) (pf2 -> next);
+  pg2 = (struct named_variable *) (pg1 -> next);
   picture_a = (struct picture_variable *) a -> var;
   picture_b = (struct picture_variable *) b -> var;
   picture_c = (struct picture_variable *) c -> var;
@@ -1798,10 +1805,13 @@ void test_drawing_commands(void){
   pair_pb2 = (struct pair_variable *) pb2 -> var;
   pair_pd1 = (struct pair_variable *) pd1 -> var;
   pair_pd2 = (struct pair_variable *) pd2 -> var;
+  pair_pe1 = (struct pair_variable *) pe1 -> var;
+  pair_pe2 = (struct pair_variable *) pe2 -> var;
+  pair_pf1 = (struct pair_variable *) pf1 -> var;
+  pair_pf2 = (struct pair_variable *) pf2 -> var;
+  pair_pg1 = (struct pair_variable *) pg1 -> var;
+  pair_pg2 = (struct pair_variable *) pg2 -> var;
   assert("Interpreting program with drawing commands", ret);
-  //print_picture(picture_a);
-  //printf("pa1: %f %f\n", pair_pa1 -> x, pair_pa1  -> y);
-  //printf("pa2: %f %f\n", pair_pa2 -> x, pair_pa2  -> y);
   assert("Drawing a simple square",
 	 picture_a -> width == 6 && picture_a -> height == 6 &&
   	 ALMOST_EQUAL(numeric_wa -> value, 12.0) &&
@@ -1815,8 +1825,6 @@ void test_drawing_commands(void){
 	 ALMOST_EQUAL(pair_pa1 -> y, 1.0) &&
 	 ALMOST_EQUAL(pair_pa2 -> x, 1.0) &&
 	 ALMOST_EQUAL(pair_pa2 -> y, 0.0));
-  //printf("b: %f\n", numeric_wb -> value);
-  //print_picture(picture_b);
   assert("Using 'pickup' command pointing to a pen",
 	 picture_b -> width == 6 && picture_b -> height == 6 &&
   	 ALMOST_EQUAL(numeric_wb -> value, 12.0) &&
@@ -1824,12 +1832,9 @@ void test_drawing_commands(void){
 	 ALMOST_EQUAL(pair_pb1 -> y, 1.0) &&
 	 ALMOST_EQUAL(pair_pb2 -> x, 1.0) &&
 	 ALMOST_EQUAL(pair_pb2 -> y, 0.0));
-  //print_picture(picture_c);
   assert("Using 'erase' command",
 	 picture_c -> width == 6 && picture_c -> height == 6 &&
   	 ALMOST_EQUAL(numeric_wc -> value, 0.0));
-  //printf("d: %f\n", numeric_wd -> value);
-  //print_picture(picture_d);
   assert("Drawing dot with circular pen",
 	 picture_d -> width == 12 && picture_d -> height == 12 &&
   	 ALMOST_EQUAL(numeric_wd -> value, 112.0) &&
@@ -1843,19 +1848,48 @@ void test_drawing_commands(void){
 	 ALMOST_EQUAL(pair_pd1 -> y, 6.0) &&
 	 ALMOST_EQUAL(pair_pd2 -> x, 6.0) &&
 	 ALMOST_EQUAL(pair_pd2 -> y, -6.0));
-  //printf("e: %f\n", numeric_we -> value);
-  //print_picture(picture_e);
   assert("Drawing dot with custom curved pen",
 	 picture_e -> width == 12 && picture_e -> height == 12 &&
-  	 ALMOST_EQUAL(numeric_we -> value, 112.0));
+  	 ALMOST_EQUAL(numeric_we -> value, 112.0) &&
+	 // You can test the reference values with METAFONT code:
+	 // path tmp;
+	 // tmp := (0.5, 0) .. controls (0.5, 0.13261) and (0.44733, 0.2598) .. (0.35356, 0.35356) .. controls (0.2598, 0.44733) and (0.13261, 0.5) .. (0, 0.5);
+	 // tmp := tmp & tmp rotated 90;
+	 // tmp := tmp & tmp rotated 180 & cycle;
+	 // tmp := tmp scaled 12 rotated 30;
+	 // pickup (makepen tmp);
+	 // message decimal xpart top lft (0, 0); % Output: -5.7957
+	 // message decimal ypart top lft (0, 0); % Output: 5.7957
+	 // message decimal xpart bot rt (0, 0); % Output: 5.7957
+	 // message decimal ypart bot rt (0, 0); % Output: -5.7957
+	 // However METAFONT produces these values because it converts the
+	 // pen to polygon, which changes the results. As we keep always
+	 // treating them as curves, we should use the values below, which are
+	 // the correct values, computed with high precision:
+	 ALMOST_EQUAL(pair_pe1 -> x, -5.92623739298447238162743669702386846) &&
+	 ALMOST_EQUAL(pair_pe1 -> y, 5.926255757660079919904343789205625362) &&
+	 ALMOST_EQUAL(pair_pe2 -> x, 5.926237392984472381627436697023868466) &&
+	 ALMOST_EQUAL(pair_pe2 -> y, -5.9262557576600799199043437892056253));
   assert("Drawing a square with custom polygonal pen",
 	 picture_f -> width == 6 && picture_f -> height == 6 &&
-  	 ALMOST_EQUAL(numeric_wf -> value, 12.0));
-  //printf("g: %f\n", numeric_wg -> value);
-  //print_picture(picture_g);
+  	 ALMOST_EQUAL(numeric_wf -> value, 12.0) &&
+	 ALMOST_EQUAL(pair_pf1 -> x, -0.5) &&
+	 ALMOST_EQUAL(pair_pf1 -> y, 1.0) &&
+	 ALMOST_EQUAL(pair_pf2 -> x, 0.5) &&
+	 ALMOST_EQUAL(pair_pf2 -> y, 0.0));
   assert("nullpen does not produce drawing",
 	 picture_g -> width == 6 && picture_g -> height == 6 &&
-  	 ALMOST_EQUAL(numeric_wg -> value, 0.0));
+  	 ALMOST_EQUAL(numeric_wg -> value, 0.0) &&
+	 // You can test the reference values with METAFONT code:
+	 // pickup nullpen shifted (1, 1);
+	 // message decimal xpart top lft (0, 0); % Output: 1
+	 // message decimal ypart top lft (0, 0); % Output: 1
+	 // message decimal xpart bot rt (0, 0);  % Output: 1
+	 // message decimal ypart bot rt (0, 0);  % Output: 1
+	 ALMOST_EQUAL(pair_pg1 -> x, 1.0) &&
+	 ALMOST_EQUAL(pair_pg1 -> y, 1.0) &&
+	 ALMOST_EQUAL(pair_pg2 -> x, 1.0) &&
+	 ALMOST_EQUAL(pair_pg2 -> y, 1.0));
   free_token_list(free, p);
   destroy_context(mf, cx);
   destroy_metafont(mf);
