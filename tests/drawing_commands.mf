@@ -2,7 +2,7 @@
 
 picture a, b, c, d, e, f, g;
 numeric wa, wb, wc, wd, we, wf, wg;
-pair pa1, pa2, pb1, pb2, pd1, pd2, pe1, pe2, pf1, pf2, pg1, pg2;
+pair pa1, pa2, pb1, pb2, pd1, pd2, pe1, pe2, pf1, pf2, pg1, pg2, ph1, ph2;
 pen p;
 path tmp;
 
@@ -99,6 +99,15 @@ draw (1, 1) -- (4, 1) -- (4, 4) -- (1, 4) -- cycle;
 
 g = currentpicture;
 wg = totalweight g;
+
+% Now this will test the commands 'top', 'bot', 'lft' and 'rt' when we
+% have a non-symetrical pen.
+
+p = pensquare xscaled 0.5 shifted (0.15, 0.1);
+pickup p;
+
+ph1 = top lft (0, 0);
+ph2 = bot rt (0, 0);
 
 
 end

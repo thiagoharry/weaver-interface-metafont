@@ -1748,13 +1748,14 @@ void test_drawing_commands(void){
   bool ret;
   struct named_variable *a, *wa, *b, *wb, *c, *wc, *d, *wd, *e, *we, *f, *wf,
     *g, *wg, *pa1, *pa2, *pb1, *pb2, *pd1, *pd2, *pe1, *pe2, *pf1, *pf2, *pg1,
-    *pg2;
+    *pg2, *ph1, *ph2;
   struct picture_variable *picture_a, *picture_b, *picture_c, *picture_d,
     *picture_e, *picture_f, *picture_g;
   struct numeric_variable *numeric_wa, *numeric_wb, *numeric_wc, *numeric_wd,
     *numeric_we, *numeric_wf, *numeric_wg;
   struct pair_variable *pair_pa1, *pair_pa2, *pair_pb1, *pair_pb2, *pair_pd1,
-    *pair_pd2, *pair_pe1, *pair_pe2, *pair_pf1, *pair_pf2, *pair_pg1, *pair_pg2;
+    *pair_pd2, *pair_pe1, *pair_pe2, *pair_pf1, *pair_pf2, *pair_pg1, *pair_pg2,
+    *pair_ph1, *pair_ph2;
   mf = init_metafont(malloc, free, "tests/drawing_commands.mf");
   cx = init_context();
   void *p = lexer(mf, malloc, free, "tests/drawing_commands.mf");
@@ -1785,6 +1786,8 @@ void test_drawing_commands(void){
   pf2 = (struct named_variable *) (pf1 -> next);
   pg1 = (struct named_variable *) (pf2 -> next);
   pg2 = (struct named_variable *) (pg1 -> next);
+  ph1 = (struct named_variable *) (pg2 -> next);
+  ph2 = (struct named_variable *) (ph1 -> next);
   picture_a = (struct picture_variable *) a -> var;
   picture_b = (struct picture_variable *) b -> var;
   picture_c = (struct picture_variable *) c -> var;
@@ -1811,6 +1814,8 @@ void test_drawing_commands(void){
   pair_pf2 = (struct pair_variable *) pf2 -> var;
   pair_pg1 = (struct pair_variable *) pg1 -> var;
   pair_pg2 = (struct pair_variable *) pg2 -> var;
+  pair_ph1 = (struct pair_variable *) ph1 -> var;
+  pair_ph2 = (struct pair_variable *) ph2 -> var;
   assert("Interpreting program with drawing commands", ret);
   assert("Drawing a simple square",
 	 picture_a -> width == 6 && picture_a -> height == 6 &&
@@ -1890,6 +1895,17 @@ void test_drawing_commands(void){
 	 ALMOST_EQUAL(pair_pg1 -> y, 1.0) &&
 	 ALMOST_EQUAL(pair_pg2 -> x, 1.0) &&
 	 ALMOST_EQUAL(pair_pg2 -> y, 1.0));
+    assert("Commands 'top', 'bot', 'lft' and 'rt' on non-symetrical pen",
+	 // You can test the reference values with METAFONT code:
+	 // pickup pensquare xscaled 0.5 shifted (0.15, 0.1);
+	 // message decimal xpart top lft (0, 0); % Output: -0.1
+	 // message decimal ypart top lft (0, 0); % Output: 0.6
+	 // message decimal xpart bot rt (0, 0);  % Output: 0.4
+	 // message decimal ypart bot rt (0, 0);  % Output: -0.4
+	 ALMOST_EQUAL(pair_ph1 -> x, -0.1) &&
+	 ALMOST_EQUAL(pair_ph1 -> y, 0.6) &&
+	 ALMOST_EQUAL(pair_ph2 -> x, 0.4) &&
+	 ALMOST_EQUAL(pair_ph2 -> y, -0.4));
   free_token_list(free, p);
   destroy_context(mf, cx);
   destroy_metafont(mf);

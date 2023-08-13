@@ -13614,13 +13614,13 @@ keywords:
 \fimcodigo
 
 These operators shift a pair for a distance that depends on the
-current pen size. The operator \monoespaco{bot} shifts the pair up a
-distance equivalent to the smallest coordinate $y$ found in the
-current pen perimeter. Assuming that the pen is centered in the
-origin, its smallest coordinate is negative and this means that
-drawing in \monoespaco{bot (x, y)} is centering the pen in the given
-coordinate $x$ while shifting down the pen such that its top is
-placed in the given coordinate $y$:
+current pen size. If we have a point $(x_0, y_0)$,
+then \monoespaco{bot (x0, y0)} represents $(x_0, y_0)$ shifted down,
+such that it is now positioned below the pen when we center it in
+point $(x_0, y_0)$. Assuming that the pen coordinates are centered on
+the origin, then its lower points are negative in axis $y$. Therefore,
+we can do it adding the initial point with the lowest $y$ value in the
+pen:
 
 \iniciocodigo
 @<Pair Primary: Other Rules to Be Defined Later@>+=
@@ -13635,11 +13635,10 @@ else if(begin_expression -> type == TYPE_BOT){
 @
 \fimcodigo
 
-The operator \monoespaco{top} shifts down a quantity equal to the
-biggest coordinate $y$ in the current pen perimeter. If the pen is
-centered in the origin, this value is positive and the pen will be
-shifted such that if we draw in \monoespaco{top (x, y)}, its top will
-be placed in the given coordinate $y$:
+The operator \monoespaco{top} shifts up a quantity equal to the
+biggest coordinate $y$ in the current pen perimeter. This means that
+\monoespaco{top (x0, y0)} will be positioned such that it will be above
+the pen when the pen is placed in $(x_0, y_0)$:
 
 \iniciocodigo
 @<Pair Primary: Other Rules to Be Defined Later@>+=
@@ -13655,10 +13654,12 @@ else if(begin_expression -> type == TYPE_TOP){
 \fimcodigo
 
 The operator \monoespaco{lft} shifts left a quantity equal the
-smallest coordinate $x$ in the current pen perimeter. Again, if the
-pen is centered in the origin, this will be a negative value that in
-fact shifts right the pen such that its leftmost par is placed in the
-coordinate $x$ given by the pair:
+smallest coordinate $x$ in the current pen
+perimeter. Therefore, \monoespaco{lft (x0, y0)} will be positioned at
+left of the pen if the pen is centered in $(x_0, y_0)$. As in a pen
+centered in the origin the leftmost points will have a negative $x$
+coordinate, we just need to add to the $x$ coordinate of the point the
+leftmost $x$ coordinate in the pen:
 
 \iniciocodigo
 @<Pair Primary: Other Rules to Be Defined Later@>+=
@@ -13673,12 +13674,10 @@ else if(begin_expression -> type == TYPE_LFT){
 @
 \fimcodigo
 
-The last operator, \monoespaco{rt}, shifts left the pair a quantity
-equivalent to the rightmost coordinate in the pen perimeter. Such that
-if the current pen is centered in the origin, the coordinate is
-shifted such that if the pen is drawn in the shifted position, its
-rightmost part is placed in the $x$ coordinate given by the pair
-before the shifting:
+The last operator, \monoespaco{rt}, shifts right the pair $(x_0, y_0)$
+a quantity equivalent to the rightmost coordinate in the pen
+perimeter, such that the point coordinate will be placed at
+right of the pen when centered in $(x_0, y_0)$:
 
 \iniciocodigo
 @<Pair Primary: Other Rules to Be Defined Later@>+=
@@ -14137,6 +14136,26 @@ void drawpoint(struct metafont *mf, struct pen_variable *pen,
 @
 \fimcodigo
 
+\secao{12. Compound Statement: Character Definition}
+
+Now we are in the part that is the main objective of the language:
+defining new characters for typographical fonts, or defining a new
+image to be used as static illustration or an animation.
+
+The syntax for this is:
+
+\alinhaverbatim
+<Compound> -> <Character Definition>
+<Character Definition> -> beginchar ( <String Token> ,
+                                      <Numeric Expression> ,
+                                      <Numeric Expresison> ,
+                                      <Numeric Expression> )
+                           <'beginchar' Body>
+                           endchar
+<'beginchar' Body> -> <Statement, except 'beginchar'>
+<Statement, except 'beginchar'> -> <Simple> | <Compound, except 'beginchar'>
+<Compound, except 'beginchar'> -> <Compound Block> | <Conditional>
+\alinhanormal
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

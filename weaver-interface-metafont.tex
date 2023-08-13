@@ -13788,12 +13788,13 @@ E também adicionar o nome dos tokens como palavras reservadas:
 \fimcodigo
 
 O que estes operadores fazem é deslocar um par uma distância que
-depende do tamanho da caneta atual que estamos usando.
-O operador \monoespaco{bot} desloca o par para baixo uma quantidade
-equivalente à maior coordenada $y$ da caneta. Se a caneta está
-centralizada em $(0, 0)$, este será um valor positivo e a caneta será
-abaixada de modo que ao desenhar ela em \monoespaco{bot (x, y)}, seu
-topo estará encostando na coordenada $y$ indicada:
+depende do tamanho da caneta atual que estamos usando.  Se temos um
+ponto $(x_0, y_0)$, então \monoespaco{bot (x0, y0)} representa $(x_0,
+y_0)$ deslocado para baixo, de modo que fique embaixo da caneta quando
+ela é centralizada no ponto $(x_0, y_0)$. Assumindo que uma caneta
+padrão é centralizada na origem, o menor ponto $y$ dela será um valor
+negativo. Então isso é obtido somando o ponto inicial com o ponto mais
+abaixo da caneta:
 
 \iniciocodigo
 @<Primário de Par: Outras Regras a Definir Depois@>+=
@@ -13808,11 +13809,9 @@ else if(begin_expression -> type == TYPE_BOT){
 @
 \fimcodigo
 
-O operador \monoespaco{top} desloca o par para baixo uma quantidade
-equivalente à maior coordenada $y$ da caneta. Se a caneta está
-centralizada em $(0, 0)$, este será um valor positivo e a caneta será
-abaixada de modo que ao desenhar ela em \monoespaco{top (x, y)}, seu
-topo estará encostando na coordenada $y$ indicada:
+O operador \monoespaco{top} desloca o par para cima de modo
+que \monoespaco{top (x0, y0)} passa a estar posicionado acima da
+caneta se esta for posicionada em $(x_0, y_o)$.
 
 \iniciocodigo
 @<Primário de Par: Outras Regras a Definir Depois@>+=
@@ -13827,13 +13826,12 @@ else if(begin_expression -> type == TYPE_TOP){
 @
 \fimcodigo
 
-
-O operador \monoespaco{lft} desloca o par à esquerda uma quantidade
-igual à menor coordenada $x$ da caneta. Novamente, se a caneta está
-centralizada em $(0, 0)$, este será um valor negativo e o efeito é que
-se usada para desenhar na coordenada deslocada, a caneta será ajustada
-para a direita de modo que sua extremidade esquerda esteja na posição
-indicada pelo par:
+O operador \monoespaco{lft} desloca o ponto à esquerda uma quantidade
+igual à menor coordenada $x$ da caneta. Assim, \monoespaco{lft (x0,
+y0)} passa a estar posicionado à esquerda da caneta se esta for
+posicionada em $(x_0, y_o)$. Como em uma caneta centrada na origem
+temos que seu ponto mais à esquerda é negativo, basta somarmos o valor
+$x_0$ com o menor valor no eixo $x$ do perímetro da caneta:
 
 \iniciocodigo
 @<Primário de Par: Outras Regras a Definir Depois@>+=
@@ -13848,11 +13846,10 @@ else if(begin_expression -> type == TYPE_LFT){
 @
 \fimcodigo
 
-Por fim, o operador \monoespaco{rt} desloca o par para a esquerda uma
-quantidade equivalente à maior coordenada $x$ da caneta atual, de modo
-que se as coordenadas da caneta estão centralizadas em $(0, 0)$, então
-a posição indicada pelo par é onde a caneta deve ser centralizada para
-que sua extremidade direita fique na coordenada $x$ indicada pelo par:
+Por fim, o operador \monoespaco{rt} desloca o par $(x_0, y_0)$ para a
+direita uma quantidade equivalente à maior coordenada $x$ da caneta
+atual, de modo que se as coordenadas do ponto ficarão à direita de uma
+caneta centralizada em $(x_0, y_0)$:
 
 \iniciocodigo
 @<Primário de Par: Outras Regras a Definir Depois@>+=
@@ -14321,6 +14318,27 @@ void drawpoint(struct metafont *mf, struct pen_variable *pen,
 }
 @
 \fimcodigo
+
+\secao{12. Declaração Composta: Declaração de Caractere}
+
+Vamos agora à parte que é o prinicpal objetivo da linguagem: definir
+novos caracteres para fontes tipográficas, ou então definir uma imagem
+que será usada como ilustração, ou animação.
+
+A sintaxe para isso é:
+
+\alinhaverbatim
+<Composta> -> <Declaração de Caractere>
+<Declaração de Caractere> -> beginchar ( <Token de String> ,
+                                         <Expressão Numérica> ,
+                                         <Expressão Numérica> ,
+                                         <Expressão Numérica> )
+                             <Corpo do 'beginchar'>
+                             endchar
+<Corpo do 'beginchar'> -> <Declaração, exceto 'beginchar'>
+<Declaração, exceto 'beginchar'> -> <Simples> | <Composta, exceto 'beginchar'>
+<Composta, exceto 'beginchar'> -> <Bloco Composto> | <Bloco Condicional>
+\alinhanormal
 
 \secao{Referências}
 
