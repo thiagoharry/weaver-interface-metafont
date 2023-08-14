@@ -200,6 +200,7 @@ extern "C" {
 #endif
 @<Inclui Cabeçalhos Gerais (metafont.h)@>
 //@<Macros Gerais (metafont.h)@>
+@<Declarações Gerais (metafont.h)@>
 @<Estrutura de Dados (metafont.h)@>
 @<Declaração de Função (metafont.h)@>
 #ifdef __cplusplus
@@ -1798,6 +1799,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
 #endif
     return false;
   }
+  @<Fim do Código: 'end' ou 'dump'@>
   return true;
 }
 @
@@ -14339,6 +14341,99 @@ A sintaxe para isso é:
 <Declaração, exceto 'beginchar'> -> <Simples> | <Composta, exceto 'beginchar'>
 <Composta, exceto 'beginchar'> -> <Bloco Composto> | <Bloco Condicional>
 \alinhanormal
+
+O token \monoespaco{beginchar} começa a definição de um novo caractere
+e o token \monoespaco{endchar} termina. O token de string é o nome do
+caractere definido. Para fontes tipográficas, deve ser a representação
+em UTF-8 do caractere. Para animações e ilustrações, pode ser qualquer
+nome, o token terminará sendo ignorado. Os valores numéricos após o
+token de string representam respectivamente a largura, altura e
+profundidade do caractere (profundidade sendo a altura dele abaixo da
+linha de base, para caracteres como ``p'' com partes dele ficando
+abaixo da linha).
+
+A linguagem WEAVEFONT tem dois modos de operação: ela pode estar
+carregando ou executando. O modo determina o comportamento dela ao
+encontrar o token \monoespaco{beginchar}. No modo de carregamento, ela
+copia o código que representa o caractere para uma posição adequada,
+para que se necessário, o código seja executado para renderizar o
+caractere. O código dentro do corpo de \monoespaco{beginchar} nem
+chega a ser executado e interpretado. No modo de execução, aí sim este
+código será executado para que o caracteres seja renderizado.
+
+Armazenamos o modo de operação na seguinte variável:
+
+\iniciocodigo
+@<Atributos (struct metafont)@>+=
+bool loading;
+@
+\fimcodigo
+
+Durante a inicialização, nós começamos no modo de carregamento:
+
+\iniciocodigo
+@<Inicialização (struct metafont)@>+=
+mf -> loading = true;
+@
+\fimcodigo
+
+Nós saímos do modo de carregamento e entramos no modo de execução
+assim que lemos um \monoespaco{end} ou \monoespaco{dump}:
+
+\iniciocodigo
+@<Fim do Código: 'end' ou 'dump'@>=
+mf -> loading = false;
+@
+\fimcodigo
+
+Mas onde devemos armazenar o código de um caractere quando estamos no
+modo de carregamento? Vamos definir a seguinte estrutura que armazena
+o código de um caractere. Ela armazena o código, as dimensões do
+caractere, a textura OpenGL onde ele foi renderizado e um atributo
+booleano que diz se podemos usar essa textura ou se devemos renderizar
+novamente o caractere:
+
+\iniciocodigo
+@<Declarações Gerais (metafont.h)@>=
+struct _glyph;
+@
+\fimcodigo
+
+\iniciocodigo
+@<Estrutura de Dados Locais (metafont.c)@>+=
+struct _glyph{
+  struct generic_token *begin, *end;
+  int width, height, depth;
+  GLuint texture;
+  bool need_rendering;
+};
+@
+\fimcodigo
+
+A lista de todos os glifos possíveis ficará aqui:
+
+\iniciocodigo
+@<Atributos (struct metafont)@>+=
+struct _glyph *glyphs[327];
+@
+\fimcodigo
+
+O número 327 é a quantidade de diferentes blocos Unicode
+existentes. Cada bloco potencialmente armazena de 1 a milhares de
+diferentes glifos relacionados entre si, tipicamente pertencentes a um
+mesmo sistema de escrita. Inicialmente, todos estes blocos serão
+inicializados como vazios. Mas à medida que encontrarmos caracteres
+pertencentes à eles, teremos que alocar cada um deles:
+
+\iniciocodigo
+@<Inicialização (struct metafont)@>+=
+memset(mf -> glyphs, 0, sizeof(struct _glyph *) * 327);
+@
+\fimcodigo
+
+
+
+% 164 bmp
 
 \secao{Referências}
 

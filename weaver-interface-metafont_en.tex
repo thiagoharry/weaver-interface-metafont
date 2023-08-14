@@ -182,6 +182,7 @@ extern "C" {
 #endif
 @<Include General Headers (metafont.h)@>
 //@<General Macros (metafont.h)@>
+@<General Declarations (metafont.h)@>
 @<Data Structures (metafont.h)@>
 @<Function Declaration (metafont.h)@>
 #ifdef __cplusplus
@@ -1756,6 +1757,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
 #endif
     return false;
   }
+  @<End of Code: 'end' or 'dump'@>
   return true;
 }
 @
@@ -14156,6 +14158,94 @@ The syntax for this is:
 <Statement, except 'beginchar'> -> <Simple> | <Compound, except 'beginchar'>
 <Compound, except 'beginchar'> -> <Compound Block> | <Conditional>
 \alinhanormal
+
+The token \monoespaco{beginchar} begins a new character definition
+and \monoespaco{endchar} ends the definition. The string token is the
+character name. For typographical fonts, it must be the UTF-8
+character that it is being represented. For animations and
+illustrations, the value will be ignored and can be any string. The
+numeric values after the string are teh character width, height and
+depth. The depth is its height below the baseline, for characters like
+``p'' or ``q'', with parts extending below the line.
+
+The language WEAVEFONT has two modes of operation: it can be loading
+or running. The mode changes how we deal with the code in
+a \monoespaco{beginchar} statement. If loading, the code inside
+the \monoespaco{beginchar} body will not be interpreted and
+executed. Instead, this code will be stored in an adequate place to be
+interpreted later, when we need to render the character. When running,
+then the language will interpret and execute the code because we need
+to render such character.
+
+We store the operation mode in the following variable:
+
+\iniciocodigo
+@<Attributes (struct metafont)@>+=
+bool loading;
+@
+\fimcodigo
+
+During initialization, we begin in loading mode:
+
+\iniciocodigo
+@<Initialization (struct metafont)@>+=
+mf -> loading = true;
+@
+\fimcodigo
+
+We finish the loading mode and begin the running mode when we arrive
+at the end of the program source, when interpreting a \monoespaco{end}
+or \monoespaco{dump} token:
+
+\iniciocodigo
+@<End of Code: 'end' or 'dump'@>=
+mf -> loading = false;
+@
+\fimcodigo
+
+But where should we store the code for each character when in the
+loading mode? For this, we will define the following structure that
+will hold information about a single glyph or image. It will store the
+code, the glyph dimensions, the OpenGL texture and an extra variable
+that says if we need to render the glyph, or we could just use the
+already rendered texture:
+
+\iniciocodigo
+@<General Declarations (metafont.h)@>=
+struct _glyph;
+@
+\fimcodigo
+
+\iniciocodigo
+@<Local Data Structures (metafont.c)@>+=
+struct _glyph{
+  struct generic_token *begin, *end;
+  int width, height, depth;
+  GLuint texture;
+  bool need_rendering;
+};
+@
+\fimcodigo
+
+The list of all glyphs will be stored here:
+
+\iniciocodigo
+@<Attributes (struct metafont)@>+=
+struct _glyph *glyphs[327];
+@
+\fimcodigo
+
+The number 327 is the number of different Unicode blocks. Each block
+can store between 1 and thousands of different glyphs, typically,
+belonging to the same writting system. Initially all these blocks will
+be initialized as empty, but when we find new character definitions
+for glyphs belonging to them, we will need to allocate them:
+
+\iniciocodigo
+@<Initialization (struct metafont)@>+=
+memset(mf -> glyphs, 0, sizeof(struct _glyph *) * 327);
+@
+\fimcodigo
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
