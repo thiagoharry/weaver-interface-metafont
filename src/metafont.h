@@ -88,9 +88,9 @@ int current_depth;
 
 bool loading;
 /*:517*//*522:*/
-#line 14233 "weaver-interface-metafont_en.tex"
+#line 14242 "weaver-interface-metafont_en.tex"
 
-struct _glyph*glyphs[327];
+struct _glyph*glyphs[332];
 /*:522*/
 #line 1306 "weaver-interface-metafont_en.tex"
 
