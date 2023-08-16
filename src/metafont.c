@@ -1219,7 +1219,7 @@ void drawpoint(struct metafont*mf,struct pen_variable*pen,
 struct picture_variable*pic,float x,float y,float*matrix,
 bool erasing);
 /*:513*//*524:*/
-#line 14265 "weaver-interface-metafont_en.tex"
+#line 14268 "weaver-interface-metafont_en.tex"
 
 static struct _glyph*get_glyph(struct metafont*mf,unsigned char*utf8,
 bool create_if_not_exist);
@@ -1853,9 +1853,10 @@ mf->current_depth= 0;
 
 mf->loading= true;
 /*:518*//*523:*/
-#line 14256 "weaver-interface-metafont_en.tex"
+#line 14258 "weaver-interface-metafont_en.tex"
 
 memset(mf->glyphs,0,sizeof(struct _glyph*)*332);
+mf->first_glyph= NULL;
 /*:523*/
 #line 1342 "weaver-interface-metafont_en.tex"
 
@@ -2301,7 +2302,96 @@ return false;
 *end_token_list= begin_token_list;
 return true;
 }
-/*:464*/
+/*:464*//*526:*/
+#line 14417 "weaver-interface-metafont_en.tex"
+
+else if(((struct generic_token*)begin_token_list)->type==
+TYPE_BEGINCHAR&&mf->loading){
+DECLARE_NESTING_CONTROL();
+struct _glyph*glyph;
+struct generic_token*t= ((struct generic_token*)begin_token_list)->next;
+if(t->type!=TYPE_OPEN_PARENTHESIS||begin_token_list==*end_token_list){
+#if defined(W_DEBUG_METAFONT)
+fprintf(stderr,"METAFONT: Error: %s:%d: Missing '(' "
+"after 'beginchar'.\n",mf->file,
+((struct generic_token*)begin_token_list)->line);
+#endif
+return false;
+}
+if(t!=*end_token_list)
+t= t->next;
+if(t->type!=TYPE_STRING){
+#if defined(W_DEBUG_METAFONT)
+fprintf(stderr,"METAFONT: Error: %s:%d: Missing UTF-8 string "
+"after 'beginchar('.\n",mf->file,
+((struct generic_token*)begin_token_list)->line);
+#endif
+return false;
+}
+{
+struct string_token*str= (struct string_token*)t;
+glyph= get_glyph(mf,(unsigned char*)str->value,true);
+if(glyph==NULL)
+return false;
+if(mf->first_glyph==NULL)
+mf->first_glyph= glyph;
+if(glyph->begin!=NULL){
+#if defined(W_DEBUG_METAFONT)
+fprintf(stderr,"METAFONT: Error: %s:%d: Glyph \"%s\" is defined "
+"twice.\n",mf->file,
+((struct generic_token*)begin_token_list)->line,
+str->value);
+#endif
+return false;
+}
+glyph->begin= begin_token_list;
+}
+{
+int number_of_commas= 0;
+while(t!=NULL&&t!=*end_token_list){
+COUNT_NESTING(t);
+if(IS_NOT_NESTED()){
+if(t->type==TYPE_COMMA)
+number_of_commas++;
+}
+t= t->next;
+if(IS_NOT_NESTED()&&t->type==TYPE_CLOSE_PARENTHESIS)
+break;
+}
+if(t==NULL||number_of_commas!=3||
+t->type!=TYPE_CLOSE_PARENTHESIS){
+#if defined(W_DEBUG_METAFONT)
+fprintf(stderr,"METAFONT: Error: %s:%d: Malformed 'beginchar' "
+"compound command.\n",mf->file,
+((struct generic_token*)begin_token_list)->line);
+#endif
+return false;
+}
+t= t->next;
+while(t!=NULL&&t->type!=TYPE_ENDCHAR){
+if(t->type==TYPE_BEGINCHAR){
+#if defined(W_DEBUG_METAFONT)
+fprintf(stderr,"METAFONT: Error: %s:%d: Nested 'beginchar'.\n",
+mf->file,t->line);
+#endif
+return false;
+}
+t= t->next;
+}
+if(t==NULL){
+#if defined(W_DEBUG_METAFONT)
+fprintf(stderr,"METAFONT: Error: %s:%d: Missing 'endchar' "
+"after'beginchar' command.\n",mf->file,
+((struct generic_token*)begin_token_list)->line);
+#endif
+return false;
+}
+glyph->end= t;
+*end_token_list= t;
+}
+return true;
+}
+/*:526*/
 #line 1542 "weaver-interface-metafont_en.tex"
 
 /*88:*/
@@ -9236,7 +9326,7 @@ glEnableVertexAttribArray(0);
 glDrawArrays(GL_TRIANGLE_FAN,0,pen->indices);
 }
 /*:516*//*525:*/
-#line 14286 "weaver-interface-metafont_en.tex"
+#line 14289 "weaver-interface-metafont_en.tex"
 
 static struct _glyph*get_glyph(struct metafont*mf,unsigned char*c,
 bool create_if_not_exist){

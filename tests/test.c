@@ -88,6 +88,10 @@ void test_compound_statements(void){
   void *p = lexer(mf, malloc, free, "tests/compound.mf");
   ret = eval_program(mf, cx, p);
   assert("Testing compound statements", ret);
+  assert("Characters defined with 'beginchar' are stored",
+	 mf -> first_glyph != NULL &&
+	 mf -> first_glyph -> begin != NULL &&
+	 mf -> first_glyph -> end != NULL);
   free_token_list(free, p);
   p = lexer(mf, malloc, free, "tests/compound_wrong.mf");
   ret = eval_program(mf, cx, p);

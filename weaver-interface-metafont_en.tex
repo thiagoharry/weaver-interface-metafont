@@ -14236,11 +14236,13 @@ struct _glyph{
 @
 \fimcodigo
 
-The list of all glyphs will be stored here:
+The list of all glyphs and a pointer to the first defined glyph will
+be stored here:
 
 \iniciocodigo
 @<Attributes (struct metafont)@>+=
 struct _glyph *glyphs[332];
+struct _glyph *first_glyph;
 @
 \fimcodigo
 
@@ -14255,6 +14257,7 @@ to them, we will need to allocate them:
 \iniciocodigo
 @<Initialization (struct metafont)@>+=
 memset(mf -> glyphs, 0, sizeof(struct _glyph *) * 332);
+mf -> first_glyph = NULL;
 @
 \fimcodigo
 
@@ -14394,6 +14397,109 @@ static struct _glyph *get_glyph(struct metafont *mf, unsigned char *c,
       INITIALIZE_GLYPH(mf -> glyphs[block][i]);
   }
   return &(mf -> glyphs[block][index]);
+}
+@
+\fimcodigo
+
+When the language finds a \monoespaco{beginchar} token while in the
+loading mode, it will read the next string token and interpret it as a
+UTF-8 code. Based on tis value, the above function is executed to
+return the correct glyph and allocate it if necessary. If a glyph for
+that charactere already is fully initialized, an error will be raised:
+this would mean that the same glyph was defined twice. Otherwise, all
+the code between \monoespaco{beginchar} and \monoespaco{endchar} will
+be stored in the glyph and this will turn the glyph in a fully
+initialized one (but not a renderized one). An error also should be
+raised if we find another \monoespaco{beginchar} inside the
+initial \monoespaco{beginchar}:
+
+\iniciocodigo
+@<Statement: Compound@>+=
+else if(((struct generic_token *) begin_token_list) -> type ==
+        TYPE_BEGINCHAR && mf -> loading){
+  DECLARE_NESTING_CONTROL();
+  struct _glyph *glyph;
+  struct generic_token *t = ((struct generic_token *) begin_token_list) -> next;
+  if(t -> type != TYPE_OPEN_PARENTHESIS || begin_token_list == *end_token_list){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Missing '(' "
+                    "after 'beginchar'.\n", mf -> file,
+                    ((struct generic_token *) begin_token_list) -> line);
+#endif
+    return false;
+  }
+  if(t != *end_token_list)
+    t = t -> next;
+  if(t -> type != TYPE_STRING){
+#if defined(W_DEBUG_METAFONT)
+    fprintf(stderr, "METAFONT: Error: %s:%d: Missing UTF-8 string "
+                    "after 'beginchar('.\n", mf -> file,
+            ((struct generic_token *) begin_token_list) -> line);
+#endif
+    return false;
+  }
+  {
+    struct string_token *str = (struct string_token *) t;
+    glyph = get_glyph(mf, (unsigned char *) str -> value, true);
+    if(glyph == NULL)
+      return false;
+    if(mf -> first_glyph == NULL)
+      mf -> first_glyph = glyph;
+    if(glyph -> begin != NULL){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: Glyph \"%s\" is defined "
+                      "twice.\n", mf -> file,
+              ((struct generic_token *) begin_token_list) -> line,
+              str -> value);
+#endif
+      return false;
+    }
+    glyph -> begin = begin_token_list;
+  }
+  {
+    int number_of_commas = 0;
+    while(t != NULL && t != *end_token_list){
+      COUNT_NESTING(t);
+      if(IS_NOT_NESTED()){
+        if(t -> type == TYPE_COMMA)
+          number_of_commas ++;
+      }
+      t = t -> next;
+      if(IS_NOT_NESTED() && t -> type == TYPE_CLOSE_PARENTHESIS)
+        break;
+    }
+    if(t == NULL || number_of_commas != 3 ||
+       t -> type != TYPE_CLOSE_PARENTHESIS){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: Malformed 'beginchar' "
+                      "compound command.\n", mf -> file,
+              ((struct generic_token *) begin_token_list) -> line);
+#endif
+      return false;
+    }
+    t = t -> next;
+    while(t != NULL && t -> type != TYPE_ENDCHAR){
+      if(t -> type == TYPE_BEGINCHAR){
+#if defined(W_DEBUG_METAFONT)
+        fprintf(stderr, "METAFONT: Error: %s:%d: Nested 'beginchar'.\n",
+                mf -> file, t -> line);
+#endif
+        return false;
+      }
+      t = t -> next;
+    }
+    if(t == NULL){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: %s:%d: Missing 'endchar' "
+                      "after'beginchar' command.\n", mf -> file,
+              ((struct generic_token *) begin_token_list) -> line);
+#endif
+      return false;
+    }
+    glyph -> end = t;
+    *end_token_list = t;
+  }
+  return true;
 }
 @
 \fimcodigo
