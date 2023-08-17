@@ -590,6 +590,8 @@ struct string_token{
   int line;
 #endif
   char value[5];
+  // Ponteiro para o glifo que a string representa (tratado na Seção XX)
+  struct _glyph *glyph;
 };
 @
 \fimcodigo
@@ -14593,8 +14595,10 @@ totalmente inicializado para tal caractere, um erro será gerado: isso
 significa que o mesmo caractere foi definido mais de uma vez. Se não,
 todo o código que vai do token \monoespaco{beginchar} até
 o \monoespaco{endchar} será armazenadono glifo e ele será considerado
-completamente inicializado (mas não renderizado). Um erro também deve
-ser gerado se existir um \monoespaco{beginchar} dentro de
+completamente inicializado (mas não renderizado). O token de string
+que especificou o glifo também será atualizado para que seu ponteiro
+interno aponte para o novo glifo criado. Um erro também deve ser
+gerado se existir um \monoespaco{beginchar} dentro de
 outro \monoespaco{beginchar}:
 
 \iniciocodigo
@@ -14639,6 +14643,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
       return false;
     }
     glyph -> begin = begin_token_list;
+    str -> glyph = glyph;
   }
   {
     int number_of_commas = 0;
@@ -14687,6 +14692,30 @@ else if(((struct generic_token *) begin_token_list) -> type ==
 }
 @
 \fimcodigo
+
+Já se estivermos em modo de carregamento e lermos um
+token \monoespaco{endchar}, isso sempre será um erro: significa que o
+código possui um \monoespaco{endchar}, mas não
+um \monoespaco{beginchar}. Já que os tokens de \monoespaco{endchar}
+são tratados na mesma iteração em que tratamos
+o \monoespaco{beginchar}:
+
+\iniciocodigo
+@<Declaração: Composta@>+=
+else if(((struct generic_token *) begin_token_list) -> type ==
+        TYPE_ENDCHAR && mf -> loading){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Found 'endchar' token "
+                  "without previous 'beginchar'.\n", mf -> file,
+          ((struct generic_token *) begin_token_list) -> line);
+#endif
+  return false;
+}
+@
+\fimcodigo
+
+Finalmente, vamos tratar o \monoespaco{beginchar} quando estamos em
+modo de execução.
 
 \secao{Referências}
 

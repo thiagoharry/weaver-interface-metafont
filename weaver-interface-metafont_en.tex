@@ -568,6 +568,8 @@ struct string_token{
   int line;
 #endif
   char value[5];
+  // Pointer for the glyph represented by string (will be used in Section XX)
+  struct _glyph *glyph;
 };
 @
 \fimcodigo
@@ -14409,8 +14411,10 @@ that charactere already is fully initialized, an error will be raised:
 this would mean that the same glyph was defined twice. Otherwise, all
 the code between \monoespaco{beginchar} and \monoespaco{endchar} will
 be stored in the glyph and this will turn the glyph in a fully
-initialized one (but not a renderized one). An error also should be
-raised if we find another \monoespaco{beginchar} inside the
+initialized one (but not a renderized one). The string token used to
+identify the glyph will also be update to point to the newly created
+glyph using its internal variables. An error also should be raised if
+we find another \monoespaco{beginchar} inside the
 initial \monoespaco{beginchar}:
 
 \iniciocodigo
@@ -14455,6 +14459,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
       return false;
     }
     glyph -> begin = begin_token_list;
+    str -> glyph = glyph;
   }
   {
     int number_of_commas = 0;
@@ -14500,6 +14505,26 @@ else if(((struct generic_token *) begin_token_list) -> type ==
     *end_token_list = t;
   }
   return true;
+}
+@
+\fimcodigo
+
+If we are in loading mode, and we read a \monoespaco{endchar} token,
+this is always an error: it means that we have an \monoespaco{endchar}
+without a previous \monoespaco{beginchar}. Tokens that end character
+definition are treated in the same loop than \monoespaco{beginchar}
+when in loading mode:
+
+\iniciocodigo
+@<Statement: Compound@>+=
+else if(((struct generic_token *) begin_token_list) -> type ==
+        TYPE_ENDCHAR && mf -> loading){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Found 'endchar' token "
+                  "without previous 'beginchar'.\n", mf -> file,
+          ((struct generic_token *) begin_token_list) -> line);
+#endif
+  return false;
 }
 @
 \fimcodigo
