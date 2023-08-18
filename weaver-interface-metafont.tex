@@ -14647,12 +14647,14 @@ else if(((struct generic_token *) begin_token_list) -> type ==
   }
   {
     int number_of_commas = 0;
+    struct generic_token *prev = t;
     while(t != NULL && t != *end_token_list){
       COUNT_NESTING(t);
       if(IS_NOT_NESTED()){
-        if(t -> type == TYPE_COMMA)
+        if(t -> type == TYPE_COMMA && prev -> type != TYPE_COMMA)
           number_of_commas ++;
       }
+      prev = t;
       t = t -> next;
       if(IS_NOT_NESTED() && t -> type == TYPE_CLOSE_PARENTHESIS)
         break;
@@ -14714,8 +14716,104 @@ else if(((struct generic_token *) begin_token_list) -> type ==
 @
 \fimcodigo
 
+Depois, quando estivermos em modo de execução, e não em modo de
+carregamento, iremos ler todo esse código entre \monoespaco{beginchar}
+e \monoespaco{endchar} novamente. E será importante memorizar qual o
+glifo que estamos tratando anquele instante. Por causa disso,
+armazenaremos no contexto qual glifo dvemos renderizar:
+
+\iniciocodigo
+@<Atributos (struct context)@>+=
+struct _glyph *current_glyph;
+@
+\fimcodigo
+
 Finalmente, vamos tratar o \monoespaco{beginchar} quando estamos em
-modo de execução.
+modo de execução. Primeiro lemos o token de string que vem em
+sequência. Como já havíamos executado este código no modo de
+carregamento, o token de string possui um ponteiro para um glifo já
+alocado e totalmente inicializado. Precisamos apenas renderizá-lo.
+
+O próximo passo será obter os valores no cabeçalho
+do \monoespaco{beginchar}, lendo os valores numéricos de largura,
+altura e profundidade. E devemos fazer com
+que \monoespaco{currentpicture} se torne uma nova imagem com a largura
+indicada e cuja altura é a soma da altura e profundidade indicados. Os
+valores de altura, largura e profundidade são também armazenados no
+glifo. E a profundidade também é armazenada para ser levada em conta
+ao obter coordenadas na imagem. Por fim, a caneta atual é modificada
+para ser uma caneta nula.
+
+\iniciocodigo
+@<Declaração: Composta@>+=
+else if(((struct generic_token *) begin_token_list) -> type ==
+        TYPE_BEGINCHAR){
+  DECLARE_NESTING_CONTROL();
+  begin_nesting_level(mf, cx, begin_token_list);
+  struct generic_token *t, *begin_expr, *end_expr;
+  struct string_token *str;
+  struct numeric_variable width, height, depth;
+  // Primeiro obtemos o glifo atual:
+  t = ((struct generic_token *) begin_token_list) -> next;
+  t = t -> next;
+  str = (struct string_token *) t;
+  cx -> current_glyph = str -> glyph;
+  // Lendo os valores no cabeçalho
+  t = t -> next;
+  t = t -> next;
+  begin_expr = t;
+  do{
+    COUNT_NESTING(t);
+    end_expr = t;
+    t = t -> next;
+  } while(IS_NOT_NESTED() && t -> type == TYPE_COMMA);
+  if(!eval_numeric_expression(mf, cx, begin_expr, end_expr, &width))
+    return false;
+  t = t -> next;
+  begin_expr = t;
+  do{
+    COUNT_NESTING(t);
+    end_expr = t;
+    t = t -> next;
+  } while(IS_NOT_NESTED() && t -> type == TYPE_COMMA);
+  if(!eval_numeric_expression(mf, cx, begin_expr, end_expr, &height))
+    return false;
+  t = t -> next;
+  begin_expr = t;
+  do{
+    COUNT_NESTING(t);
+    end_expr = t;
+    t = t -> next;
+  } while(IS_NOT_NESTED() && t -> type == TYPE_CLOSE_PARENTHESIS);
+  if(!eval_numeric_expression(mf, cx, begin_expr, end_expr, &depth))
+    return false;
+  *end_token_list = t;
+  {
+    // currentpicture:
+    struct picture_variable *pic = &(mf -> internal_picture_variables[0]);
+    pic -> width = width.value;
+    pic -> height = height.value + depth.value;
+    mf -> current_depth = depth.value;
+    cx -> current_glyph -> width = width.value;
+    cx -> current_glyph -> height = height.value;
+    cx -> current_glyph -> depth = depth.value;
+  }
+  {
+    // currentpen = nullpen:
+    mf -> internal_pen_variables[0].format = NULL; // A caneta 'currentpen'
+    mf -> internal_pen_variables[0].type = TYPE_T_PEN;
+    mf -> internal_pen_variables[0].flags = FLAG_NULL;
+    mf -> internal_pen_variables[0].referenced = NULL;
+    if(mf -> internal_pen_variables[0].gl_vbo != 0)
+      glDeleteBuffers(1, &(mf -> internal_pen_variables[0].gl_vbo));
+    mf -> internal_pen_variables[0].gl_vbo = 0;
+    mf -> internal_pen_variables[0].indices = 0;
+    mf -> pen_lft = mf -> pen_rt = mf -> pen_top = mf -> pen_bot = 0.0;
+  }
+}
+@
+\fimcodigo
+
 
 \secao{Referências}
 

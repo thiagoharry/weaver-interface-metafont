@@ -2351,12 +2351,14 @@ str->glyph= glyph;
 }
 {
 int number_of_commas= 0;
+struct generic_token*prev= t;
 while(t!=NULL&&t!=*end_token_list){
 COUNT_NESTING(t);
 if(IS_NOT_NESTED()){
-if(t->type==TYPE_COMMA)
+if(t->type==TYPE_COMMA&&prev->type!=TYPE_COMMA)
 number_of_commas++;
 }
+prev= t;
 t= t->next;
 if(IS_NOT_NESTED()&&t->type==TYPE_CLOSE_PARENTHESIS)
 break;
@@ -2395,7 +2397,7 @@ glyph->end= t;
 return true;
 }
 /*:526*//*527:*/
-#line 14519 "weaver-interface-metafont_en.tex"
+#line 14521 "weaver-interface-metafont_en.tex"
 
 else if(((struct generic_token*)begin_token_list)->type==
 TYPE_ENDCHAR&&mf->loading){
@@ -2406,7 +2408,75 @@ fprintf(stderr,"METAFONT: Error: %s:%d: Found 'endchar' token "
 #endif
 return false;
 }
-/*:527*/
+/*:527*//*529:*/
+#line 14562 "weaver-interface-metafont_en.tex"
+
+else if(((struct generic_token*)begin_token_list)->type==
+TYPE_BEGINCHAR){
+DECLARE_NESTING_CONTROL();
+begin_nesting_level(mf,cx,begin_token_list);
+struct generic_token*t,*begin_expr,*end_expr;
+struct string_token*str;
+struct numeric_variable width,height,depth;
+
+t= ((struct generic_token*)begin_token_list)->next;
+t= t->next;
+str= (struct string_token*)t;
+cx->current_glyph= str->glyph;
+
+t= t->next;
+t= t->next;
+begin_expr= t;
+do{
+COUNT_NESTING(t);
+end_expr= t;
+t= t->next;
+}while(IS_NOT_NESTED()&&t->type==TYPE_COMMA);
+if(!eval_numeric_expression(mf,cx,begin_expr,end_expr,&width))
+return false;
+t= t->next;
+begin_expr= t;
+do{
+COUNT_NESTING(t);
+end_expr= t;
+t= t->next;
+}while(IS_NOT_NESTED()&&t->type==TYPE_COMMA);
+if(!eval_numeric_expression(mf,cx,begin_expr,end_expr,&height))
+return false;
+t= t->next;
+begin_expr= t;
+do{
+COUNT_NESTING(t);
+end_expr= t;
+t= t->next;
+}while(IS_NOT_NESTED()&&t->type==TYPE_CLOSE_PARENTHESIS);
+if(!eval_numeric_expression(mf,cx,begin_expr,end_expr,&depth))
+return false;
+*end_token_list= t;
+{
+
+struct picture_variable*pic= &(mf->internal_picture_variables[0]);
+pic->width= width.value;
+pic->height= height.value+depth.value;
+mf->current_depth= depth.value;
+cx->current_glyph->width= width.value;
+cx->current_glyph->height= height.value;
+cx->current_glyph->depth= depth.value;
+}
+{
+
+mf->internal_pen_variables[0].format= NULL;
+mf->internal_pen_variables[0].type= TYPE_T_PEN;
+mf->internal_pen_variables[0].flags= FLAG_NULL;
+mf->internal_pen_variables[0].referenced= NULL;
+if(mf->internal_pen_variables[0].gl_vbo!=0)
+glDeleteBuffers(1,&(mf->internal_pen_variables[0].gl_vbo));
+mf->internal_pen_variables[0].gl_vbo= 0;
+mf->internal_pen_variables[0].indices= 0;
+mf->pen_lft= mf->pen_rt= mf->pen_top= mf->pen_bot= 0.0;
+}
+}
+/*:529*/
 #line 1544 "weaver-interface-metafont_en.tex"
 
 /*88:*/

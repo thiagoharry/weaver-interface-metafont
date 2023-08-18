@@ -38,7 +38,11 @@ struct generic_token*end_token_stack;
 #line 1924 "weaver-interface-metafont_en.tex"
 
 void*variables;
-/*:85*/
+/*:85*//*528:*/
+#line 14541 "weaver-interface-metafont_en.tex"
+
+struct _glyph*current_glyph;
+/*:528*/
 #line 1291 "weaver-interface-metafont_en.tex"
 
 };
