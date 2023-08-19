@@ -2453,18 +2453,37 @@ t= t->next;
 if(!eval_numeric_expression(mf,cx,begin_expr,end_expr,&depth))
 return false;
 *end_token_list= t;
+mf->current_depth= depth.value;
 {
-
+unsigned char*data;
+size_t size;
 struct picture_variable*pic= &(mf->internal_picture_variables[0]);
 pic->width= width.value;
 pic->height= height.value+depth.value;
-mf->current_depth= depth.value;
-cx->current_glyph->width= width.value;
-cx->current_glyph->height= height.value;
-cx->current_glyph->depth= depth.value;
+size= pic->width*pic->height*4;
+data= temporary_alloc(size);
+if(data==NULL){
+#if defined(W_DEBUG_METAFONT)
+fprintf(stderr,"METAFONT: Error: Not enough memory.\n");
+#endif
+return false;
+}
+
+memset(data,255,size);
+{
+int i;
+for(i= 3;i<size;i+= 4)
+data[i]= 0;
+}
+glGenTextures(1,&(pic->texture));
+glBindTexture(GL_TEXTURE_2D,pic->texture);
+glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,pic->width,pic->height,0,
+GL_RGBA,GL_UNSIGNED_BYTE,data);
+glBindTexture(GL_TEXTURE_2D,0);
+if(temporary_free!=NULL)
+temporary_free(data);
 }
 {
-
 mf->internal_pen_variables[0].format= NULL;
 mf->internal_pen_variables[0].type= TYPE_T_PEN;
 mf->internal_pen_variables[0].flags= FLAG_NULL;
@@ -2476,7 +2495,27 @@ mf->internal_pen_variables[0].indices= 0;
 mf->pen_lft= mf->pen_rt= mf->pen_top= mf->pen_bot= 0.0;
 }
 }
-/*:529*/
+/*:529*//*530:*/
+#line 14659 "weaver-interface-metafont_en.tex"
+
+else if(((struct generic_token*)begin_token_list)->type==
+TYPE_ENDCHAR){
+struct picture_variable*currentpicture= 
+&(mf->internal_picture_variables[0]);
+
+end_nesting_level(mf,cx,begin_token_list);
+cx->current_glyph->width= currentpicture->width;
+cx->current_glyph->depth= mf->current_depth;
+cx->current_glyph->height= currentpicture->height-
+mf->current_depth;
+cx->current_glyph->texture= currentpicture->texture;
+cx->current_glyph->need_rendering= false;
+currentpicture->width= -1;
+currentpicture->height= -1;
+currentpicture->texture= 0;
+*end_token_list= begin_token_list;
+}
+/*:530*/
 #line 1544 "weaver-interface-metafont_en.tex"
 
 /*88:*/
