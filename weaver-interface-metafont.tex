@@ -14472,9 +14472,7 @@ suficiente para alocar o bloco).
 
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
-static struct _glyph *get_glyph(struct metafont *mf, unsigned char *c,
-                                bool create_if_not_exist){
-  const uint32_t greatest_point[332] = {
+static const uint32_t greatest_point[332] = {
   // Plano Multilingual Básico (164 blocos)
 0x7f, 0xff, 0x17f, 0x24f, 0x2af, 0x2ff, 0x36f, 0x3ff, 0x4ff, 0x52f,
 0x58f, 0x5ff, 0x6ff, 0x74f, 0x7ff, 0x7bf, 0x7ff, 0x83f, 0x85f, 0x86f,
@@ -14531,7 +14529,9 @@ static struct _glyph *get_glyph(struct metafont *mf, unsigned char *c,
   0xfffff,
   // Área de Uso Privado Suplementar B
   0x10ffff
-  };
+};
+static struct _glyph *get_glyph(struct metafont *mf, unsigned char *c,
+                                bool create_if_not_exist){
   uint32_t code_point;
   int block, block_size, index;
   // UTF-8 -> UTF-32
@@ -14736,13 +14736,15 @@ alocado e totalmente inicializado. Precisamos apenas renderizá-lo.
 
 O próximo passo será obter os valores no cabeçalho
 do \monoespaco{beginchar}, lendo os valores numéricos de largura,
-altura e profundidade. E devemos fazer com
-que \monoespaco{currentpicture} se torne uma nova imagem com a largura
-indicada e cuja altura é a soma da altura e profundidade indicados. Os
-valores de altura, largura e profundidade são também armazenados no
-glifo. E a profundidade também é armazenada para ser levada em conta
-ao obter coordenadas na imagem. Por fim, a caneta atual é modificada
-para ser uma caneta nula.
+altura e profundidade e usando tais valores para gerar uma
+nova \monoespaco{currentpicture}. A imagem renderizada terá o dobro
+dos valores indicados para que possamos obter tons de cinza realizando
+uma multi-amostragem, gerando cada pixel à partir de 4 outros pixels
+de amostragem. Exceto se a
+macro \monoespaco{W\_WEAVEFONT\_DISABLE\_MULTISAMPLE} estiver
+definida, caso em que não usaremos a técnica.  Por fim, a caneta atual
+é modificada para ser uma caneta nula.
+
 
 \iniciocodigo
 @<Declaração: Composta@>+=
@@ -14788,13 +14790,19 @@ else if(((struct generic_token *) begin_token_list) -> type ==
   if(!eval_numeric_expression(mf, cx, begin_expr, end_expr, &depth))
     return false;
   *end_token_list = t;
-  mf -> current_depth = depth.value;
   { // Inicializando currentpicture = nullpicture(width, height + depth):
     unsigned char *data;
     size_t size;
     struct picture_variable *pic = &(mf -> internal_picture_variables[0]);
+#ifndef W_WEAVEFONT_DISABLE_MULTISAMPLE
+    mf -> current_depth = 2 * depth.value;
+    pic -> width = 2 * width.value;
+    pic -> height = 2 * (height.value + depth.value);
+#else
+    mf -> current_depth = depth.value;
     pic -> width = width.value;
-    pic -> height = height.value + depth.value;
+    pic -> height = (height.value + depth.value);
+#endif
     size = pic -> width * pic -> height * 4;
     data = temporary_alloc(size);
     if(data == NULL){
@@ -14849,16 +14857,70 @@ else if(((struct generic_token *) begin_token_list) -> type ==
                                         &(mf -> internal_picture_variables[0]);
 
   end_nesting_level(mf, cx, begin_token_list);
+#ifndef W_WEAVEFONT_DISABLE_MULTISAMPLE
   cx -> current_glyph -> width = currentpicture -> width;
   cx -> current_glyph -> depth = mf -> current_depth;
   cx -> current_glyph -> height = currentpicture -> height -
                                   mf -> current_depth;
+#else
+  cx -> current_glyph -> width = currentpicture -> width / 2;
+  cx -> current_glyph -> depth = mf -> current_depth / 2;
+  cx -> current_glyph -> height = (currentpicture -> height -
+                                  mf -> current_depth) / 2;
+#endif
   cx -> current_glyph -> texture = currentpicture -> texture;
   cx -> current_glyph -> need_rendering = false;
   currentpicture -> width = -1;
   currentpicture -> height = -1;
   currentpicture -> texture = 0;
   *end_token_list = begin_token_list;
+}
+@
+\fimcodigo
+
+\secao{13. Funções de API para Usar as Fontes}
+
+Um código WEAVEFONT pode ter suas variáveis globais modificadas e
+assim atualizar a renderização de glifos e imagens sem que o código
+precise ser reescrito e reinterpretado. Para atualizar variáveis
+globais numéricas, usamos a seguinte função que será exportada:
+
+\iniciocodigo
+@<Declaração de Função (metafont.h)@>+=
+bool _Wupdate_numeric_variable(struct metafont *mf, char *name, float value);
+@
+\fimcodigo
+
+O que esta função fará será mudar a variável global indicada por tal
+nome e irá marcar todos os glifos como necessitando ser renderizados
+novamente:
+
+\iniciocodigo
+@<Definição de Funções da API (metafont.c)@>+=
+bool _Wupdate_numeric_variable(struct metafont *mf, char *name, float value){
+  struct named_variable *var = (struct named_variable *) mf -> named_variables;
+  while(var != NULL){
+    if(!strcmp(name, var -> name)){
+      struct numeric_variable *n = (struct numeric_variable *) var -> var;
+      if(n -> type != TYPE_T_NUMERIC)
+        return false;
+      n -> value = value;
+      {
+        int i, j;
+        for(i = 0; i < 332; i ++){
+          struct _glyph *g = mf -> glyphs[i];
+          int size = ((i == 0)?(greatest_point[0] + 1):
+                               (greatest_point[i] - greatest_point[i - 1]));
+          if(g != NULL){
+            for(j = 0; j < size; j ++)
+                g[j].need_rendering = true;
+          }
+        }
+      }
+    }
+    var = var -> next;
+  }
+  return false;
 }
 @
 \fimcodigo
