@@ -14609,14 +14609,16 @@ else if(((struct generic_token *) begin_token_list) -> type ==
     unsigned char *data;
     size_t size;
     struct picture_variable *pic = &(mf -> internal_picture_variables[0]);
-#ifndef W_WEAVEFONT_DISABLE_MULTISAMPLE
-    mf -> current_depth = 2 * depth.value;
-    pic -> width = 2 * width.value;
-    pic -> height = 2 * (height.value + depth.value);
-#else
+    if(pic -> texture != 0)
+      glDeleteTextures(1, &(pic -> texture));
+#ifdef W_WEAVEFONT_DISABLE_MULTISAMPLE
     mf -> current_depth = depth.value;
     pic -> width = width.value;
     pic -> height = (height.value + depth.value);
+#else
+    mf -> current_depth = 2 * depth.value;
+    pic -> width = 2 * width.value;
+    pic -> height = 2 * (height.value + depth.value);
 #endif
     size = pic -> width * pic -> height * 4;
     data = temporary_alloc(size);
@@ -14661,8 +14663,12 @@ mode, this means that we finished to render a new glyph. Then we copy
 the rendered picture from \monoespaco{currentpicture} to the new glyph
 and get the new glyph dimensions reading
 the \monoespaco{currentpicture} size and also the current depth
-stored. Finally, we mark the glyph as already rendered and
-erase all \monoespaco{currentpicture} content:
+stored. If we are not using multisampling, we just copy
+the \monoespaco{currentpicture} content into the new glyph. Otherwise,
+we render \monoespaco{currentpicture} into the new glyph, such that
+the source texture has twice the size of the target texture.  Finally,
+we mark the glyph as already rendered and erase
+all \monoespaco{currentpicture} content:
 
 \iniciocodigo
 @<Statement: Compound@>+=
@@ -14672,16 +14678,56 @@ else if(((struct generic_token *) begin_token_list) -> type ==
                                         &(mf -> internal_picture_variables[0]);
 
   end_nesting_level(mf, cx, begin_token_list);
-#ifndef W_WEAVEFONT_DISABLE_MULTISAMPLE
+#ifdef W_WEAVEFONT_DISABLE_MULTISAMPLE
   cx -> current_glyph -> width = currentpicture -> width;
   cx -> current_glyph -> depth = mf -> current_depth;
   cx -> current_glyph -> height = currentpicture -> height -
                                   mf -> current_depth;
 #else
-  cx -> current_glyph -> width = currentpicture -> width / 2;
-  cx -> current_glyph -> depth = mf -> current_depth / 2;
-  cx -> current_glyph -> height = (currentpicture -> height -
-                                  mf -> current_depth) / 2;
+  { // We need to create a new texture with half the size of the picture
+    // that we rendered
+    unsigned char *data;
+    size_t size;
+    GLuint temporary_framebuffer;
+    GLint previous_framebuffer;
+    float model_view_matrix[9] = {1.0, 0.0, 0.0,
+                                 0.0, 1.0, 0.0,
+                                 0.0, 0.0, 1.0};
+    cx -> current_glyph -> width = currentpicture -> width / 2;
+    cx -> current_glyph -> depth = mf -> current_depth / 2;
+    cx -> current_glyph -> height = (currentpicture -> height -
+                                    mf -> current_depth) / 2;
+    size = 4 * cx -> current_glyph -> width * (cx -> current_glyph -> depth +
+                                               cx -> current_glyph -> height);
+    data = temporary_alloc(size);
+    if(data == NULL){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: Not enough memory.\n");
+#endif
+      return false;
+    }
+    glGenTextures(1, &(cx -> current_glyph -> texture));
+    glBindTexture(GL_TEXTURE_2D, cx -> current_glyph -> texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
+                 cx -> current_glyph -> width,
+                 cx -> current_glyph -> height + cx -> current_glyph -> depth,
+                 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    if(temporary_free != NULL)
+      temporary_free(data);
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &previous_framebuffer);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    get_new_framebuffer(&temporary_framebuffer,
+                        &(cx -> current_glyph -> texture),
+                        cx -> current_glyph -> width,
+                        cx -> current_glyph -> height);
+    render_picture(currentpicture, model_view_matrix,
+                   currentpicture -> width, currentpicture -> height,
+                   true);
+    glBindFramebuffer(GL_FRAMEBUFFER, previous_framebuffer);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glDeleteFramebuffers(1, &temporary_framebuffer);
+  }
 #endif
   cx -> current_glyph -> texture = currentpicture -> texture;
   cx -> current_glyph -> need_rendering = false;
@@ -14697,18 +14743,20 @@ else if(((struct generic_token *) begin_token_list) -> type ==
 
 A WEAVEFONT code can have its global variables changed and this will
 change the rendering of the next glyphs, without needing to change the
-source code or reload the code. To update numeric global variables, we
-will export the following function:
+source code or reload the code. To read and update numeric global
+variables, we will export the following functions:
 
 \iniciocodigo
 @<Function Declaration (metafont.h)@>+=
 bool _Wupdate_numeric_variable(struct metafont *mf, char *name, float value);
+float _Wread_numeric_variable(struct metafont *mf, char *name);
 @
 \fimcodigo
 
 This function will change the given global variable assigning the
 given value to it and also will mark all glyphs as needing to be
-rendered again:
+rendered again. If a numeric global variable with such name does not
+exist, the function returns false. Otherwise, it returns true:
 
 \iniciocodigo
 @<API Functions Definition (metafont.c)@>+=
@@ -14736,6 +14784,27 @@ bool _Wupdate_numeric_variable(struct metafont *mf, char *name, float value){
     var = var -> next;
   }
   return false;
+}
+@
+\fimcodigo
+
+The code to read a gloabal numeric variable is similar. If such
+variable does not exist, we return NAN:
+
+\iniciocodigo
+@<API Functions Definition (metafont.c)@>+=
+float _Wread_numeric_variable(struct metafont *mf, char *name){
+  struct named_variable *var = (struct named_variable *) mf -> named_variables;
+  while(var != NULL){
+    if(!strcmp(name, var -> name)){
+      struct numeric_variable *n = (struct numeric_variable *) var -> var;
+      if(n -> type != TYPE_T_NUMERIC)
+        return NAN;
+      return n -> value;
+    }
+    var = var -> next;
+  }
+  return NAN;
 }
 @
 \fimcodigo

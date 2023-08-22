@@ -14794,14 +14794,16 @@ else if(((struct generic_token *) begin_token_list) -> type ==
     unsigned char *data;
     size_t size;
     struct picture_variable *pic = &(mf -> internal_picture_variables[0]);
-#ifndef W_WEAVEFONT_DISABLE_MULTISAMPLE
-    mf -> current_depth = 2 * depth.value;
-    pic -> width = 2 * width.value;
-    pic -> height = 2 * (height.value + depth.value);
-#else
+    if(pic -> texture != 0)
+      glDeleteTextures(1, &(pic -> texture));
+#ifdef W_WEAVEFONT_DISABLE_MULTISAMPLE
     mf -> current_depth = depth.value;
     pic -> width = width.value;
     pic -> height = (height.value + depth.value);
+#else
+    mf -> current_depth = 2 * depth.value;
+    pic -> width = 2 * width.value;
+    pic -> height = 2 * (height.value + depth.value);
 #endif
     size = pic -> width * pic -> height * 4;
     data = temporary_alloc(size);
@@ -14844,9 +14846,10 @@ else if(((struct generic_token *) begin_token_list) -> type ==
 Finalmente, quando lemos um \monoespaco{endchar} em modo de execução,
 significa que terminamos de renderizar um novo glifo. Devemos então
 copiar a imagem renderizada de \monoespaco{currentícture} para o
-glifo. Também iremos deduzir as dimensões do glifo baseado no tamanho
-da \monoespaco{currentpicture} e no valor da profundidade que
-armazenamos. Por fim, devemos marcar o glifo como já renderizado e
+glifo. Se não estamos usando multi-amostragem, basta simplesmente
+copiar diretamente a imagem. Se não, é neste momento que realizamos a
+multi-amostragem, renderizando a imagem que geramos no destino com a
+metade do tamanho. Por fim, devemos marcar o glifo como já renderizado e
 apagar o conteúdo de \monoespaco{currentpicture}:
 
 \iniciocodigo
@@ -14857,18 +14860,58 @@ else if(((struct generic_token *) begin_token_list) -> type ==
                                         &(mf -> internal_picture_variables[0]);
 
   end_nesting_level(mf, cx, begin_token_list);
-#ifndef W_WEAVEFONT_DISABLE_MULTISAMPLE
+#ifdef W_WEAVEFONT_DISABLE_MULTISAMPLE
   cx -> current_glyph -> width = currentpicture -> width;
   cx -> current_glyph -> depth = mf -> current_depth;
   cx -> current_glyph -> height = currentpicture -> height -
                                   mf -> current_depth;
-#else
-  cx -> current_glyph -> width = currentpicture -> width / 2;
-  cx -> current_glyph -> depth = mf -> current_depth / 2;
-  cx -> current_glyph -> height = (currentpicture -> height -
-                                  mf -> current_depth) / 2;
-#endif
   cx -> current_glyph -> texture = currentpicture -> texture;
+#else
+  { // Necessário criar nova textura para o glifo, com metade do
+    // tamanho da que renderizamos
+    unsigned char *data;
+    size_t size;
+    GLuint temporary_framebuffer;
+    GLint previous_framebuffer;
+    float model_view_matrix[9] = {1.0, 0.0, 0.0,
+                                 0.0, 1.0, 0.0,
+                                 0.0, 0.0, 1.0};
+    cx -> current_glyph -> width = currentpicture -> width / 2;
+    cx -> current_glyph -> depth = mf -> current_depth / 2;
+    cx -> current_glyph -> height = (currentpicture -> height -
+                                    mf -> current_depth) / 2;
+    size = 4 * cx -> current_glyph -> width * (cx -> current_glyph -> depth +
+                                               cx -> current_glyph -> height);
+    data = temporary_alloc(size);
+    if(data == NULL){
+#if defined(W_DEBUG_METAFONT)
+      fprintf(stderr, "METAFONT: Error: Not enough memory.\n");
+#endif
+      return false;
+    }
+    glGenTextures(1, &(cx -> current_glyph -> texture));
+    glBindTexture(GL_TEXTURE_2D, cx -> current_glyph -> texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
+                 cx -> current_glyph -> width,
+                 cx -> current_glyph -> height + cx -> current_glyph -> depth,
+                 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    if(temporary_free != NULL)
+      temporary_free(data);
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &previous_framebuffer);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    get_new_framebuffer(&temporary_framebuffer,
+                        &(cx -> current_glyph -> texture),
+                        cx -> current_glyph -> width,
+                        cx -> current_glyph -> height);
+    render_picture(currentpicture, model_view_matrix,
+                   currentpicture -> width, currentpicture -> height,
+                   true);
+    glBindFramebuffer(GL_FRAMEBUFFER, previous_framebuffer);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glDeleteFramebuffers(1, &temporary_framebuffer);
+  }
+#endif
   cx -> current_glyph -> need_rendering = false;
   currentpicture -> width = -1;
   currentpicture -> height = -1;
@@ -14882,18 +14925,20 @@ else if(((struct generic_token *) begin_token_list) -> type ==
 
 Um código WEAVEFONT pode ter suas variáveis globais modificadas e
 assim atualizar a renderização de glifos e imagens sem que o código
-precise ser reescrito e reinterpretado. Para atualizar variáveis
-globais numéricas, usamos a seguinte função que será exportada:
+precise ser reescrito e reinterpretado. Para escrever e ler variáveis
+globais numéricas, usamos as seguintes funções que serão exportadas:
 
 \iniciocodigo
 @<Declaração de Função (metafont.h)@>+=
 bool _Wupdate_numeric_variable(struct metafont *mf, char *name, float value);
+float _Wread_numeric_variable(struct metafont *mf, char *name);
 @
 \fimcodigo
 
-O que esta função fará será mudar a variável global indicada por tal
-nome e irá marcar todos os glifos como necessitando ser renderizados
-novamente:
+O que a primeira função fará será mudar a variável global indicada por
+tal nome e irá marcar todos os glifos como necessitando ser
+renderizados novamente. Se não existir variável numérica com tal nome,
+retornamos falso. Se não, retornamos verdadeiro:
 
 \iniciocodigo
 @<Definição de Funções da API (metafont.c)@>+=
@@ -14924,6 +14969,28 @@ bool _Wupdate_numeric_variable(struct metafont *mf, char *name, float value){
 }
 @
 \fimcodigo
+
+O código para lermos uma variável numérica será similar. Se a variável
+numérica global com tal nome não existir, retornamos NAN:
+
+\iniciocodigo
+@<Definição de Funções da API (metafont.c)@>+=
+float _Wread_numeric_variable(struct metafont *mf, char *name){
+  struct named_variable *var = (struct named_variable *) mf -> named_variables;
+  while(var != NULL){
+    if(!strcmp(name, var -> name)){
+      struct numeric_variable *n = (struct numeric_variable *) var -> var;
+      if(n -> type != TYPE_T_NUMERIC)
+        return NAN;
+      return n -> value;
+    }
+    var = var -> next;
+  }
+  return NAN;
+}
+@
+\fimcodigo
+
 
 \secao{Referências}
 
