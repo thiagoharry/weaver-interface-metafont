@@ -1921,7 +1921,7 @@ void test_opengl(void){
 
 int main(int argc, char **argv){
   _Wcreate_window(&keyboard, &mouse);
-  if(!_Winit_metafont(malloc, free, malloc, free, my_rand, 36)){
+  if(!_Winit_metafont(malloc, free, malloc, free, my_rand, 2592)){
     fprintf(stderr, "ERROR: Test cannot be done. Initialization failed.\n");
     exit(1);
   }
