@@ -119,11 +119,13 @@ E nós precisamos inserir o cabeçalho Weaver de interface de usuário:
 Mas além de simplesmente carregar as fontes tipográficas lidas para um
 arquivo, é importante poder gerar também uma estrutura de dados
 representando a fonte lida, para que ela depois possa ser usada por
-uma função que renderiza texto:
+uma função que renderiza texto. E também uma função para desalocar tal
+estrutura quando não precisarmos mais dela:
 
 \iniciocodigo
 @<Declaração de Função (metafont.h)@>+=
-struct metafont *new_metafont(char *filename);
+struct metafont *_Wnew_metafont(char *filename);
+void _Wdestroy_metafont(struct metafont *mf);
 @
 \fimcodigo
 
@@ -159,8 +161,6 @@ função de inicialização:
 void _Wfinish_metafont(void);
 @
 \fimcodigo
-
-
 
 \subsecao{1.1. Programação Literária}
 
@@ -1340,7 +1340,7 @@ struct metafont{
 \fimcodigo
 
 Ambas as estruturas de dados terão uma função que as inicializa e as
-finaliza:
+finaliza (a função que finaliza a estrutura metafont já foi delarada):
 
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
@@ -1348,7 +1348,6 @@ struct metafont *init_metafont(void *(*alloc)(size_t),
                               void (*disalloc)(void *),
                               char *filename);
 struct context *init_context(void);
-void destroy_metafont(struct metafont *mf);
 void destroy_context(struct metafont *mf, struct context *cx);
 @
 \fimcodigo
@@ -1386,7 +1385,7 @@ Já a definição das funções que finalizam e desalocam as estruturas:
 
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
-void destroy_metafont(struct metafont *mf){
+void _Wdestroy_metafont(struct metafont *mf){
   if(mf -> free != NULL){
     mf -> free(mf -> file);
     @<Finalização (struct metafont)@>
@@ -14428,6 +14427,7 @@ linguagem, assim como um ponteiro para o primeiro glifo definido:
 @<Atributos (struct metafont)@>+=
 struct _glyph *glyphs[332];
 struct _glyph *first_glyph;
+int number_of_glyphs;
 @
 \fimcodigo
 
@@ -14444,6 +14444,7 @@ teremos que alocar cada um deles:
 @<Inicialização (struct metafont)@>+=
 memset(mf -> glyphs, 0, sizeof(struct _glyph *) * 332);
 mf -> first_glyph = NULL;
+mf -> number_of_glyphs = 0;
 @
 \fimcodigo
 
@@ -14689,6 +14690,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
     glyph -> end = t;
     *end_token_list = t;
   }
+  mf -> number_of_glyphs ++;
   return true;
 }
 @
@@ -14845,11 +14847,11 @@ else if(((struct generic_token *) begin_token_list) -> type ==
 Finalmente, quando lemos um \monoespaco{endchar} em modo de execução,
 significa que terminamos de renderizar um novo glifo. Devemos então
 copiar a imagem renderizada de \monoespaco{currentícture} para o
-glifo. Se não estamos usando multi-amostragem, basta simplesmente
-copiar diretamente a imagem. Se não, é neste momento que realizamos a
-multi-amostragem, renderizando a imagem que geramos no destino com a
-metade do tamanho. Por fim, devemos marcar o glifo como já renderizado e
-apagar o conteúdo de \monoespaco{currentpicture}:
+glifo. E se estivermos usando multi-amostragem, devemos ajustatr o
+tamanho do glifo para a metade, para ser renderizado na tela com
+metade do tamanho que tem na memória. Por fim, devemos marcar o glifo
+como já renderizado e apagar o conteúdo
+de \monoespaco{currentpicture}:
 
 \iniciocodigo
 @<Declaração: Composta@>+=
@@ -14859,57 +14861,15 @@ else if(((struct generic_token *) begin_token_list) -> type ==
                                         &(mf -> internal_picture_variables[0]);
 
   end_nesting_level(mf, cx, begin_token_list);
-#ifdef W_WEAVEFONT_DISABLE_MULTISAMPLE
   cx -> current_glyph -> width = currentpicture -> width;
   cx -> current_glyph -> depth = mf -> current_depth;
   cx -> current_glyph -> height = currentpicture -> height -
                                   mf -> current_depth;
   cx -> current_glyph -> texture = currentpicture -> texture;
-#else
-  { // Necessário criar nova textura para o glifo, com metade do
-    // tamanho da que renderizamos
-    unsigned char *data;
-    size_t size;
-    GLuint temporary_framebuffer;
-    GLint previous_framebuffer;
-    float model_view_matrix[9] = {1.0, 0.0, 0.0,
-                                 0.0, 1.0, 0.0,
-                                 0.0, 0.0, 1.0};
-    cx -> current_glyph -> width = currentpicture -> width / 2;
-    cx -> current_glyph -> depth = mf -> current_depth / 2;
-    cx -> current_glyph -> height = (currentpicture -> height -
-                                    mf -> current_depth) / 2;
-    size = 4 * cx -> current_glyph -> width * (cx -> current_glyph -> depth +
-                                               cx -> current_glyph -> height);
-    data = temporary_alloc(size);
-    if(data == NULL){
-#if defined(W_DEBUG_METAFONT)
-      fprintf(stderr, "METAFONT: Error: Not enough memory.\n");
-#endif
-      return false;
-    }
-    glGenTextures(1, &(cx -> current_glyph -> texture));
-    glBindTexture(GL_TEXTURE_2D, cx -> current_glyph -> texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
-                 cx -> current_glyph -> width,
-                 cx -> current_glyph -> height + cx -> current_glyph -> depth,
-                 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-    if(temporary_free != NULL)
-      temporary_free(data);
-    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &previous_framebuffer);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    get_new_framebuffer(&temporary_framebuffer,
-                        &(cx -> current_glyph -> texture),
-                        cx -> current_glyph -> width,
-                        cx -> current_glyph -> height);
-    render_picture(currentpicture, model_view_matrix,
-                   currentpicture -> width, currentpicture -> height,
-                   true);
-    glBindFramebuffer(GL_FRAMEBUFFER, previous_framebuffer);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glDeleteFramebuffers(1, &temporary_framebuffer);
-  }
+#ifndef W_WEAVEFONT_DISABLE_MULTISAMPLE
+  cx -> current_glyph -> width /= 2;
+  cx -> current_glyph -> depth /= 2;
+  cx -> current_glyph -> height /= 2;
 #endif
   cx -> current_glyph -> need_rendering = false;
   currentpicture -> width = -1;
@@ -14986,6 +14946,31 @@ float _Wread_numeric_variable(struct metafont *mf, char *name){
     var = var -> next;
   }
   return NAN;
+}
+@
+\fimcodigo
+
+
+Já a função que lê um arquivo com código WEAVEFONT e carrega uma nova
+meta-fonte é:
+
+\iniciocodigo
+@<Definição de Funções da API (metafont.c)@>+=
+struct metafont *_Wnew_metafont(char *filename){
+  void *p;
+  struct metafont *mf;
+  struct context *cx;
+  bool ret;
+  mf = init_metafont(permanent_alloc, permanent_free, filename);
+  p = lexer(mf, permanent_alloc, permanent_free, filename);
+  cx = init_context();
+  ret = eval_program(mf, cx, p);
+  destroy_context(mf, cx);
+  if(!ret){
+    _Wdestroy_metafont(mf);
+    return NULL;
+  }
+  return mf;
 }
 @
 \fimcodigo

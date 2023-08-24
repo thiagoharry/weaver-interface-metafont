@@ -75,7 +75,7 @@ void test_empty_programs(void){
   ret = eval_program(mf, cx, p);
   free_token_list(free, p);
   destroy_context(mf, cx);
-  destroy_metafont(mf);
+  _Wdestroy_metafont(mf);
   assert("Testing program with empty statements", ret);
 }
 
@@ -97,7 +97,7 @@ void test_compound_statements(void){
   ret = eval_program(mf, cx, p);
   free_token_list(free, p);
   destroy_context(mf, cx);
-  destroy_metafont(mf);
+  _Wdestroy_metafont(mf);
   assert("Detecting wrong compound statements", !ret);
 }
 
@@ -135,7 +135,7 @@ void test_variables(void){
   }
   free_token_list(free, tok);
   destroy_context(mf, cx);
-  destroy_metafont(mf);
+  _Wdestroy_metafont(mf);
 }
 
 void test_assignments(void){
@@ -149,7 +149,7 @@ void test_assignments(void){
   assert("Detecting wrong assignment", !ret);
   free_token_list(free, p);
   destroy_context(mf, cx);
-  destroy_metafont(mf);
+  _Wdestroy_metafont(mf);
 }
 
 void test_lexer(void){
@@ -338,7 +338,7 @@ void test_lexer(void){
   assert("Wrong program not parsed", !ok);
   free_token_list(free, token_pointer);
   destroy_context(mf, cx);
-  destroy_metafont(mf);
+  _Wdestroy_metafont(mf);
 }
 
 void test_path_expressions(void){
@@ -959,7 +959,7 @@ void test_path_expressions(void){
 	 path_m -> cyclic == true);
   free_token_list(free, p);
   destroy_context(mf, cx);
-  destroy_metafont(mf);
+  _Wdestroy_metafont(mf);
 }
 
 void test_pen_expressions(void){
@@ -1328,7 +1328,7 @@ void test_pen_expressions(void){
 	 	      1.0 * pen_p14 -> gl_matrix[7]));
   free_token_list(free, p);
   destroy_context(mf, cx);
-  destroy_metafont(mf);
+  _Wdestroy_metafont(mf);
 }
 
 void test_numeric_expressions(void){
@@ -1371,7 +1371,7 @@ void test_numeric_expressions(void){
 	 ALMOST_EQUAL(numeric_h -> value, 6.0));
   free_token_list(free, p);
   destroy_context(mf, cx);
-  destroy_metafont(mf);
+  _Wdestroy_metafont(mf);
 }
 
 void test_pair_expressions(void){
@@ -1392,7 +1392,7 @@ void test_pair_expressions(void){
 	 ALMOST_EQUAL(pair_a -> y, 27.0));
   free_token_list(free, p);
   destroy_context(mf, cx);
-  destroy_metafont(mf);
+  _Wdestroy_metafont(mf);
 }
 
 
@@ -1502,7 +1502,7 @@ void test_transform_expressions(void){
 	 ALMOST_EQUAL(transform_j -> value[4], 0.2));
   free_token_list(free, p);
   destroy_context(mf, cx);
-  destroy_metafont(mf);
+  _Wdestroy_metafont(mf);
 }
 
 void test_picture_expressions(void){
@@ -1621,7 +1621,7 @@ void test_picture_expressions(void){
   	 ALMOST_EQUAL(numeric_wm -> value, 1.0));
   free_token_list(free, p);
   destroy_context(mf, cx);
-  destroy_metafont(mf);
+  _Wdestroy_metafont(mf);
 }
 
 void test_boolean_expressions(void){
@@ -1718,7 +1718,7 @@ void test_boolean_expressions(void){
   assert("Testing 'cycle' operator", boolean_e6 -> value && !(boolean_f6 -> value));
   free_token_list(free, p);
   destroy_context(mf, cx);
-  destroy_metafont(mf);
+  _Wdestroy_metafont(mf);
 }
 
 void test_if_statements(void){
@@ -1743,7 +1743,7 @@ void test_if_statements(void){
 	 numeric_c -> value == 17);
   free_token_list(free, p);
   destroy_context(mf, cx);
-  destroy_metafont(mf);
+  _Wdestroy_metafont(mf);
 }
 
 void test_drawing_commands(void){
@@ -1912,7 +1912,7 @@ void test_drawing_commands(void){
 	 ALMOST_EQUAL(pair_ph2 -> y, -0.4));
   free_token_list(free, p);
   destroy_context(mf, cx);
-  destroy_metafont(mf);
+  _Wdestroy_metafont(mf);
 }
 
 void test_opengl(void){
