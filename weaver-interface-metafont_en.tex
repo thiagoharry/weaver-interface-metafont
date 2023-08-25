@@ -1357,7 +1357,7 @@ And this is the definition for the functions that frees the memory
 occupied by these structures:
 
 \iniciocodigo
-@<Auxiliary Local Functions (metafont.c)@>+=
+@<API Functions Definition (metafont.c)@>+=
 void _Wdestroy_metafont(struct metafont *mf){
   if(mf -> free != NULL){
     mf -> free(mf -> file);
@@ -1365,6 +1365,11 @@ void _Wdestroy_metafont(struct metafont *mf){
     mf -> free(mf);
   }
 }
+@
+\fimcodigo
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
 void destroy_context(struct metafont *mf, struct context *cx){
   if(temporary_free != NULL){
     @<Finalization (struct context)@>
@@ -14223,6 +14228,8 @@ struct _glyph;
 struct _glyph{
   struct generic_token *begin, *end;
   int width, height, depth;
+  int italic_correction;
+  struct kerning *kern;
   GLuint texture;
   bool need_rendering;
 };
@@ -14231,12 +14238,29 @@ struct _glyph{
                             a.width = 0; \
                             a.height = 0;\
                             a.depth = 0; \
+                            a.italic_correction = 0; \
+                            a.kern = NULL; \
                             a.texture = 0; \
                             a.need_rendering = true; \
                             }
 
 @
 \fimcodigo
+
+The ``kerning'' present above a a linked list which stores the
+addictional spacing that should be placed before the next character,
+based on which is the next character.
+
+\iniciocodigo
+@<Local Data Structures (metafont.c)@>+=
+struct kerning{
+  char next_char[5];
+  int kern;
+  struct kerning *next;
+};
+@
+\fimcodigo
+
 
 The list of all glyphs and a pointer to the first defined glyph will
 be stored here:
@@ -14404,6 +14428,43 @@ static struct _glyph *get_glyph(struct metafont *mf, unsigned char *c,
 }
 @
 \fimcodigo
+
+But if we allocate glyphs in the above function, this means that
+during finalization, we need to iterate over all glyphs and deallocate
+them and their internal data:
+
+\iniciocodigo
+@<Finalização (struct metafont)@>+=
+{
+  int block, block_size, index;
+  // Walking over all blocks:
+  for(block = 0; block < 332; block ++){
+    if(mf -> glyphs[block] != NULL){
+      // Get the block size
+      if(block == 0)
+        block_size = greatest_point[block] + 1;
+      else
+        block_size = greatest_point[block] - greatest_point[block - 1];
+      // Walking over all glyphs:
+      for(index = 0; index < block_size; index ++){
+        struct kerning *kern = mf -> glyphs[block][index].kern;
+        if(mf -> glyphs[block][index].texture != 0)
+          glDeleteTextures(1, &(mf -> glyphs[block][index].texture));
+        while(kern != NULL && mf -> free != NULL){
+          struct kerning *to_be_erased;
+          to_be_erased = kern;
+          kern = kern -> next;
+          mf -> free(to_be_erased);          
+        }
+      }
+      if(mf -> free != NULL)
+        mf -> free(mf -> glyphs[block]);
+    }
+  }
+}
+@
+\fimcodigo
+
 
 When the language finds a \monoespaco{beginchar} token while in the
 loading mode, it will read the next string token and interpret it as a

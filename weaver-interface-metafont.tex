@@ -532,7 +532,7 @@ coisas à inicialização, poderemos precisar adicionar código
 correspondente à finalização:
 
 \iniciocodigo
-@<Definição de Funções da API (metafont.c)@>=
+@<Definição de Funções da API (metafont.c)@>+=
 void _Wfinish_metafont(void){
   @<Finalização de Weaver Metafont@>
 }
@@ -1384,7 +1384,7 @@ struct context *init_context(void){
 Já a definição das funções que finalizam e desalocam as estruturas:
 
 \iniciocodigo
-@<Funções Auxiliares Locais (metafont.c)@>+=
+@<Definição de Funções da API (metafont.c)@>+=
 void _Wdestroy_metafont(struct metafont *mf){
   if(mf -> free != NULL){
     mf -> free(mf -> file);
@@ -1392,6 +1392,11 @@ void _Wdestroy_metafont(struct metafont *mf){
     mf -> free(mf);
   }
 }
+@
+\fimcodigo
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
 void destroy_context(struct metafont *mf, struct context *cx){
   if(temporary_free != NULL){
     @<Finalização (struct context)@>
@@ -14406,6 +14411,8 @@ struct _glyph;
 struct _glyph{
   struct generic_token *begin, *end;
   int width, height, depth;
+  int italic_correction;
+  struct kerning *kern;
   GLuint texture;
   bool need_rendering;
 };
@@ -14414,9 +14421,25 @@ struct _glyph{
                             a.width = 0; \
                             a.height = 0;\
                             a.depth = 0; \
+                            a.italic_correction = 0; \
+                            a.kern = NULL; \
                             a.texture = 0; \
                             a.need_rendering = true; \
                             }
+@
+\fimcodigo
+
+O ``kerning'' que é armazenado será uma lista encadeada listando
+quanto de espaço adicional deve ser colocado antes do próximo
+caractere baseado em qual é o próximo caractere.
+
+\iniciocodigo
+@<Estrutura de Dados Locais (metafont.c)@>+=
+struct kerning{
+  char next_char[5];
+  int kern;
+  struct kerning *next;
+};
 @
 \fimcodigo
 
@@ -14582,6 +14605,42 @@ static struct _glyph *get_glyph(struct metafont *mf, unsigned char *c,
       INITIALIZE_GLYPH(mf -> glyphs[block][i]);
   }
   return &(mf -> glyphs[block][index]);
+}
+@
+\fimcodigo
+
+Note que umavez que glifos podem ser alocados, isso significa que na
+finalização, teremos que desalocar eles. Também temos que remover a
+lista encadeada de kerning quando ela existir:
+
+\iniciocodigo
+@<Finalização (struct metafont)@>+=
+{
+  int block, block_size, index;
+  // Percorre todos os blocos:
+  for(block = 0; block < 332; block ++){
+    if(mf -> glyphs[block] != NULL){
+      // Obtém tamanho do bloco
+      if(block == 0)
+        block_size = greatest_point[block] + 1;
+      else
+        block_size = greatest_point[block] - greatest_point[block - 1];
+      // Percorre todos os glifos:
+      for(index = 0; index < block_size; index ++){
+        struct kerning *kern = mf -> glyphs[block][index].kern;
+        if(mf -> glyphs[block][index].texture != 0)
+          glDeleteTextures(1, &(mf -> glyphs[block][index].texture));
+        while(kern != NULL && mf -> free != NULL){
+          struct kerning *to_be_erased;
+          to_be_erased = kern;
+          kern = kern -> next;
+          mf -> free(to_be_erased);          
+        }
+      }
+      if(mf -> free != NULL)
+        mf -> free(mf -> glyphs[block]);
+    }
+  }
 }
 @
 \fimcodigo
