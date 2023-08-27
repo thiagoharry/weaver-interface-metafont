@@ -2330,7 +2330,7 @@ do{
 COUNT_NESTING(t);
 end_expr= t;
 t= t->next;
-}while(IS_NOT_NESTED()&&t->type==TYPE_COMMA);
+}while(IS_NOT_NESTED()&&t->type!=TYPE_COMMA);
 if(!eval_numeric_expression(mf,cx,begin_expr,end_expr,&width))
 return false;
 t= t->next;
@@ -2339,7 +2339,7 @@ do{
 COUNT_NESTING(t);
 end_expr= t;
 t= t->next;
-}while(IS_NOT_NESTED()&&t->type==TYPE_COMMA);
+}while(IS_NOT_NESTED()&&t->type!=TYPE_COMMA);
 if(!eval_numeric_expression(mf,cx,begin_expr,end_expr,&height))
 return false;
 t= t->next;
@@ -2348,7 +2348,7 @@ do{
 COUNT_NESTING(t);
 end_expr= t;
 t= t->next;
-}while(IS_NOT_NESTED()&&t->type==TYPE_CLOSE_PARENTHESIS);
+}while(IS_NOT_NESTED()&&t->type!=TYPE_CLOSE_PARENTHESIS);
 if(!eval_numeric_expression(mf,cx,begin_expr,end_expr,&depth))
 return false;
 *end_token_list= t;
@@ -2401,9 +2401,10 @@ mf->internal_pen_variables[0].gl_vbo= 0;
 mf->internal_pen_variables[0].indices= 0;
 mf->pen_lft= mf->pen_rt= mf->pen_top= mf->pen_bot= 0.0;
 }
+return true;
 }
 /*:532*//*533:*/
-#line 14916 "weaver-interface-metafont.tex"
+#line 14917 "weaver-interface-metafont.tex"
 
 else if(((struct generic_token*)begin_token_list)->type==
 TYPE_ENDCHAR){
@@ -2426,6 +2427,7 @@ currentpicture->width= -1;
 currentpicture->height= -1;
 currentpicture->texture= 0;
 *end_token_list= begin_token_list;
+return true;
 }
 /*:533*/
 #line 1582 "weaver-interface-metafont.tex"
@@ -9764,7 +9766,7 @@ mf->free(mf);
 }
 }
 /*:60*//*535:*/
-#line 14962 "weaver-interface-metafont.tex"
+#line 14964 "weaver-interface-metafont.tex"
 
 bool _Wupdate_numeric_variable(struct metafont*mf,char*name,float value){
 struct named_variable*var= (struct named_variable*)mf->named_variables;
@@ -9792,7 +9794,7 @@ var= var->next;
 return false;
 }
 /*:535*//*536:*/
-#line 14995 "weaver-interface-metafont.tex"
+#line 14997 "weaver-interface-metafont.tex"
 
 float _Wread_numeric_variable(struct metafont*mf,char*name){
 struct named_variable*var= (struct named_variable*)mf->named_variables;
@@ -9808,7 +9810,7 @@ var= var->next;
 return NAN;
 }
 /*:536*//*537:*/
-#line 15017 "weaver-interface-metafont.tex"
+#line 15019 "weaver-interface-metafont.tex"
 
 struct metafont*_Wnew_metafont(char*filename){
 void*p;
@@ -9826,7 +9828,48 @@ return NULL;
 }
 return mf;
 }
-/*:537*/
+/*:537*//*539:*/
+#line 15055 "weaver-interface-metafont.tex"
+
+bool _Wrender_glyph(struct metafont*mf,char*glyph,
+char*next_glyph,GLuint*texture,
+int*width,int*height,int*depth,
+int*italcorr,int*kerning){
+struct _glyph*current;
+struct kerning*k;
+current= get_glyph(mf,(unsigned char*)glyph,false);
+if(current==NULL)
+return false;
+if(current->need_rendering){
+bool ret;
+struct context*cx= init_context();
+if(cx==NULL){
+printf("CX CREATION FAILED");
+return false;
+}
+ret= eval_list_of_statements(mf,cx,current->begin,current->end);
+if(!ret){
+printf("ERROR EXECUTING\n");
+return false;
+}
+}
+*texture= current->texture;
+*width= current->width;
+*height= current->height;
+*depth= current->depth;
+*italcorr= current->italic_correction;
+k= current->kern;
+*kerning= 0;
+while(k!=NULL&&next_glyph!=NULL){
+if(!strcmp(k->next_char,next_glyph)){
+*kerning= k->kern;
+break;
+}
+k= k->next;
+}
+return true;
+}
+/*:539*/
 #line 240 "weaver-interface-metafont.tex"
 
 /*:7*/

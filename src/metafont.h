@@ -133,11 +133,18 @@ uint64_t(*rand)(void),int dpi);
 
 void _Wfinish_metafont(void);
 /*:5*//*534:*/
-#line 14950 "weaver-interface-metafont.tex"
+#line 14952 "weaver-interface-metafont.tex"
 
 bool _Wupdate_numeric_variable(struct metafont*mf,char*name,float value);
 float _Wread_numeric_variable(struct metafont*mf,char*name);
-/*:534*/
+/*:534*//*538:*/
+#line 15044 "weaver-interface-metafont.tex"
+
+bool _Wrender_glyph(struct metafont*mf,char*glyph,
+char*next_glyph,GLuint*texture,
+int*width,int*height,int*depth,
+int*italcorr,int*kerning);
+/*:538*/
 #line 203 "weaver-interface-metafont.tex"
 
 #ifdef __cplusplus

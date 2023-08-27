@@ -14828,7 +14828,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
     COUNT_NESTING(t);
     end_expr = t;
     t = t -> next;
-  } while(IS_NOT_NESTED() && t -> type == TYPE_COMMA);
+  } while(IS_NOT_NESTED() && t -> type != TYPE_COMMA);
   if(!eval_numeric_expression(mf, cx, begin_expr, end_expr, &width))
     return false;
   t = t -> next;
@@ -14837,7 +14837,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
     COUNT_NESTING(t);
     end_expr = t;
     t = t -> next;
-  } while(IS_NOT_NESTED() && t -> type == TYPE_COMMA);
+  } while(IS_NOT_NESTED() && t -> type != TYPE_COMMA);
   if(!eval_numeric_expression(mf, cx, begin_expr, end_expr, &height))
     return false;
   t = t -> next;
@@ -14846,7 +14846,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
     COUNT_NESTING(t);
     end_expr = t;
     t = t -> next;
-  } while(IS_NOT_NESTED() && t -> type == TYPE_CLOSE_PARENTHESIS);
+  } while(IS_NOT_NESTED() && t -> type != TYPE_CLOSE_PARENTHESIS);
   if(!eval_numeric_expression(mf, cx, begin_expr, end_expr, &depth))
     return false;
   *end_token_list = t;
@@ -14899,6 +14899,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
     mf -> internal_pen_variables[0].indices = 0;
     mf -> pen_lft = mf -> pen_rt = mf -> pen_top = mf -> pen_bot = 0.0;
   }
+  return true;
 }
 @
 \fimcodigo
@@ -14935,6 +14936,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
   currentpicture -> height = -1;
   currentpicture -> texture = 0;
   *end_token_list = begin_token_list;
+  return true;
 }
 @
 \fimcodigo
@@ -15030,6 +15032,64 @@ struct metafont *_Wnew_metafont(char *filename){
     return NULL;
   }
   return mf;
+}
+@
+\fimcodigo
+
+Finalmente, se quisermos renderizar um caractere e obter informações
+sobre suas dimensões em pixels (largura, altura, profundidade,
+correção itálica e ``kerning''), executamos a seguinte função:
+
+\iniciocodigo
+@<Declaração de Função (metafont.h)@>+=
+bool _Wrender_glyph(struct metafont *mf, char *glyph,
+                    char *next_glyph, GLuint *texture,
+                    int *width, int *height, int *depth,
+                    int *italcorr, int *kerning);
+@
+\fimcodigo
+
+E a implementação da função:
+
+\iniciocodigo
+@<Definição de Funções da API (metafont.c)@>+=
+bool _Wrender_glyph(struct metafont *mf, char *glyph,
+                    char *next_glyph, GLuint *texture,
+                    int *width, int *height, int *depth,
+                    int *italcorr, int *kerning){
+  struct _glyph *current;
+  struct kerning *k;
+  current = get_glyph(mf, (unsigned char *) glyph, false);
+  if(current == NULL)
+    return false;
+  if(current -> need_rendering){
+    bool ret;
+    struct context *cx = init_context();
+    if(cx  == NULL){
+      printf("CX CREATION FAILED");
+      return false;
+    }
+    ret = eval_list_of_statements(mf, cx, current -> begin, current -> end);
+    if(!ret){
+      printf("ERROR EXECUTING\n");
+      return false;
+    }
+  }
+  *texture = current -> texture;
+  *width = current -> width;
+  *height = current -> height;
+  *depth = current -> depth;
+  *italcorr = current -> italic_correction;
+  k = current -> kern;
+  *kerning = 0;
+  while(k != NULL && next_glyph != NULL){
+    if(!strcmp(k -> next_char, next_glyph)){
+      *kerning = k -> kern;
+      break;
+    }
+    k = k -> next;
+  }
+  return true;
 }
 @
 \fimcodigo
