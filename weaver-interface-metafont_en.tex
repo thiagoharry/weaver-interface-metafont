@@ -1459,7 +1459,10 @@ bool eval_list_of_statements(struct metafont *mf, struct context *cx,
       ret = eval_statement(mf, cx, begin, (void **) &end);
         if(!ret)
           return false;
-      begin = end -> next;
+      if(end != end_token_list)
+        begin = end -> next;
+      else
+        begin = NULL;
     }
   }
   @<After Evaluating Code@>
@@ -14742,6 +14745,11 @@ else if(((struct generic_token *) begin_token_list) -> type ==
 
   end_nesting_level(mf, cx, begin_token_list);
   cx -> current_glyph -> texture = currentpicture -> texture;
+  cx -> current_glyph -> width = round(currentpicture -> width);
+  cx -> current_glyph -> depth = round(mf -> current_depth);
+  cx -> current_glyph -> height = round(currentpicture -> height -
+                                        mf -> current_depth);
+  cx -> current_glyph -> texture = currentpicture -> texture;
 #ifndef W_WEAVEFONT_DISABLE_MULTISAMPLE
   cx -> current_glyph -> width /= 2;
   cx -> current_glyph -> depth /= 2;
@@ -14798,6 +14806,7 @@ bool _Wupdate_numeric_variable(struct metafont *mf, char *name, float value){
           }
         }
       }
+      return true;
     }
     var = var -> next;
   }
