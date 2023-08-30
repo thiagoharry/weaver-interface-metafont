@@ -2291,10 +2291,13 @@ ponto flutuante nelas.
 Entretanto, além de variáveis declaradas pelo usuário, a nossa versão
 da linguagem Metafont irá possuir algumas variáveis internas numéricas
 próprias. Elas sempre estarão presentes e não precisam ser
-declaradas. Iremos ter ao todo três
-delas: \monoespaco{pt}, \monoespaco{cm} e \monoespaco{mm}. Basicamente
-elas irão armazenar quantos pixels correspondem a 1pt, 1cm e 1mm
-respectivamente.
+declaradas. Iremos ter ao todo seis
+delas: \monoespaco{pt}, \monoespaco{cm}, \monoespaco{mm}, \monoespaco{w},
+\monoespaco{h} e \monoespaco{d}. Basicamente as três primeiras
+irão armazenar quantos pixels correspondem a 1pt, 1cm e 1mm
+respectivamente. As próximas três irão armazenar a largura, altura e
+profundidade de um novo glifo caso estejamos renderizando algum no
+momento. Nos demais casos, elas conterão zero.
 
 Tais variáveis numéricas internas serão armazenadas na estrutura
 metafont:
@@ -2310,7 +2313,7 @@ Na inicialização alocamos espaço para as três variáveis e as preenchemos:
 \iniciocodigo
 @<Inicialização (struct metafont)@>+=
 mf -> internal_numeric_variables =
-             mf -> alloc(3 * sizeof(struct numeric_variable));
+             mf -> alloc(6 * sizeof(struct numeric_variable));
 ((struct numeric_variable *) mf -> internal_numeric_variables)[0].value =
    ((double) dpi) / 72.0; // 1in = 72 pt
 ((struct numeric_variable *) mf -> internal_numeric_variables)[1].value =
@@ -2319,7 +2322,7 @@ mf -> internal_numeric_variables =
    ((double) dpi) / 25.4; // 1in = 25.4mm
 {
   int i;
-  for(i = 0; i < 3; i ++){
+  for(i = 0; i < 6; i ++){
     ((struct numeric_variable *)
       mf -> internal_numeric_variables)[i].type = TYPE_T_NUMERIC;
     ((struct numeric_variable *)
@@ -2340,6 +2343,9 @@ mais facilmente:
 #define INTERNAL_NUMERIC_PT 0
 #define INTERNAL_NUMERIC_CM 1
 #define INTERNAL_NUMERIC_MM 2
+#define INTERNAL_NUMERIC_W  3
+#define INTERNAL_NUMERIC_H  4
+#define INTERNAL_NUMERIC_D  5
 @
 \fimcodigo
 
@@ -2374,6 +2380,21 @@ else if(!strcmp(buffer, "mm")){
   new_token -> var =
           &(((struct numeric_variable *)
                 mf -> internal_numeric_variables)[INTERNAL_NUMERIC_MM]);
+}
+else if(!strcmp(buffer, "w")){
+  new_token -> var =
+          &(((struct numeric_variable *)
+                mf -> internal_numeric_variables)[INTERNAL_NUMERIC_W]);
+}
+else if(!strcmp(buffer, "h")){
+  new_token -> var =
+          &(((struct numeric_variable *)
+                mf -> internal_numeric_variables)[INTERNAL_NUMERIC_H]);
+}
+else if(!strcmp(buffer, "d")){
+  new_token -> var =
+          &(((struct numeric_variable *)
+                mf -> internal_numeric_variables)[INTERNAL_NUMERIC_D]);
 }
 @
 \fimcodigo
@@ -9048,7 +9069,8 @@ void assign_pen_variable(struct metafont *mf,
                           struct pen_variable *source){
   void *(*alloc)(size_t);
   void (*disalloc)(void *);
-  if(target -> nesting_level == 0){
+  int nesting_level = target -> nesting_level;
+  if(nesting_level == 0){
     disalloc = mf -> free;
     alloc = mf -> alloc;
   }
@@ -9061,6 +9083,7 @@ void assign_pen_variable(struct metafont *mf,
   if(target -> gl_vbo != 0)
     glDeleteBuffers(1, &(target -> gl_vbo));
   memcpy(target, source, sizeof(struct pen_variable));
+  target -> nesting_level = nesting_level;
   target -> type = TYPE_T_PEN;
   if(! (source -> flags & (FLAG_CIRCULAR | FLAG_SQUARE | FLAG_NULL)))
     recursive_copy_points(alloc, &(target -> format), source -> format, true);
@@ -9085,7 +9108,8 @@ Por enquanto não existe nenhum operador terciário de caneta:
 \alinhanormal
 
 Então a função que avalia expressão terciária de canetas apenas
-repassa a expressão para a expressão secundária:
+repassa a expressão para a expressão secundária (mas podemos adicionar
+algumas linhas para detectar erros comuns):
 
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
@@ -9102,6 +9126,17 @@ bool eval_pen_expression(struct metafont *mf, struct context *cx,
                         struct generic_token *begin_expression,
                         struct generic_token *end_token_list,
                         struct pen_variable *result){
+  if(begin_expression -> type != TYPE_SYMBOLIC &&
+     begin_expression -> type != TYPE_NULLPEN &&
+     begin_expression -> type != TYPE_OPEN_PARENTHESIS &&
+     begin_expression -> type != TYPE_PENCIRCLE &&
+     begin_expression -> type != TYPE_MAKEPEN){
+#if defined(W_DEBUG_METAFONT)
+  fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognized pen expression.\n",
+          mf -> file, begin_expression -> line);
+#endif
+    return false;
+  }
   return eval_pen_secondary(mf, cx, begin_expression, end_token_list, result);
 }
 @
@@ -14832,7 +14867,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
     COUNT_NESTING(t);
     end_expr = t;
     t = t -> next;
-  } while(IS_NOT_NESTED() && t -> type != TYPE_COMMA);
+  } while(!IS_NOT_NESTED() || t -> type != TYPE_COMMA);
   if(!eval_numeric_expression(mf, cx, begin_expr, end_expr, &width))
     return false;
   t = t -> next;
@@ -14841,7 +14876,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
     COUNT_NESTING(t);
     end_expr = t;
     t = t -> next;
-  } while(IS_NOT_NESTED() && t -> type != TYPE_COMMA);
+  } while(!IS_NOT_NESTED() || t -> type != TYPE_COMMA);
   if(!eval_numeric_expression(mf, cx, begin_expr, end_expr, &height))
     return false;
   t = t -> next;
@@ -14850,7 +14885,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
     COUNT_NESTING(t);
     end_expr = t;
     t = t -> next;
-  } while(IS_NOT_NESTED() && t -> type != TYPE_CLOSE_PARENTHESIS);
+  } while(!IS_NOT_NESTED() || t -> type != TYPE_CLOSE_PARENTHESIS);
   if(!eval_numeric_expression(mf, cx, begin_expr, end_expr, &depth))
     return false;
   *end_token_list = t;
@@ -14858,8 +14893,14 @@ else if(((struct generic_token *) begin_token_list) -> type ==
     unsigned char *data;
     size_t size;
     struct picture_variable *pic = &(mf -> internal_picture_variables[0]);
-    if(pic -> texture != 0)
-      glDeleteTextures(1, &(pic -> texture));
+    ((struct numeric_variable *)
+    mf -> internal_numeric_variables)[INTERNAL_NUMERIC_W].value = width.value;
+    ((struct numeric_variable *)
+    mf -> internal_numeric_variables)[INTERNAL_NUMERIC_H].value = height.value;
+    ((struct numeric_variable *)
+    mf -> internal_numeric_variables)[INTERNAL_NUMERIC_D].value = depth.value;
+     if(pic -> texture != 0)
+       glDeleteTextures(1, &(pic -> texture));
 #ifdef W_WEAVEFONT_DISABLE_MULTISAMPLE
     mf -> current_depth = depth.value;
     pic -> width = width.value;
@@ -14954,7 +14995,7 @@ globais numéricas, usamos as seguintes funções que serão exportadas:
 
 \iniciocodigo
 @<Declaração de Função (metafont.h)@>+=
-bool _Wupdate_numeric_variable(struct metafont *mf, char *name, float value);
+bool _Wwrite_numeric_variable(struct metafont *mf, char *name, float value);
 float _Wread_numeric_variable(struct metafont *mf, char *name);
 @
 \fimcodigo
@@ -14966,7 +15007,7 @@ retornamos falso. Se não, retornamos verdadeiro:
 
 \iniciocodigo
 @<Definição de Funções da API (metafont.c)@>+=
-bool _Wupdate_numeric_variable(struct metafont *mf, char *name, float value){
+bool _Wwrite_numeric_variable(struct metafont *mf, char *name, float value){
   struct named_variable *var = (struct named_variable *) mf -> named_variables;
   while(var != NULL){
     if(!strcmp(name, var -> name)){
