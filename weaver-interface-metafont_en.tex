@@ -3367,7 +3367,7 @@ operator, or one of the following tokens that we will define later:
 \monoespaco{cosd}, \monoespaco{log}, \monoespaco{exp},
 \monoespaco{floor},  \monoespaco{uniformdeviate}, \monoespaco{rotated},
 \monoespaco{shifted}, \monoespaco{slanted}, \monoespaco{xscaled},
-\monoespaco{yscaled}, \monoespaco{zscaled}.
+\monoespaco{yscaled}, \monoespaco{zscaled}--.
 
 If we have a previous token (\monoespaco{prev}) and the current one
 (\monoespaco{cur}), we can check if it represents a valid sum or
@@ -13863,19 +13863,25 @@ static GLint previous_fb;
 \fimcodigo
 
 And here is where we save the previous framebuffer before evaluating
-the code in \monoespaco{eval\_list\_of\_expressions}:
+the code in \monoespaco{eval\_list\_of\_expressions}. We also save the
+previous viewport, as we can change this value too when rendering a
+glyph:
 
 \iniciocodigo
 @<Before Evaluating Code@>=
+GLint _viewport[4];
+glGetIntegerv(GL_VIEWPORT, _viewport);
 glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &previous_fb);
 @
 \fimcodigo
 
-And this restores the old framebuffer after code evaluation:
+And this restores the old framebuffer and viewport after code
+evaluation:
 
 \iniciocodigo
 @<After Evaluating Code@>=
 glBindFramebuffer(GL_FRAMEBUFFER, previous_fb);
+glViewport(_viewport[0], _viewport[1], _viewport[2], _viewport[3]);
 @
 \fimcodigo
 

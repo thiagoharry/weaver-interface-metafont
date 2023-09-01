@@ -3847,6 +3847,7 @@ else if(begin_expression -> type == TYPE_SIND){
     return false;
   // 1 grau = 0,0174533 radianos
   result -> value = sinf(num.value * 0.0174533);
+  printf("DEBUG: sind %f = %f\n", num.value, result -> value);
   return true;
 }
 @
@@ -14037,21 +14038,27 @@ static GLint previous_fb;
 @
 \fimcodigo
 
-E aqui é onde salvamos o framebuffer anterior antes de começar a
-executar qualquer código em \monoespaco{eval\_list\_of\_expressions}:
+E abaixo temos onde salvamos o framebuffer anterior antes de começar a
+executar qualquer código
+em \monoespaco{eval\_list\_of\_expressions}. Salvamos também as
+dimensões do ``viewport'', já que podemos mudar tais valores ao
+renderizar uma imagem:
 
 \iniciocodigo
 @<Antes de Avaliar Código@>=
+GLint _viewport[4];
+glGetIntegerv(GL_VIEWPORT, _viewport);
 glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &previous_fb);
 @
 \fimcodigo
 
-E aqui nós restauramos o framebuffer de antes de começarmos a
-interpretar código:
+E aqui nós restauramos o framebuffer e o ``viewport'' de antes de
+começarmos a interpretar código:
 
 \iniciocodigo
 @<Depois de Avaliar Código@>=
 glBindFramebuffer(GL_FRAMEBUFFER, previous_fb);
+glViewport(_viewport[0], _viewport[1], _viewport[2], _viewport[3]);
 @
 \fimcodigo
 
