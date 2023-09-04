@@ -1,0 +1,99 @@
+numeric size, weight, italic;
+pen dot;
+
+size = 10;
+weight = 1;
+italic = 0;
+
+beginchar("!",
+    ((0.15 + 0.138 * italic) * size + 0.433333 + 1.17 * (weight-1) - 0.367 * italic) * pt,
+    (0.625000 * size + 0.916667 + 0.75 * italic - 0.75 * italic * (weight-1)) * pt, 0);
+  pen dot;
+  numeric dot_center;
+  % Drawing dot
+  dot = pencircle scaled ((0.176 + 0.103 * (weight-1)) * h);
+  pickup dot;
+  dot_center =  0.5 * (xpart (rt (0, 0)));
+  draw (top rt (0, (italic - italic*(weight-1)) + 0.04 * italic * h - 0.04 * h * italic * (weight-1)));
+  % Drawing body
+  pen body;
+  pair point1, point2;
+  numeric sl;
+  point1 = (0, -0.5);
+  point2 = (0.5, 0.5);
+  body = makepen ((-1/3,-0.5)--(1/3, -0.5)--(5/18,-19/46)--(7/18, -1/23)--
+      (0.5, 0.5)--(-0.5, 0.5)--(-7/18, -1/23)--(-5/18, -19/46)--cycle);
+  body = body xscaled ((0.125 + 0.154 * (weight-1)) * h)
+    yscaled ((0.7 - 0.075 *(weight-1) - 0.05 * italic + 0.05*italic*(weight-1)) * h);
+  point1 = point1 xscaled ((0.125 + 0.154 * (weight-1)) * h)
+    yscaled ((0.7 - 0.075 *(weight-1) - 0.05 * italic + 0.05*italic*(weight-1)) * h);
+  point2 = point1 xscaled ((0.125 + 0.154 * (weight-1)) * h)
+    yscaled ((0.7 - 0.075 *(weight-1) - 0.05 * italic + 0.05*italic*(weight-1)) * h);
+  sl = italic * (-h*0.125) * (w- 0.5 * dot_center - (xpart point2) + (xpart point1))/
+    ((ypart point2)-(ypart point1));
+  pickup body slanted sl shifted (0.5 * dot_center * italic - 0.5 * italic * (weight-1), 0);
+    
+  draw bot rt (0, h);
+endchar;
+
+beginchar("\"",
+    ((0.1375 + 0.15 * (weight-1)+0.025*italic) * size + (2.133333-0.733 * (weight-1)-0.483*italic)+0.086*italic*(weight-1)) * pt,
+    (0.625000 * size + 0.916667) * pt,
+    ((-0.412500+0.0125*(weight-1)) * size + -0.400000) * pt);
+  pen body;
+  body = makepen ((-1/3,-0.5)--(1/3, -0.5)--(5/18,-19/46)--(7/18, -1/23)--
+      (0.5, 0.5)--(-0.5, 0.5)--(-7/18, -1/23)--(-5/18, -19/46)--cycle);
+  body = body xscaled ((0.364+0.0602*(weight-1))*w) yscaled (h+d);
+  pickup body;
+  draw rt (0, (h-d)/2);
+  draw lft (w, (h-d)/2);
+  %pickup pencircle scaled 5;
+  %draw (w/2, (h-d)/2);
+endchar;
+
+beginchar("0",
+    ((0.525 - (weight-1) * 0.025 - 0.025 * italic +
+     (italic * (weight-1) * 0.137500)) * size +
+     (0.833 + (weight-1) * 1.15 + italic * 1.483334 -
+     (italic * (weight-1) * 1.616667))) * pt,
+     (0.625000 * size + 0.916667) * pt, 0);
+  pen dot;
+  pair tmp;
+  numeric wf, ang, zero_height, zero_width;
+  path circle, dash;
+  % Creating pen
+  wf = (weight - 1);
+  dot = pencircle scaled (0.11594202898550725 * h);
+  dot = dot xscaled (1.3 + (0.7 * wf));
+  dot = dot yscaled (1 + (0.25 * wf));
+  dot = dot yscaled (1 + (0.125 * italic) + (0.125 * wf));
+  pickup dot;
+  % Getting path dimensions and form for the circle
+  circle =
+  (0.5, 0)
+  .. controls (0.5, 0.13261) and (0.44733, 0.2598) ..
+  (0.35356, 0.35356)
+  .. controls (0.2598, 0.44733) and (0.13261, 0.5) ..
+  (0, 0.5);
+  circle = circle & circle rotated 90;
+  circle = circle & circle rotated 180 & cycle;
+  dash = (-0.5, 0) -- (0.5, 0);
+  ang = -15 * italic;
+  zero_height = h / (cosd ang);
+  zero_width = w * (cosd ang) - italic * 0.25 * size;
+  tmp = (w, h) xscaled (zero_width / w);
+  tmp = tmp yscaled (zero_height / h);
+  tmp = tmp - (top rt (0, 0)) + (bot lft (0, 0));
+  circle = circle xscaled (xpart tmp) yscaled (ypart tmp);
+  circle = circle rotated ang shifted (w/2, h/2);
+  draw circle;
+  % Creating the dash
+  dash = dash scaled (1 - (italic * 0.1));
+  dash = dash rotated (-45+ang) xscaled ((xpart tmp)) yscaled (ypart tmp);
+  dash = dash shifted (w/2, h/2);
+  pickup dot scaled (1 - 0.3 * (weight-1) - 0.1 * italic);
+  draw dash;
+endchar
+
+end
+  

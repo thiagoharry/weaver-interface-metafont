@@ -11,6 +11,8 @@ benchmark:
 	@bash tests/benchmark.sh
 tangle:
 	ctangle weaver-interface-metafont.tex
+tangle_en:
+	ctangle weaver-interface-metafont_en.tex
 test: tangle
 	cp src/metafont.* tests/
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -Wall -g -O2 tests/window.c tests/test.c -o test_metafont -lpthread -lX11 -lEGL -lGLESv2 -lm #-DW_DEBUG_METAFONT

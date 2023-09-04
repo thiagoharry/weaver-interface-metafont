@@ -1915,6 +1915,31 @@ void test_drawing_commands(void){
   _Wdestroy_metafont(mf);
 }
 
+void test_font_rendering(void){
+  struct metafont *mf;
+  struct context *cx;
+  bool ret;
+  GLuint glyph = 0;
+  int width = 0, height = 0, depth = -1, italcorr = -1, kerning = -1;
+  mf = init_metafont(malloc, free, "sample/compare_fonts/sample.mf");
+  cx = init_context();
+  void *p = lexer(mf, malloc, free, "sample/compare_fonts/sample.mf");
+  ret = eval_program(mf, cx, p);
+  assert("Loading typographic font", ret);
+  ret = _Wrender_glyph(mf, "0", NULL, &glyph, &width, &height,
+		       &depth, &italcorr, &kerning);
+  assert("Loading glyph", ret && glyph != 0 && width > 0 && height > 0 &&
+	 depth >= 0 && italcorr == 0 && kerning == 0);
+  ret = _Wrender_glyph(mf, " ", NULL, &glyph, &width, &height,
+		       &depth, &italcorr, &kerning);
+  assert("Detecting missing glyph", !ret);
+
+  free_token_list(free, p);
+  destroy_context(mf, cx);
+  _Wdestroy_metafont(mf);
+
+}
+
 void test_opengl(void){
   assert("No errors in OpenGL", glGetError() == GL_NO_ERROR);
 }
@@ -1939,6 +1964,7 @@ int main(int argc, char **argv){
   test_boolean_expressions();
   test_if_statements();
   test_drawing_commands();
+  test_font_rendering();
   test_opengl();
   imprime_resultado();
   _Wfinish_metafont();

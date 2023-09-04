@@ -797,10 +797,12 @@ if((c == '.' && isdigit(next_char)) || isdigit(c)){
 \fimcodigo
 
 4) If the next character is a double quote, the next token will be a
-string. Its content will be all other chacarters until the next double
-quote that should be in the same line. If we have a double quote
-opening a string, but the same line do not have another double quote
-to close the string, this is an error.
+string. Its content will be all other characters until the next double
+quote not preceded by a back slash that should be in the same line. If
+we have a double quote opening a string, but the same line do not have
+another double quote to close the string, this is an error. When
+reading a back slash, we always ignore the first one, but we always
+consider the next character.
 
 \iniciocodigo
 @<Lexer: Rule 4@>=
@@ -816,14 +818,15 @@ if(c == '"'){
 #if defined(W_DEBUG_METAFONT)
   new_token -> line = line;
 #endif
-  int i = 0;
+  int i = 0, prev;
   do{
+    prev = c;
     c = fgetc(fp);
-    if(i < 5){
+    if(i < 5 && (c !='\\' || prev == '\\')){
       new_token -> value[i] = c;
       i ++;
     }
-  } while(c != '"' && c != '\n' && c != EOF);
+  } while((c != '"' || prev == '\\') && c != '\n' && c != EOF);
   i --;
   new_token -> value[i] = '\0';
   if(c == '\n' || c == EOF){
@@ -9547,7 +9550,7 @@ int read_flags(struct path_variable *path){
         d2_x = p3_x - p2_x;
         d2_y = p3_y - p2_y;
         z_cross_product = d1_x * d2_y - d1_y * d2_x;
-        if(z_cross_product > 0.00002 || z_cross_product < -0.00002){
+        if(z_cross_product > 0.004 || z_cross_product < -0.004){
           if(positive_cross_product == -1)
             positive_cross_product = (z_cross_product > 0);
           else if((z_cross_product > 0) != positive_cross_product){
@@ -12007,7 +12010,9 @@ int get_primary_expression_type(struct metafont *mf, struct context *cx,
     // Pair expression (case 3):
     if(begin_expr -> type == TYPE_POINT ||
        begin_expr -> type == TYPE_PRECONTROL ||
-       begin_expr -> type == TYPE_POSTCONTROL)
+       begin_expr -> type == TYPE_POSTCONTROL ||
+       begin_expr -> type == TYPE_BOT || begin_expr -> type == TYPE_TOP ||
+       begin_expr -> type == TYPE_LFT || begin_expr -> type == TYPE_RT)
       return TYPE_T_PAIR;    
     // Numeric expression (Case 4):
     if(begin_expr -> type == TYPE_LENGTH || begin_expr -> type == TYPE_XPART ||
@@ -13999,12 +14004,14 @@ else if(((struct generic_token *) begin_token_list) -> type ==
   else
     memcpy(transform_matrix, currentpen -> gl_matrix, 9 * sizeof(float));
   @<Prepare 'currentpicture' for Drawing@>
+  glEnable(GL_BLEND);
   if(erasing){
-    glBlendEquation(GL_FUNC_REVERSE_SUBTRACT);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBlendFunc(GL_ONE, GL_ONE);
+    glBlendEquationSeparate(GL_MAX, GL_FUNC_REVERSE_SUBTRACT);
   }
   else{
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBlendEquation(GL_FUNC_ADD);
   }
   // Part 4: Drawing loop
   for(i = 0; i < path.length - 1; i ++){
@@ -14012,13 +14019,13 @@ else if(((struct generic_token *) begin_token_list) -> type ==
     float dx, dy, dt;
     dx = path.points[i].u_x - path.points[i].x;
     dy = path.points[i].u_y - path.points[i].y;
-    distance += (int) round(sqrt(dx * dx + dy * dy));
+    distance += (int) ceil(sqrt(dx * dx + dy * dy));
     dx = path.points[i].v_x - path.points[i].u_x;
     dy = path.points[i].v_y - path.points[i].u_y;
-    distance += (int) round(sqrt(dx * dx + dy * dy));
+    distance += (int) ceil(sqrt(dx * dx + dy * dy));
     dx = path.points[(i+1) % (path.length)].x - path.points[i].v_x;
     dy = path.points[(i+1) % (path.length)].y - path.points[i].v_y;
-    distance += (int) round(sqrt(dx * dx + dy * dy));
+    distance += (int) ceil(sqrt(dx * dx + dy * dy));
     dt = 1 / ((float) distance);
     for(j = 0; j <= distance; j ++){
       float t = dt * j;
@@ -14162,7 +14169,7 @@ void drawpoint(struct metafont *mf, struct pen_variable *pen,
   gl_matrix[4] = (2 * matrix[4]) /  pic -> height; // 2d/h
   gl_matrix[5] = 0.0;
   gl_matrix[6] = 2 * (matrix[6] + x) /  pic -> width - 1.0;
-  gl_matrix[7] = 2 * (matrix[7] + mf -> current_depth + y) / pic -> width -
+  gl_matrix[7] = 2 * (matrix[7] + mf -> current_depth + y) / pic -> height -
                  1.0;
   gl_matrix[8] = 1.0;
   glViewport(0, 0, pic -> width, pic -> height);
@@ -14678,12 +14685,12 @@ else if(((struct generic_token *) begin_token_list) -> type ==
   struct generic_token *t, *begin_expr, *end_expr;
   struct string_token *str;
   struct numeric_variable width, height, depth;
-  // Getting the glyph to be rendered
+  // First we get the current glyph
   t = ((struct generic_token *) begin_token_list) -> next;
   t = t -> next;
   str = (struct string_token *) t;
   cx -> current_glyph = str -> glyph;
-  // Reading numeric values in the statement header
+  // Reading the values in the header
   t = t -> next;
   t = t -> next;
   begin_expr = t;
@@ -14713,26 +14720,28 @@ else if(((struct generic_token *) begin_token_list) -> type ==
   if(!eval_numeric_expression(mf, cx, begin_expr, end_expr, &depth))
     return false;
   *end_token_list = t;
-  { // Setting currentpicture = nullpicture(width, height + depth):
+  { // Initializing currentpicture = nullpicture(width, height + depth):
     unsigned char *data;
+    struct numeric_variable *vars;
     size_t size;
     struct picture_variable *pic = &(mf -> internal_picture_variables[0]);
-    ((struct numeric_variable *)
-    mf -> internal_numeric_variables)[INTERNAL_NUMERIC_W].value = width.value;
-    ((struct numeric_variable *)
-    mf -> internal_numeric_variables)[INTERNAL_NUMERIC_H].value = height.value;
-    ((struct numeric_variable *)
-    mf -> internal_numeric_variables)[INTERNAL_NUMERIC_D].value = depth.value;
-    if(pic -> texture != 0)
-      glDeleteTextures(1, &(pic -> texture));
+     if(pic -> texture != 0)
+       glDeleteTextures(1, &(pic -> texture));
+     vars = ((struct numeric_variable *) mf -> internal_numeric_variables);
 #ifdef W_WEAVEFONT_DISABLE_MULTISAMPLE
-    mf -> current_depth = depth.value;
-    pic -> width = width.value;
-    pic -> height = (height.value + depth.value);
+    mf -> current_depth = round(depth.value);
+    pic -> width = round(width.value);
+    pic -> height = (round(height.value) + round(depth.value));
+    vars[INTERNAL_NUMERIC_W].value = round(width.value);
+    vars[INTERNAL_NUMERIC_H].value = round(height.value);
+    vars[INTERNAL_NUMERIC_D].value = round(depth.value);
 #else
-    mf -> current_depth = 2 * depth.value;
-    pic -> width = 2 * width.value;
-    pic -> height = 2 * (height.value + depth.value);
+    mf -> current_depth = 2 * round(depth.value);
+    pic -> width = 2 * round(width.value);
+    pic -> height = 2 * (round(height.value) + round(depth.value));
+    vars[INTERNAL_NUMERIC_W].value = 2 * round(width.value);
+    vars[INTERNAL_NUMERIC_H].value = 2 * round(height.value);
+    vars[INTERNAL_NUMERIC_D].value = 2 * round(depth.value);
 #endif
     size = pic -> width * pic -> height * 4;
     data = temporary_alloc(size);
@@ -14742,9 +14751,9 @@ else if(((struct generic_token *) begin_token_list) -> type ==
 #endif
       return false;
     }
-    // The new picture will be white
+    // Making a new white texture
     memset(data, 255, size);
-    { // And also transparent:
+    { // And turning it transparent
       int i;
       for(i = 3; i < size; i += 4)
         data[i] = 0;
@@ -14753,9 +14762,14 @@ else if(((struct generic_token *) begin_token_list) -> type ==
     glBindTexture(GL_TEXTURE_2D, pic -> texture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, pic -> width, pic -> height, 0,
                  GL_RGBA, GL_UNSIGNED_BYTE, data);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glBindTexture(GL_TEXTURE_2D, 0);
     if(temporary_free != NULL)
       temporary_free(data);
+    @<Create new 'currentpicture'@>
   }
   { // Setting currentpen = nullpen:
     mf -> internal_pen_variables[0].format = NULL; // A caneta 'currentpen'
@@ -14789,7 +14803,6 @@ else if(((struct generic_token *) begin_token_list) -> type ==
         TYPE_ENDCHAR){
   struct picture_variable *currentpicture =
                                         &(mf -> internal_picture_variables[0]);
-
   end_nesting_level(mf, cx, begin_token_list);
   cx -> current_glyph -> texture = currentpicture -> texture;
   cx -> current_glyph -> width = round(currentpicture -> width);
@@ -14821,7 +14834,7 @@ variables, we will export the following functions:
 
 \iniciocodigo
 @<Function Declaration (metafont.h)@>+=
-bool _Wupdate_numeric_variable(struct metafont *mf, char *name, float value);
+bool _Wwrite_numeric_variable(struct metafont *mf, char *name, float value);
 float _Wread_numeric_variable(struct metafont *mf, char *name);
 @
 \fimcodigo
@@ -14833,7 +14846,7 @@ exist, the function returns false. Otherwise, it returns true:
 
 \iniciocodigo
 @<API Functions Definition (metafont.c)@>+=
-bool _Wupdate_numeric_variable(struct metafont *mf, char *name, float value){
+bool _Wwrite_numeric_variable(struct metafont *mf, char *name, float value){
   struct named_variable *var = (struct named_variable *) mf -> named_variables;
   while(var != NULL){
     if(!strcmp(name, var -> name)){
@@ -14931,7 +14944,7 @@ bool _Wrender_glyph(struct metafont *mf, char *glyph,
   struct _glyph *current;
   struct kerning *k;
   current = get_glyph(mf, (unsigned char *) glyph, false);
-  if(current == NULL)
+  if(current == NULL || current -> begin == NULL || current -> end == NULL)
     return false;
   if(current -> need_rendering){
     bool ret;
