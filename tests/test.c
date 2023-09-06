@@ -1927,9 +1927,9 @@ void test_font_rendering(void){
   ret = eval_program(mf, cx, p);
   assert("Loading typographic font", ret);
   ret = _Wrender_glyph(mf, "0", NULL, &glyph, &width, &height,
-		       &depth, &italcorr, &kerning);
+  		       &depth, &italcorr, &kerning);
   assert("Loading glyph", ret && glyph != 0 && width > 0 && height > 0 &&
-	 depth >= 0 && italcorr == 0 && kerning == 0);
+  	 depth >= 0 && italcorr == 0 && kerning == 0);
   ret = _Wrender_glyph(mf, " ", NULL, &glyph, &width, &height,
 		       &depth, &italcorr, &kerning);
   assert("Detecting missing glyph", !ret);

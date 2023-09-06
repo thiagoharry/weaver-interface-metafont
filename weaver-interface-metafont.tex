@@ -2887,6 +2887,7 @@ mf -> internal_pen_variables[0].flags = FLAG_NULL;
 mf -> internal_pen_variables[0].referenced = NULL;
 mf -> internal_pen_variables[0].gl_vbo = 0;
 mf -> internal_pen_variables[0].indices = 0;
+mf -> internal_pen_variables[0].nesting_level = 0;
 mf -> internal_pen_variables[1].format = NULL; // A caneta 'pensquare'
 mf -> internal_pen_variables[1].type = TYPE_T_PEN;
 mf -> internal_pen_variables[1].flags = FLAG_CONVEX | FLAG_STRAIGHT |
@@ -2894,6 +2895,7 @@ mf -> internal_pen_variables[1].flags = FLAG_CONVEX | FLAG_STRAIGHT |
 mf -> internal_pen_variables[1].referenced = NULL;
 mf -> internal_pen_variables[1].gl_vbo = 0;
 mf -> internal_pen_variables[1].indices = 4;
+mf -> internal_pen_variables[1].nesting_level = 0;
 { // Inicializando a matriz de transformação de ambas
   int j;
   for(j = 0; j < 2; j ++)
@@ -13080,6 +13082,8 @@ bool is_pen_counterclockwise(struct pen_variable *pen){
   float smallest_y = INFINITY, biggest_x = -INFINITY;
   if(pen -> flags & FLAG_ORIENTATION)
     return (pen -> flags & FLAG_COUNTERCLOCKWISE);
+  if(pen -> format == NULL || size <= 0)
+    return true;
   for(i = 0; i < size; i ++){
     if(pen -> format -> points[i].y < smallest_y ||
        (pen -> format -> points[i].y == smallest_y &&
@@ -14149,29 +14153,62 @@ glDeleteProgram(pen_erase_program);
 \subsecao{11.3. Desenhando Caminhos}
 
 Terminada a preparação da triangulação, do framebuffer e do shader
-usado, podemos escrever agora o código de desenho em si.
+usado, podemos escrever agora códigos que fazem o desenho.
 
 \iniciocodigo
 @<Declaração: Comando@>=
-else if(((struct generic_token *) begin_token_list) -> type ==
-        TYPE_DRAW || ((struct generic_token *) begin_token_list) -> type ==
-        TYPE_ERASE){
-  int i, j;
+else if(((struct generic_token *) begin_token_list) -> type == TYPE_DRAW){
   struct path_variable path;
-  float transform_matrix[9];
-  // Parte 1: Inicialização
-  bool erasing = (((struct generic_token *) begin_token_list) -> type ==
-    TYPE_ERASE);
-  struct pen_variable *currentpen = &(mf -> internal_pen_variables[0]);
-  struct picture_variable *currentpicture =
-                                        &(mf -> internal_picture_variables[0]);
-  // Parte 2: Avaliar a expressão de caminho
+  // Avaliar a expressão de caminho
   if(!eval_path_expression(mf, cx,
                           ((struct generic_token *) begin_token_list) -> next,
                           (struct generic_token *) *end_token_list,
                            &path))
     return false;
-  // Parte 3: Preparar a caneta, a imagem de destino e parâmetros OpenGL
+  if(!drawing_commands(mf, cx, &path, 0))
+    return false;
+  if(temporary_free != NULL)
+    path_recursive_free(temporary_free, &path, false);
+  return true;
+}
+else if(((struct generic_token *) begin_token_list) -> type == TYPE_ERASE){
+  struct path_variable path;
+  // Avaliar a expressão de caminho
+  if(!eval_path_expression(mf, cx,
+                          ((struct generic_token *) begin_token_list) -> next,
+                          (struct generic_token *) *end_token_list,
+                           &path))
+    return false;
+  if(!drawing_commands(mf, cx, &path, 1))
+    return false;
+  if(temporary_free != NULL)
+    path_recursive_free(temporary_free, &path, false);
+  return true;
+}
+@
+\fimcodigo
+
+O código acima detecta um comando \monoespaco{draw} e obtém o caminho
+a ser desenhado. A função que efetivamente realiza o desenho é:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+bool drawing_commands(struct metafont *mf, struct context *cx,
+                      struct path_variable *path, unsigned int flags);
+@
+\fimcodigo
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+#define ERASE_FLAG 1
+bool drawing_commands(struct metafont *mf, struct context *cx,
+                      struct path_variable *path, unsigned int flags){
+  int i, j;
+  float transform_matrix[9];
+  struct pen_variable *currentpen = &(mf -> internal_pen_variables[0]);
+  struct picture_variable *currentpicture =
+                                        &(mf -> internal_picture_variables[0]);
+  // Preparar a caneta, a imagem de destino e parâmetros OpenGL
   if(currentpen -> referenced != NULL){
     memcpy(transform_matrix, currentpen -> referenced -> gl_matrix,
            9 * sizeof(float));
@@ -14182,7 +14219,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
     memcpy(transform_matrix, currentpen -> gl_matrix, 9 * sizeof(float));
   @<Prepara 'currentpicture' para Desenho@>
   glEnable(GL_BLEND);
-  if(erasing){
+  if(flags & ERASE_FLAG){
     glBlendFunc(GL_ONE, GL_ONE);
     glBlendEquationSeparate(GL_MAX, GL_FUNC_REVERSE_SUBTRACT);
   }
@@ -14190,52 +14227,49 @@ else if(((struct generic_token *) begin_token_list) -> type ==
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glBlendEquation(GL_FUNC_ADD);
   }
-  // Parte 4: Loop de desenho
-  for(i = 0; i < path.length - 1; i ++){
+  // Loop de desenho
+  for(i = 0; i < path -> length - 1; i ++){
     int distance = 0;
     float dx, dy, dt;
-    dx = path.points[i].u_x - path.points[i].x;
-    dy = path.points[i].u_y - path.points[i].y;
+    dx = path -> points[i].u_x - path -> points[i].x;
+    dy = path -> points[i].u_y - path -> points[i].y;
     distance += (int) ceil(sqrt(dx * dx + dy * dy));
-    dx = path.points[i].v_x - path.points[i].u_x;
-    dy = path.points[i].v_y - path.points[i].u_y;
+    dx = path -> points[i].v_x - path -> points[i].u_x;
+    dy = path -> points[i].v_y - path -> points[i].u_y;
     distance += (int) ceil(sqrt(dx * dx + dy * dy));
-    dx = path.points[(i+1) % (path.length)].x - path.points[i].v_x;
-    dy = path.points[(i+1) % (path.length)].y - path.points[i].v_y;
+    dx = path -> points[(i+1) % (path -> length)].x - path -> points[i].v_x;
+    dy = path -> points[(i+1) % (path -> length)].y - path -> points[i].v_y;
     distance += (int) ceil(sqrt(dx * dx + dy * dy));
     dt = 1 / ((float) distance);
     for(j = 0; j <= distance; j ++){
       float t = dt * j;
-      float x = (1-t)*(1-t)*(1-t) * path.points[i].x +
-                3*(1-t)*(1-t)*t * path.points[i].u_x +
-                3*(1-t)*t*t * path.points[i].v_x +
-                t*t*t * path.points[(i + 1) % (path.length)].x;
-      float y = (1-t)*(1-t)*(1-t) * path.points[i].y +
-                3*(1-t)*(1-t)*t * path.points[i].u_y +
-                3*(1-t)*t*t * path.points[i].v_y +
-                t*t*t * path.points[(i + 1) % (path.length)].y;
+      float x = (1-t)*(1-t)*(1-t) * path -> points[i].x +
+                3*(1-t)*(1-t)*t * path -> points[i].u_x +
+                3*(1-t)*t*t * path -> points[i].v_x +
+                t*t*t * path -> points[(i + 1) % (path -> length)].x;
+      float y = (1-t)*(1-t)*(1-t) * path -> points[i].y +
+                3*(1-t)*(1-t)*t * path -> points[i].u_y +
+                3*(1-t)*t*t * path -> points[i].v_y +
+                t*t*t * path -> points[(i + 1) % (path -> length)].y;
       drawpoint(mf, currentpen, currentpicture, x, y, transform_matrix,
-                erasing);
+                flags & ERASE_FLAG);
     }
   }
   // Quando é um único ponto e o loop acima não foi executado:
-  if(path.length == 1)
-    drawpoint(mf, currentpen, currentpicture, path.points[0].x,
-              path.points[0].y, transform_matrix, erasing);
-  // Parte 5: Finalização
+  if(path -> length == 1)
+    drawpoint(mf, currentpen, currentpicture, path -> points[0].x,
+              path -> points[0].y, transform_matrix, flags & ERASE_FLAG);
+  // Finalização
   glDisable(GL_BLEND);
-  if(temporary_free != NULL)
-    path_recursive_free(temporary_free, &path, false);
   return true;
 }
 @
 \fimcodigo
 
-O código acima na parte 1 obtém as variáveis relevantes ao comando
-(\monoespaco{currentpen}, \monoespaco{currentpicture}) e na parte 2
-avalia a expressão de caminho após o token \monoespaco{draw}.
+O código acima primeiro obtém as variáveis relevantes ao comando
+(\monoespaco{currentpen}, \monoespaco{currentpicture}).
 
-Em seguida, na parte 3, obtemos qual caneta que devemos usar, a
+Em seguida, obtemos qual caneta que devemos usar, a
 triangulamos e inicializamos os parâmetros OpenGL específicos deste
 tipo de desenho, que definimos nas Subseções anteriores. Um dos dois
 únicos lugares em que tratamos de forma diferente o \monoespaco{draw}
@@ -14245,16 +14279,14 @@ os pixels já existentes na imagem de destino. As escolhas feitas são
 análogas às que fizemos quando definimos a soma e subtração de
 imagens.
 
-Na parte 4 temos o loop no qual iremos desenhar ponto-a-ponto o nosso
+Depois temos o loop no qual iremos desenhar ponto-a-ponto o nosso
 caminho usando a função que ainda será
 definida \monoespaco{drawpoint}. Para obter casa um dos pontos, usamos
 a fórmula das curvas de Beziér cúbicas $z(t) = (1-t)^3z_1 +
 3(1-t)^2tz_2' + 3(1-t)t^2z_3'+t^3z_4$. E para saber quantos pontos
 intermediários devem ser desenhados entre dois pontos de extremidade,
 nós somamos a distância em pixels de todos os pontos envolvidos em
-cada curva: os dois pontos de extremidade e os de controle. Depois de
-desenhar tudo, desalocamos a variável temporária que armazenou o
-caminho desenhado na parte 5.
+cada curva: os dois pontos de extremidade e os de controle.
 
 Resta apenas definir a função \monoespaco{drawpoint}. O seu cabeçalho
 é:

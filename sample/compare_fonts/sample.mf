@@ -37,7 +37,8 @@ beginchar("!",
 endchar;
 
 beginchar("\"",
-    ((0.1375 + 0.15 * (weight-1)+0.025*italic) * size + (2.133333-0.733 * (weight-1)-0.483*italic)+0.086*italic*(weight-1)) * pt,
+    ((0.1375 + 0.15 * (weight-1)+0.025*italic) * size +
+    (2.133333-0.733 * (weight-1)-0.483*italic)+0.086*italic*(weight-1)) * pt,
     (0.625000 * size + 0.916667) * pt,
     ((-0.412500+0.0125*(weight-1)) * size + -0.400000) * pt);
   pen body;
@@ -47,8 +48,27 @@ beginchar("\"",
   pickup body;
   draw rt (0, (h-d)/2);
   draw lft (w, (h-d)/2);
-  %pickup pencircle scaled 5;
-  %draw (w/2, (h-d)/2);
+endchar;
+
+beginchar("#", 
+          ((0.575+0.175*(weight-1)+0.05*italic-0.05*(weight-1)*italic) * size + 
+          (0.883-0.133*(weight-1)-0.716*italic-0.034*(weight-1)*italic)) * pt,
+      (0.625 * size + 0.917) * pt, 0);
+  pickup pensquare scaled ((0.119+0.090*(weight-1)) * h) slanted 0.15;
+  draw rt (0, (0.313-0.02*(weight-1)) * h) --
+    lft (0.948 * w, (0.313-0.02*(weight-1)) * h);
+  draw rt (0.0517 * w, (0.687+0.02*(weight-1)) * h) --
+    lft (w, (0.687+0.02*(weight-1)) * h);
+  draw top (0.241 * w, 0) -- bot (0.396 * w, h);
+  draw top (0.595 * w, 0) -- bot (0.75 * w, h);
+endchar;
+
+beginchar("$",
+          (0.487500 * size + 1.283333) * pt,
+          (0.725000 * size + 2.316667) * pt,
+          (0.050000 * size + 0.783333) * pt);
+  %pen line;
+  %line = pensquare xscaled (0.11 * h) rotated 16.21;
 endchar;
 
 beginchar("0",
@@ -77,9 +97,8 @@ beginchar("0",
   (0, 0.5);
   circle = circle & circle rotated 90;
   circle = circle & circle rotated 180 & cycle;
-  dash = (-0.5, 0) -- (0.5, 0);
   ang = -15 * italic;
-  zero_height = h / (cosd ang);
+  zero_height = 0.988 * (h / (cosd ang));
   zero_width = w * (cosd ang) - italic * 0.25 * size;
   tmp = (w, h) xscaled (zero_width / w);
   tmp = tmp yscaled (zero_height / h);
@@ -88,9 +107,11 @@ beginchar("0",
   circle = circle rotated ang shifted (w/2, h/2);
   draw circle;
   % Creating the dash
+  dash = (-0.5, 0) -- (0.5, 0);
+  dash = dash rotated -45;
   dash = dash scaled (1 - (italic * 0.1));
-  dash = dash rotated (-45+ang) xscaled ((xpart tmp)) yscaled (ypart tmp);
-  dash = dash shifted (w/2, h/2);
+  dash = dash xscaled ((xpart tmp)) yscaled (ypart tmp);
+  dash = dash rotated ang shifted (w/2, h/2);
   pickup dot scaled (1 - 0.3 * (weight-1) - 0.1 * italic);
   draw dash;
 endchar
