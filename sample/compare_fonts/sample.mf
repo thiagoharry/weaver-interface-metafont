@@ -66,9 +66,12 @@ endchar;
 beginchar("$",
           (0.487500 * size + 1.283333) * pt,
           (0.725000 * size + 2.316667) * pt,
-          (0.050000 * size + 0.783333) * pt);
-  %pen line;
-  %line = pensquare xscaled (0.11 * h) rotated 16.21;
+      (0.050000 * size + 0.783333) * pt);
+  path s;
+  s = (0.08365758754863813, 0.29674306393244876) .. controls (0.13855272957198445, 0.19844329915560915) and (0.3106728813229572, 0.14572198914354645) .. (0.48638132295719844, 0.13751507840772015);
+  pickup pencircle scaled (0.11 * h);
+  s = s xscaled w yscaled h;
+  draw s;
 endchar;
 
 beginchar("0",
@@ -99,7 +102,7 @@ beginchar("0",
   circle = circle & circle rotated 180 & cycle;
   ang = -15 * italic;
   zero_height = 0.988 * (h / (cosd ang));
-  zero_width = w * (cosd ang) - italic * 0.25 * size;
+  zero_width = w * (cosd ang) - italic * 0.2 * size;
   tmp = (w, h) xscaled (zero_width / w);
   tmp = tmp yscaled (zero_height / h);
   tmp = tmp - (top rt (0, 0)) + (bot lft (0, 0));

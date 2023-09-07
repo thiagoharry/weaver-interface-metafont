@@ -4167,8 +4167,8 @@ if(begin_expression -> type == TYPE_NORMALDEVIATE){
   else{
     uint64_t random_bits;
     float u, v, s;
-    random_bits = random_func();
     do{
+      random_bits = random_func();
       u = (float) ldexp((double) (random_bits >> 1), -63) *
             ((random_bits %2)?(-1.0):(+1.0));
       v = (float) ldexp((double) (random_bits >> 1), -63) *
