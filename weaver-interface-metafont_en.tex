@@ -1693,6 +1693,24 @@ bool end_nesting_level(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
+Notice that if an error happens inside a compound statement, we could
+stop the code execution before calling
+the \monoespaco{end\_nesting\_level}. Bacause of this, when freeing
+the memory for a context, we need to destroy any remaining token in
+the stack of expected ending tokens:
+
+\iniciocodigo
+@<Finalization (struct context)@>=
+if(temporary_free != NULL){
+  while(cx -> end_token_stack != NULL){
+    struct generic_token *end_tok = cx -> end_token_stack;
+    cx -> end_token_stack = end_tok -> next;
+    temporary_free(end_tok);
+  }  
+}
+@
+\fimcodigo
+
 How exactly a statement is evaluated? First, recall that the
 function \monoespaco{eval\_list\_of\_statements} splits the code using
 semiconlons as delimiters. Next, each part is given to
@@ -1948,7 +1966,7 @@ cx -> variables = NULL;
 And we finalize it exactly as the list of global variables:
 
 \iniciocodigo
-@<Finalization (struct context)@>=
+@<Finalization (struct context)@>+=
 if(temporary_free != NULL){
   struct variable *v = (struct variable *) (cx -> variables);
   struct variable *next;
@@ -2464,6 +2482,15 @@ if(mf -> internal_transform_variables == NULL){
 // The transform variable 'identity':
 mf -> internal_transform_variables[0].type = TYPE_T_TRANSFORM;
 INITIALIZE_IDENTITY_MATRIX(mf -> internal_transform_variables[0].value);
+@
+\fimcodigo
+
+In the finalization, we need to free the allocated memory:
+
+\iniciocodigo
+@<Finalization (struct metafont)@>+=
+if(mf -> free != NULL)
+  mf -> free(mf -> internal_transform_variables);
 @
 \fimcodigo
 
@@ -8955,6 +8982,7 @@ void assign_pen_variable(struct metafont *mf,
   void *(*alloc)(size_t);
   void (*disalloc)(void *);
   int nesting_level = target -> nesting_level;
+  struct variable *next = target -> next;
   if(nesting_level == 0){
     disalloc = mf -> free;
     alloc = mf -> alloc;
@@ -8970,6 +8998,7 @@ void assign_pen_variable(struct metafont *mf,
   memcpy(target, source, sizeof(struct pen_variable));
   target -> nesting_level = nesting_level;
   target -> type = TYPE_T_PEN;
+  target -> next = next;
   if(! (source -> flags & (FLAG_CIRCULAR | FLAG_SQUARE | FLAG_NULL)))
     recursive_copy_points(alloc, &(target -> format), source -> format, true);
   target -> gl_vbo = 0;
@@ -12929,6 +12958,10 @@ bool is_pen_counterclockwise(struct pen_variable *pen){
   }
   {
     int n = (index - 1) % size, p = (index + 1) % size;
+    if(n < 0)
+      n += size;
+    if(p < 0)
+      p += size;
     while(pen -> format -> points[index].x == pen -> format -> points[n].x &&
           pen -> format -> points[index].y == pen -> format -> points[n].y)
       n = (n + 1) % size;
@@ -14978,17 +15011,18 @@ bool _Wrender_glyph(struct metafont *mf, char *glyph,
                     int *italcorr, int *kerning){
   struct _glyph *current;
   struct kerning *k;
+  struct context *cx = NULL;
   current = get_glyph(mf, (unsigned char *) glyph, false);
   if(current == NULL || current -> begin == NULL || current -> end == NULL)
     return false;
   if(current -> need_rendering){
-    bool ret;
-    struct context *cx = init_context();
+    cx = init_context();
     if(cx  == NULL)
       return false;
-    ret = eval_list_of_statements(mf, cx, current -> begin, current -> end);
-    if(!ret)
+    if(!eval_list_of_statements(mf, cx, current -> begin, current -> end)){
+      destroy_context(mf, cx);
       return false;
+    }
   }
   *texture = current -> texture;
   *width = current -> width;
@@ -15004,6 +15038,8 @@ bool _Wrender_glyph(struct metafont *mf, char *glyph,
     }
     k = k -> next;
   }
+  if(cx != NULL)
+    destroy_context(mf, cx);
   return true;
 }
 @

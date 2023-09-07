@@ -1733,6 +1733,24 @@ bool end_nesting_level(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
+Note que se um erro ocorrer ao interpretar código quando estamos no
+meio de uma função composta, nós podemos interromper a execução antes
+de executarmos o \monoespaco{end\_nesting\_level}. Por causa disso, ao
+finalizar um contexto, devemos remover e finalizar qualquer token
+existente na pilha de tokens de finalização esperados:
+
+\iniciocodigo
+@<Finalização (struct context)@>=
+if(temporary_free != NULL){
+  while(cx -> end_token_stack != NULL){
+    struct generic_token *end_tok = cx -> end_token_stack;
+    cx -> end_token_stack = end_tok -> next;
+    temporary_free(end_tok);
+  }  
+}
+@
+\fimcodigo
+
 Como exatamente uma declaração composta é avaliada? Primeiro lembre-se
 que a função \monoespaco{eval\_list\_of\_statements} separa o código
 em partes usando o ponto-e-vírgula como delimitador. Em seguida, ele
@@ -1987,7 +2005,7 @@ cx -> variables = NULL;
 E finalizamos ela assim como finalizamos a lista de variáveis globais:
 
 \iniciocodigo
-@<Finalização (struct context)@>=
+@<Finalização (struct context)@>+=
 if(temporary_free != NULL){
   struct variable *v = (struct variable *) (cx -> variables);
   struct variable *next;
@@ -2064,10 +2082,11 @@ A inserção de uma nova variável segue a seguinte lógica:
     else
       variable_pointer = insert_named_global_variable(mf, type, variable);
   }
-  else
+  else{
     variable_pointer = insert_variable(cx -> nesting_level,
                                       temporary_alloc, type,
                                       variable, &(cx -> variables));
+  }
   if(variable_pointer == NULL){
 #if defined(W_DEBUG_METAFONT)
       fprintf(stderr, "METAFONT: Error: %s:%d: No memory to create "
@@ -2136,12 +2155,14 @@ struct variable *insert_variable(int nesting_level,
     var -> nesting_level = nesting_level;
     @<Inicialização de Nova Variável@>
   }
+  
   if(*target == NULL)
     *target = var;
   else{
     struct variable *p = (struct variable *) (*target);
-    while(p -> next != NULL)
+    while(p -> next != NULL){
       p = (struct variable *) p -> next;
+    }
     p -> next = var;
   }
   return var;
@@ -2509,6 +2530,16 @@ INITIALIZE_IDENTITY_MATRIX(mf -> internal_transform_variables[0].value);
 @
 \fimcodigo
 
+Na finalização isso deve ser desalocado:
+
+\iniciocodigo
+@<Finalização (struct metafont)@>+=
+if(mf -> free != NULL)
+  mf -> free(mf -> internal_transform_variables);
+@
+\fimcodigo
+
+
 A variável \monoespaco{identity} deve ser registrada como tendo a
 primeira posição:
 
@@ -2529,6 +2560,8 @@ else if(!strcmp(buffer, "identity"))
           &(mf -> internal_transform_variables[INTERNAL_TRANSFORM_IDENTITY]);
 @
 \fimcodigo
+
+
 
 \subsecao{7.4. Variáveis de Caminhos}
 
@@ -9076,6 +9109,7 @@ void assign_pen_variable(struct metafont *mf,
   void *(*alloc)(size_t);
   void (*disalloc)(void *);
   int nesting_level = target -> nesting_level;
+  struct variable *next = target -> next;
   if(nesting_level == 0){
     disalloc = mf -> free;
     alloc = mf -> alloc;
@@ -9091,6 +9125,7 @@ void assign_pen_variable(struct metafont *mf,
   memcpy(target, source, sizeof(struct pen_variable));
   target -> nesting_level = nesting_level;
   target -> type = TYPE_T_PEN;
+  target -> next = next;
   if(! (source -> flags & (FLAG_CIRCULAR | FLAG_SQUARE | FLAG_NULL)))
     recursive_copy_points(alloc, &(target -> format), source -> format, true);
   target -> gl_vbo = 0;
@@ -13095,6 +13130,10 @@ bool is_pen_counterclockwise(struct pen_variable *pen){
   }
   {
     int n = (index - 1) % size, p = (index + 1) % size;
+    if(n < 0)
+      n += size;
+    if(p < 0)
+      p += size;
     while(pen -> format -> points[index].x == pen -> format -> points[n].x &&
           pen -> format -> points[index].y == pen -> format -> points[n].y)
       n = (n + 1) % size;
@@ -15153,19 +15192,18 @@ bool _Wrender_glyph(struct metafont *mf, char *glyph,
                     int *italcorr, int *kerning){
   struct _glyph *current;
   struct kerning *k;
+  struct context *cx = NULL;
   current = get_glyph(mf, (unsigned char *) glyph, false);
   if(current == NULL || current -> begin == NULL || current -> end == NULL)
     return false;
   if(current -> need_rendering){
-    bool ret;
-    struct context *cx = init_context();
-    if(cx  == NULL){
-      printf("CX CREATION FAILED");
+    cx = init_context();
+    if(cx  == NULL)
+      return false;
+    if(!eval_list_of_statements(mf, cx, current -> begin, current -> end)){
+      destroy_context(mf, cx);
       return false;
     }
-    ret = eval_list_of_statements(mf, cx, current -> begin, current -> end);
-    if(!ret)
-      return false;
   }
   *texture = current -> texture;
   *width = current -> width;
@@ -15181,6 +15219,8 @@ bool _Wrender_glyph(struct metafont *mf, char *glyph,
     }
     k = k -> next;
   }
+  if(cx != NULL)
+    destroy_context(mf, cx);
   return true;
 }
 @
