@@ -9777,8 +9777,10 @@ deallocate the temporary pen evaluation:
 \iniciocodigo
 @<'makepath': Formato Personalizado@>=
 recursive_copy_points(temporary_alloc, &result, tmp.format, false);
-if(temporary_free != NULL && tmp.referenced == NULL)
+if(temporary_free != NULL){
+  temporary_free(tmp.format -> points);
   temporary_free(tmp.format);
+}
 @
 \fimcodigo
 

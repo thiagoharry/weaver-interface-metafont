@@ -136,8 +136,7 @@ void test(struct metafont *mf, char *font_name, char *c, int weight, int italic)
     }
     else{
       y_values1[size-MIN_SIZE] = face->glyph -> bitmap.width;
-      y_values2[size-MIN_SIZE] = face->glyph -> bitmap.rows +
-	((f_depth < 0)?(-f_depth):(0));
+      y_values2[size-MIN_SIZE] = face->glyph -> bitmap.rows - f_depth;
       y_values3[size-MIN_SIZE] = f_depth;
       printf("Freetype2 font: %dpt (%dx%ld)[depth: %ld]: %f seconds (CPU time)\n", size,
 	     face->glyph -> bitmap.width, face->glyph -> bitmap.rows - f_depth,
