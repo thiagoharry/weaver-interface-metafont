@@ -9835,7 +9835,9 @@ else if(type == TYPE_T_PICTURE){
       struct picture_variable *pic = (struct picture_variable *) var -> var;
       if(pic -> texture != 0)
         glDeleteTextures(1, &(pic -> texture));
-      memcpy(pic, &result, sizeof(struct picture_variable));
+      pic -> width = result.width;
+      pic -> height = result.height;
+      pic -> texture = result.texture;
       pic -> type = TYPE_T_PICTURE;
       // If assigning to 'currentpicture', additional code is executed
       if(pic ==
