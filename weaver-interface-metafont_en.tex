@@ -13541,7 +13541,8 @@ while(next_token != end_expression){
   case TYPE_ROTATED:
     if(!eval_numeric_expression(mf, cx, begin_subexpr, end_subexpr, &a))
       return false;
-    TRANSFORM_ROTATE(mf -> internal_pen_variables[0].gl_matrix, a.value);
+    TRANSFORM_ROTATE(mf -> internal_pen_variables[0].gl_matrix,
+                     a.value * 0.0174533);
     break;
   case TYPE_SCALED:
     if(!eval_numeric_expression(mf, cx, begin_subexpr, end_subexpr, &a))
