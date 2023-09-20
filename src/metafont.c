@@ -4676,8 +4676,8 @@ if(!eval_pair_expression(mf,cx,begin_b,end_b,&b))
 return false;
 if(!eval_pair_expression(mf,cx,begin_c,end_c,&c))
 return false;
-result->x= (b.x+c.x)*a.value;
-result->y= (b.y+c.y)*a.value;
+result->x= b.x+a.value*(c.x-b.x);
+result->y= b.y+a.value*(c.y-b.y);
 return true;
 }
 /*:211*/

@@ -1393,8 +1393,8 @@ void test_pair_expressions(void){
 	 ALMOST_EQUAL(pair_a -> x, 20.0) &&
 	 ALMOST_EQUAL(pair_a -> y, 27.0));
   assert("Interpolating between two points",
-	 ALMOST_EQUAL(pair_b -> x, 10.0) &&
-	 ALMOST_EQUAL(pair_b -> y, 13.5));
+	 ALMOST_EQUAL(pair_b -> x, 227.9591) &&
+	 ALMOST_EQUAL(pair_b -> y, 74.94846));
   free_token_list(free, p);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
