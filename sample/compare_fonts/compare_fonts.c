@@ -9,8 +9,8 @@
 #include "metafont.h"
 #include "interface.h"
 
-#define MIN_SIZE 12
-#define MAX_SIZE 20
+#define MIN_SIZE 200
+#define MAX_SIZE 200
 
 #define ZOOM 1.0
 
