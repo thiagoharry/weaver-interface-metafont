@@ -1,4 +1,4 @@
-\font\sixteen=cmbx15
+\font\sixteen=cmbx12
 \font\twelve=cmr12
 \font\fonteautor=cmbx12
 \font\fonteemail=cmtt10
@@ -44,50 +44,204 @@
 
 \twelve
 \vskip12pt
-\titulo{Interface de Usuário Weaver}
+\titulo{WEAVEFONT: Linguagem de Desrição de Fontes Tipográficas}
 \vskip12pt
 \autor{Thiago Leucz Astrizi}
 \vskip6pt
 \email{thiago@@bitbitbit.com.br}
 \vskip6pt
 
-\abstract{This article contains an implementation of an interpreter
- for a language based on METAFONT. This is aimed at allowing the
- definition of flexible and parameterized typographic fonts that could
- be interpreted and rendered on the fly.  Because of this, we
- sacrifice some flexibility from the original METAFONT language to be
- able to produce faster results. The implementation will be used by
- Weaver Game Engine as a module and uses modern OpenGL to render the
- fonts.}
+\abstract{This article contains an implementation of  WEAVEFONT, a language
+ created to represent typographical fonts, vector illustrations and
+ animations. The language is strongly based on METAFONT, a description
+ language created by Donald Knuth in 1984 [KNUTH, 1989]. The syntax is
+ very similar for both languages, but WEAVEFONT was created to run and
+ produce images in real time using OpenGL. Therefore, changes were
+ made to make the language faster for this goal. Contrary to METAFONT,
+ WEAVEFONT do not support macros and is an imperative
+ language. Several useful features from METAFONT that were implemented
+ with macros, in WEAVEFONT are a direct part of the language.}
 
 
 \vskip 0.5cm plus 3pt minus 3pt
 
-\resumo{Este artigo contém uma implementação de um interpretador para
- uma linguagem baseada no METAFONT. Esta linguagem é projetada para
- permitir a definição de fontes tipográficas flexíveis e
- parametrizadas que podem ser interpretadas e renderizadas rapidamente
- à medida que são lidas. Por causa disso, nós sacrificamos alguma
- flexibilidade da linguagem METAFONT original para sermos capazes de
- criar resultados mais rápidos. A implementação será usada pelo Motor
- de Jogos Weaver como um módulo e usará OpenGL moderno para renderizar
- as fontes.}
+\resumo{Este artigo contém uma implementação de WEAVEFONT, uma linguagem criada
+ para representar fontes tipográficas, ilustrações vetoriais e
+ animações. A linguagem é fortemente baseada em METAFONT, uma
+ linguagem de descrição criada por Donald Knuth em 1977 [KNUTH,
+ 1989]. A sintaxe é muito similar para ambas as linguagens.  mas
+ WEAVEFONT foi criada para executar e produzir imagens em tempo real
+ usando OpenGL. Por isso, mudanças foram feitas para tornar a
+ linguagem mais rápida para tal propósito. Ao contrário de METAFONT,
+ WEAVEFONT não suporta macros e é uma linguagem imperativa. Várias
+ funcionalidades úteis que em METAFONT foram criadas usando macros, em
+ WEAVEFONT são diretamente parte da linguagem.}
+
+\secao{Índice}
+
+\def\indice#1{\leaders\hbox{.}\hfill #1}
+
+1. Introdução \indice{XX}
+
+1.1. Programação Literária \indice{XX}
+
+2. Código Auxiliar Geral \indice{XX}
+
+2.1. Código de Álgebra Linear \indice{XX}
+
+3. Inicialização e Finalização \indice{XX}
+
+4. Analisador Léxico \indice{XX}
+
+5. Programas WEAVEFONT \indice{XX}
+
+6. Listas de Declarações \indice{XX}
+
+7. Declaração Composta: Bloco Composto \indice{XX}
+
+8. Declaração de Variáveis \indice{XX}
+
+8.1. Variáveis Numéricas \indice{XX}
+
+8.2. Variáveis de Pares \indice{XX}
+
+8.3. Variáveis de Transformação \indice{XX}
+
+8.4. Variáveis de Caminhos \indice{XX}
+
+8.5. Variáveis de Caneta \indice{XX}
+
+8.6. Variáveis de Imagens \indice{XX}
+
+8.7. Variáveis Booleanas \indice{XX}
+
+9. Atribuições \indice{XX}
+
+9.1. Atribuições e Expressões Numéricas \indice{XX}
+
+9.1.1. Soma e Subtração: Normal e Pitagórica \indice{XX}
+
+9.1.2. Multiplicação e Divisão \indice{XX}
+
+9.1.3. Módulo, Seno, Cosseno, Exponenciais, Piso e Aleatórios Uniformes \indice{XX}
+
+9.1.4. Números Isolados e Valores Aleatórios Normais \indice{XX}
+
+9.2. Atribuições e Expressões de Pares \indice{XX}
+
+9.2.1. Soma e Subtração \indice{XX}
+
+9.2.2. Transformações, Multiplicação e Divisão Escalar \indice{XX}
+
+9.2.3. Valores Intermediários de Pares, Literais e Variáveis \indice{XX}
+
+9.2.4. Pares em Expressões Numéricas \indice{XX}
+
+9.3. Atribuições e Expressões de Transformação \indice{XX}
+
+9.3.1. Transformações sobre Transformadores \indice{XX}
+
+9.3.2 Expressões Primárias de Transformação: Literais e Variáveis \indice{XX}
+
+9.3.3. Transformações em Expressões Numéricas \indice{XX}
+
+9.3.4. Transformações em Expressões de Pares \indice{XX}
+
+9.4. Atribuições e Expressões de Caminhos \indice{XX}
+
+9.4.1. Junção de Caminhos \indice{XX}
+
+9.4.2. Expressões Terciárias de Caminhos \indice{XX}
+
+9.4.3. Expressões Secundárias de Caminhos: Transformadores \indice{XX}
+
+9.4.4. Expressões Primárias: Variáveis, Reversos e Subcaminhos \indice{XX}
+
+9.4.5. Caminhos em Expressões Numéricas \indice{XX}
+
+9.4.6. Caminhos em Expressões de Pares \indice{XX}
+
+9.5. Atribuições e Expressões de Caneta \indice{XX}
+
+9.5.1. Expressão Terciária de Caneta \indice{XX}
+
+9.5.2. Transformadores de Caneta \indice{XX}
+
+9.5.3. Expressões Primárias: Caneta Nula, Circular,
+Arbitrária e Variáveis \indice{XX}
+
+9.5.4. Canetas em Expressões de Caminho \indice{XX}
+
+9.6. Atribuições e Expressões de Imagens \indice{XX}
+
+9.6.1. Expressões Terciárias de Imagem: Soma e Subtração \indice{XX}
+
+9.6.2. Expressões Secundárias de Imagem: Transformadores \indice{XX}
+
+9.6.3. Expressões Primárias: Inversores, Identidade e
+Imagens Vazias \indice{XX}
+
+9.6.4. Imagens em Expressões Numéricas \indice{XX}
+
+9.7. Atribuições e Expressões Booleanas \indice{XX}
+
+9.7.1. Comparações \indice{XX}
+
+9.7.2. A Operação OR \indice{XX}
+
+9.7.3. A Operação AND \indice{XX}
+
+9.7.4. Expressões Primárias Booleanas: Literais e Predicados Simples \indice{XX}
+
+9.8. Identificando Tipos de Expressões \indice{XX}
+
+10. Declaração Composta: Declaração Condicional \indice{XX}
+
+11. O Comando \monoespaco{pickup} \indice{XX}
+
+11.1. Pontos de Extremidade de Caneta \indice{XX}
+
+11.2. Triangulação \indice{XX}
+
+11.3. Interpretando o Comando \monoespaco{pickup} \indice{XX}
+
+11.4. Os Operadores \monoespaco{bot}, \monoespaco{top}, \monoespaco{lft},
+\monoespaco{rt} \indice{XX}
+
+12. O Comando \monoespaco{draw} e \monoespaco{erase} \indice{XX}
+
+12.1. Preparando o Framebuffer \indice{XX}
+
+12.2. Shaders de Desenho \indice{XX}
+
+12.3. Desenhando Caminhos \indice{XX}
+
+13. Declaração Composta: Declaração de Caractere \indice{XX}
+
+13.1 Unicode e UTF-8 \indice{XX}
+
+14. Funções de API para Usar as Fontes \indice{XX}
+
+Referências \indice{XX}
 
 \secao{1. Introdução}
 
-A linguagem METAFONT original é uma linguagem feita para descrever
-fontes tipográficas. Ela foi criada em 1984 por Donald Knuth e difere
-de outros formatos de fontes tipográficas por permitir a criação de
-fontes à partir da modificação de parâmetros definidos na descrição
-básica da fonte. Desta forma, o projetista de uma fonte não deve criar
-uma simples fonte tipográfica, mas uma meta-fonte, a qual pode por sua
-vez gerar muitas outras fontes tipográficas diferentes mediante a
-simples modificação dos parâmetros.
+A primeira linguagem de descrição para fontes tipográficas foi a
+METAFONT. Ela foi criada em 1984 por Donald Knuth e difere de outros
+formatos de fontes tipográficas por permitir a criação de fontes à
+partir da modificação de parâmetros definidos na descrição básica da
+fonte. Desta forma, o projetista de uma fonte não deve criar uma
+simples fonte tipográfica, mas uma meta-fonte, a qual pode por sua vez
+gerar muitas outras fontes tipográficas diferentes mediante a simples
+modificação dos parâmetros.  Aqui também chamaremos de meta-fonte as
+fontes que definiremos, as quais não devem ser confundidas com a
+linguagem METAFONT.
 
 A especificação original da linguagem METAFONT pode ser encontrada em
-[KNUTH, 1989], mas a implementação aqui não será compatível com a
-linguagem original. Ao invés disso uma nova linguagem será definida,
-mas ela terá objetivos similares.
+[KNUTH, 1989].  Baseada nesta linguagem, definiremos aqui a linguagem
+WEAVEFONT, a qual tem objetivos similares. A diferença é que a
+linguagem a ser definida aqui deverá ser usada em tempo real para
+produzir imagens à partir da descrição vetorial.
 
 Como este artigo define um subsistema do Motor de Jogos Weaver, e mais
 especificamente um subsistema de interface de usuário, nosso objetivo
@@ -244,14 +398,14 @@ associado a este cabeçaho, o código será este:
 Todo o código que definiremos e explicaremos a seguir será posicionado
 nestes dois arquivos. Além deles, nenhum outro arquivo será criado.
 
-\secao{X. Código Auxiliar Geral}
+\secao{2. Código Auxiliar Geral}
 
 O código apresentado nesta seção tem como característica ser usado em
 diferentes partes de nossa linguagem e também ser independente de
 estruturas de dados específicas deste projeto. Por causa disso, vamos
 defini-lo como uma introdução, antes do código mais específico.
 
-\subsecao{X.Y. Código de Álgebra Linear}
+\subsecao{2.1. Código de Álgebra Linear}
 
 Iremos usar com uma frequência muito grande matrizes $3\times 3$, que
 serão usadas tipicamente para representar transformações lineares em
@@ -539,7 +693,7 @@ void _Wfinish_metafont(void){
 @
 \fimcodigo
 
-\secao{3. Analisador Léxico}
+\secao{4. Analisador Léxico}
 
 A primeira coisa a criar para uma linguagem é seu analisador
 léxico. Ele irá ler o código-fonte da linguagem presente em um arquivo
@@ -1229,7 +1383,7 @@ if(buffer[0] != '\0'){
 \fimcodigo
 
 
-\secao{4. Programas METAFONT}
+\secao{5. Programas WEAVEFONT}
 
 Quando avaliamos um programa METAFONT, vamos precisar de duas
 extruturas adicionais. A primeira delas, a qual chamaremos
@@ -1444,7 +1598,7 @@ mais rico e com mais capacidades. Tudo o que temos que fazer é apenas
 alocar memória necessária e realizar algumas inicializações mais
 básicas.
 
-\secao{5. Listas de Declarações}
+\secao{6. Listas de Declarações}
 
 Uma lista de declarações é uma série de declarações (potencialmente
 vazias) sempre separadas por ponto-e-vírgula:
@@ -1515,7 +1669,7 @@ iteração avançamos os ponteiros para os próximos tokens, mas cuidamos
 para nunca sair de dentro da região delimitada
 por \monoespaco{begin\_token\_list} e \monoespaco{end\_token\_list}.
 
-\secao{6. Declaração Composta: Bloco Composto}
+\secao{7. Declaração Composta: Bloco Composto}
 
 Uma declaração individual na linguagem pode na verdade ser composta
 por muitas outras declarações. A sintaxe para isso é:
@@ -1836,7 +1990,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
 \fimcodigo
 
 
-\secao{7. Declaração de Variáveis}
+\secao{8. Declaração de Variáveis}
 
 A sintaxe para declarar variáveis é:
 
@@ -2270,7 +2424,7 @@ void update_token_pointer_for_variable(struct symbolic_token *var_token,
 @
 \fimcodigo
 
-\subsecao{7.1. Variáveis Numéricas}
+\subsecao{8.1. Variáveis Numéricas}
 
 Uma variável numérica será armazenada na seguinte estrutura:
 
@@ -2423,7 +2577,7 @@ else if(!strcmp(buffer, "d")){
 @
 \fimcodigo
 
-\subsecao{7.2. Variáveis de Pares}
+\subsecao{8.2. Variáveis de Pares}
 
 Uma variável de par serve para armazenar coordenadas de um ponto. Ela
 será armazenada na seguinte estrutura:
@@ -2451,7 +2605,7 @@ if(type == TYPE_T_PAIR){
 @
 \fimcodigo
 
-\subsecao{7.3. Variáveis de Transformação}
+\subsecao{8.3. Variáveis de Transformação}
 
 Se um variável de par é uma tupla de dois valores numéricos, uma
 variável de transformação é uma tupla com seis valores
@@ -2563,7 +2717,7 @@ else if(!strcmp(buffer, "identity"))
 
 
 
-\subsecao{7.4. Variáveis de Caminhos}
+\subsecao{8.4. Variáveis de Caminhos}
 
 Uma variável de caminho armazena uma sequência de pontos e uma
 sequência de pontos de controle formando uma sequência de Curvas de
@@ -2715,7 +2869,7 @@ void path_recursive_free(void (*free_func)(void *),
 @
 \fimcodigo
 
-\subsecao{7.5. Variáveis de Caneta}
+\subsecao{8.5. Variáveis de Caneta}
 
 Uma variável de caneta armazena a estrutura utilizada para desenhar
 formas no METAFONT. As canetas especificam o diâmetro e formato das
@@ -2997,7 +3151,7 @@ if(mf -> internal_pen_variables[INTERNAL_PEN_CURRENTPEN].referenced == pen){
 @
 \fimcodigo
 
-\subsecao{7.6. Variáveis de Imagens}
+\subsecao{8.6. Variáveis de Imagens}
 
 Uma variável de imagem armazena uma imagem renderizada, possivelmente
 por meio de pincéis e comandos de desenho do Weaver Metafont. Ao
@@ -3121,7 +3275,7 @@ else if(!strcmp(buffer, "currentpicture"))
 @
 \fimcodigo
 
-\subsecao{7.7. Variáveis Booleanas}
+\subsecao{8.7. Variáveis Booleanas}
 
 A mais simples de todas as variáveis, uma variável booleana armazena
 somente verdadeiro ou falso. O formato de sua estrutura é:
@@ -3149,7 +3303,7 @@ if(type == TYPE_T_BOOLEAN)
 \fimcodigo
 
 
-\secao{8. Atribuições}
+\secao{9. Atribuições}
 
 Atribuições são como fazemos com que as variáveis sejam inicializadas,
 como modificamos seus valores e como armazenamos nelas o resultado de
@@ -3294,7 +3448,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
 @
 \fimcodigo
 
-\subsecao{8.1. Atribuições e Expressões Numéricas}
+\subsecao{9.1. Atribuições e Expressões Numéricas}
 
 Como então realizar a atribuição de variáveis numéricas dado o código
 acima? Usamos o código abaixo:
@@ -3344,7 +3498,7 @@ void assign_numeric_variable(struct numeric_variable *target,
 
 Agora passemos para definir como interpretar expressões numéricas.
 
-\subsubsecao{8.1.1. Soma e Subtração: Normal e Pitagórica}
+\subsubsecao{9.1.1. Soma e Subtração: Normal e Pitagórica}
 
 As regras iniciais de expressões numéricas seguem abaixo:
 
@@ -3576,7 +3730,7 @@ bool eval_numeric_expression(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
-\subsubsecao{8.1.2. Multiplicação e Divisão}
+\subsubsecao{9.1.2. Multiplicação e Divisão}
 
 As regras para lidar com expressões secundárias são:
 
@@ -3692,9 +3846,7 @@ bool eval_numeric_secondary(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
-\subsubsecao{8.1.3. Módulo,
-    Funções Trigonométricas, Exponenciais, Piso e Valores Aleatórios
-    Uniformes}
+\subsubsecao{9.1.3. Módulo, Seno, Cosseno, Exponenciais, Piso e Aleatórios Uniformes}
 
 As regras de expressões numéricas primárias é:
 
@@ -4089,7 +4241,7 @@ else{
 @
 \fimcodigo
 
-\subsubsecao{8.1.4. Números Isolados e Valores Aleatórios Normais}
+\subsubsecao{9.1.4. Números Isolados e Valores Aleatórios Normais}
 
 As regras finais para as expressões numéricas que iremos tratar são:
 
@@ -4331,7 +4483,7 @@ if(begin_expression -> type == TYPE_NUMERIC &&
 \fimcodigo
 
 
-\subsecao{8.2. Atribuições e Expressões de Pares}
+\subsecao{9.2. Atribuições e Expressões de Pares}
 
 Para realizar a atribuição de pares a variáveis do tipo certo, usamos
 o código abaixo:
@@ -4378,7 +4530,7 @@ void assign_pair_variable(struct pair_variable *target,
 
 Vamos agora à avaliação de expressões de pares.
 
-\subsubsecao{8.2.1. Soma e Subtração}
+\subsubsecao{9.2.1. Soma e Subtração}
 
 As regras gramaticais para as expressões de pares começam com:
 
@@ -4452,7 +4604,7 @@ bool eval_pair_expression(struct metafont *mf, struct context *cx,
 \fimcodigo
 
 
-\subsubsecao{8.2.2. Transformações, Multiplicação e Divisão Escalar}
+\subsubsecao{9.2.2. Transformações, Multiplicação e Divisão Escalar}
 
 A gramática para expressões de pares secundárias é:
 
@@ -4803,7 +4955,7 @@ else if(last_mul -> type == TYPE_ZSCALED){
 @
 \fimcodigo
 
-\subsubsecao{8.2.3. Valores Intermediários de Pares, Literais e Variáveis}
+\subsubsecao{9.2.3. Valores Intermediários de Pares, Literais e Variáveis}
 
 As regras gramaticais finais para a expressão de pares é:
 
@@ -5113,7 +5265,7 @@ else{
 @
 \fimcodigo
 
-\subsubsecao{8.2.4. Pares em Expressões Numéricas}
+\subsubsecao{9.2.4. Pares em Expressões Numéricas}
 
 Subexpressões numéricas podem aparecer dentro de expressões de
 pares. Por exemplo, em $a[b,c]$ onde $a$ é um átomo numérico. Da mesma
@@ -5247,7 +5399,7 @@ else if(begin_expression -> type == TYPE_ANGLE){
 @
 \fimcodigo
 
-\subsecao{8.3. Atribuições e Expressões de Transformação}
+\subsecao{9.3. Atribuições e Expressões de Transformação}
 
 Um dos momentos em que esperamos ter que avaliar uma expressão de
 transformação quando formos fazer uma atribuição para uma variável de
@@ -5277,7 +5429,7 @@ else if(type == TYPE_T_TRANSFORM){
 
 Vamos agora ver como avaliar as expressões de transformação.
 
-\subsubsecao{8.3.1. Transformações sobre Transformadores}
+\subsubsecao{9.3.1. Transformações sobre Transformadores}
 
 A regra gramatical para avaliar uma expressão de transformação começam
 como:
@@ -5574,7 +5726,7 @@ else if(last_transform -> type == TYPE_TRANSFORMED){
 @
 \fimcodigo
 
-\subsecao{8.3.2 Expressões Primárias de Transformação: Literais e Variáveis}
+\subsecao{9.3.2 Expressões Primárias de Transformação: Literais e Variáveis}
 
 Continuando a gramática das expressões de transformadores, as próximas
 regras são:
@@ -5742,7 +5894,7 @@ return true;
 @
 \fimcodigo
 
-\subsubsecao{8.3.3. Transformações em Expressões Numéricas}
+\subsubsecao{9.3.3. Transformações em Expressões Numéricas}
 
 Transformações podem aparecer dentro de expressões primárias
 numéricas. Existem as seguintes regras gramaticais adicionais que as
@@ -5835,7 +5987,7 @@ return true;
 @
 \fimcodigo
 
-\subsubsecao{8.3.4. Transformações em Expressões de Pares}
+\subsubsecao{9.3.4. Transformações em Expressões de Pares}
 
 Transformações também aparecem nas regras gramaticais de expressões de
 pares. Existe uma expressão secundária que obtém uma expressão
@@ -5868,7 +6020,7 @@ else if(last_mul -> type == TYPE_TRANSFORMED){
 @
 \fimcodigo
 
-\subsecao{8.4. Atribuições e Expressões de Caminhos}
+\subsecao{9.4. Atribuições e Expressões de Caminhos}
 
 Para realizar a atribuição de caminhos a variáveis do tipo certo,
 usamos o código abaixo:
@@ -6001,7 +6153,7 @@ void recursive_aux_copy(struct path_points **dst, struct path_variable *origin){
 
 Vejamos agora a expressões que existem para expressões de caminhos:
 
-\subsubsecao{8.4.1. Junção de Caminhos}
+\subsubsecao{9.4.1. Junção de Caminhos}
 
 A gramática para a expressão de caminhos começa com:
 
@@ -7723,7 +7875,7 @@ Isso finaliza a construção de uma curva dados seus pontos e
 subcaminhos lidos. Agora iremos estabelecer como ler os pontos e
 subcaminhos.
 
-\subsubsecao{8.4.2. Expressões Terciárias de Caminhos}
+\subsubsecao{9.4.2. Expressões Terciárias de Caminhos}
 
 A gramática para expressões de caminho terciárias é:
 
@@ -7810,7 +7962,7 @@ bool eval_path_tertiary(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
-\subsubsecao{8.4.3. Expressões Secundárias de Caminhos: Transformadores}
+\subsubsecao{9.4.3. Expressões Secundárias de Caminhos: Transformadores}
 
 A gramática para expressões secundárias de caminho é:
 
@@ -8298,7 +8450,8 @@ void path_transform(struct path_variable *p, float *M){
 \fimcodigo
 
 
-\subsubsecao{8.4.4. Expressões Primárias de Caminhos}
+\subsubsecao{9.4.4. Expressões Primárias: Variáveis, Reversos
+e Subcaminhos}
 
 A gramática para expressões primárias de caminho é:
 
@@ -8833,7 +8986,7 @@ return true;
 @
 \fimcodigo
 
-\subsubsecao{8.4.5. Caminhos em Expressões Numéricas}
+\subsubsecao{9.4.5. Caminhos em Expressões Numéricas}
 
 Existe a expressão numérica primária com o
 operador \monoespaco{length} que retorna o número de pontos de
@@ -8866,7 +9019,7 @@ else if(expr_type == TYPE_T_PATH){
 @
 \fimcodigo
 
-\subsubsecao{8.4.6. Caminhos em Expressões de Pares}
+\subsubsecao{9.4.6. Caminhos em Expressões de Pares}
 
 Dado um caminho, nós podemos extrair pares dele. O par pode ser um dos
 pontos de extremidade ou algum dos pontos de controle. A sintaxe para
@@ -9060,7 +9213,7 @@ if(begin_expression -> type == TYPE_POINT ||
 @
 \fimcodigo
 
-\subsecao{8.5. Atribuições e Expressões de Caneta}
+\subsecao{9.5. Atribuições e Expressões de Caneta}
 
 Para realizar a atribuição de canetas a variáveis do tipo certo,
 usamos o código abaixo:
@@ -9139,7 +9292,7 @@ void assign_pen_variable(struct metafont *mf,
 @
 \fimcodigo
 
-\subsubsecao{8.5.1. Expressão Terciária de Caneta}
+\subsubsecao{9.5.1. Expressão Terciária de Caneta}
 
 Por enquanto não existe nenhum operador terciário de caneta:
 
@@ -9183,7 +9336,7 @@ bool eval_pen_expression(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
-\subsubsecao{8.5.2. Transformadores de Caneta}
+\subsubsecao{9.5.2. Transformadores de Caneta}
 
 A sintaxe para expressões secundárias de caneta é:
 
@@ -9441,7 +9594,8 @@ return true;
 @
 \fimcodigo
 
-\subsubsecao{8.5.3. Expressões Primárias de Caneta}
+\subsubsecao{9.5.3. Expressões Primárias: Caneta Nula, Circular,
+Arbitrária e Variáveis}
 
 A gramática das expressões primárias de caminho é definida como:
 
@@ -9730,7 +9884,7 @@ int read_flags(struct path_variable *path){
 @
 \fimcodigo
 
-\subsubsecao{8.5.4. Canetas em Expressões de Caminho}
+\subsubsecao{9.5.4. Canetas em Expressões de Caminho}
 
 Expressões primárias de caneta podem aparecer também quando avaliamos
 uma expressão primária de caminho. Isso permite que possamos extrair
@@ -9941,7 +10095,7 @@ lineares que estiverem registradas na matriz de transformação OpenGL:
 @
 \fimcodigo
 
-\subsecao{8.6. Atribuições e Expressões de Imagens}
+\subsecao{9.6. Atribuições e Expressões de Imagens}
 
 Para realizar a atribuição de imagens a variáveis do tipo certo,
 usamos o código abaixo. O que ele faz é avaliar uma expressão de
@@ -10318,7 +10472,7 @@ void assign_picture_variable(struct metafont *mf,
 @
 \fimcodigo
 
-\subsubsecao{8.6.1. Expressões Terciárias de Imagem: Soma e Subtração}
+\subsubsecao{9.6.1. Expressões Terciárias de Imagem: Soma e Subtração}
 
 A operação terciária de imagem é a soma e a subtração:
 
@@ -10538,7 +10692,7 @@ glDeleteFramebuffers(1, &temporary_framebuffer);
 @
 \fimcodigo
 
-\subsubsecao{8.6.2. Expressões Secundárias de Imagem: Transformadores}
+\subsubsecao{9.6.2. Expressões Secundárias de Imagem: Transformadores}
 
 Uma expressão secundária de imagem tem a seguinte sintaxe:
 
@@ -10923,7 +11077,8 @@ bool apply_image_transformation(struct metafont *mf,
 @
 \fimcodigo
 
-\subsubsecao{8.6.3. Expressões Primárias de Imagem: Inversores, Identidade e Imagens Vazias}
+\subsubsecao{Expressões Primárias: Inversores, Identidade e
+Imagens Vazias}
 
 Segundo a gramática da linguagem, a sintaxe para expressões primárias
 de imagens é:
@@ -11326,7 +11481,7 @@ tamanho e offset:
 @
 \fimcodigo
 
-\subsubsecao{8.6.4. Imagens em Expressões Numéricas}
+\subsubsecao{9.6.4. Imagens em Expressões Numéricas}
 
 Há casos nos quais precisamos avaliar uma expressão de imagem dentro
 de uma expressão numérica. Há três expressões primárias numéricas
@@ -11491,7 +11646,7 @@ else if(begin_expression -> type == TYPE_HEIGHT){
 \fimcodigo
 
 
-\subsecao{8.7. Atribuições e Expressões Booleanas}
+\subsecao{9.7. Atribuições e Expressões Booleanas}
 
 Como em todos os outros tipos de atribuições e expressões, começamos
 definindo o código que faz a atribuição de variáveis após avaliar a
@@ -11521,7 +11676,7 @@ else if(type == TYPE_T_BOOLEAN){
 Podendo atribuir o resultado de expressões às variáveis, vamos agora à
 parte de escrever código para avaliar as expressões booleanas.
 
-\subsubsecao{8.7.1. Comparações}
+\subsubsecao{9.7.1. Comparações}
 
 Comparações são feitas usando relações. Elas permitem avaliar se duas
 variáveis ou expressões nos dão o mesmo resultado, um resultado
@@ -11796,7 +11951,7 @@ bool eval_boolean_expression(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
-\subsubsecao{8.7.2. A Operação OR}
+\subsubsecao{9.7.2. A Operação OR}
 
 O operador booleano OR é a única operação booleana terciária. A
 gramática das expressões booleanas terciárias é:
@@ -11878,7 +12033,7 @@ bool eval_boolean_tertiary(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
-\subsubsecao{8.7.3. A Operação AND}
+\subsubsecao{9.7.3. A Operação AND}
 
 O operador booleano AND é a única operação booleana secundária. A
 gramática das expressões booleanas secundárias é:
@@ -11946,7 +12101,7 @@ bool eval_boolean_secondary(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
-\subsubsecao{8.7.4. Expressões Primárias Booleanos}
+\subsubsecao{9.7.4. Expressões Primárias Booleanas: Literais e Predicados Simples}
 
 A gramática das expressões primárias booleanas é:
 
@@ -12103,7 +12258,7 @@ bool eval_boolean_primary(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
-\subsecao{8.8. Identificando Tipos de Expressões}
+\subsecao{9.8. Identificando Tipos de Expressões}
 
 Muitas vezes temos uma expressão e devemos identificar qual o tipo da
 expressão para tratá-la corretamente. Por exemplo, quando temos uma
@@ -12403,7 +12558,7 @@ int get_tertiary_expression_type(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
-\secao{9. Declaração Composta: Declaração Condicional}
+\secao{10. Declaração Composta: Declaração Condicional}
 
 Uma declaração condicional é um \monoespaco{if}, uma estrutura que
 garante que certos trechos de código sejam executados somente se
@@ -12660,7 +12815,7 @@ else if(((struct generic_token *) begin_token_list) -> type == TYPE_FI){
 @
 \fimcodigo
 
-\secao{10. O Comando \monoespaco{pickup}}
+\secao{11. O Comando \monoespaco{pickup}}
 
 Agora podemos começar a definir o nosso primeiro comando. A sintaxe do
 comando \monoespaco{pickup} é dada por:
@@ -12692,7 +12847,7 @@ O que este comando faz é armazenar um novo valor na
 variável \monoespaco{currentpen}, a qual usaremos para fazer desenhos
 (conforme definiremos na próxima Seção).
 
-\subsecao{10.1. Pontos de Extremidade de Caneta}
+\subsecao{11.1. Pontos de Extremidade de Caneta}
 
 Uma coisa que devemos fazer ao recebermos uma caneta com o
 comando \monoespaco{pickup} é armazenar 4 valores internamente. Dois
@@ -13056,7 +13211,7 @@ void path_extremity_points(struct metafont *mf, struct path_variable *p,
 @
 \fimcodigo
 
-\subsecao{10.2. Triangulação}
+\subsecao{11.2. Triangulação}
 
 Vamos agora lidar com o código de triangulação. As placas de vídeo e o
 OpenGL trabalha com triângulos. Nós devemos então triangular um pincel
@@ -13606,7 +13761,7 @@ return false;
 @
 \fimcodigo
 
-\subsecao{10.3. Lendo o Comando 'pickup'}
+\subsecao{11.3. Interpretando o Comando 'pickup'}
 
 Agora vamos ao que efetivamente ocorre quando lemos o
 comando \monoespaco{pickup}.
@@ -13856,7 +14011,7 @@ transformação, a passamos para a função que fará a triangulação:
 @
 \fimcodigo
 
-\subsecao{10.4. Os Operadores \monoespaco{bot}, \monoespaco{top}, \monoespaco{lft},
+\subsecao{11.4. Os Operadores \monoespaco{bot}, \monoespaco{top}, \monoespaco{lft},
 \monoespaco{rt}}
 
 Embora tenhamos definido quase todos os operadores de pares na
@@ -13964,7 +14119,7 @@ else if(begin_expression -> type == TYPE_RT){
 @
 \fimcodigo
 
-\secao{11. O Comando \monoespaco{draw} e \monoespaco{erase}}
+\secao{12. O Comando \monoespaco{draw} e \monoespaco{erase}}
 
 Finalmente podemos começar a especificar dois dos mais importantes
 comandos da linguagem. O comando que usa uma caneta para caminhos em
@@ -13992,7 +14147,7 @@ TYPE_ERASE,  // O token simbólico 'erase'
 @
 \fimcodigo
 
-\subsecao{11.1. Preparando o Framebuffer}
+\subsecao{12.1. Preparando o Framebuffer}
 
 Para desenhar ou apagar com uma caneta na
 imagem \monoespaco{currentpicture}, nós precisamos de um framebuffer
@@ -14115,7 +14270,7 @@ glViewport(_viewport[0], _viewport[1], _viewport[2], _viewport[3]);
 @
 \fimcodigo
 
-\subsecao{11.2. Shaders de Desenho}
+\subsecao{12.2. Shaders de Desenho}
 
 Desenhar e apagar com uma caneta vai exigir dois novos shaders (um
 para cada operação) que precisamos definir. Os shaders que definimos
@@ -14194,7 +14349,7 @@ glDeleteProgram(pen_erase_program);
 @
 \fimcodigo
 
-\subsecao{11.3. Desenhando Caminhos}
+\subsecao{12.3. Desenhando Caminhos}
 
 Terminada a preparação da triangulação, do framebuffer e do shader
 usado, podemos escrever agora códigos que fazem o desenho.
@@ -14283,7 +14438,7 @@ bool drawing_commands(struct metafont *mf, struct context *cx,
     distance += (int) ceil(sqrt(dx * dx + dy * dy));
     dx = path -> points[(i+1) % (path -> length)].x - path -> points[i].v_x;
     dy = path -> points[(i+1) % (path -> length)].y - path -> points[i].v_y;
-    distance += (int) ceil(sqrt(dx * dx + dy * dy));
+    distance +=  (int) ceil(sqrt(dx * dx + dy * dy));
     dt = 1 / ((float) distance);
     for(j = 0; j <= distance; j ++){
       float t = dt * j;
@@ -14451,7 +14606,7 @@ void drawpoint(struct metafont *mf, struct pen_variable *pen,
 @
 \fimcodigo
 
-\secao{12. Declaração Composta: Declaração de Caractere}
+\secao{13. Declaração Composta: Declaração de Caractere}
 
 Vamos agora à parte que é o prinicpal objetivo da linguagem: definir
 novos caracteres para fontes tipográficas, ou então definir uma imagem
@@ -14516,7 +14671,7 @@ mf -> loading = false;
 @
 \fimcodigo
 
-\subsecao{12.1 Unicode e UTF-8}
+\subsecao{13.1 Unicode e UTF-8}
 
 Mas onde devemos armazenar o código de um caractere quando estamos no
 modo de carregamento? Vamos definir a seguinte estrutura que armazena
@@ -15078,7 +15233,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
 @
 \fimcodigo
 
-\secao{13. Funções de API para Usar as Fontes}
+\secao{14. Funções de API para Usar as Fontes}
 
 Um código WEAVEFONT pode ter suas variáveis globais modificadas e
 assim atualizar a renderização de glifos e imagens sem que o código

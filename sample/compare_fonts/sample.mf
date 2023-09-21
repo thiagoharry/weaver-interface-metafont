@@ -174,9 +174,8 @@ endchar;
 
 beginchar("&", ((0.612500+0.025*(weight-1)+0.025*italic+0.2*italic*(weight-1)) * size + 1.53-0.23*(weight-1)-1.48*italic-0.37*italic) * pt, ((0.625+0.1*(weight-1)-0.0125*italic*(weight-1)) * size + 0.917-0.767*(weight-1)+0.117*italic*(weight-1)) * pt, 0);
   pair p0, p1, p2, p3, p4, p5, p6, p7, p8;
-  path p;
+  path p, q;
   pickup pensquare xscaled 0.17*h;
-  %pickup pencircle scaled 0.17*h;
   p0 = lft (w, 0);
   p2 = (0.356*w, 0.561*h);
   p1 = 0.4[p0, p2];
@@ -232,6 +231,15 @@ beginchar("&", ((0.612500+0.025*(weight-1)+0.025*italic+0.2*italic*(weight-1)) *
       ypart p7 + (0.589757 * (ypart p1 - ypart p7)))
     .. p1;
   draw p;
+  %pickup pensquare xscaled 0.17*h; % Este pincel expõe problema no blending?
+  q = p1 .. controls
+    (xpart p1 + (0.673745 * (xpart p8 - xpart p1)),
+      ypart p1 + (0.316709 * (ypart p8 - ypart p1)))
+    and
+    (xpart p1 + (0.821956 * (xpart p8 - xpart p1)),
+      ypart p1 + (0.591944 * (ypart p8 - ypart p1)))
+    .. p8;
+  draw q;
 endchar;
 
 beginchar("0",

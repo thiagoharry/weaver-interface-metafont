@@ -1,5 +1,5 @@
 \input tex/epsf.tex
-\font\sixteen=cmbx15
+\font\sixteen=cmbx12
 \font\twelve=cmr12
 \font\fonteautor=cmbx12
 \font\fonteemail=cmtt10
@@ -46,39 +46,186 @@
 
 \twelve
 \vskip12pt
-\titulo{Weaver User Interface}
+\titulo{WEAVEFONT: A Description Language for Typographical Fonts}
 \vskip12pt
 \autor{Thiago Leucz Astrizi}
 \vskip6pt
 \email{thiago@@bitbitbit.com.br}
 \vskip6pt
 
-\abstract{This article contains an implementation of an interpreter
- for a language based on METAFONT. This is aimed at allowing the
- definition of flexible and parameterized typographic fonts that could
- be interpreted and rendered on the fly.  Because of this, we
- sacrifice some flexibility from the original METAFONT language to be
- able to produce faster results. The implementation will be used by
- Weaver Game Engine as a module and uses modern OpenGL to render the
- fonts.}
+\abstract{This article contains an implementation of  WEAVEFONT, a language
+ created to represent typographical fonts, vector illustrations and
+ animations. The language is strongly based on METAFONT, a description
+ language created by Donald Knuth in 1984. The syntax is very similar
+ for both languages, but WEAVEFONT was created to run and produce images
+ in real time using OpenGL. Therefore, changes were made to make the language
+ faster for this goal. Contrary to METAFONT, WEAVEFONT do not support macros
+ and is an imperative language. Several useful features from METAFONT that
+ were implemented with macros, in WEAVEFONT are a direct part of the language.}
+
+\secao{Index}
+
+\def\indice#1{\leaders\hbox{.}\hfill #1}
+
+1. Introduction \indice{XX}
+
+1.1. Literate Programming \indice{XX}
+
+2. General Auxiliary Code \indice{XX}
+
+2.1. Linear Algebra Code \indice{XX}
+
+3. Initialization and Finalization \indice{XX}
+
+4. Lexer \indice{XX}
+
+5. WEAVEFONT Programs \indice{XX}
+
+6. List of Statements \indice{XX}
+
+7. Compound Statements: Compound Block \indice{XX}
+
+8. Variable Declarations \indice{XX}
+
+8.1. Numeric Variables \indice{XX}
+
+8.2. Pair Variables \indice{XX}
+
+8.3. Transform Variables \indice{XX}
+
+8.4. Path Variables \indice{XX}
+
+8.5. Pen Variables \indice{XX}
+
+8.6. Picture Variables \indice{XX}
+
+8.7. Boolean Variables \indice{XX}
+
+9. Assignments \indice{XX}
+
+9.1. Numeric Assignments and Expressions \indice{XX}
+
+9.1.1. Sum and Subtraction: Normal and Pythagorean \indice{XX}
+
+9.1.2. Multiplication and Division \indice{XX}
+
+9.1.3. Modulus, Sine, Cosine, Exponentials, Floor and
+  Random Uniform Values \indice{XX}
+
+9.1.4. Isolated Numbers and Random Normal Values \indice{XX}
+
+9.2. Pair Assignments and Expressions \indice{XX}
+
+9.2.1. Sum and Subtraction \indice{XX}
+
+9.2.2. Transformers and Scalar Multiplication and Division \indice{XX}
+
+9.2.3. Pair Intermediary Values, Literals and Variables \indice{XX}
+
+9.2.4. Pairs in Numeric Expressions \indice{XX}
+
+9.3. Transform Assignments and Expressions \indice{XX}
+
+9.3.1. Transforming Transformers \indice{XX}
+
+9.3.2 Transform Tertiary Expressions: Literals and Variables \indice{XX}
+
+9.3.3. Transforms in Numeric Expressions \indice{XX}
+
+9.3.4. Transforms in Pair Expressions \indice{XX}
+
+9.4. Path Assignments and Expressions \indice{XX}
+
+9.4.1. Joining Paths \indice{XX}
+
+9.4.2. Tertiary Path Expressions \indice{XX}
+
+9.4.3. Secondary Path Expressions: Transformers \indice{XX}
+
+9.4.4. Primary Path Expressions \indice{XX}
+
+9.4.5. Path in Numeric Expressions \indice{XX}
+
+9.4.6. Path in Pair Expressions \indice{XX}
+
+9.5. Pen Assignments and Expressions \indice{XX}
+
+9.5.1. Pen Tertiary Expression \indice{XX}
+
+9.5.2. Pen Transformers \indice{XX}
+
+9.5.3. Variables, Null Pen, Circular Pen and Arbitrary Pen \indice{XX}
+
+9.5.4. Pens in Path Expressions \indice{XX}
+
+9.6. Picture Assignments and Expressions \indice{XX}
+
+9.6.1. Picture Tertiary Expressions: Sum and Subtraction \indice{XX}
+
+9.6.2. Picture Secondary Expressions: Transformers \indice{XX}
+
+9.6.3. Inverters, Identity and Empty Images \indice{XX}
+
+9.6.4. Pictures in Numeric Expressions \indice{XX}
+
+9.7. Boolean Assignments and Expressions \indice{XX}
+
+9.7.1. Comparisons \indice{XX}
+
+9.7.2. Operation OR \indice{XX}
+
+9.7.3. Operator AND \indice{XX}
+
+9.7.4. Boolean Literals, Variables, NOT and Simple Predicates \indice{XX}
+
+9.8. Identifying Expression Types \indice{XX}
+
+10. Compound Statements: Conditional Statement \indice{XX}
+
+11. The \monoespaco{pickup} Command \indice{XX}
+
+11.1. Extremity Points in Pens \indice{XX}
+
+11.2. Triangulation \indice{XX}
+
+11.3. Reading the \monoespaco{pickup} Command\indice{XX}
+
+11.4. Operators \monoespaco{bot}, \monoespaco{top}, \monoespaco{lft},
+\monoespaco{rt}\indice{XX}
+
+12. The \monoespaco{draw} and \monoespaco{erase} Command\indice{XX}
+
+12.1. Preparing Framebuffer \indice{XX}
+
+12.2. Drawing Shaders\indice{XX}
+
+12.3. Drawing Paths \indice{XX}
+
+13. Compound Statement: Character Definition \indice{XX}
+
+13.1 Unicode and UTF-8 \indice{XX}
+
+14. API Functions to Use the Fonts \indice{XX}
+
+References \indice{XX}
+
 
 \secao{1. Introduction}
 
-The original METAFONT is a language made to describe typographical
-fonts. It was created on 1984 by Donald Knuth and differs from other
-formats for allowing a designer to create different fonts merely by
-changing basic parameters in the base description of the font. This
+The first description language for typographical fonts was
+METAFONT. It was created on 1984 by Donald Knuth and differs from
+other formats for allowing a designer to create different fonts merely
+by changing basic parameters in the base description of the font. This
 way, a designer should not create a single typographic font, but a
 meta-font from which new fonts could be obtained changing these basic
-parameters.
+parameters. Here we also will call ``meta-font'' the fonts defined by
+our system, which should not be confused with the METAFONT language.
 
 The original specification for the METAFONT language can be found in
-[KNUTH, 1989], but the implementation described here will not be
-compatible with that language. Instead, a new language will be
-defined, strongly based on the original METAFONT, but with a different
-grammar. The new language will have similar objectives, but it will be
-focused on defining typographical fonts that could be interpreted and
-rendered on the fly.
+[KNUTH, 1989]. Based on this language, we will define here the
+language WEAVEFONT, which will have similar goals, except that it will
+be focused on defining typographical fonts that could be interpreted
+and rendered on the fly.
 
 As this article defines a subsystem for Weaver Game Engine, and more
 specifically a subsystem for the user interface modulus, our objective
@@ -226,14 +373,14 @@ with this header, its structure is:
 All the code presented in this document will be placed in one of these
 two files. Besides them, no other file will be created.
 
-\secao{X. General Auxiliary Code}
+\secao{2. General Auxiliary Code}
 
 The code presented in this Section will be an introduction about how
 we define code in this article. All code here will be widely used in
 the next Sections and all code will be independant of the specific
 data structure used by Weaver Metafont.
 
-\subsecao{X.Y. Linear Algebra Code}
+\subsecao{2.1. Linear Algebra Code}
 
 We will use very frequently matrices $3\times 3$, that usually will
 represent linear transformations over a vector space with 3
@@ -466,7 +613,7 @@ Performing this operation in another matrix can be done using:
 \fimcodigo
 
 
-\secao{2. Initialization and Finalization}
+\secao{3. Initialization and Finalization}
 
 First we will define the initialization function. What it will do is
 set some static variables with some functions that we will use in the
@@ -518,7 +665,7 @@ void _Wfinish_metafont(void){
 \fimcodigo
 
 
-\secao{3. Lexer}
+\secao{4. Lexer}
 
 The first thing to be created for a language is its lexer. It will
 read the source code in a file and will output a list of tokens, where
@@ -1202,7 +1349,7 @@ if(buffer[0] != '\0'){
 @
 \fimcodigo
 
-\secao{4. METAFONT Programs}
+\secao{5. WEAVEFONT Programs}
 
 When we evaluate a METAFONT program, we need two additional
 structures. The first one, which we will call \monoespaco{struct
@@ -1414,7 +1561,7 @@ implementation that runs in a richer environment with more
 capabilities. All we need to do is memory allocation and more basic
 initialization.
 
-\secao{5. List of Statements}
+\secao{6. List of Statements}
 
 A list of potentially empty statements delimited by a semicolon:
 
@@ -1481,7 +1628,7 @@ individual statement. During the iteration we always ensure that we do
 not go outside the region delimited by \monoespaco{begin\_token\_list}
 and \monoespaco{end\_token\_list}.
 
-\secao{6. Compound Statements: Compound Block}
+\secao{7. Compound Statements: Compound Block}
 
 An individual statement in the language can be composed by many other
 statements. The syntax for this is:
@@ -1795,7 +1942,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
 \fimcodigo
 
 
-\secao{7. Variable Declarations}
+\secao{8. Variable Declarations}
 
 The syntax to declare variables is:
 
@@ -2228,7 +2375,7 @@ void update_token_pointer_for_variable(struct symbolic_token *var_token,
 @
 \fimcodigo
 
-\subsecao{7.1. Numeric Variables}
+\subsecao{8.1. Numeric Variables}
 
 A numeric variable will be stored in the following structure:
 
@@ -2381,7 +2528,7 @@ else if(!strcmp(buffer, "d")){
 @
 \fimcodigo
 
-\subsecao{7.2. Pair Variables}
+\subsecao{8.2. Pair Variables}
 
 A pair variable will store point coordinates. They will be stored in
 the following structure:
@@ -2409,7 +2556,7 @@ if(type == TYPE_T_PAIR){
 @
 \fimcodigo
 
-\subsecao{7.3. Transform Variables}
+\subsecao{8.3. Transform Variables}
 
 If a pair variable is a tuple with two numeric values, then a
 transform variable is a tuple with six different values. Let's assume
@@ -2515,7 +2662,7 @@ else if(!strcmp(buffer, "identity"))
 \fimcodigo
 
 
-\subsecao{7.4. Path Variables}
+\subsecao{8.4. Path Variables}
 
 A path variable store a sequence of points and control
 points. Together they compose a sequence of Cubic Beziér Curves.
@@ -2662,7 +2809,7 @@ void path_recursive_free(void (*free_func)(void *),
 @
 \fimcodigo
 
-\subsecao{7.5. Pen Variables}
+\subsecao{8.5. Pen Variables}
 
 A pen variable stores the structure needed to draw lines and forms in
 METAFONT. The pens specify the diameter and format of all drawed lines
@@ -2935,7 +3082,7 @@ if(mf -> internal_pen_variables[INTERNAL_PEN_CURRENTPEN].referenced == pen){
 @
 \fimcodigo
 
-\subsecao{7.6. Picture Variables}
+\subsecao{8.6. Picture Variables}
 
 A picture variable will store a rendered image, possibly created using
 pens and Weaver Metafont drawing commands. Contrary to original
@@ -3057,7 +3204,7 @@ else if(!strcmp(buffer, "currentpicture"))
 @
 \fimcodigo
 
-\subsecao{7.7. Boolean Variables}
+\subsecao{8.7. Boolean Variables}
 
 The simplest variable type, a boolean variable can store only true or
 false. Its struct format is:
@@ -3084,7 +3231,7 @@ if(type == TYPE_T_BOOLEAN)
 \fimcodigo
 
 
-\secao{8. Assignments}
+\secao{9. Assignments}
 
 Assignments are how we initialize variables, how we modify their
 values and how we store the result of expressions.
@@ -3226,7 +3373,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
 @
 \fimcodigo
 
-\subsecao{8.1. Numeric Assignments and Expressions}
+\subsecao{9.1. Numeric Assignments and Expressions}
 
 How do we assign numeric variables given the code above? We use the
 following code:
@@ -3275,7 +3422,7 @@ void assign_numeric_variable(struct numeric_variable *target,
 
 Now we will write how to interpret numeric expressions.
 
-\subsubsecao{8.1.1. Sum and Subtraction: Normal and Pythagorean}
+\subsubsecao{9.1.1. Sum and Subtraction: Normal and Pythagorean}
 
 The rules for numeric expressions begins as:
 
@@ -3517,7 +3664,7 @@ bool eval_numeric_expression(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
-\subsubsecao{8.1.2. Multiplication and Division}
+\subsubsecao{9.1.2. Multiplication and Division}
 
 The rules to deal with secondary numeric expressions are:
 
@@ -3628,8 +3775,7 @@ bool eval_numeric_secondary(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
-\subsubsecao{8.1.3. Modulus,
-  Trigonometric Functions,  Exponentials, Floor and
+\subsubsecao{9.1.3. Modulus, Sine, Cosine, Exponentials, Floor and
   Random Uniform Values}
 
 The rules for primary numeric expressions are:
@@ -4018,7 +4164,7 @@ else{
 @
 \fimcodigo
 
-\subsubsecao{8.1.4. Isolated Numbers and Random Normal Values}
+\subsubsecao{9.1.4. Isolated Numbers and Random Normal Values}
 
 The final rules for numeric expressions are:
 
@@ -4260,7 +4406,7 @@ if(begin_expression -> type == TYPE_NUMERIC &&
 @
 \fimcodigo
 
-\subsecao{8.2. Pair Assignments and Expressions}
+\subsecao{9.2. Pair Assignments and Expressions}
 
 To make the assignment to pair variables, we use the code below:
 
@@ -4306,7 +4452,7 @@ void assign_pair_variable(struct pair_variable *target,
 
 Now let's see how to evaluate  pair expressions.
 
-\subsubsecao{8.2.1. Sum and Subtraction}
+\subsubsecao{9.2.1. Sum and Subtraction}
 
 The grammar rules for pair tertiary expressions begin with sum and
 subtraction:
@@ -4380,7 +4526,7 @@ bool eval_pair_expression(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
-\subsubsecao{8.2.2. Transformers and Scalar Multiplication and Division}
+\subsubsecao{9.2.2. Transformers and Scalar Multiplication and Division}
 
 The grammar for secondary pair expressions is:
 
@@ -4728,7 +4874,7 @@ else if(last_mul -> type == TYPE_ZSCALED){
 @
 \fimcodigo
 
-\subsubsecao{8.2.3. Pair Intermediary Values, Literals and Variables}
+\subsubsecao{9.2.3. Pair Intermediary Values, Literals and Variables}
 
 The final grammar rules for pair expressions are:
 
@@ -5035,7 +5181,7 @@ else{
 @
 \fimcodigo
 
-\subsubsecao{8.2.4. Pairs in Numeric Expressions}
+\subsubsecao{9.2.4. Pairs in Numeric Expressions}
 
 Numeric subexpressions can appear inside pair expressions. For
 example, in $a[b,c]$, $a$ is a numeric atom. Likewise, pair
@@ -5170,7 +5316,7 @@ else if(begin_expression -> type == TYPE_ANGLE){
 @
 \fimcodigo
 
-\subsecao{8.3. Transform Assignments and Expressions}
+\subsecao{9.3. Transform Assignments and Expressions}
 
 One of the moments where we expect to eval a transform expression is
 when making assignments to transform variables. In this case, we apply
@@ -5200,7 +5346,7 @@ else if(type == TYPE_T_TRANSFORM){
 
 Now let's see how do we evaluate a transform expression.
 
-\subsubsecao{8.3.1. Transforming Transformers}
+\subsubsecao{9.3.1. Transforming Transformers}
 
 The grammar rules to evaluate a transform expression begins with:
 
@@ -5490,7 +5636,7 @@ else if(last_transform -> type == TYPE_TRANSFORMED){
 @
 \fimcodigo
 
-\subsecao{8.3.2 Transform Tertiary Expressions: Literals and Variables}
+\subsecao{9.3.2 Transform Tertiary Expressions: Literals and Variables}
 
 The remaining rules in the grammar for transform expressions are:
 
@@ -5655,7 +5801,7 @@ return true;
 @
 \fimcodigo
 
-\subsubsecao{8.3.3. Transforms in Numeric Expressions}
+\subsubsecao{9.3.3. Transforms in Numeric Expressions}
 
 Transforms can be placed in primary numeric expressions. The following
 grammar rules allow them:
@@ -5747,7 +5893,7 @@ return true;
 @
 \fimcodigo
 
-\subsubsecao{8.3.4. Transforms in Pair Expressions}
+\subsubsecao{9.3.4. Transforms in Pair Expressions}
 
 Transforms also appear in grammar rules about pair expressions. It is
 needed to deal woth transform expressions in pair secondary
@@ -5780,7 +5926,7 @@ else if(last_mul -> type == TYPE_TRANSFORMED){
 \fimcodigo
 
 
-\subsecao{8.4. Path Assignments and Expressions}
+\subsecao{9.4. Path Assignments and Expressions}
 
 To assign a path to a variable with the right type, we use the
 following code:
@@ -5915,7 +6061,7 @@ void recursive_aux_copy(struct path_points **dst, struct path_variable *origin){
 
 Now we can examine the path expressions.
 
-\subsubsecao{8.4.1. Joining Paths}
+\subsubsecao{9.4.1. Joining Paths}
 
 The grammar for path expressions begin with:
 
@@ -7597,7 +7743,7 @@ if(result -> length >= expected_length && result -> cyclic == false){
 This finalizes how a curve should be built given its points and
 subpaths. Now we will see how we read the points and subpaths.
 
-\subsubsecao{8.4.2. Tertiary Path Expressions}
+\subsubsecao{9.4.2. Tertiary Path Expressions}
 
 The grammar for tertiary path expressions is:
 
@@ -7684,7 +7830,7 @@ bool eval_path_tertiary(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
-\subsubsecao{8.4.3. Secondary Path Expressions: Transformers}
+\subsubsecao{9.4.3. Secondary Path Expressions: Transformers}
 
 The grammar for secondary path expressions is:
 
@@ -8173,7 +8319,7 @@ void path_transform(struct path_variable *p, float *M){
 \fimcodigo
 
 
-\subsubsecao{8.4.4. Primary Path Expressions}
+\subsubsecao{9.4.4. Primary Path Expressions}
 
 The grammar for primary path expressions is:
 
@@ -8707,7 +8853,7 @@ return true;
 @
 \fimcodigo
 
-\subsubsecao{8.4.5. Path in Numeric Expressions}
+\subsubsecao{9.4.5. Path in Numeric Expressions}
 
 We can nuse the numeric expression with the
 operator \monoespaco{length} to obtain the number of extremity points
@@ -8740,7 +8886,7 @@ else if(expr_type == TYPE_T_PATH){
 @
 \fimcodigo
 
-\subsubsecao{8.4.6. Path in Pair Expressions}
+\subsubsecao{9.4.6. Path in Pair Expressions}
 
 Given a path, we can extract pairs from it. The pair can be an
 extremity point or some of the control points. The syntax for this is:
@@ -8933,7 +9079,7 @@ if(begin_expression -> type == TYPE_POINT ||
 @
 \fimcodigo
 
-\subsecao{8.5. Pen Assignments and Expressions}
+\subsecao{9.5. Pen Assignments and Expressions}
 
 To assign a pen to a variable with the right type, we use the
 following code:
@@ -9012,7 +9158,7 @@ void assign_pen_variable(struct metafont *mf,
 @
 \fimcodigo
 
-\subsubsecao{8.5.1. Pen Tertiary Expression}
+\subsubsecao{9.5.1. Pen Tertiary Expression}
 
 For now we have no tertiry operator for pen expressions:
 
@@ -9056,7 +9202,7 @@ bool eval_pen_expression(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
-\subsubsecao{8.5.2. Pen Transformers}
+\subsubsecao{9.5.2. Pen Transformers}
 
 The syntax for secondary pen expressions is:
 
@@ -9311,7 +9457,7 @@ return true;
 @
 \fimcodigo
 
-\subsubsecao{8.5.3. Pen Primary Expressions}
+\subsubsecao{9.5.3. Variables, Null Pen, Circular Pen and Arbitrary Pen}
 
 The grammar for pen primary expressions are defined as:
 
@@ -9597,7 +9743,7 @@ int read_flags(struct path_variable *path){
 @
 \fimcodigo
 
-\subsubsecao{8.5.4. Pens in Path Expressions}
+\subsubsecao{9.5.4. Pens in Path Expressions}
 
 Primary pen expressions also can appear inside path primary
 expressions. This happens when we try to extract a pen format as a
@@ -9809,7 +9955,7 @@ shifting, slanting, scaling or other transformations stored there:
 @
 \fimcodigo
 
-\subsecao{8.6. Picture Assignments and Expressions}
+\subsecao{9.6. Picture Assignments and Expressions}
 
 To make a picture assignment, we use the code below. It first
 evaluates a picture expression and get a picture variable as
@@ -10187,7 +10333,7 @@ void assign_picture_variable(struct metafont *mf,
 @
 \fimcodigo
 
-\subsubsecao{8.6.1. Picture Tertiary Expressions: Sum and Subtraction}
+\subsubsecao{9.6.1. Picture Tertiary Expressions: Sum and Subtraction}
 
 The tertiary picture expressions invoves sums and subtractions:
 
@@ -10401,7 +10547,7 @@ glDeleteFramebuffers(1, &temporary_framebuffer);
 @
 \fimcodigo
 
-\subsubsecao{8.6.2. Picture Secondary Expressions: Transformers}
+\subsubsecao{9.6.2. Picture Secondary Expressions: Transformers}
 
 A picture secondary expression has the following syntax:
 
@@ -10784,7 +10930,7 @@ bool apply_image_transformation(struct metafont *mf,
 @
 \fimcodigo
 
-\subsubsecao{8.6.3. Primary Picture Expressions: Inverters, Identity and Empty Images}
+\subsubsecao{9.6.3. Inverters, Identity and Empty Images}
 
 The grammar for primary picture expressions is:
 
@@ -11186,7 +11332,7 @@ in the two pairs:
 @
 \fimcodigo
 
-\subsubsecao{8.6.4. Pictures in Numeric Expressions}
+\subsubsecao{9.6.4. Pictures in Numeric Expressions}
 
 There are cases where we need to evaluate a picture expression inside
 expressions of other types. We have three additional numeric
@@ -11347,7 +11493,7 @@ else if(begin_expression -> type == TYPE_HEIGHT){
 \fimcodigo
 
 
-\subsecao{8.7. Boolean Assignments and Expressions}
+\subsecao{9.7. Boolean Assignments and Expressions}
 
 Like for all other expressions and assignments, we begin defining the
 code to assign variables after evaluate an expression:
@@ -11376,7 +11522,7 @@ else if(type == TYPE_T_BOOLEAN){
 Now that we can assign the result of expressions, we can write the
 code to proper evaluate the expressions.
 
-\subsubsecao{8.7.1. Comparisons}
+\subsubsecao{9.7.1. Comparisons}
 
 Comparisons are made using relations. They allow us to check if two
 values are equal or not, and also which value is bigger or
@@ -11643,7 +11789,7 @@ bool eval_boolean_expression(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
-\subsubsecao{8.7.2. Operation OR}
+\subsubsecao{9.7.2. Operation OR}
 
 The boolean operator OR is the sole tertiary boolean operator. The
 grammar for boolean tertiary expressions is:
@@ -11726,7 +11872,7 @@ bool eval_boolean_tertiary(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
-\subsubsecao{8.7.3. Operator AND}
+\subsubsecao{9.7.3. Operator AND}
 
 The boolean operator AND is the sole boolean secondary operator. The
 grammar for secondary boolean expressions is:
@@ -11793,7 +11939,7 @@ bool eval_boolean_secondary(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
-\subsubsecao{8.7.4. Primary Boolean Expressions}
+\subsubsecao{9.7.4. Boolean Literals, Variables, NOT and Simple Predicates}
 
 The grammar for boolean primary expressions is:
 
@@ -11944,7 +12090,7 @@ bool eval_boolean_primary(struct metafont *mf, struct context *cx,
 \fimcodigo
 
 
-\subsecao{8.8. Identifying Expression Types}
+\subsecao{9.8. Identifying Expression Types}
 
 Several times we have an expression and want to identify its type. For
 example, in boolean expressions we can compare values from numeric,
@@ -12242,7 +12388,7 @@ int get_tertiary_expression_type(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
-\secao{9. Compound Statements: Conditional Statement}
+\secao{10. Compound Statements: Conditional Statement}
 
 A conditional statement is a \monoespaco{if}, it ensures that some
 piece of code will be evaluated only if some conditions are true. The
@@ -12493,7 +12639,7 @@ else if(((struct generic_token *) begin_token_list) -> type == TYPE_FI){
 @
 \fimcodigo
 
-\secao{10. The \monoespaco{pickup} Command}
+\secao{11. The \monoespaco{pickup} Command}
 
 Npw we can begin defining our first command. The syntax for
 command \monoespaco{pickup} is:
@@ -12525,7 +12671,7 @@ What this command does is store a new value in the
 variable \monoespaco{currentpen}, which we will use to make drawings
 (which we will define in the following Section).
 
-\subsecao{10.1. Extremity Points in Pens}
+\subsecao{11.1. Extremity Points in Pens}
 
 When we pick a pen, we will store internally 4 values related to the
 pen. Two of them will store the biggest and smallest values in the
@@ -12885,7 +13031,7 @@ void path_extremity_points(struct metafont *mf, struct path_variable *p,
 \fimcodigo
 
 
-\subsecao{10.2. Triangulation}
+\subsecao{11.2. Triangulation}
 
 Now let's deal with the triangulation code. Video cards and OpenGL
 works drawing triangles in the screen. Therefore, each pen should be
@@ -13426,7 +13572,7 @@ return false;
 @
 \fimcodigo
 
-\subsecao{10.3. Reading the 'pickup' Command}
+\subsecao{11.3. Reading the \monoespaco{pickup} Command}
 
 Now we will define what will happen when we read
 the \monoespaco{pickup} command.
@@ -13676,7 +13822,7 @@ the triangulation function:
 @
 \fimcodigo
 
-\subsecao{10.4. Operators \monoespaco{bot}, \monoespaco{top}, \monoespaco{lft},
+\subsecao{11.4. Operators \monoespaco{bot}, \monoespaco{top}, \monoespaco{lft},
 \monoespaco{rt}}
 
 We defined most pair operators in Subsection 8.2, but there are still
@@ -13787,7 +13933,7 @@ else if(begin_expression -> type == TYPE_RT){
 \fimcodigo
 
 
-\secao{11. The \monoespaco{draw} and \monoespaco{erase} Command}
+\secao{12. The \monoespaco{draw} and \monoespaco{erase} Command}
 
 Finally we can begin specifying two of the most important command in
 the language. The command that uses a pen to draw a path in a picture
@@ -13816,7 +13962,7 @@ TYPE_ERASE, // Symbolic token 'erase'
 \fimcodigo
 
 
-\subsecao{11.1. Preparing Framebuffer}
+\subsecao{12.1. Preparing Framebuffer}
 
 To draw or erase with a pen in the
 picture \monoespaco{currentpicture}, we need a framebuffer associated
@@ -14011,7 +14157,7 @@ glDeleteProgram(pen_erase_program);
 @
 \fimcodigo
 
-\subsecao{11.3. Drawing Paths}
+\subsecao{12.3. Drawing Paths}
 
 After finishing preparing the triangulation, the framebuffer and
 shaders, we finally can write code for drawing.
@@ -14269,7 +14415,7 @@ void drawpoint(struct metafont *mf, struct pen_variable *pen,
 @
 \fimcodigo
 
-\secao{12. Compound Statement: Character Definition}
+\secao{13. Compound Statement: Character Definition}
 
 Now we are in the part that is the main objective of the language:
 defining new characters for typographical fonts, or defining a new
@@ -14333,6 +14479,8 @@ or \monoespaco{dump} token:
 mf -> loading = false;
 @
 \fimcodigo
+
+\subsecao{13.1 Unicode and UTF-8}
 
 But where should we store the code for each character when in the
 loading mode? For this, we will define the following structure that
@@ -14860,7 +15008,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
 @
 \fimcodigo
 
-FInally, when we read an \monoespaco{endchar} token not in the loading
+Finally, when we read an \monoespaco{endchar} token not in the loading
 mode, this means that we finished to render a new glyph. Then we copy
 the rendered picture from \monoespaco{currentpicture} to the new glyph
 and get the new glyph dimensions reading
@@ -14898,7 +15046,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
 @
 \fimcodigo
 
-\secao{13. API Functions to Use the Fonts}
+\secao{14. API Functions to Use the Fonts}
 
 A WEAVEFONT code can have its global variables changed and this will
 change the rendering of the next glyphs, without needing to change the
