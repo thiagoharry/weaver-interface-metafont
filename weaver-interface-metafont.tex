@@ -81,17 +81,23 @@
 
 \def\indice#1{\leaders\hbox{.}\hfill #1}
 
-1. Introdução \indice{XX}
+1. Introdução \indice{3}
 
-1.1. Programação Literária \indice{XX}
+1.1. Programação Literária \indice{4}
 
-2. Código Auxiliar Geral \indice{XX}
+2. Código Auxiliar Geral \indice{6}
 
-2.1. Código de Álgebra Linear \indice{XX}
+2.1. Código de Álgebra Linear \indice{6}
 
-3. Inicialização e Finalização \indice{XX}
+2.2. Mutexes e Seções Críticas \indice{9}
 
-4. Analisador Léxico \indice{XX}
+3. Inicialização e Finalização \indice{10}
+
+4. Analisador Léxico \indice{11}
+
+4.1. Tipos de Tokens \indice{11}
+
+4.2. A Análise Léxica \indice{13}
 
 5. Programas WEAVEFONT \indice{XX}
 
@@ -243,14 +249,17 @@ WEAVEFONT, a qual tem objetivos similares. A diferença é que a
 linguagem a ser definida aqui deverá ser usada em tempo real para
 produzir imagens à partir da descrição vetorial.
 
-Como este artigo define um subsistema do Motor de Jogos Weaver, e mais
-especificamente um subsistema de interface de usuário, nosso objetivo
-aqui será definir a seguinte função que irá interpretar um arquivo com
-código METAFONT e irá gerar uma interface de usuário com as letras
-lidas como textura:
+O arquivo de código-fonte que está sendo definido neste artigo pode
+tanto ser usado sozinho para usar somente a linguagem WEAVEFONT, ou
+pode estar integrado ao subsistema do Motor de Jogos Weaver, do qual
+esta linguagem é um sub-projeto. Se estivermos usando este projeto
+dentro do motor de jogos, isso significa que temos definida a
+macro \monoespaco{WEAVER\_ENGINE}. Neste caso, devemos definir a
+seguinte função:
 
 \iniciocodigo
 @<Declaração de Função (metafont.h)@>=
+#if defined(WEAVER_ENGINE)
 void _Wmetafont_loading(void *(*permanent_alloc)(size_t),
                         void (*permanent_free)(void *),
                         void *(*temporary_alloc)(size_t),
@@ -259,22 +268,34 @@ void _Wmetafont_loading(void *(*permanent_alloc)(size_t),
                         void (*after_loading_interface)(void),
                         char *source_filename,
                         struct user_interface *target);
+#endif
 @
 \fimcodigo
 
-E nós precisamos inserir o cabeçalho Weaver de interface de usuário:
+Esta função serve para ler um arquivo (\monoespaco{source\_filename})
+e gerar com ele uma nova interface de usuário a ser usada pelo motor
+de jogos. No caso, o arquivo com código WEAVEFONT será interpretado
+como uma imagem vetorial ou uma animação vetorial.
+
+E nós precisamos também inserir o cabeçalho Weaver de interface de usuário:
 
 \iniciocodigo
 @<Inclui Cabeçalhos Gerais (metafont.h)@>=
+#if defined(WEAVER_ENGINE)
 #include "interface.h"
+#endif
 @
 \fimcodigo
 
-Mas além de simplesmente carregar as fontes tipográficas lidas para um
-arquivo, é importante poder gerar também uma estrutura de dados
-representando a fonte lida, para que ela depois possa ser usada por
-uma função que renderiza texto. E também uma função para desalocar tal
-estrutura quando não precisarmos mais dela:
+Tanto se estivermos executando este código de dentro do Motor Weaver
+ou de fora dele, uma operação que será necessária será ler uma fonte
+tipográfica, uma meta-fonte. Depois de lê-la, nós retornamos um
+ponteiro para uma estrutura com todas as informações relevantes sobre
+ela. Esta estrutura pode então ser usada para renderizar caracteres
+que estiverem definidos ali. Depois de renderizar o que queremos,
+precisaremos de uma segunda função para desalocar a estrutura. Em
+suma, iremos definir também as seguintes funções para criar e destruir
+uma nova meta-fonte que serão sempre exportadas:
 
 \iniciocodigo
 @<Declaração de Função (metafont.h)@>+=
@@ -283,14 +304,16 @@ void _Wdestroy_metafont(struct metafont *mf);
 @
 \fimcodigo
 
-Antes de chamar qualquer uma das funções acima, será importante chamar
-a seguinte função de inicialização que especifica ãlgumas das funções
-que devem ser usadas, e além disso nos informa quantos pontos por
-polegada tem a nossa tela (DPI):
+Podemos em um mesmo projeto criar e manter muitas meta-fontes para
+renderizar caracteres ou imagens delas. Mas antes de começar a criar a
+primeira delas, será importante chamar a seguinte função de
+inicialização que especifica algumas das funções que devem ser usadas,
+e além disso nos informa quantos pontos por polegada tem a nossa tela
+(DPI):
 
 \iniciocodigo
 @<Declaração de Função (metafont.h)@>+=
-bool _Winit_metafont(void *(*temporary_alloc)(size_t),
+bool _Winit_weavefont(void *(*temporary_alloc)(size_t),
                      void (*temporary_free)(void *),
                      void *(*permanent_alloc)(size_t),
                      void (*permanent_free)(void *),
@@ -347,11 +370,14 @@ Podemos apresentar aqui a estrutura do arquivo
 extern "C" {
 #endif
 #include <stdbool.h> // Define tipo 'bool'
+#include <stdlib.h>  // Define 'atof', 'abs'
+#if defined(__linux__) || defined(BSD) || defined(__EMSCRIPTEN__)
+#include <GLES3/gl3.h> // Nossa linguagem renderiza com OpenGL
+#endif
 #if !defined(_WIN32)
 #include <sys/param.h> // Necessário no BSD, mas causa problema no Windows
 #endif
 @<Inclui Cabeçalhos Gerais (metafont.h)@>
-//@<Macros Gerais (metafont.h)@>
 @<Declarações Gerais (metafont.h)@>
 @<Estrutura de Dados (metafont.h)@>
 @<Declaração de Função (metafont.h)@>
@@ -640,14 +666,117 @@ Realizar esta multiplicação por outra matriz é feito com essa macro:
 @
 \fimcodigo
 
+\subsecao{2.2. Mutexes e Seções Críticas}
 
-\secao{2. Inicialização e Finalização}
+Um mutex é uma estrutura de dados abstrata usada para controlar acesso
+de múltiplos processos a um recurso em comum. Eles serão tratados de
+forma diferente dependendo do sistema operacional e ambiente. Devido à
+seu caráter não-portável, teremos que usar diferentes técnicas
+dependendo de onde o código será compilado.
+
+No Linux e BSD, o Mutex é definido pela biblioteca
+\monoespaco{pthread} e segue a nomenclatura típica dela. No Web Assembly,
+o Emscripten possui uma implementação com API compatível, mas ela só
+irá funcionar se a página web que servir a aplicação passar os
+cabeçalhos certos, por isso só iremos suportar threads nele se o
+usuário pedir definindo uma
+macro \monoespaco{W\_ALWAYS\_USE\_THREADS}. No Windows há uma
+diferença entre um mutex, que pode ser compartilhado entre diferentes
+programas e uma ``seção crítica'', que só pode ser compartilhada entre
+threads de um mesmo programa. No nosso caso, devemos usar seções
+críticas que nos dão uma performance melhor.
+
+\iniciocodigo
+@<Declarar um Mutex@>=
+#if defined(_WIN32)
+CRITICAL_SECTION mutex;
+#elif defined(__linux__) || defined(BSD) || defined(W_ALWAYS_USE_THREADS)
+pthread_mutex_t mutex;
+#endif
+@
+\fimcodigo
+
+Isso significa que no Linux e BSD nós precisamos inserir o cabeçalho
+da biblioteca \monoespaco{pthread}. No Windows, basta o cabeçalho
+padrão do windows que já colocamos em \monoespaco{metafont.h}.
+
+\iniciocodigo
+@<Inclui Cabeçalhos Gerais (metafont.h)@>=
+#if defined(__linux__) || defined(BSD) || defined(W_ALWAYS_USE_THREADS)
+#include <pthread.h>
+#endif
+@
+\fimcodigo
+
+No nosso código vamos precisar inicializar cada Mutex que
+declararmos. Para isso, usaremos a seguinte macro:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>=
+#if defined(_WIN32)
+#define MUTEX_INIT(mutex) InitializeCriticalSection(mutex);
+#elif defined(__linux__) || defined(BSD) || defined(W_ALWAYS_USE_THREADS)
+#define MUTEX_INIT(mutex) pthread_mutex_init(mutex, NULL);
+#elif defined(__EMSCRIPTEN__)
+#define MUTEX_INIT(mutex)
+#endif
+@
+\fimcodigo
+
+Para finalizar um Mutex quando não precisarmos mais, usamos a seguinte
+macro:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#if defined(_WIN32)
+#define MUTEX_DESTROY(mutex) DeleteCriticalSection(mutex);
+#elif defined(__linux__) || defined(BSD) || defined(W_ALWAYS_USE_THREADS)
+#define MUTEX_DESTROY(mutex) pthread_mutex_destroy(mutex);
+#elif defined(__EMSCRIPTEN__)
+#define MUTEX_DESTROY(mutex)
+#endif
+@
+\fimcodigo
+
+Tendo um Mutex, há duas operações que podemos fazer com ele. A
+primeira é requerer o uso do Mutex. Neste momento, se algum outro
+processo está usando ele, iremos esperar até que o Mutex esteja livre
+novamente:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#if defined(_WIN32)
+#define MUTEX_WAIT(mutex) EnterCriticalSection(mutex);
+#elif defined(__linux__) || defined(BSD) || defined(W_ALWAYS_USE_THREADS)
+#define MUTEX_WAIT(mutex) pthread_mutex_lock(mutex);
+#elif defined(__EMSCRIPTEN__)
+#define MUTEX_WAIT(mutex)
+#endif
+@
+\fimcodigo
+
+E finalmente, depois de deixarmos de usar o recurso guardado pelo
+Mutex, podemos liberar ele com o código abaixo:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>=
+#if defined(_WIN32)
+#define MUTEX_SIGNAL(mutex) LeaveCriticalSection(mutex);
+#elif defined(__linux__) || defined(BSD) || defined(W_ALWAYS_USE_THREADS)
+#define MUTEX_SIGNAL(mutex) pthread_mutex_unlock(mutex);
+#elif defined(__EMSCRIPTEN__)
+#define MUTEX_SIGNAL(mutex)
+#endif
+@
+\fimcodigo
+
+
+\secao{3. Inicialização e Finalização}
 
 Primeiro vamos definir a função de inicialização. O que ela fará será
-armazenar em uma série de variáveis estáticas várias das funções que
-iremos usar no programa, além de nos informar a medida de densidade de
-pixels da tela em DPI. As variáveis que armazenarão tais informações
-são:
+armazenar em uma série de variáveis estáticas ques erão usadas pelas
+outras funções, além de nos informar a medida de densidade de pixels
+da tela em DPI. As variáveis que armazenarão tais informações são:
 
 \iniciocodigo
 @<Variáveis Locais (metafont.c)@>=
@@ -675,7 +804,7 @@ bool _Winit_metafont(void *(*t_alloc)(size_t),
   permanent_free = p_free;
   random_func = random;
   dpi = pixel_density;
-  @<Inicialização de Weaver Metafont@>
+  @<Inicialização WEAVEFONT@>
   return true;
 }
 @
@@ -688,28 +817,40 @@ correspondente à finalização:
 \iniciocodigo
 @<Definição de Funções da API (metafont.c)@>+=
 void _Wfinish_metafont(void){
-  @<Finalização de Weaver Metafont@>
+  @<Finalização WEAVEFONT@>
 }
 @
 \fimcodigo
 
+Coisas como variáveis globais e informações que uma meta-fonte precisa
+à longo prazo serão sempre alocadas com a alocação permanente. Coisas
+como variáveis locais dentro de uma definição de como renderizar um
+caractere serão alocadas pela alocação temporária. Se o gerenciador de
+memória distinguir entre estes dois tipos de alocação (como ocorre no
+Motor Weaver), estas serão duas funções diferentes. Na maioria dos
+casos, será a mesma função, possivelmente um \monoespaco{malloc}. Caso
+em que ambas as funções de desalocação também serão
+um \monoespaco{free}. Já no Motor Weaver, não há funções de
+desalocação: a alocação permanente é desalocada quando o laço de jogo
+atual (``game loop'') termina e a temporária é desalocada a cada frame.
+
+Como esperamos que estas funções sejam chamadas apenas uma vez por
+programa, não precisamos usar mutex nelas.
+
 \secao{4. Analisador Léxico}
+
+\subsecao{4.1. Tipos de Tokens}
 
 A primeira coisa a criar para uma linguagem é seu analisador
 léxico. Ele irá ler o código-fonte da linguagem presente em um arquivo
 e irágerar uma lista de ``tokens'', sendo cada token a unidade mais
 básica da linguagem, basicamente uma palavra.
 
-METAFONT reconhece três tipos de tokens: numéricos, strings e
+WEAVEFONT reconhece três tipos de tokens: numéricos, strings e
 simbólicos. Na prática nós iremos dividir os tokens simbólicos em
 diferentes tipos de subtokens para podermos armazená-los e lê-los de
-maneira mais eficiente.
-
-Um token numérico será representado internamente como um número em
-ponto flutuante. Nisso iremos diferir do METAFONT original que usava
-uma representação própria de números. Em nome de operações mais
-rápidas, usaremos a forma moderna de representar números. Então essa é
-a aparência de um token numérico:
+maneira mais eficiente. Aqui é onde definimos os três tipos
+principais e onde vamos mais adiante armazenar todos os subtipos:
 
 \iniciocodigo
 @<Estrutura de Dados Locais (metafont.c)@>=
@@ -717,10 +858,21 @@ enum { // Tipos de Tokens
   TYPE_NUMERIC = 1, TYPE_STRING, TYPE_SYMBOLIC,
   // Os 3 primeiros tipos básicos (numérico, string e simbólico) estão acima.
   // Os outros serão colocados logo abaixo:
-  @<METAFONT: Definição de Token Simbólico@>
-  // E um último tipo que não deve ser usado:
+  @<WEAVEFONT: Definição de Token Simbólico@>
+  // E um último tipo que não deve ser usado, exceto para indicar erro:
   TYPE_INVALID_TOKEN
 };
+@
+\fimcodigo
+
+Um token numérico será representado internamente como um número em
+ponto flutuante. Nisso iremos diferir do METAFONT que usava uma
+representação própria de números em ponto fixo. Esta escolha nos
+permitirá realizar operações sobre números mais rapidamente, graças ao
+suporte de hardware.  Essa é a aparência de um token numérico:
+
+\iniciocodigo
+@<Estrutura de Dados Locais (metafont.c)@>+=
 struct numeric_token{
   int type;   // Deve ser igual a 'TYPE_NUMERIC'
   void *next;
@@ -742,21 +894,18 @@ struct string_token{
 #if defined(W_DEBUG_METAFONT)
   int line;
 #endif
-  char value[5];
-  // Ponteiro para o glifo que a string representa (tratado na Seção XX)
+  char value[4];
+  // Ponteiro para o glifo que a string representa (tratado na Seção XXX)
   struct _glyph *glyph;
 };
 @
 \fimcodigo
 
-Nós iremos armazenar apenas os primeiros 5 bytes de cada string que
+Nós iremos armazenar apenas os primeiros 4 bytes de cada string que
 encontrarmos, mesmo que no código-fonte a string seja maior. Isso será
 feito porque ao contrário do METAFONT original, a única utilidade para
 strings aqui será indicar qual caractere Unicode deve estar associado
-a cada glifo definido. Para isso nós precisamos de apenas 5 bytes (no
-máximo 4 para o caractere mais o byte 0 final). E também podemos usar
-eles para associar certos glifos a ligaduras como ``ff'', que também
-cabe em 5 bytes.
+a cada glifo definido. Para isso nós precisamos de apenas 4 bytes.
 
 Já no caso de tokens simbólicos, precisamos armazenar todo o seu
 conteúdo para podermos saber qual token temos, e vamos alocar
@@ -789,7 +938,7 @@ seguinte estrutura:
 \iniciocodigo
 @<Estrutura de Dados Locais (metafont.c)@>+=
 struct generic_token{
-  int type;   // Should be one of the above
+  int type;   // Um sub-tipo de token simbólico.
   void *next;
 #if defined(W_DEBUG_METAFONT)
   int line;
@@ -798,11 +947,11 @@ struct generic_token{
 @
 \fimcodigo
 
-Precisamos apenas definir para eles um tipo de token que indique o quê
+Precisamos apenas definir para eles um subtipo de token que indique o quê
 eles são:
 
 \iniciocodigo
-@<METAFONT: Definição de Token Simbólico@>=
+@<WEAVEFONT: Definição de Token Simbólico@>=
 TYPE_OPEN_PARENTHESIS,  // '('
 TYPE_CLOSE_PARENTHESIS, // ')'
 TYPE_COMMA,             // ','
@@ -816,27 +965,42 @@ usamos, qualquer token cujo tipo é um número igual ou maior que 3 é
 simbólico.
 
 Todo token possui um ponteiro para um próximo token. Isso ocorre
-porque eles geralmente formarão uma lista encadeada de tokens. Para
-desalocar a memória ocupada por uma lista de tokens dada uma função de
-desalocação e apagá-los, pode-se usar a seguinte função:
+porque eles geralmente formarão uma lista encadeada de tokens.
+
+Tokens são gerados pela função de alocação permanente. Precisamos
+mantê-los na memória, já que podemos ter que interpretá-los muitas
+vezes, cada vez que formos renderizar um novo caractere. Justamente
+por isso, não queremos armazenar neles mais do que é necessário. Por
+exemplo, o número de linha em que eles estão é útil para indicar onde
+um erro foi localizado no código-fonte. Esta é uma variável que
+certamente será usada por um projetista de fontes ou por quem está
+criando código WEAVEFONT. Mas para a maioria dos usuários, depurar
+erros não será algo que eles farão. Por causa disso, só armazenamos
+tal informação se estivermos em modo de depuração. E pelo mesmo motivo
+não nos preocupamos em armazenar strings muito grandes.
+
+Para desalocar a memória ocupada por uma lista de tokens e apagá-los,
+pode-se usar a seguinte função:
 
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>=
-void free_token_list(void (*dealloc)(void *), void *token_list){
-  struct generic_token *p, *p_next;
-  if(dealloc == NULL || token_list == NULL)
-    return;
-  p = token_list;
-  while(p != NULL){
-    p_next = p -> next;
-    if(p -> type == TYPE_SYMBOLIC)
-      dealloc(((struct symbolic_token *) p) -> value);
-    dealloc(p);
-    p = p_next;
+void free_token_list(void *token_list){
+  if(permanent_free != NULL && token_list != NULL){
+    struct generic_token *p, *p_next;
+    p = token_list;
+    while(p != NULL){
+      p_next = p -> next;
+      if(p -> type == TYPE_SYMBOLIC)
+        permanent_free(((struct symbolic_token *) p) -> value);
+      permanent_free(p);
+      p = p_next;
+    }
   }
 }
 @
 \fimcodigo
+
+\subsecao{4.2. A Análise Léxica}
 
 Agora a função que fará a análise léxica. Ela receberá como argumento
 a estrutura da fonte, uma função de alocação de memória e uma string
@@ -870,7 +1034,7 @@ void *lexer(struct metafont *mf, void *(*alloc)(size_t),
     // Nenhuma regra aplicada: erro
     fprintf(stderr, "ERROR: %s:%d: Unknown character: '%c'\n",
             path, line, c);
-    free_token_list(dealloc, first_token);
+    free_token_list(first_token);
     return NULL;
   }
   fclose(fp);
@@ -940,7 +1104,7 @@ if((c == '.' && isdigit(next_char)) || isdigit(c)){
   struct numeric_token *new_token = (struct numeric_token *)
                                       alloc(sizeof(struct numeric_token));
   if(new_token == NULL){
-    free_token_list(dealloc, first_token);
+    free_token_list(first_token);
     return NULL;
   }
   new_token -> type = TYPE_NUMERIC;
@@ -989,7 +1153,7 @@ if(c == '"'){
   struct string_token *new_token = (struct string_token *)
                                      alloc(sizeof(struct string_token));
   if(new_token == NULL){
-    free_token_list(dealloc, first_token);
+    free_token_list(first_token);
     return NULL;
   }
   new_token -> type = TYPE_STRING;
@@ -1011,7 +1175,7 @@ if(c == '"'){
   if(c == '\n' || c == EOF){
     fprintf(stderr, "ERROR: %s:%d: Incomplete String.\n", path, line);
     dealloc(new_token);
-    free_token_list(dealloc, first_token);
+    free_token_list(first_token);
     return NULL;
   }
   if(first_token == NULL)
@@ -1035,7 +1199,7 @@ if(c == '(' || c == ')' || c == ',' || c == ';'){
   struct generic_token *new_token =
      (struct generic_token *) alloc(sizeof(struct generic_token));
   if(new_token == NULL){
-    free_token_list(dealloc, first_token);
+    free_token_list(first_token);
     return NULL;
   }
   if(c == '(')
@@ -1318,7 +1482,7 @@ dependendo de sua posição na lista:
     struct generic_token *new_token =
        (struct generic_token *) alloc(sizeof(struct generic_token));
     if(new_token == NULL){
-      free_token_list(dealloc, first_token);
+      free_token_list(first_token);
       return NULL;
     }
     @<Muda Tipo na Geração de Tokens em Casos Especiais@>
@@ -1359,7 +1523,7 @@ if(buffer[0] != '\0'){
   struct symbolic_token *new_token =
      (struct symbolic_token *) alloc(sizeof(struct symbolic_token));
   if(new_token == NULL){
-    free_token_list(dealloc, first_token);
+    free_token_list(first_token);
     return NULL;
   }
   new_token -> type = TYPE_SYMBOLIC;
@@ -1381,7 +1545,6 @@ if(buffer[0] != '\0'){
 }
 @
 \fimcodigo
-
 
 \secao{5. Programas WEAVEFONT}
 
@@ -1415,7 +1578,7 @@ Vamos definir então um novo tipo de token simbólico que será uma
 abreviação deste símbolo de finalização, seja qual ele for:
 
 \iniciocodigo
-@<METAFONT: Definição de Token Simbólico@>=
+@<WEAVEFONT: Definição de Token Simbólico@>=
 TYPE_END,  // O token simbólico 'end'
 TYPE_DUMP, // O token simbólico 'dump'
 @
@@ -1708,7 +1871,7 @@ Para ler corretamente declarações compostas, devemos sevar em conta os
 tokens que as delimitam, definidos abaixo:
 
 \iniciocodigo
-@<METAFONT: Definição de Token Simbólico@>+=
+@<WEAVEFONT: Definição de Token Simbólico@>+=
 TYPE_BEGINGROUP,            // O token simbólico 'begingroup'
 TYPE_ENDGROUP,              // O token simbólico 'endgroup'
 TYPE_IF,                    // O token simbólico 'if'
@@ -2009,7 +2172,7 @@ Para interpretar a declaração de variáveis, vamos então introduzir no
 nosso analisador léxico os seguintes tokens especiais:
 
 \iniciocodigo
-@<METAFONT: Definição de Token Simbólico@>+=
+@<WEAVEFONT: Definição de Token Simbólico@>+=
 TYPE_T_BOOLEAN,               // O token simbólico 'boolean'
 TYPE_T_PATH,                  // O token simbólico 'path'
 TYPE_T_PEN,                   // O token simbólico 'pen'
@@ -3333,7 +3496,7 @@ tokens ``\monoespaco{=}'' e ``\monoespaco{:=}'' são equivalentes,
 representam a mesma coisa e tem significado especial:
 
 \iniciocodigo
-@<METAFONT: Definição de Token Simbólico@>+=
+@<WEAVEFONT: Definição de Token Simbólico@>+=
 TYPE_ASSIGNMENT,            // O token simbólico '='
 TYPE_ASSIGNMENT2,           // O token simbólico ':='
 @
@@ -3542,7 +3705,7 @@ um para cada operador. Vamos aproveitar e criar tipos novos para
 analisador sintático:
 
 \iniciocodigo
-@<METAFONT: Definição de Token Simbólico@>+=
+@<WEAVEFONT: Definição de Token Simbólico@>+=
 TYPE_SUM,                   // O token simbólico '+'
 TYPE_SUBTRACT,              // O token simbólico '-'
 TYPE_PYTHAGOREAN_SUM,       // O token simbólico '++'
@@ -3747,7 +3910,7 @@ Vamos adicionar estes operadores à lista de palavras-chave reservadas
 e definir seus tipos:
 
 \iniciocodigo
-@<METAFONT: Definição de Token Simbólico@>+=
+@<WEAVEFONT: Definição de Token Simbólico@>+=
 TYPE_MULTIPLICATION,        // O token simbólico '*'
 TYPE_DIVISION,              // O token simbólico '/'
 @
@@ -3872,7 +4035,7 @@ reservadas. Vamos adicionar também os outros operadores da lista de
 operadores numéricos. Os colchetes Já pertencem à esta lista:
 
 \iniciocodigo
-@<METAFONT: Definição de Token Simbólico@>+=
+@<WEAVEFONT: Definição de Token Simbólico@>+=
 TYPE_LENGTH,         // O token simbólico 'length'
 TYPE_SQRT,           // O token simbólico 'sqrt'
 TYPE_SIND,           // O token simbólico 'sind'
@@ -4255,7 +4418,7 @@ As regras finais para as expressões numéricas que iremos tratar são:
 O único token novo a ser tratado é \monoespaco{normaldeviate}:
 
 \iniciocodigo
-@<METAFONT: Definição de Token Simbólico@>+=
+@<WEAVEFONT: Definição de Token Simbólico@>+=
 TYPE_NORMALDEVIATE,  // O token simbólico 'normaldeviate'
 @
 \fimcodigo
@@ -4627,7 +4790,7 @@ Vamos adicionar as sete novas palavras-chave representando
 transformadores:
 
 \iniciocodigo
-@<METAFONT: Definição de Token Simbólico@>+=
+@<WEAVEFONT: Definição de Token Simbólico@>+=
 TYPE_ROTATED,  // O token simbólico 'rotated'
 TYPE_SCALED,   // O token simbólico 'scaled'
 TYPE_SHIFTED,  // O token simbólico 'shifted'
@@ -5283,7 +5446,7 @@ envolvem avaliar pares:
 Isso requer definir os seguintes novos tipos de tokens:
 
 \iniciocodigo
-@<METAFONT: Definição de Token Simbólico@>+=
+@<WEAVEFONT: Definição de Token Simbólico@>+=
 TYPE_XPART,  // O token simbólico 'xpart'
 TYPE_YPART,  // O token simbólico 'ypart'
 TYPE_ANGLE,  // O token simbólico 'angle'
@@ -5454,7 +5617,7 @@ transformador que não havíamos definido na subseção anterior sobre
 expressões de pares:
 
 \iniciocodigo
-@<METAFONT: Definição de Token Simbólico@>+=
+@<WEAVEFONT: Definição de Token Simbólico@>+=
 TYPE_TRANSFORMED,  // O token simbólico 'transformed'
 @
 \fimcodigo
@@ -5914,7 +6077,7 @@ definíamos as expressões de pares, resta definirmos tokens para os
 outros quatro operadores que são novos:
 
 \iniciocodigo
-@<METAFONT: Definição de Token Simbólico@>+=
+@<WEAVEFONT: Definição de Token Simbólico@>+=
 TYPE_XXPART,  // O token simbólico xxpart'
 TYPE_XYPART,  // O token simbólico xypart'
 TYPE_YXPART,  // O token simbólico yxpart'
@@ -6180,7 +6343,7 @@ A gramática para a expressão de caminhos começa com:
 Tudo isso requer que registremos os seguintes novos tipos de tokens:
 
 \iniciocodigo
-@<METAFONT: Definição de Token Simbólico@>+=
+@<WEAVEFONT: Definição de Token Simbólico@>+=
 TYPE_CYCLE,          // O token simbólico 'cycle'
 TYPE_AMPERSAND,      // O token simbólico '&'
 TYPE_JOIN,           // O token simbólico '..'
@@ -8467,7 +8630,7 @@ Isso significa que devemos registrar tokens
 novos: \monoespaco{reverse}, \monoespaco{subpath} e \monoespaco{of}:
 
 \iniciocodigo
-@<METAFONT: Definição de Token Simbólico@>+=
+@<WEAVEFONT: Definição de Token Simbólico@>+=
 TYPE_REVERSE,        // O token simbólico 'reverse'
 TYPE_SUBPATH,        // O token simbólico 'subpath'
 TYPE_OF,             // O token simbólico 'of'
@@ -9034,7 +9197,7 @@ isso é:
 Isso requer adicionarmos os seguintes novos tipos de tokens:
 
 \iniciocodigo
-@<METAFONT: Definição de Token Simbólico@>+=
+@<WEAVEFONT: Definição de Token Simbólico@>+=
 TYPE_POINT,             // O token simbólico 'point'
 TYPE_PRECONTROL,        // O token simbólico 'precontrol'
 TYPE_POSTCONTROL,       // O token simbólico 'postcontrol'
@@ -9609,7 +9772,7 @@ A gramática das expressões primárias de caminho é definida como:
 Isso requer registrar três novas palavras reservadas:
 
 \iniciocodigo
-@<METAFONT: Definição de Token Simbólico@>+=
+@<WEAVEFONT: Definição de Token Simbólico@>+=
 TYPE_NULLPEN,        // O token simbólico 'nullpen'
 TYPE_PENCIRCLE,      // O token simbólico 'pencircle'
 TYPE_MAKEPEN,        // O token simbólico 'makepen'
@@ -9898,7 +10061,7 @@ operação é:
 Temos que registrar um novo token para o ``makepath'':
 
 \iniciocodigo
-@<METAFONT: Definição de Token Simbólico@>+=
+@<WEAVEFONT: Definição de Token Simbólico@>+=
 TYPE_MAKEPATH,       // O token simbólico 'makepath'
 @
 \fimcodigo
@@ -10184,7 +10347,7 @@ Na inicialização do Weaver Metafont nós enviamos estes vértices para
 a placa de vídeo:
 
 \iniciocodigo
-@<Inicialização de Weaver Metafont@>=
+@<Inicialização WEAVEFONT@>=
 glGenBuffers(1, &vbo);
 glBindBuffer(GL_ARRAY_BUFFER, vbo);
 // Enviando os vértices para a placa de vídeo:
@@ -10195,7 +10358,7 @@ glBufferData(GL_ARRAY_BUFFER, sizeof(square), square, GL_STATIC_DRAW);
 Na finalização nós removemos os vértices da placa de vídeo:
 
 \iniciocodigo
-@<Finalização de Weaver Metafont@>=
+@<Finalização WEAVEFONT@>=
 glDeleteBuffers(1, &vbo);
 @
 \fimcodigo
@@ -10309,7 +10472,7 @@ GLuint compile_shader_program(const char *vertex_shader_source,
 E podemos usar esta função para inicializar nosso programa de shader padrão:
 
 \iniciocodigo
-@<Inicialização de Weaver Metafont@>+=
+@<Inicialização WEAVEFONT@>+=
 {
   program = compile_shader_program(vertex_shader, fragment_shader);
   uniform_matrix = glGetUniformLocation(program, "model_view_matrix");
@@ -10321,7 +10484,7 @@ E podemos usar esta função para inicializar nosso programa de shader padrão:
 Na finalização iremos destruir o programa compilado acima:
 
 \iniciocodigo
-@<Finalização de Weaver Metafont@>+=
+@<Finalização WEAVEFONT@>+=
 glDeleteProgram(program);
 @
 \fimcodigo
@@ -10623,7 +10786,7 @@ Um novo programa de shader deve ser então compilado na inicialização
 para podermos inverter os valores RGB de imagens:
 
 \iniciocodigo
-@<Inicialização de Weaver Metafont@>+=
+@<Inicialização WEAVEFONT@>+=
 {
   inv_program = compile_shader_program(vertex_shader, fragment_shader_inverse);
   uniform_inv_matrix = glGetUniformLocation(inv_program, "model_view_matrix");
@@ -10635,7 +10798,7 @@ para podermos inverter os valores RGB de imagens:
 E na finalização nós destruimos este programa:
 
 \iniciocodigo
-@<Finalização de Weaver Metafont@>+=
+@<Finalização WEAVEFONT@>+=
 glDeleteProgram(inv_program);
 @
 \fimcodigo
@@ -11095,7 +11258,7 @@ de imagens é:
 Isso requer registrar ``nullpicture'' e ``subpicture'' como um token:
 
 \iniciocodigo
-@<METAFONT: Definição de Token Simbólico@>+=
+@<WEAVEFONT: Definição de Token Simbólico@>+=
 TYPE_NULLPICTURE,        // O token simbólico 'nullpicture'
 TYPE_SUBPICTURE,         // O token simbólico 'subpicture'
 @
@@ -11508,7 +11671,7 @@ obter o valor, multiplicamos pela transparência.
 Primeiro vamos adicionar novos tipos de tokens para esses operadores:
 
 \iniciocodigo
-@<METAFONT: Definição de Token Simbólico@>+=
+@<WEAVEFONT: Definição de Token Simbólico@>+=
 TYPE_TOTALWEIGHT,        // O token simbólico 'totalweight'
 TYPE_WIDTH,              // O token simbólico 'width'
 TYPE_HEIGHT,             // O token simbólico 'height'
@@ -11704,7 +11867,7 @@ As relações mostradas acima requerem que novos tipos de tokens sejam
 considerados:
 
 \iniciocodigo
-@<METAFONT: Definição de Token Simbólico@>+=
+@<WEAVEFONT: Definição de Token Simbólico@>+=
 TYPE_LT,                    // O token simbólico '<'
 TYPE_LEQ,                   // O token simbólico '<='
 TYPE_GT,                    // O token simbólico '>'
@@ -11965,7 +12128,7 @@ Para implementarmos esta expressão, precisamos então
 definir \monoespaco{or} como um novo tipo de token simbólico:
 
 \iniciocodigo
-@<METAFONT: Definição de Token Simbólico@>+=
+@<WEAVEFONT: Definição de Token Simbólico@>+=
 TYPE_OR,                    // O token simbólico 'or'
 @
 \fimcodigo
@@ -12124,7 +12287,7 @@ serve para checar se um caminho é cíclico ou não.
 Os seguintes novos tipos de token não foram ainda definidos:
 
 \iniciocodigo
-@<METAFONT: Definição de Token Simbólico@>+=
+@<WEAVEFONT: Definição de Token Simbólico@>+=
 TYPE_TRUE,                    // O token simbólico 'true'
 TYPE_FALSE,                   // O token simbólico 'false'
 TYPE_ODD,                     // O token simbólico 'odd'
@@ -12580,7 +12743,7 @@ expressões deste tipo é:
 Declararemos então os seguintes novos tipos de tokens:
 
 \iniciocodigo
-@<METAFONT: Definição de Token Simbólico@>+=
+@<WEAVEFONT: Definição de Token Simbólico@>+=
 TYPE_ELSEIF,  // O token simbólico 'elseif'
 TYPE_ELSE,    // O token simbólico 'else'
 TYPE_COLON,   // O token simbólico ':'
@@ -12832,7 +12995,7 @@ comando \monoespaco{pickup} é dada por:
 O comando requer que criemos um novo token e palavra reservada:
 
 \iniciocodigo
-@<METAFONT: Definição de Token Simbólico@>+=
+@<WEAVEFONT: Definição de Token Simbólico@>+=
 TYPE_PICKUP,   // O token simbólico 'pickup'
 @
 \fimcodigo
@@ -13374,7 +13537,7 @@ static GLuint pensquare_vbo;
 E o código de triangulação que será usado na inicialização:
 
 \iniciocodigo
-@<Inicialização de Weaver Metafont@>+=
+@<Inicialização WEAVEFONT@>+=
 {
   float square_vertices[8] = {-0.5, -0.5,
                                +0.5, -0.5,
@@ -13391,7 +13554,7 @@ E o código de triangulação que será usado na inicialização:
 Na finalização podemos remover os vértices da placa de vídeo:
 
 \iniciocodigo
-@<Finalização de Weaver Metafont@>+=
+@<Finalização WEAVEFONT@>+=
 glDeleteBuffers(1, &pensquare_vbo);
 @
 \fimcodigo
@@ -14026,7 +14189,7 @@ definir aqui. A gramática deles é:
 Isso requer adicionar 4 novos tokens para tais operadores:
 
 \iniciocodigo
-@<METAFONT: Definição de Token Simbólico@>+=
+@<WEAVEFONT: Definição de Token Simbólico@>+=
 TYPE_BOT,  // O token simbólico 'bot'
 TYPE_TOP,  // O token simbólico 'top'
 TYPE_LFT,  // O token simbólico 'lft'
@@ -14135,7 +14298,7 @@ apagar é:
 Os quais requerem dois tokens e palavras reservada novas:
 
 \iniciocodigo
-@<METAFONT: Definição de Token Simbólico@>+=
+@<WEAVEFONT: Definição de Token Simbólico@>+=
 TYPE_DRAW,   // O token simbólico 'draw'
 TYPE_ERASE,  // O token simbólico 'erase'
 @
@@ -14167,7 +14330,7 @@ static GLuint currentpicture_fb;
 A qual é inicializada como zero:
 
 \iniciocodigo
-@<Inicialização de Weaver Metafont@>+=
+@<Inicialização WEAVEFONT@>+=
 currentpicture_fb = 0;
 @
 \fimcodigo
@@ -14326,7 +14489,7 @@ Na inicialização nós compilamos estes dois shaders e obtemos a
 localização de suas variáveis uniformes:
 
 \iniciocodigo
-@<Inicialização de Weaver Metafont@>+=
+@<Inicialização WEAVEFONT@>+=
 {
   pen_program = compile_shader_program(pen_vertex_shader, pen_fragment_shader);
   pen_uniform_matrix = glGetUniformLocation(pen_program, "model_view_matrix");
@@ -14343,7 +14506,7 @@ localização de suas variáveis uniformes:
 E na finalização nós destruimos estes programas:
 
 \iniciocodigo
-@<Finalização de Weaver Metafont@>+=
+@<Finalização WEAVEFONT@>+=
 glDeleteProgram(pen_program);
 glDeleteProgram(pen_erase_program);
 @

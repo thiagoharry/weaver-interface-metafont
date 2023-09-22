@@ -70,10 +70,10 @@ void test_empty_programs(void){
   void *p = lexer(mf, malloc, free, "tests/empty.mf");
   ret = eval_program(mf, cx, p);
   assert("Testing empty program", ret);
-  free_token_list(free, p);
+  free_token_list(p);
   p = lexer(mf, malloc, free, "tests/empty_statements.mf");
   ret = eval_program(mf, cx, p);
-  free_token_list(free, p);
+  free_token_list(p);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
   assert("Testing program with empty statements", ret);
@@ -92,10 +92,10 @@ void test_compound_statements(void){
 	 mf -> first_glyph != NULL &&
 	 mf -> first_glyph -> begin != NULL &&
 	 mf -> first_glyph -> end != NULL);
-  free_token_list(free, p);
+  free_token_list(p);
   p = lexer(mf, malloc, free, "tests/compound_wrong.mf");
   ret = eval_program(mf, cx, p);
-  free_token_list(free, p);
+  free_token_list(p);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
   assert("Detecting wrong compound statements", !ret);
@@ -133,7 +133,7 @@ void test_variables(void){
     printf("ERROR: Exprected value: '(%f, %f)', Found value: '(%f,%f)'\n",
            0.0, 3.0, p -> x, p -> y);
   }
-  free_token_list(free, tok);
+  free_token_list(tok);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
 }
@@ -147,7 +147,7 @@ void test_assignments(void){
   void *p = lexer(mf, malloc, free, "tests/wrong_assignment.mf");
   ret = eval_program(mf, cx, p);
   assert("Detecting wrong assignment", !ret);
-  free_token_list(free, p);
+  free_token_list(p);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
 }
@@ -336,7 +336,7 @@ void test_lexer(void){
   assert("Testing METAFONT Lexer", ok);
   ok = eval_program(mf, cx, token_pointer);
   assert("Wrong program not parsed", !ok);
-  free_token_list(free, token_pointer);
+  free_token_list(token_pointer);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
 }
@@ -957,7 +957,7 @@ void test_path_expressions(void){
 	 ALMOST_EQUAL(get_point(path_m, 3) -> x, 9.0) &&
 	 ALMOST_EQUAL(get_point(path_m, 3) -> y, 12.0) &&
 	 path_m -> cyclic == true);
-  free_token_list(free, p);
+  free_token_list(p);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
 }
@@ -1326,7 +1326,7 @@ void test_pen_expressions(void){
 	 ALMOST_EQUAL(3.5, 0.5 * pen_p14 -> gl_matrix[1] +
 	 	      -0.5 * pen_p14 -> gl_matrix[4] +
 	 	      1.0 * pen_p14 -> gl_matrix[7]));
-  free_token_list(free, p);
+  free_token_list(p);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
 }
@@ -1369,7 +1369,7 @@ void test_numeric_expressions(void){
   assert("Evaluating numeric width and height for pictures",
 	 ALMOST_EQUAL(numeric_g -> value, 5.0) &&
 	 ALMOST_EQUAL(numeric_h -> value, 6.0));
-  free_token_list(free, p);
+  free_token_list(p);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
 }
@@ -1395,7 +1395,7 @@ void test_pair_expressions(void){
   assert("Interpolating between two points",
 	 ALMOST_EQUAL(pair_b -> x, 227.9591) &&
 	 ALMOST_EQUAL(pair_b -> y, 74.94846));
-  free_token_list(free, p);
+  free_token_list(p);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
 }
@@ -1505,7 +1505,7 @@ void test_transform_expressions(void){
 	 ALMOST_EQUAL(transform_j -> value[3], 0.4) &&
 	 ALMOST_EQUAL(transform_j -> value[1], -0.4) &&
 	 ALMOST_EQUAL(transform_j -> value[4], 0.2));
-  free_token_list(free, p);
+  free_token_list(p);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
 }
@@ -1624,7 +1624,7 @@ void test_picture_expressions(void){
   assert("Interpreting subpictures",
    	 picture_m -> width == 3 && picture_m -> height == 1 &&
   	 ALMOST_EQUAL(numeric_wm -> value, 1.0));
-  free_token_list(free, p);
+  free_token_list(p);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
 }
@@ -1721,7 +1721,7 @@ void test_boolean_expressions(void){
   assert("Testing Boolean Variable evaluation", boolean_b6);
   assert("Testing 'odd' operator", (!boolean_c6 -> value) && boolean_d6 -> value);
   assert("Testing 'cycle' operator", boolean_e6 -> value && !(boolean_f6 -> value));
-  free_token_list(free, p);
+  free_token_list(p);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
 }
@@ -1746,7 +1746,7 @@ void test_if_statements(void){
   assert("Interpreting 'if', 'elseif' and 'else'",
 	 numeric_a -> value == 2 && numeric_b -> value == 11 &&
 	 numeric_c -> value == 17);
-  free_token_list(free, p);
+  free_token_list(p);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
 }
@@ -1925,7 +1925,7 @@ void test_drawing_commands(void){
 	 ALMOST_EQUAL(pair_ph1 -> y, 0.6) &&
 	 ALMOST_EQUAL(pair_ph2 -> x, 0.4) &&
 	 ALMOST_EQUAL(pair_ph2 -> y, -0.4));
-  free_token_list(free, p);
+  free_token_list(p);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
 }
@@ -1949,7 +1949,7 @@ void test_font_rendering(void){
 		       &depth, &italcorr, &kerning);
   assert("Detecting missing glyph", !ret);
 
-  free_token_list(free, p);
+  free_token_list(p);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
 
