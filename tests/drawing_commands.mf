@@ -109,5 +109,3 @@ pickup p;
 ph1 = top lft (0, 0);
 ph2 = bot rt (0, 0);
 
-
-end

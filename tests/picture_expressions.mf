@@ -54,4 +54,4 @@ wl = totalweight l;
 m = subpicture (2, 1) and (3, 1) of (i + (-nullpicture(1, 1)));
 wm = totalweight m;
 
-end
+

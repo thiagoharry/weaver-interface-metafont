@@ -24,4 +24,3 @@ i = identity zscaled (8, 2);
 % Transformed: will be equal (-1, 0, 0.2, 0.4, -0.4, 0.2):
 j = identity transformed a;
 
-end

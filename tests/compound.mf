@@ -23,6 +23,4 @@ beginchar("a", 10, 10, 0)
 endchar
 
 
-
-end
   

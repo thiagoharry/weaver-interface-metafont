@@ -85,7 +85,7 @@
 
 4.2. Lexical Analysis \indice{13}
 
-5. WEAVEFONT Programs \indice{XX}
+5. WEAVEFONT Programs \indice{21}
 
 6. List of Statements \indice{XX}
 
@@ -312,7 +312,7 @@ finalize it:
 
 \iniciocodigo
 @<Function Declaration (metafont.h)@>+=
-void _Wfinish_metafont(void);
+void _Wfinish_weavefont(void);
 @
 \fimcodigo
 
@@ -762,7 +762,7 @@ And the initialization function that sets these variables:
 
 \iniciocodigo
 @<API Functions Definition (metafont.c)@>=
-bool _Winit_metafont(void *(*t_alloc)(size_t),
+bool _Winit_weavefont(void *(*t_alloc)(size_t),
                     void (*t_free)(void *),
                     void *(*p_alloc)(size_t),
                     void (*p_free)(void *),
@@ -785,7 +785,7 @@ the finalization function:
 
 \iniciocodigo
 @<API Functions Definition (metafont.c)@>=
-void _Wfinish_metafont(void){
+void _Wfinish_weavefont(void){
   @<WEAVEFONT Finalization@>
 }
 @
@@ -968,21 +968,24 @@ void free_token_list(void *token_list){
 
 \subsecao{4.2. Lexical Analysis}
 
-Now the funtion that represents our lexer. It will get as argument an
-allocation function and a string with a path for the file with
-METAFONT source code. It will return a linked list of tokens:
+Now the funtion that represents our lexer. It gets as argument the
+struct for our meta-font (whose contents we still will define) and a
+string with a path for the file with METAFONT source code. It will
+produce a token list and will store in its two last arguments the
+pointer for the first and last pointer.
 
 \iniciocodigo
 @<Auxiliary Local Functions (metafont.c)@>=
-void *lexer(struct metafont *mf, void *(*alloc)(size_t),
-            void (*dealloc)(void *), char *path){
+void lexer(struct metafont *mf, char *path, struct generic_token **first_token,
+           struct generic_token **last_token){
   FILE *fp;
   char c;
   int line = 1;
-  void *first_token = NULL, *last_token = NULL;
+  *first_token = NULL;
+  *last_token = NULL;
   fp = fopen(path, "r");
   if(fp == NULL)
-    return NULL;
+    return;
   while((c = fgetc(fp)) != EOF){
     char next_char = fgetc(fp);
     ungetc(next_char, fp);
@@ -1000,15 +1003,16 @@ void *lexer(struct metafont *mf, void *(*alloc)(size_t),
     fprintf(stderr, "ERROR: %s:%d: Unknown character: '%c'\n",
             path, line, c);
     free_token_list(first_token);
-    return NULL;
+    *first_token = NULL;
+    *last_token = NULL;
+    return;
   }
   fclose(fp);
-  return first_token;
 }
 @
 \fimcodigo
 
-Oh, we used the struct \monoespaco{FILE}, this means that we need to
+As we used the struct \monoespaco{FILE}, this means that we need to
 include the header with data about input/output to be able to read
 files:
 
@@ -1021,13 +1025,14 @@ files:
 The rules to read tokens consist in reading each line in the source
 code applying the following rules for each character in the line:
 
-1) If the next character is a space or a period and is not followed by
+1) If the next character is a space, tabs or a period and is not followed by
 a period or a decimal digit, then ignore this character and go to the
 next one.
 
 \iniciocodigo
 @<Lexer: Rule 1@>=
-if(c == ' ' || (c == '.' && next_char != '.' && !isdigit(next_char)))
+if(c == ' ' || c == '\t' ||
+   (c == '.' && next_char != '.' && !isdigit(next_char)))
   continue;
 @
 \fimcodigo
@@ -1040,7 +1045,6 @@ following header that declares this function:
 #include <ctype.h>
 @
 \fimcodigo
-
 
 2) If the character is a percent sign, ignore it and also ignore all
 other following characters in this line. Percentage sign is how we
@@ -1067,11 +1071,12 @@ dot present in the input.
 @<Lexer: Rule 3@>=
 if((c == '.' && isdigit(next_char)) || isdigit(c)){
   char buffer[256];
-  struct numeric_token *new_token = (struct numeric_token *)
-                                      alloc(sizeof(struct numeric_token));
+  struct numeric_token *new_token =
+    (struct numeric_token *) permanent_alloc(sizeof(struct numeric_token));
   if(new_token == NULL){
-    free_token_list(first_token);
-    return NULL;
+    free_token_list(*first_token);
+    *first_token = *last_token = NULL;
+    return;
   }
   new_token -> type = TYPE_NUMERIC;
   new_token -> next = NULL;
@@ -1093,11 +1098,11 @@ if((c == '.' && isdigit(next_char)) || isdigit(c)){
   i --;
   buffer[i] = '\0';
   new_token -> value = atof(buffer);
-  if(first_token == NULL)
-    first_token = last_token = new_token;
+  if(*first_token == NULL)
+    *first_token = *last_token = (struct generic_token *) new_token;
   else{
-    ((struct generic_token *) last_token) -> next = new_token;
-    last_token = new_token;
+    ((struct generic_token *) *last_token) -> next = new_token;
+    *last_token = (struct generic_token *) new_token;
   }
   continue;
 }
@@ -1110,16 +1115,19 @@ quote not preceded by a back slash that should be in the same line. If
 we have a double quote opening a string, but the same line do not have
 another double quote to close the string, this is an error. When
 reading a back slash, we always ignore the first one, but we always
-consider the next character.
+consider the next character. This rule allow us to represent a double
+quote inside a string (in the form \monoespaco{"\\""}) and a backslash inside the
+string (in the form \monoespaco{"\\\\"}).
 
 \iniciocodigo
 @<Lexer: Rule 4@>=
-if(c == '"'){
-  struct string_token *new_token = (struct string_token *)
-                                     alloc(sizeof(struct string_token));
+if(c == 34){ // 34: ASCII  for double quote
+  struct string_token *new_token =
+    (struct string_token *) permanent_alloc(sizeof(struct string_token));
   if(new_token == NULL){
-    free_token_list(first_token);
-    return NULL;
+    free_token_list(*first_token);
+    *first_token = *last_token = NULL;
+    return;
   }
   new_token -> type = TYPE_STRING;
   new_token -> next = NULL;
@@ -1134,20 +1142,22 @@ if(c == '"'){
       new_token -> value[i] = c;
       i ++;
     }
-  } while((c != '"' || prev == '\\') && c != '\n' && c != EOF);
+  } while((c != 34 || prev == '\\') && c != '\n' && c != EOF);
   i --;
   new_token -> value[i] = '\0';
   if(c == '\n' || c == EOF){
     fprintf(stderr, "ERROR: %s:%d: Incomplete String.\n", path, line);
-    dealloc(new_token);
-    free_token_list(first_token);
-    return NULL;
+    if(permanent_free != NULL)
+      permanent_free(new_token);
+    free_token_list(*first_token);
+    *first_token = *last_token = NULL;
+    return;
   }
-  if(first_token == NULL)
-    first_token = last_token = new_token;
+  if(*first_token == NULL)
+    *first_token = *last_token = (struct generic_token *) new_token;
   else{
-    ((struct generic_token *) last_token) -> next = new_token;
-    last_token = new_token;
+    ((struct generic_token *) *last_token) -> next = new_token;
+    *last_token = (struct generic_token *) new_token;
   }
   continue;
 }
@@ -1162,10 +1172,11 @@ next token will be symbolic and composed by that single character.
 @<Lexer: Rule 5@>=
 if(c == '(' || c == ')' || c == ',' || c == ';'){
   struct generic_token *new_token =
-     (struct generic_token *) alloc(sizeof(struct generic_token));
+     (struct generic_token *) permanent_alloc(sizeof(struct generic_token));
   if(new_token == NULL){
-    free_token_list(first_token);
-    return NULL;
+    free_token_list(*first_token);
+    *first_token = *last_token = NULL;
+    return;
   }
   if(c == '(')
     new_token -> type = TYPE_OPEN_PARENTHESIS;
@@ -1179,11 +1190,11 @@ if(c == '(' || c == ')' || c == ',' || c == ';'){
 #if defined(W_DEBUG_METAFONT)
   new_token -> line = line;
 #endif
-  if(first_token == NULL)
-    first_token = last_token = new_token;
+  if(*first_token == NULL)
+    *first_token = *last_token = (struct generic_token *) new_token;
   else{
-    ((struct generic_token *) last_token) -> next = new_token;
-    last_token = new_token;
+    ((struct generic_token *) *last_token) -> next = new_token;
+    *last_token = (struct generic_token *) new_token;
   }
   continue;
 }
@@ -1191,7 +1202,8 @@ if(c == '(' || c == ')' || c == ',' || c == ';'){
 \fimcodigo
 
 6) Otherwise, the next token will be symbolic and will be composed by
-the longest sequence of 12 families of characteres:
+the longest sequence composed only by characters taken from one of 12
+different families:
 
 \iniciocodigo
 @<Lexer: Rule 6@>=
@@ -1444,22 +1456,22 @@ in this list:
       token_type = i + 8; // Token types for keywords begin in 8
   if(token_type != 0){
     struct generic_token *new_token =
-       (struct generic_token *) alloc(sizeof(struct generic_token));
+       (struct generic_token *) permanent_alloc(sizeof(struct generic_token));
     if(new_token == NULL){
-      free_token_list(first_token);
-      return NULL;
+      free_token_list(*first_token);
+      *first_token = *last_token = NULL;
+      return;
     }
-    @<Change Type in Token Creation for Special Cases@>
     new_token -> type = token_type;
     new_token -> next = NULL;
 #if defined(W_DEBUG_METAFONT)
     new_token -> line = line;
 #endif
-    if(first_token == NULL)
-      first_token = last_token = new_token;
+    if(*first_token == NULL)
+      *first_token = *last_token = (struct generic_token *) new_token;
     else{
-      ((struct generic_token *) last_token) -> next = new_token;
-      last_token = new_token;
+      ((struct generic_token *) *last_token) -> next = new_token;
+      *last_token = (struct generic_token *) new_token;
     }
     continue;
   }
@@ -1477,7 +1489,8 @@ To use function \monoespaco{strcmp} we need the following header:
 
 
 If we do not have a reserved symbolic token, and if we have something
-in our buffer, then we generate a new generic symbolic token:
+in our buffer, then we generate a new generic symbolic token. This
+token will represent a variable:
 
 \iniciocodigo
 @<Lexer: New Generic Symbolic Token@>=
@@ -1485,25 +1498,28 @@ if(buffer[0] != '\0'){
   buffer[255] = '\0';
   size_t buffer_size = strlen(buffer) + 1;
   struct symbolic_token *new_token =
-     (struct symbolic_token *) alloc(sizeof(struct symbolic_token));
+     (struct symbolic_token *) permanent_alloc(sizeof(struct symbolic_token));
   if(new_token == NULL){
-    free_token_list(first_token);
-    return NULL;
+    free_token_list(*first_token);
+    *first_token = *last_token = NULL;
+    return;
   }
   new_token -> type = TYPE_SYMBOLIC;
   new_token -> next = NULL;
   new_token -> var = NULL;
+  // If this has the name of an internal variable, we can set the pointer
+  // for its content right now:
   @<Set Pointer to Internal Variable@>
 #if defined(W_DEBUG_METAFONT)
   new_token -> line = line;
 #endif
-  new_token -> value = (char *) alloc(buffer_size);
+  new_token -> value = (char *) permanent_alloc(buffer_size);
   memcpy(new_token -> value, buffer, buffer_size);
-  if(first_token == NULL)
-    first_token = last_token = new_token;
+  if(*first_token == NULL)
+    *first_token = *last_token = (struct generic_token *) new_token;
   else{
-    ((struct generic_token *) last_token) -> next = new_token;
-    last_token = new_token;
+    ((struct generic_token *) *last_token) -> next = new_token;
+    *last_token = (struct generic_token *) new_token;
   }
   continue;
 }
@@ -1512,83 +1528,55 @@ if(buffer[0] != '\0'){
 
 \secao{5. WEAVEFONT Programs}
 
-When we evaluate a METAFONT program, we need two additional
+To evaluate a WEAVEFONT program, we need two additional
 structures. The first one, which we will call \monoespaco{struct
 metafont} will contain all the final information extracted from the
-typographical font and that will be needed to render each glyph. The
-second structure, which we will call \monoespaco{struct context}
-represents the current state in our parser and represents information
-that we need to know to interpret correctly the token list. This
-second structure can be discarded after we read all the tokens from
-our font.
+typographical meta-font and that will store all needed information to
+render each glyph in that font. The second structure, which we will
+call \monoespaco{struct context} represents the current state in our
+parser and represents information that we need to know to interpret
+correctly the token list. This second structure can be discarded after
+we read all the tokens from our font.
 
-The first thing that our parser needs to know is that a METAFONT
-program is a list (possibly empty) of statements ended by a symbolic
-token \monoespaco{end} or \monoespaco{dump}:
+In short, for each file with WEAVEFONT source-code, we will produce a
+single \monoespaco{struct metafont} with data about the font. And each
+time we execute code from this file (when we read the file for the
+first time, and each time we render a new character), we create a
+new \monoespaco{struct context}, which will be discarded after the
+code execution.
+
+The first thing that our parser needs to know is that a WEAVEFONT
+program is a list (possibly empty) of statements:
 
 \alinhaverbatim
-<Program> -> <List of Statements> end | <List of Statements> dump
+<Program> -> <List of Statements>
 \alinhanormal
 
-for us, there will be no difference between these two kind of programs
-and symbols \monoespaco{end} and \monoespaco{dump} will be
-equivalent. In the original METAFONT, one of them ends programs that
-define typographical fonts and the other ends the description of a
-base file (something like a basic standard library).
-
-We will define then a new kind of symbolic token to represent this
-end-of-file marking:
-
-\iniciocodigo
-@<WEAVEFONT: Symbolic Token Definition@>=
-TYPE_END,  // Symbolic token 'end'
-TYPE_DUMP, // Symbolic token 'dump'
-@
-\fimcodigo
-
-And let's add both the keywords \monoespaco{end} and \monoespaco{dump}
-in ourt list of keywords:
-
-\iniciocodigo
-@<List of Keywords@>=
-"end", "dump",
-@
-\fimcodigo
-
-But to simplify, we will not use \monoespaco{TYPE\_DUMP},
-only \monoespaco{TYPE\_END} to make the code simpler in the parser:
-
-\iniciocodigo
-@<Change Type in Token Creation for Special Cases@>=
-if(token_type == TYPE_DUMP)
-  token_type = TYPE_END;
-@
-\fimcodigo
-
+In the METAFONT language, it was necessary to indicate the end of
+statements with a final \monoespaco{end} statement. In WEAVEFONT
+language this is not necessary becaus e we will assume that all code
+is in a single file. Therefore, the end of file is the end of
+statements.
 
 The first parser function to be defined is the one that recognizes an
-entire program. It basically checks if the program is ended correctly
-and if not, generates an error. If the program is ended correctly, it
-passes for the next parser function that evaluates list of statements,
-marking the beginning and end of such list:
+entire program. It first checks if the program is empty. If so, then
+the function returns: doing nothing is the correct execution of an
+empty program. Otherwise, it passes the entire list of statements for
+the next function that will split them in individual statements and
+execute each one individually. After we run the code, we return if the
+execution was successful. 
 
 \iniciocodigo
 @<Auxiliary Local Functions (metafont.c)@>+=
 bool eval_program(struct metafont *mf, struct context *cx,
-                  void *token_list){
-  struct generic_token *end = (struct generic_token *) token_list;
-  while(end != NULL && end -> type != TYPE_END)
-    end = (struct generic_token *) (end -> next);
-  if(end == NULL){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s: Program not finished with "
-                    "'end' or 'dump'.\n", mf -> file);
-#endif
-    return false;
-  }
-  if(end == token_list)
+                  struct generic_token *first_token,
+                  struct generic_token *last_token){
+  if(first_token == NULL)
     return true;
-  return eval_list_of_statements(mf, cx, token_list, end);
+  if(!eval_list_of_statements(mf, cx, first_token, last_token))
+    return false;
+  @<After Program Execution@>
+  return true;
 }
 @
 \fimcodigo
@@ -1603,7 +1591,6 @@ struct context{
 };
 @
 \fimcodigo
-
 
 And as seen above, one of the contents in \monoespaco{struct metafont}
 is the file name from where the font was read. We also will store the
@@ -2086,18 +2073,13 @@ statement). In this case, we should generate an error if we are inside
 a some nesting in a compound statement:
 
 \iniciocodigo
-@<Statement: Compound@>+=
-else if(((struct generic_token *) begin_token_list) -> type ==
-        TYPE_END){
-  if(cx -> nesting_level > 0){
+@<After Program Execution@>=
+if(cx -> nesting_level > 0){
 #if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s: Program ending with unclosed "
-                    "compound statement.\n", mf -> file);
+  fprintf(stderr, "METAFONT: Error: %s: Program ending with unclosed "
+                  "compound statement.\n", mf -> file);
 #endif
-    return false;
-  }
-  @<End of Code: 'end' or 'dump'@>
-  return true;
+  return false;
 }
 @
 \fimcodigo
@@ -3434,17 +3416,6 @@ Both types are added to the list of keywords:
 @
 \fimcodigo
 
-But to simplify the code, we will transform the second type in the
-first and consider only the first kind of assignment:
-
-\iniciocodigo
-@<Change Type in Token Creation for Special Cases@>+=
-else if(token_type == TYPE_ASSIGNMENT2)
-  token_type = TYPE_ASSIGNMENT;
-@
-\fimcodigo
-
-
 Now that we have this new kind of token, the code to evaluate
 assignments is described below. What it does is walk over the tokens
 in the assignment detecting all variables that should pass by the
@@ -3500,7 +3471,7 @@ else if(((struct generic_token *) begin_token_list) -> type ==
       var = (struct symbolic_token *) (var -> next);
     else
       var = NULL;
-    if(var -> type != TYPE_ASSIGNMENT){
+    if(var -> type != TYPE_ASSIGNMENT && var -> type != TYPE_ASSIGNMENT2){
 #if defined(W_DEBUG_METAFONT)
       fprintf(stderr, "METAFONT: Error: %s:%d: Variable in left-side "
               "without assignment.\n", mf -> file, var -> line);
@@ -3512,8 +3483,10 @@ else if(((struct generic_token *) begin_token_list) -> type ==
     else
       var = NULL;
   } while(var != NULL &&
+          (((struct generic_token *) (var -> next)) -> type ==
+          TYPE_ASSIGNMENT ||
           ((struct generic_token *) (var -> next)) -> type ==
-          TYPE_ASSIGNMENT);
+          TYPE_ASSIGNMENT2));
   if(var == NULL){
 #if defined(W_DEBUG_METAFONT)
       fprintf(stderr, "METAFONT: Error: %s:%d: Empty expression in "
@@ -14636,7 +14609,7 @@ at the end of the program source, when interpreting a \monoespaco{end}
 or \monoespaco{dump} token:
 
 \iniciocodigo
-@<End of Code: 'end' or 'dump'@>=
+@<After Program Execution@>+=
 mf -> loading = false;
 @
 \fimcodigo
@@ -15284,14 +15257,14 @@ metafont is:
 \iniciocodigo
 @<API Functions Definition (metafont.c)@>+=
 struct metafont *_Wnew_metafont(char *filename){
-  void *p;
   struct metafont *mf;
   struct context *cx;
+  struct generic_token *first, *last;
   bool ret;
   mf = init_metafont(permanent_alloc, permanent_free, filename);
-  p = lexer(mf, permanent_alloc, permanent_free, filename);
+  lexer(mf, filename, &first, &last);
   cx = init_context();
-  ret = eval_program(mf, cx, p);
+  ret = eval_program(mf, cx, first, last);
   destroy_context(mf, cx);
   if(!ret){
     _Wdestroy_metafont(mf);

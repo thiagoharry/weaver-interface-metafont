@@ -62,46 +62,49 @@ uint64_t my_rand(void){
 }
 
 void test_empty_programs(void){
+  struct generic_token *first, *last;
   struct metafont *mf;
   struct context *cx;
   bool ret;
   mf = init_metafont(malloc, free, "tests/empty.mf");
   cx = init_context();
-  void *p = lexer(mf, malloc, free, "tests/empty.mf");
-  ret = eval_program(mf, cx, p);
+  lexer(mf,  "tests/empty.mf", &first, &last);
+  ret = eval_program(mf, cx, first, last);
   assert("Testing empty program", ret);
-  free_token_list(p);
-  p = lexer(mf, malloc, free, "tests/empty_statements.mf");
-  ret = eval_program(mf, cx, p);
-  free_token_list(p);
+  free_token_list(first);
+  lexer(mf,  "tests/empty_statements.mf", &first, &last);
+  ret = eval_program(mf, cx, first, last);
+  free_token_list(first);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
   assert("Testing program with empty statements", ret);
 }
 
 void test_compound_statements(void){
+  struct generic_token *first, *last;
   struct metafont *mf;
   struct context *cx;
   bool ret;
   mf = init_metafont(malloc, free, "tests/compound.mf");
   cx = init_context();
-  void *p = lexer(mf, malloc, free, "tests/compound.mf");
-  ret = eval_program(mf, cx, p);
+  lexer(mf,  "tests/compound.mf", &first, &last);
+  ret = eval_program(mf, cx, first, last);
   assert("Testing compound statements", ret);
   assert("Characters defined with 'beginchar' are stored",
 	 mf -> first_glyph != NULL &&
 	 mf -> first_glyph -> begin != NULL &&
 	 mf -> first_glyph -> end != NULL);
-  free_token_list(p);
-  p = lexer(mf, malloc, free, "tests/compound_wrong.mf");
-  ret = eval_program(mf, cx, p);
-  free_token_list(p);
+  free_token_list(first);
+  lexer(mf,  "tests/compound_wrong.mf", &first, &last);
+  ret = eval_program(mf, cx, first, last);
+  free_token_list(first);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
   assert("Detecting wrong compound statements", !ret);
 }
 
 void test_variables(void){
+  struct generic_token *first, *last;
   struct metafont *mf;
   struct context *cx;
   struct numeric_variable *n;
@@ -110,8 +113,8 @@ void test_variables(void){
   bool ret;
   mf = init_metafont(malloc, free, "tests/variables.mf");
   cx = init_context();
-  void *tok = lexer(mf, malloc, free, "tests/variables.mf");
-  ret = eval_program(mf, cx, tok);
+  lexer(mf,  "tests/variables.mf", &first, &last);
+  ret = eval_program(mf, cx, first, last);
   ret = ret && (mf -> named_variables != NULL) &&
     (mf -> global_variables != NULL) &&
     (cx -> variables != NULL);
@@ -133,35 +136,36 @@ void test_variables(void){
     printf("ERROR: Exprected value: '(%f, %f)', Found value: '(%f,%f)'\n",
            0.0, 3.0, p -> x, p -> y);
   }
-  free_token_list(tok);
+  free_token_list(first);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
 }
 
 void test_assignments(void){
+  struct generic_token *first, *last;
   struct metafont *mf;
   struct context *cx;
   bool ret;
   mf = init_metafont(malloc, free, "tests/wrong_assignment.mf");
   cx = init_context();
-  void *p = lexer(mf, malloc, free, "tests/wrong_assignment.mf");
-  ret = eval_program(mf, cx, p);
+  lexer(mf,  "tests/wrong_assignment.mf", &first, &last);
+  ret = eval_program(mf, cx, first, last);
   assert("Detecting wrong assignment", !ret);
-  free_token_list(p);
+  free_token_list(first);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
 }
 
 void test_lexer(void){
-  void *p, *token_pointer;
+  struct generic_token *first, *last;
+  void *p;
   bool ok = true;
   struct metafont *mf;
   struct context *cx;
   mf = init_metafont(malloc, free, "tests/ridiculous.mf");
-  token_pointer = lexer(mf, malloc, free,
-                        "tests/ridiculous.mf");
+  lexer(mf, "tests/ridiculous.mf", &first, &last);
   cx = init_context();
-  p = token_pointer;
+  p = first;
   if(((struct symbolic_token *) p) -> type != TYPE_SYMBOLIC){
     ok = false;
     goto test_lexer_end;
@@ -334,14 +338,15 @@ void test_lexer(void){
   }
  test_lexer_end:
   assert("Testing METAFONT Lexer", ok);
-  ok = eval_program(mf, cx, token_pointer);
+  ok = eval_program(mf, cx, first, last);
   assert("Wrong program not parsed", !ok);
-  free_token_list(token_pointer);
+  free_token_list(first);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
 }
 
 void test_path_expressions(void){
+  struct generic_token *first, *last;
   struct metafont *mf;
   struct context *cx;
   bool ret;
@@ -357,8 +362,8 @@ void test_path_expressions(void){
   struct pair_variable *pair_q, *pair_r, *pair_s;
   mf = init_metafont(malloc, free, "tests/path_expressions.mf");
   cx = init_context();
-  void *p = lexer(mf, malloc, free, "tests/path_expressions.mf");
-  ret = eval_program(mf, cx, p);
+  lexer(mf,  "tests/path_expressions.mf", &first, &last);
+  ret = eval_program(mf, cx, first, last);
   assert("Interpreting program with primary path expressions", ret);
   p1 = (struct named_variable *) mf -> named_variables;
   p2 = p1 -> next;
@@ -957,12 +962,13 @@ void test_path_expressions(void){
 	 ALMOST_EQUAL(get_point(path_m, 3) -> x, 9.0) &&
 	 ALMOST_EQUAL(get_point(path_m, 3) -> y, 12.0) &&
 	 path_m -> cyclic == true);
-  free_token_list(p);
+  free_token_list(first);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
 }
 
 void test_pen_expressions(void){
+  struct generic_token *first, *last;
   struct metafont *mf;
   struct context *cx;
   bool ret;
@@ -974,8 +980,8 @@ void test_pen_expressions(void){
   struct path_variable *path_p9, *path_p10, *path_p11, *path_p12, *path_p13;
   mf = init_metafont(malloc, free, "tests/pen_expressions.mf");
   cx = init_context();
-  void *p = lexer(mf, malloc, free, "tests/pen_expressions.mf");
-  ret = eval_program(mf, cx, p);
+  lexer(mf,  "tests/pen_expressions.mf", &first, &last);
+  ret = eval_program(mf, cx, first, last);
   p1 = (struct named_variable *) mf -> named_variables;
   p2 = p1 -> next;
   p3 = p2 -> next;
@@ -1326,12 +1332,13 @@ void test_pen_expressions(void){
 	 ALMOST_EQUAL(3.5, 0.5 * pen_p14 -> gl_matrix[1] +
 	 	      -0.5 * pen_p14 -> gl_matrix[4] +
 	 	      1.0 * pen_p14 -> gl_matrix[7]));
-  free_token_list(p);
+  free_token_list(first);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
 }
 
 void test_numeric_expressions(void){
+  struct generic_token *first, *last;
   struct metafont *mf;
   struct context *cx;
   bool ret;
@@ -1340,8 +1347,8 @@ void test_numeric_expressions(void){
     *numeric_d, *numeric_e, *numeric_f, *numeric_g, *numeric_h;
   mf = init_metafont(malloc, free, "tests/numeric_expressions.mf");
   cx = init_context();
-  void *p = lexer(mf, malloc, free, "tests/numeric_expressions.mf");
-  ret = eval_program(mf, cx, p);
+  lexer(mf,  "tests/numeric_expressions.mf", &first, &last);
+  ret = eval_program(mf, cx, first, last);
   a = (struct named_variable *) mf -> named_variables;
   b = a -> next;
   c = b -> next;
@@ -1369,12 +1376,13 @@ void test_numeric_expressions(void){
   assert("Evaluating numeric width and height for pictures",
 	 ALMOST_EQUAL(numeric_g -> value, 5.0) &&
 	 ALMOST_EQUAL(numeric_h -> value, 6.0));
-  free_token_list(p);
+  free_token_list(first);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
 }
 
 void test_pair_expressions(void){
+  struct generic_token *first, *last;
   struct metafont *mf;
   struct context *cx;
   bool ret;
@@ -1382,8 +1390,8 @@ void test_pair_expressions(void){
   struct pair_variable *pair_a, *pair_b;
   mf = init_metafont(malloc, free, "tests/pair_expressions.mf");
   cx = init_context();
-  void *p = lexer(mf, malloc, free, "tests/pair_expressions.mf");
-  ret = eval_program(mf, cx, p);
+  lexer(mf,  "tests/pair_expressions.mf", &first, &last);
+  ret = eval_program(mf, cx, first, last);
   a = (struct named_variable *) mf -> named_variables;
   b = a -> next;
   pair_a = (struct pair_variable *) a -> var;
@@ -1395,14 +1403,13 @@ void test_pair_expressions(void){
   assert("Interpolating between two points",
 	 ALMOST_EQUAL(pair_b -> x, 227.9591) &&
 	 ALMOST_EQUAL(pair_b -> y, 74.94846));
-  free_token_list(p);
+  free_token_list(first);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
 }
 
-
-
 void test_transform_expressions(void){
+  struct generic_token *first, *last;
   struct metafont *mf;
   struct context *cx;
   bool ret;
@@ -1412,8 +1419,8 @@ void test_transform_expressions(void){
     *transform_i, *transform_j;
   mf = init_metafont(malloc, free, "tests/transform_expressions.mf");
   cx = init_context();
-  void *p = lexer(mf, malloc, free, "tests/transform_expressions.mf");
-  ret = eval_program(mf, cx, p);
+  lexer(mf,  "tests/transform_expressions.mf", &first, &last);
+  ret = eval_program(mf, cx, first, last);
   a = (struct named_variable *) mf -> named_variables;
   b = a -> next;
   c = b -> next;
@@ -1505,12 +1512,13 @@ void test_transform_expressions(void){
 	 ALMOST_EQUAL(transform_j -> value[3], 0.4) &&
 	 ALMOST_EQUAL(transform_j -> value[1], -0.4) &&
 	 ALMOST_EQUAL(transform_j -> value[4], 0.2));
-  free_token_list(p);
+  free_token_list(first);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
 }
 
 void test_picture_expressions(void){
+  struct generic_token *first, *last;
   struct metafont *mf;
   struct context *cx;
   bool ret;
@@ -1524,8 +1532,8 @@ void test_picture_expressions(void){
     *numeric_wj, *numeric_wk, *numeric_wl, *numeric_wm;
   mf = init_metafont(malloc, free, "tests/picture_expressions.mf");
   cx = init_context();
-  void *p = lexer(mf, malloc, free, "tests/picture_expressions.mf");
-  ret = eval_program(mf, cx, p);
+  lexer(mf,  "tests/picture_expressions.mf", &first, &last);
+  ret = eval_program(mf, cx, first, last);
   a = (struct named_variable *) mf -> named_variables;
   b = a -> next;
   c = b -> next;
@@ -1624,12 +1632,13 @@ void test_picture_expressions(void){
   assert("Interpreting subpictures",
    	 picture_m -> width == 3 && picture_m -> height == 1 &&
   	 ALMOST_EQUAL(numeric_wm -> value, 1.0));
-  free_token_list(p);
+  free_token_list(first);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
 }
 
 void test_boolean_expressions(void){
+  struct generic_token *first, *last;
   struct metafont *mf;
   struct context *cx;
   bool ret;
@@ -1647,8 +1656,8 @@ void test_boolean_expressions(void){
     *boolean_f6;
   mf = init_metafont(malloc, free, "tests/boolean_expressions.mf");
   cx = init_context();
-  void *p = lexer(mf, malloc, free, "tests/boolean_expressions.mf");
-  ret = eval_program(mf, cx, p);
+  lexer(mf,  "tests/boolean_expressions.mf", &first, &last);
+  ret = eval_program(mf, cx, first, last);
   a0 = (struct named_variable *) mf -> named_variables;
   b0 = a0 -> next; c0 = b0 -> next; d0 = c0 -> next; e0 = d0 -> next;
   f0 = e0 -> next; a1 = f0 -> next; b1 = a1 -> next; c1 = b1 -> next;
@@ -1721,12 +1730,13 @@ void test_boolean_expressions(void){
   assert("Testing Boolean Variable evaluation", boolean_b6);
   assert("Testing 'odd' operator", (!boolean_c6 -> value) && boolean_d6 -> value);
   assert("Testing 'cycle' operator", boolean_e6 -> value && !(boolean_f6 -> value));
-  free_token_list(p);
+  free_token_list(first);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
 }
 
 void test_if_statements(void){
+  struct generic_token *first, *last;
   struct metafont *mf;
   struct context *cx;
   bool ret;
@@ -1734,8 +1744,8 @@ void test_if_statements(void){
   struct numeric_variable *numeric_a, *numeric_b, *numeric_c;
   mf = init_metafont(malloc, free, "tests/if_statement.mf");
   cx = init_context();
-  void *p = lexer(mf, malloc, free, "tests/if_statement.mf");
-  ret = eval_program(mf, cx, p);
+  lexer(mf,  "tests/if_statement.mf", &first, &last);
+  ret = eval_program(mf, cx, first, last);
   a = (struct named_variable *) mf -> named_variables;
   b = a -> next;
   c = b -> next;
@@ -1746,12 +1756,13 @@ void test_if_statements(void){
   assert("Interpreting 'if', 'elseif' and 'else'",
 	 numeric_a -> value == 2 && numeric_b -> value == 11 &&
 	 numeric_c -> value == 17);
-  free_token_list(p);
+  free_token_list(first);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
 }
 
 void test_drawing_commands(void){
+  struct generic_token *first, *last;
   struct metafont *mf;
   struct context *cx;
   bool ret;
@@ -1767,8 +1778,8 @@ void test_drawing_commands(void){
     *pair_ph1, *pair_ph2;
   mf = init_metafont(malloc, free, "tests/drawing_commands.mf");
   cx = init_context();
-  void *p = lexer(mf, malloc, free, "tests/drawing_commands.mf");
-  ret = eval_program(mf, cx, p);
+  lexer(mf,  "tests/drawing_commands.mf", &first, &last);
+  ret = eval_program(mf, cx, first, last);
   a = (struct named_variable *) mf -> named_variables;
   b = (struct named_variable *) (a -> next);
   c = (struct named_variable *) (b -> next);
@@ -1925,12 +1936,13 @@ void test_drawing_commands(void){
 	 ALMOST_EQUAL(pair_ph1 -> y, 0.6) &&
 	 ALMOST_EQUAL(pair_ph2 -> x, 0.4) &&
 	 ALMOST_EQUAL(pair_ph2 -> y, -0.4));
-  free_token_list(p);
+  free_token_list(first);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
 }
 
 void test_font_rendering(void){
+  struct generic_token *first, *last;
   struct metafont *mf;
   struct context *cx;
   bool ret;
@@ -1938,8 +1950,8 @@ void test_font_rendering(void){
   int width = 0, height = 0, depth = -1, italcorr = -1, kerning = -1;
   mf = init_metafont(malloc, free, "sample/compare_fonts/sample.mf");
   cx = init_context();
-  void *p = lexer(mf, malloc, free, "sample/compare_fonts/sample.mf");
-  ret = eval_program(mf, cx, p);
+  lexer(mf, "sample/compare_fonts/sample.mf", &first, &last);
+  ret = eval_program(mf, cx, first, last);
   assert("Loading typographic font", ret);
   ret = _Wrender_glyph(mf, "0", NULL, &glyph, &width, &height,
   		       &depth, &italcorr, &kerning);
@@ -1949,7 +1961,7 @@ void test_font_rendering(void){
 		       &depth, &italcorr, &kerning);
   assert("Detecting missing glyph", !ret);
 
-  free_token_list(p);
+  free_token_list(first);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
 
@@ -1961,7 +1973,7 @@ void test_opengl(void){
 
 int main(int argc, char **argv){
   _Wcreate_window(&keyboard, &mouse);
-  if(!_Winit_metafont(malloc, free, malloc, free, my_rand, 2592)){
+  if(!_Winit_weavefont(malloc, free, malloc, free, my_rand, 2592)){
     fprintf(stderr, "ERROR: Test cannot be done. Initialization failed.\n");
     exit(1);
   }
@@ -1982,7 +1994,7 @@ int main(int argc, char **argv){
   test_font_rendering();
   test_opengl();
   imprime_resultado();
-  _Wfinish_metafont();
+  _Wfinish_weavefont();
   _Wdestroy_window();
   return 0;
 }

@@ -305,7 +305,7 @@ int main(int argc, char **argv){
 
   // Initializing WEAVEFONT and the metafont
   start = (float)clock()/CLOCKS_PER_SEC;
-  ret = _Winit_metafont(malloc, free, malloc, free, empty, 96);
+  ret = _Winit_weavefont(malloc, free, malloc, free, empty, 96);
   if(!ret){
     fprintf(stderr, "ERROR initializing WEAVEFONT library.\n");
     return 1;
@@ -329,7 +329,7 @@ int main(int argc, char **argv){
   printf("BOLD ITALIC TEST\n");
   test(mf, "sample_bold_italic.otf", argv[1], 2, 1);
   _Wdestroy_metafont(mf);
-  _Wfinish_metafont();
+  _Wfinish_weavefont();
   _Wfinish_interface();
   _Wdestroy_window();
   return 0;

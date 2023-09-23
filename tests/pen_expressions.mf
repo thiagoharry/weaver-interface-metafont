@@ -44,4 +44,3 @@ p17 = p1 shifted (1, 2) scaled 0.5 xscaled 3;
 p18 = p1 shifted (1, 2) scaled 0.5 xscaled 3 yscaled 4;
 p19 = p1 shifted (1, 2) scaled 0.5 xscaled 3 yscaled 4 slanted 0.1;
 
-end
