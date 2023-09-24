@@ -66,8 +66,8 @@ void test_empty_programs(void){
   struct metafont *mf;
   struct context *cx;
   bool ret;
-  mf = init_metafont(malloc, free, "tests/empty.mf");
-  cx = init_context();
+  mf = init_metafont("tests/empty.mf");
+  cx = init_context(mf);
   lexer(mf,  "tests/empty.mf", &first, &last);
   ret = eval_program(mf, cx, first, last);
   assert("Testing empty program", ret);
@@ -85,8 +85,8 @@ void test_compound_statements(void){
   struct metafont *mf;
   struct context *cx;
   bool ret;
-  mf = init_metafont(malloc, free, "tests/compound.mf");
-  cx = init_context();
+  mf = init_metafont("tests/compound.mf");
+  cx = init_context(mf);
   lexer(mf,  "tests/compound.mf", &first, &last);
   ret = eval_program(mf, cx, first, last);
   assert("Testing compound statements", ret);
@@ -111,8 +111,8 @@ void test_variables(void){
   struct pair_variable *p;
   struct named_variable *named;
   bool ret;
-  mf = init_metafont(malloc, free, "tests/variables.mf");
-  cx = init_context();
+  mf = init_metafont("tests/variables.mf");
+  cx = init_context(mf);
   lexer(mf,  "tests/variables.mf", &first, &last);
   ret = eval_program(mf, cx, first, last);
   ret = ret && (mf -> named_variables != NULL) &&
@@ -146,8 +146,8 @@ void test_assignments(void){
   struct metafont *mf;
   struct context *cx;
   bool ret;
-  mf = init_metafont(malloc, free, "tests/wrong_assignment.mf");
-  cx = init_context();
+  mf = init_metafont("tests/wrong_assignment.mf");
+  cx = init_context(mf);
   lexer(mf,  "tests/wrong_assignment.mf", &first, &last);
   ret = eval_program(mf, cx, first, last);
   assert("Detecting wrong assignment", !ret);
@@ -162,9 +162,9 @@ void test_lexer(void){
   bool ok = true;
   struct metafont *mf;
   struct context *cx;
-  mf = init_metafont(malloc, free, "tests/ridiculous.mf");
+  mf = init_metafont("tests/ridiculous.mf");
   lexer(mf, "tests/ridiculous.mf", &first, &last);
-  cx = init_context();
+  cx = init_context(mf);
   p = first;
   if(((struct symbolic_token *) p) -> type != TYPE_SYMBOLIC){
     ok = false;
@@ -360,8 +360,8 @@ void test_path_expressions(void){
     *path_i, *path_j, *path_k, *path_l, *path_m;
   struct numeric_variable *numeric_n;
   struct pair_variable *pair_q, *pair_r, *pair_s;
-  mf = init_metafont(malloc, free, "tests/path_expressions.mf");
-  cx = init_context();
+  mf = init_metafont("tests/path_expressions.mf");
+  cx = init_context(mf);
   lexer(mf,  "tests/path_expressions.mf", &first, &last);
   ret = eval_program(mf, cx, first, last);
   assert("Interpreting program with primary path expressions", ret);
@@ -978,8 +978,8 @@ void test_pen_expressions(void){
     *pen_p5, *pen_p6, *pen_p7, *pen_p8, *pen_p13, *pen_p14, *pen_p15, *pen_p16,
     *pen_p17, *pen_p18, *pen_p19;
   struct path_variable *path_p9, *path_p10, *path_p11, *path_p12, *path_p13;
-  mf = init_metafont(malloc, free, "tests/pen_expressions.mf");
-  cx = init_context();
+  mf = init_metafont("tests/pen_expressions.mf");
+  cx = init_context(mf);
   lexer(mf,  "tests/pen_expressions.mf", &first, &last);
   ret = eval_program(mf, cx, first, last);
   p1 = (struct named_variable *) mf -> named_variables;
@@ -1345,8 +1345,8 @@ void test_numeric_expressions(void){
   struct named_variable *a, *b, *c, *d, *e, *f, *g, *h;
   struct numeric_variable *numeric_a, *numeric_b, *numeric_c,
     *numeric_d, *numeric_e, *numeric_f, *numeric_g, *numeric_h;
-  mf = init_metafont(malloc, free, "tests/numeric_expressions.mf");
-  cx = init_context();
+  mf = init_metafont("tests/numeric_expressions.mf");
+  cx = init_context(mf);
   lexer(mf,  "tests/numeric_expressions.mf", &first, &last);
   ret = eval_program(mf, cx, first, last);
   a = (struct named_variable *) mf -> named_variables;
@@ -1388,8 +1388,8 @@ void test_pair_expressions(void){
   bool ret;
   struct named_variable *a, *b;
   struct pair_variable *pair_a, *pair_b;
-  mf = init_metafont(malloc, free, "tests/pair_expressions.mf");
-  cx = init_context();
+  mf = init_metafont("tests/pair_expressions.mf");
+  cx = init_context(mf);
   lexer(mf,  "tests/pair_expressions.mf", &first, &last);
   ret = eval_program(mf, cx, first, last);
   a = (struct named_variable *) mf -> named_variables;
@@ -1417,8 +1417,8 @@ void test_transform_expressions(void){
   struct transform_variable *transform_a, *transform_b, *transform_c,
     *transform_d, *transform_e, *transform_f, *transform_g, *transform_h,
     *transform_i, *transform_j;
-  mf = init_metafont(malloc, free, "tests/transform_expressions.mf");
-  cx = init_context();
+  mf = init_metafont("tests/transform_expressions.mf");
+  cx = init_context(mf);
   lexer(mf,  "tests/transform_expressions.mf", &first, &last);
   ret = eval_program(mf, cx, first, last);
   a = (struct named_variable *) mf -> named_variables;
@@ -1530,8 +1530,8 @@ void test_picture_expressions(void){
   struct numeric_variable *numeric_wa, *numeric_wb, *numeric_wc, *numeric_wd,
     *numeric_we, *numeric_wf, *numeric_wg, *numeric_wh, *numeric_wi,
     *numeric_wj, *numeric_wk, *numeric_wl, *numeric_wm;
-  mf = init_metafont(malloc, free, "tests/picture_expressions.mf");
-  cx = init_context();
+  mf = init_metafont("tests/picture_expressions.mf");
+  cx = init_context(mf);
   lexer(mf,  "tests/picture_expressions.mf", &first, &last);
   ret = eval_program(mf, cx, first, last);
   a = (struct named_variable *) mf -> named_variables;
@@ -1654,8 +1654,8 @@ void test_boolean_expressions(void){
     *boolean_a5, *boolean_b5, *boolean_c5, *boolean_d5,
     *boolean_a6, *boolean_b6, *boolean_c6, *boolean_d6, *boolean_e6,
     *boolean_f6;
-  mf = init_metafont(malloc, free, "tests/boolean_expressions.mf");
-  cx = init_context();
+  mf = init_metafont("tests/boolean_expressions.mf");
+  cx = init_context(mf);
   lexer(mf,  "tests/boolean_expressions.mf", &first, &last);
   ret = eval_program(mf, cx, first, last);
   a0 = (struct named_variable *) mf -> named_variables;
@@ -1742,8 +1742,8 @@ void test_if_statements(void){
   bool ret;
   struct named_variable *a, *b, *c;
   struct numeric_variable *numeric_a, *numeric_b, *numeric_c;
-  mf = init_metafont(malloc, free, "tests/if_statement.mf");
-  cx = init_context();
+  mf = init_metafont("tests/if_statement.mf");
+  cx = init_context(mf);
   lexer(mf,  "tests/if_statement.mf", &first, &last);
   ret = eval_program(mf, cx, first, last);
   a = (struct named_variable *) mf -> named_variables;
@@ -1776,8 +1776,8 @@ void test_drawing_commands(void){
   struct pair_variable *pair_pa1, *pair_pa2, *pair_pb1, *pair_pb2, *pair_pd1,
     *pair_pd2, *pair_pe1, *pair_pe2, *pair_pf1, *pair_pf2, *pair_pg1, *pair_pg2,
     *pair_ph1, *pair_ph2;
-  mf = init_metafont(malloc, free, "tests/drawing_commands.mf");
-  cx = init_context();
+  mf = init_metafont("tests/drawing_commands.mf");
+  cx = init_context(mf);
   lexer(mf,  "tests/drawing_commands.mf", &first, &last);
   ret = eval_program(mf, cx, first, last);
   a = (struct named_variable *) mf -> named_variables;
@@ -1948,8 +1948,8 @@ void test_font_rendering(void){
   bool ret;
   GLuint glyph = 0;
   int width = 0, height = 0, depth = -1, italcorr = -1, kerning = -1;
-  mf = init_metafont(malloc, free, "sample/compare_fonts/sample.mf");
-  cx = init_context();
+  mf = init_metafont("sample/compare_fonts/sample.mf");
+  cx = init_context(mf);
   lexer(mf, "sample/compare_fonts/sample.mf", &first, &last);
   ret = eval_program(mf, cx, first, last);
   assert("Loading typographic font", ret);

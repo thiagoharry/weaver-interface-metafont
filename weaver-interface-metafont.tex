@@ -83,7 +83,7 @@
 
 1. Introdução \indice{3}
 
-1.1. Programação Literária \indice{4}
+1.1. Programação Literária \indice{5}
 
 2. Código Auxiliar Geral \indice{6}
 
@@ -97,11 +97,15 @@
 
 4.1. Tipos de Tokens \indice{11}
 
-4.2. A Análise Léxica \indice{13}
+4.2. A Análise Léxica \indice{14}
 
-5. Programas WEAVEFONT \indice{21}
+5. Programas WEAVEFONT \indice{22}
 
-6. Listas de Declarações \indice{XX}
+5.1. Executando Programas \indice{22}
+
+5.2. Lidando com Erros \indice{24}
+
+5.3. Separando Lista de Instruções em Instruções Individuais \indice{27}
 
 7. Declaração Composta: Bloco Composto \indice{XX}
 
@@ -338,6 +342,18 @@ função de inicialização:
 void _Wfinish_weavefont(void);
 @
 \fimcodigo
+
+Caso algum erro tenha ocorrido durante a execução de um código
+WEAVEFONT que define uma meta-fonte, então o usuário poderá usar a
+seguinte função para imprimir na tela uma mensagem descrevendo o erro
+encontrado:
+
+\iniciocodigo
+@<Declaração de Função (metafont.h)@>+=
+void _Wprint_metafont_error(struct metafont *);
+@
+\fimcodigo
+
 
 \subsecao{1.1. Programação Literária}
 
@@ -716,7 +732,7 @@ declararmos. Para isso, usaremos a seguinte macro:
 #if defined(_WIN32)
 #define MUTEX_INIT(mutex) InitializeCriticalSection(mutex);
 #elif defined(__linux__) || defined(BSD) || defined(W_ALWAYS_USE_THREADS)
-#define MUTEX_INIT(mutex) pthread_mutex_init(mutex, NULL);
+#define MUTEX_INIT(mutex) pthread_mutex_init(&mutex, NULL);
 #elif defined(__EMSCRIPTEN__)
 #define MUTEX_INIT(mutex)
 #endif
@@ -731,7 +747,7 @@ macro:
 #if defined(_WIN32)
 #define MUTEX_DESTROY(mutex) DeleteCriticalSection(mutex);
 #elif defined(__linux__) || defined(BSD) || defined(W_ALWAYS_USE_THREADS)
-#define MUTEX_DESTROY(mutex) pthread_mutex_destroy(mutex);
+#define MUTEX_DESTROY(mutex) pthread_mutex_destroy(&mutex);
 #elif defined(__EMSCRIPTEN__)
 #define MUTEX_DESTROY(mutex)
 #endif
@@ -748,7 +764,7 @@ novamente:
 #if defined(_WIN32)
 #define MUTEX_WAIT(mutex) EnterCriticalSection(mutex);
 #elif defined(__linux__) || defined(BSD) || defined(W_ALWAYS_USE_THREADS)
-#define MUTEX_WAIT(mutex) pthread_mutex_lock(mutex);
+#define MUTEX_WAIT(mutex) pthread_mutex_lock(&mutex);
 #elif defined(__EMSCRIPTEN__)
 #define MUTEX_WAIT(mutex)
 #endif
@@ -763,7 +779,7 @@ Mutex, podemos liberar ele com o código abaixo:
 #if defined(_WIN32)
 #define MUTEX_SIGNAL(mutex) LeaveCriticalSection(mutex);
 #elif defined(__linux__) || defined(BSD) || defined(W_ALWAYS_USE_THREADS)
-#define MUTEX_SIGNAL(mutex) pthread_mutex_unlock(mutex);
+#define MUTEX_SIGNAL(mutex) pthread_mutex_unlock(&mutex);
 #elif defined(__EMSCRIPTEN__)
 #define MUTEX_SIGNAL(mutex)
 #endif
@@ -1033,9 +1049,8 @@ void lexer(struct metafont *mf, char *path, struct generic_token **first_token,
     @<Análise Léxica: Regra 4@>
     @<Análise Léxica: Regra 5@>
     @<Análise Léxica: Regra 6@>
-    // Nenhuma regra aplicada: erro
-    fprintf(stderr, "ERROR: %s:%d: Unknown character: '%c'\n",
-            path, line, c);
+    // Nenhuma regra aplicada: erro. Definiremos erros na Subseção 5.2.
+    RAISE_ERROR_INVALID_CHAR(mf, line, c);
     free_token_list(first_token);
     *first_token = NULL;
     *last_token = NULL;
@@ -1110,6 +1125,7 @@ if((c == '.' && isdigit(next_char)) || isdigit(c)){
   if(new_token == NULL){
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
+    RAISE_ERROR_NO_MEMORY(mf, line); // Vamos definir erros na Seção 5.2.
     return;
   }
   new_token -> type = TYPE_NUMERIC;
@@ -1163,6 +1179,7 @@ if(c == 34){ // 34: ASCII para aspas duplas
   if(new_token == NULL){
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
+    RAISE_ERROR_NO_MEMORY(mf, line);
     return;
   }
   new_token -> type = TYPE_STRING;
@@ -1182,7 +1199,7 @@ if(c == 34){ // 34: ASCII para aspas duplas
   i --;
   new_token -> value[i] = '\0';
   if(c == '\n' || c == EOF){
-    fprintf(stderr, "ERROR: %s:%d: Incomplete String.\n", path, line);
+    RAISE_ERROR_UNCLOSED_STRING(mf, line, new_token -> value);
     if(permanent_free != NULL)
       permanent_free(new_token);
     free_token_list(*first_token);
@@ -1212,6 +1229,7 @@ if(c == '(' || c == ')' || c == ',' || c == ';'){
   if(new_token == NULL){
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
+    RAISE_ERROR_NO_MEMORY(mf, line);
     return;
   }
   if(c == '(')
@@ -1496,6 +1514,7 @@ dependendo de sua posição na lista:
     if(new_token == NULL){
       free_token_list(*first_token);
       *first_token = *last_token = NULL;
+      RAISE_ERROR_NO_MEMORY(mf, line);
       return;
     }
     new_token -> type = token_type;
@@ -1538,6 +1557,7 @@ if(buffer[0] != '\0'){
   if(new_token == NULL){
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
+    RAISE_ERROR_NO_MEMORY(mf, line);
     return;
   }
   new_token -> type = TYPE_SYMBOLIC;
@@ -1563,6 +1583,8 @@ if(buffer[0] != '\0'){
 \fimcodigo
 
 \secao{5. Programas WEAVEFONT}
+
+\subsecao{5.1. Executando Programas}
 
 Quando avaliamos um programa WEAVEFONT, vamos precisar de duas
 extruturas adicionais. A primeira delas, a qual chamaremos
@@ -1612,6 +1634,7 @@ bool eval_program(struct metafont *mf, struct context *cx,
     return true;
   if(!eval_list_of_statements(mf, cx, first_token, last_token))
     return false;
+  // Código adicional a ser definido futuramente:
   @<Após Execução de Programa@>
   return true;
 }
@@ -1629,31 +1652,38 @@ struct context{
 @
 \fimcodigo
 
-E como indicado acima, um dos conteúdos de \monoespaco{struct
-metafont} é o arquivo de onde saiu a fonte que ele representa. Também
-vamos armazenar o que é necessário para alocar e desalocar a estrutura
-e seus elementos:
+Já a estrutura da meta-fonte, por hora vamos indicar três variáveis
+dentro dela. A primeira é um mutex, como descrito na Subseção 2.2.
+Depois temos uma string com o nome do arquivo de onde o código da
+fonte foi lida. A última indica se a fonte já terminou de carregar ou
+se ainda está em carregamento. Uma fonte em carregamento está
+executando código WEAVEFONT, mas ainda não terminou de processar todo
+o arquivo até o final pela primeira vez. Ela ainda não sabe quais
+caracteres ela pode ou não renderizar. Já se ela não está em modo de
+carregamento,ela já terminou de processar o arquivo com o código e
+está pronta para renderizar imagens.
 
 \iniciocodigo
 @<Estrutura de Dados (metafont.h)@>+=
 struct metafont{
+  @<Declarar um Mutex@>
   char *file;
-  void *(*alloc)(size_t);
-  void (*free)(void *);
+  bool loading;
   @<Atributos (struct metafont)@>
 };
 @
 \fimcodigo
 
 Ambas as estruturas de dados terão uma função que as inicializa e as
-finaliza (a função que finaliza a estrutura metafont já foi declarada):
+finaliza (a função que finaliza a estrutura
+metafont, \monoespaco{\_Wdestroy\_metafont}, já foi declarada na Seção
+1, quando listávamos o cabeçalho das funções que seriam exportadas
+para o usuário):
 
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
-struct metafont *init_metafont(void *(*alloc)(size_t),
-                              void (*disalloc)(void *),
-                              char *filename);
-struct context *init_context(void);
+struct metafont *init_metafont(char *filename);
+struct context *init_context(struct metafont *mf);
 void destroy_context(struct metafont *mf, struct context *cx);
 @
 \fimcodigo
@@ -1665,22 +1695,30 @@ será alocado e desalocado com as funções temporárias de memória.
 
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
-struct metafont *init_metafont(void *(*alloc)(size_t),
-                              void (*disalloc)(void *),
-                              char *filename){
+struct metafont *init_metafont(char *filename){
   struct metafont *mf;
+  mf = (struct metafont *) permanent_alloc(sizeof(struct metafont));
+  if(mf == NULL)
+    return NULL;
+  MUTEX_INIT(mf -> mutex);
+  // Copiando o nome do arquivo com o código
   size_t filename_size = strlen(filename) + 1;
-  mf = (struct metafont *) alloc(sizeof(struct metafont));
-  mf -> file = (char *) alloc(filename_size);
+  mf -> file = (char *) permanent_alloc(filename_size);
   memcpy(mf -> file, filename, filename_size);
-  mf -> alloc = alloc;
-  mf -> free = disalloc;
+  // Iniciamos no modo de carregamento
+  mf -> loading = true;
+  // Mais código a ser definido futuramente:
   @<Inicialização (struct metafont)@>
   return mf;
 }
-struct context *init_context(void){
+struct context *init_context(struct metafont *mf){
   struct context *cx;
   cx = (struct context *) temporary_alloc(sizeof(struct context));
+  if(cx == NULL){
+    RAISE_ERROR_NO_MEMORY(mf, 0); // Vamos definir erros na Seção 5.2.
+    return NULL;
+  }
+  // A ser definido futuramente:
   @<Inicialização (struct context)@>
   return cx;
 }
@@ -1692,10 +1730,12 @@ Já a definição das funções que finalizam e desalocam as estruturas:
 \iniciocodigo
 @<Definição de Funções da API (metafont.c)@>+=
 void _Wdestroy_metafont(struct metafont *mf){
-  if(mf -> free != NULL){
-    mf -> free(mf -> file);
+  if(permanent_free != NULL){
+    permanent_free(mf -> file);
+    // A ser definido no futuro:
     @<Finalização (struct metafont)@>
-    mf -> free(mf);
+    MUTEX_DESTROY(mf -> mutex);
+    permanent_free(mf);
   }
 }
 @
@@ -1705,6 +1745,7 @@ void _Wdestroy_metafont(struct metafont *mf){
 @<Funções Auxiliares Locais (metafont.c)@>+=
 void destroy_context(struct metafont *mf, struct context *cx){
   if(temporary_free != NULL){
+    // A ser definido no futuro:
     @<Finalização (struct context)@>
     temporary_free(cx);
   }
@@ -1712,42 +1753,210 @@ void destroy_context(struct metafont *mf, struct context *cx){
 @
 \fimcodigo
 
-O quão rápido executa o nosso código de inicialização e finalização
-comparado ao METAFONT original? Para responder isso, foi feito um
-``benchmark'' comparando a execução de um programa vazio formado só
-pela palavra ``end'' ao ser interpretado pelo programa METAFONT
-original e pela nossa implementação do Weaver Metafont. O teste foi
-feito em um Ubuntu 20.04.4 rodando em um Intel(R) Core(TM) i5-3210M
-CPU @ 2.50GHz com 4GB de RAM. O resultado é apresentado abaixo:
+Conforme foi comentado, a variável booleana \monoespaco{loading}
+dentro da \monoespaco{struct metafont} deve ser mudada para falso
+depois que o programa inteiro é avaliado e executado pela primeira
+vez. Nesta mesma Subseção mostramos o código que é executado para ler
+o programa pela primeira vez (função \monoespaco{eval\_program}). Só
+precisamos então adicionar depois dele código para atualizar esta
+variável:
 
+\iniciocodigo
+@<Após Execução de Programa@>=
+mf -> loading = false;
+@
+\fimcodigo
 
-\vbox{%A forma mais geral de remover espaçamento entre linhas:
-\baselineskip-1000pt\lineskip0pt\lineskiplimit16383.99999pt\tabskip0pt
-\def\linha{\noalign{\hrule}}
-\def\hidewidth{\hskip-1000pt plus 1fill}
-\def\col{\hbox{\vrule height12pt depth3.5pt width0pt}}
-\halign to15cm{\col#& \vrule#\tabskip=1em plus2em&
-\hfil#& \vrule#& \hfil#\hfil& \vrule#&
-\hfil#& \vrule#&\hfil#& \vrule#\tabskip=0pt\cr\linha
-&&\omit\hidewidth Versão\hidewidth&&\omit\hidewidth
-Tempo (s)\hidewidth&&
-\omit\hidewidth Versão\hidewidth&&Tempo (s)&\cr\linha
-&&METAFONT&&0,121&&Weaver Metafont&&0.001&\cr\linha}}
+\subsecao{5.2. Lidando com Erros}
 
-A diferença de valores se dá provavelmente devido ao fato do METAFONT
-original necessariamente imprimir mensagens na tela e ter uma lista
-muito maior de variáveis internas que precisam ser inicializadas. Além
-disso, o programa original foi feito em uma versão primitiva de Pascal
-onde não havia uma maneira padronizada de se lidar com strings,
-números em ponto flutuante, etc. Tudo isso exigiu do METAFONT original
-uma burocracia muito maior na inicialização e finalização para
-preparar rotinas que lidam com tais tarefas básicas. Nada disso é
-necessário em nossa implementação que já conta com um ambiente padrão
-mais rico e com mais capacidades. Tudo o que temos que fazer é apenas
-alocar memória necessária e realizar algumas inicializações mais
-básicas.
+Quando erros existirem em um código-fonte WEAVEFONT, nenhuma imagem ou
+meta-fonte tipográfica pode ser gerada. Entretanto, o programador deve
+ter alguma forma de descobrir o quê deu errado para que o problema
+possa ser ajustado. Por causa disso, vamos adicionar à estrutura de
+cada meta-fonte variáveis que, em caso de erro, conterão um
+diagnóstico do quê aconteceu de errado:
 
-\secao{6. Listas de Declarações}
+\iniciocodigo
+@<Atributos (struct metafont)@>=
+  int errno, errno_line;
+  char *errno_str;
+  int errno_int;
+@
+\fimcodigo
+
+A ideia é que caso nenhum erro aconteça, todas as variáveis acima
+serão igual a zero ou nulo. Então, quando inicializamos uma
+meta-fonte, precisamos inicializar estas variáveis com tais valores
+que indicam ausência de erro:
+
+\iniciocodigo
+@<Inicialização (struct metafont)@>=
+mf -> errno = mf -> errno_line = 0;
+mf -> errno_str = NULL;
+mf -> errno_int = 0;
+@
+\fimcodigo
+
+A ideia é que tão logo o primeiro erro seja encontrado, o valor
+de \monoespaco{errno} deve mudar para algo que indique a natureza do
+erro encontrado. Caso estejamos contando o número de linhas no código
+(ou seja, quando a macro \monoespaco{W\_DEBUG\_METAFONT} estiver
+definida), então a linha onde o erro ocorreu deve ser armazenada
+em \monoespaco{errno\_line}. E se mais informação precisam ser
+indicadas para que o erro possa ser descrito com mais precisão, então
+usaremos o ponteiro logo abaixo e o faremos apontar para uma string
+relevante. Ou armazenaresmo algum número que explique o erro
+em \monoespaco{errno\_int}.
+
+Somente o primeiro erro encontrado em cada meta-fonte deve ser
+armazenado. Se houverem mais, eles devem ser ignorados. Todas as
+funções que executam código WEAVEFONT devem retornar um valor
+booleano. Caso nenhum erro tenha ocorrido, retrona-se verdadeiro. Já
+em caso de erros, retorna-se falso.
+
+Os diferentes tipos de erros serão armazenados aqui:
+
+\iniciocodigo
+@<Estrutura de Dados Locais (metafont.c)@>+=
+enum { // Tipos de Erros
+  ERROR_NO_ERROR = 0,
+  // Os diferentes tipos que serão definidos:
+  @<Tipos de Erros@>
+  // E um último que esperamos nunca usar: indica erro desconhecido
+  ERROR_UNKNOWN
+};
+@
+\fimcodigo
+
+Dado o código que definimos até agora, somente três tipos de erro
+podem ocorrer. Podemos ficar sem memória quando estamos alocando um
+token, um contexto ou qualquer outra estrutura auxiliar da qual
+precisamos. Ou podemos ter encontrado um símbolo completamente
+não-suportado em nosso analisador léxico. Ou ainda podemos ter
+começado uma string e não terminado.
+
+Não vamos nos preocupar com erros como quando um usuário passa um
+arquivo de código-fonte que não existe para inicializar uma
+meta-fonte. Neste caso, a fonte não será inicializada e não haverá
+código algum. Os tipos de erro que nos interessa aqui são erros
+léxicos e de sintaxe encontrados na linguagem.
+
+Pode ser difícil para um usuário ter que lembrar todos os tipos de
+erros para analisar corretamente esta informação. Por causa disso, uma
+função será exportada para imprimir na tela uma mensagem
+diagnosticando o erro encontrado:
+
+\iniciocodigo
+@<Definição de Funções da API (metafont.c)@>+=
+void _Wprint_metafont_error(struct metafont *mf){
+  char *line_number;
+  // Primeiro tentamos gerar uma string com o número de linha onde teve erro.
+  // Assim é como podemos calcular o tamanho desta string:
+  int str_size = (int)((ceil(log10(mf -> errno_line))+1)*sizeof(char));
+  line_number = (char *) temporary_alloc(str_size);
+  // Mas se não temos um número de linha, só deixamos a string vazia:
+  if(mf -> errno_line == 0)
+    line_number[0] = '\0';
+  else
+    sprintf(line_number, "%d: ", mf -> errno_line);
+  switch(mf -> errno){
+  case ERROR_NO_ERROR:
+    fprintf(stderr, "%s:%s No errors.\n", mf -> file, line_number);
+    break;
+  @<Imprime Mensagem de Erro@>
+  default:
+    fprintf(stderr, "%s:%s Unknown error.\n", mf -> file, line_number);
+  }
+  if(temporary_free != NULL)
+    temporary_free(line_number);
+}
+@
+\fimcodigo
+
+Para adicionar novos tipos de erro, basta começarmos definindo os seus
+tipos, o que acabará dando um código numérico para ele. Por exemplo,
+para os casos de erro por não termos memória, por encontrarmos um caractere
+inválido no analisador léxico e por termos começado e não terminado
+uma string, podemos adicionar os 3 tipos abaixo:
+
+\iniciocodigo
+@<Tipos de Erros@>=
+ERROR_NO_MEMORY, ERROR_INVALID_CHAR, ERROR_UNCLOSED_STRING,
+@
+\fimcodigo
+
+Iremos definir macros para gerar tais erros. No caso de falta de memória:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_NO_MEMORY(mf, line) {\
+  if(!mf -> errno){\
+    mf -> errno = ERROR_NO_MEMORY;\
+    mf -> errno_line = line;}}
+@
+\fimcodigo
+
+No caso de termos um caractere não suportado, além de tentar guardar o
+número da linha, nós também armazenamos em \monoespaco{errno\_int}
+qual o caractere inválido encontrado.
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_INVALID_CHAR(mf, line, char) {\
+  if(!mf -> errno){\
+    mf -> errno = ERROR_INVALID_CHAR;\
+    mf -> errno_line = line;\
+    mf -> errno_int = char;}}
+@
+\fimcodigo
+
+E finalmente, quando estamos com uma string não-finalizada:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_UNCLOSED_STRING(mf, line, str) {\
+  if(!mf -> errno){\
+    mf -> errno = ERROR_UNCLOSED_STRING;\
+    mf -> errno_line = line;\
+    mf -> errno_str = (char *) permanent_alloc(sizeof(str)+1);\
+    memcpy(mf -> errno_str, str, sizeof(str)+1);}}
+@
+\fimcodigo
+
+Para imprimir uma mensagem de diagnóstico para os três erros
+definidos, usamos:
+
+\iniciocodigo
+@<Imprime Mensagem de Erro@>=
+case ERROR_NO_MEMORY:
+  fprintf(stderr, "%s:%s Not enough memory for allocation.\n", mf -> file,
+          line_number);
+  break;
+case ERROR_INVALID_CHAR:
+  fprintf(stderr, "%s:%s UNsupported character in source code: '%x'.\n",
+          mf -> file, line_number, (unsigned) mf -> errno_int);
+  break;
+case ERROR_UNCLOSED_STRING:
+  fprintf(stderr, "%s:%s Unclosed string \"%s\".\n", mf -> file,
+          line_number, mf -> errno_str);
+  break;
+@
+\fimcodigo
+
+Note que no caso do erro em que a string não é finalizada, nós
+copiamos o conteúdo da string para \monoespaco{errno\_str} após alocar
+espaço para isso. O que significa que quando formos finalizar o
+nosso \monoespaco{struct metafont}, precisaremos checar se existe algo
+alocado lá e desalocar:
+
+\iniciocodigo
+@<Finalização (struct metafont)@>=
+if(mf -> errno_str != NULL && permanent_free != NULL)
+  permanent_free(mf -> errno_str);
+@
+\fimcodigo
+
+\subsecao{5.3. Separando Lista de Instruções em Instruções Individuais}
 
 Uma lista de declarações é uma série de declarações (potencialmente
 vazias) sempre separadas por ponto-e-vírgula:
@@ -2246,14 +2455,14 @@ de operações adicionais para serem removidas, mas trataremos delas
 posteriormente.
 
 \iniciocodigo
-@<Finalização (struct metafont)@>=
-if(mf -> free != NULL){
+@<Finalização (struct metafont)@>+=
+if(permanent_free != NULL){
   struct variable *v = (struct variable *) (mf -> global_variables);
   struct variable *next;
   while(v != NULL){
     next = (struct variable *) (v -> next);
     @<Finaliza Variável Global 'v'@>
-    mf -> free(v);
+    permanent_free(v);
     v = next;
   }
 }
@@ -2265,17 +2474,17 @@ feito de maneira semelhante:
 
 \iniciocodigo
 @<Finalização (struct metafont)@>+=
-if(mf -> free != NULL){
+if(permanent_free != NULL){
   struct named_variable *named = (struct named_variable *)
                                    (mf -> named_variables);
   struct named_variable *next;
   while(named != NULL){
     struct variable *v = (struct variable *) (named -> var);
     next = (struct named_variable *) (named -> next);
-    mf -> free(named -> name);
+    permanent_free(named -> name);
     @<Finaliza Variável Global 'v'@>
-    mf -> free(v);
-    mf -> free(named);
+    permanent_free(v);
+    permanent_free(named);
     named = next;
   }
 }
@@ -2375,7 +2584,7 @@ A inserção de uma nova variável segue a seguinte lógica:
   void *variable_pointer;
   if(cx -> nesting_level == 0){ // Variável global
     if(variable -> value[0] == '_')
-      variable_pointer = insert_variable(0, mf -> alloc, type, variable,
+      variable_pointer = insert_variable(0, permanent_alloc, type, variable,
                                          &(mf -> global_variables));
     else
       variable_pointer = insert_named_global_variable(mf, type, variable);
@@ -2490,25 +2699,25 @@ struct variable *insert_named_global_variable(struct metafont *mf,
   struct variable *new_var;
   size_t name_size;
   named = (struct named_variable *)
-              mf -> alloc(sizeof(struct named_variable));
+              permanent_alloc(sizeof(struct named_variable));
   if(named == NULL)
     return NULL;
   name_size = strlen(var -> value) + 1;
-  named -> name = (char *) mf -> alloc(name_size);
+  named -> name = (char *) permanent_alloc(name_size);
   if(named -> name == NULL){
-    if(mf -> free != NULL)
-      mf -> free(named);
+    if(permanent_free != NULL)
+      permanent_free(named);
     return NULL;
   }
   memcpy(named -> name, var -> value, name_size);
   named -> next = NULL;
   named -> var = NULL;
-  new_var = insert_variable(0, mf -> alloc, type, var,
+  new_var = insert_variable(0, permanent_alloc, type, var,
                            (void **) &(named -> var));
   if(new_var == NULL){
-    if(mf -> free != NULL){
-      mf -> free(named -> name);
-      mf -> free(named);
+    if(permanent_free != NULL){
+      permanent_free(named -> name);
+      permanent_free(named);
       return NULL;
     }
   }
@@ -2635,7 +2844,7 @@ Na inicialização alocamos espaço para as três variáveis e as preenchemos:
 \iniciocodigo
 @<Inicialização (struct metafont)@>+=
 mf -> internal_numeric_variables =
-             mf -> alloc(6 * sizeof(struct numeric_variable));
+             permanent_alloc(6 * sizeof(struct numeric_variable));
 ((struct numeric_variable *) mf -> internal_numeric_variables)[0].value =
    ((double) dpi) / 72.0; // 1in = 72 pt
 ((struct numeric_variable *) mf -> internal_numeric_variables)[1].value =
@@ -2676,8 +2885,8 @@ internas:
 
 \iniciocodigo
 @<Finalização (struct metafont)@>+=
-if(mf -> free != NULL)
-  mf -> free(mf -> internal_numeric_variables);
+if(permanent_free != NULL)
+  permanent_free(mf -> internal_numeric_variables);
 @
 \fimcodigo
 
@@ -2816,10 +3025,10 @@ alocado e as variáveis internas são inicializadas:
 @<Inicialização (struct metafont)@>+=
 mf -> internal_transform_variables =
   (struct transform_variable *)
-    mf -> alloc(sizeof(struct transform_variable));
+    permanent_alloc(sizeof(struct transform_variable));
 if(mf -> internal_transform_variables == NULL){
-  if(disalloc != NULL)
-    disalloc(mf);
+  if(permanent_free != NULL)
+    permanent_free(mf);
   return NULL; //ERRO: Sem memória suficiente
 }
 // A transformação 'identity':
@@ -2832,8 +3041,8 @@ Na finalização isso deve ser desalocado:
 
 \iniciocodigo
 @<Finalização (struct metafont)@>+=
-if(mf -> free != NULL)
-  mf -> free(mf -> internal_transform_variables);
+if(permanent_free != NULL)
+  permanent_free(mf -> internal_transform_variables);
 @
 \fimcodigo
 
@@ -2957,8 +3166,8 @@ estiver inicializada, precisamos remover a lista de pontos alocada:
 @<Finaliza Variável Global 'v'@>=
 if(v -> type == TYPE_T_PATH){
   struct path_variable *path = (struct path_variable *) v;
-  if(path -> length != -1 && mf -> free != NULL)
-    path_recursive_free(mf -> free, path, false);
+  if(path -> length != -1 && permanent_free != NULL)
+    path_recursive_free(permanent_free, path, false);
 }
 @
 \fimcodigo
@@ -3159,8 +3368,8 @@ vértices:
 @<Finaliza Variável Global 'v'@>=
 if(v -> type == TYPE_T_PEN){
   struct pen_variable *pen = (struct pen_variable *) v;
-  if(pen -> format != NULL && mf -> free != NULL)
-    path_recursive_free(mf -> free, pen -> format, true);
+  if(pen -> format != NULL && permanent_free != NULL)
+    path_recursive_free(permanent_free, pen -> format, true);
   if(pen -> gl_vbo != 0)
     glDeleteBuffers(1, &(pen -> gl_vbo));
 }
@@ -3206,10 +3415,10 @@ caneta vazia e a \monoespaco{pensquare} será um quadrado de lado
 \iniciocodigo
 @<Inicialização (struct metafont)@>+=
 mf -> internal_pen_variables = (struct pen_variable *)
-                                 mf -> alloc(2 * sizeof(struct pen_variable));
+                                 permanent_alloc(2 * sizeof(struct pen_variable));
 if(mf -> internal_pen_variables == NULL){
-  if(disalloc != NULL)
-    disalloc(mf);
+  if(permanent_free != NULL)
+    permanent_free(mf);
   return NULL;
 }
 mf -> internal_pen_variables[0].format = NULL; // A caneta 'currentpen'
@@ -3250,12 +3459,12 @@ internas:
 
 \iniciocodigo
 @<Finalização (struct metafont)@>+=
-if(mf -> free != NULL){
+if(permanent_free != NULL){
   if(mf -> internal_pen_variables[1].format != NULL){
-    mf -> free(mf -> internal_pen_variables[1].format -> points);
-    mf -> free(mf -> internal_pen_variables[1].format);
+    permanent_free(mf -> internal_pen_variables[1].format -> points);
+    permanent_free(mf -> internal_pen_variables[1].format);
   }
-  mf -> free(mf -> internal_pen_variables);
+  permanent_free(mf -> internal_pen_variables);
 }
 @
 \fimcodigo
@@ -3371,10 +3580,10 @@ declarada, mas deixada como não-inicializada:
 \iniciocodigo
 @<Inicialização (struct metafont)@>+=
 mf -> internal_picture_variables = (struct picture_variable *)
-                                   mf-> alloc(sizeof(struct picture_variable));
+                                   permanent_alloc(sizeof(struct picture_variable));
 if(mf -> internal_picture_variables == NULL){
-  if(disalloc != NULL)
-    disalloc(mf);
+  if(permanent_free != NULL)
+    permanent_free(mf);
   return NULL;
 }
 // A imagem 'currentpicture':
@@ -3402,8 +3611,8 @@ inicializada:
 @<Finalização (struct metafont)@>+=
 if(mf -> internal_picture_variables[0].texture != 0)
   glDeleteTextures(1, &(mf -> internal_picture_variables[0].texture));
-if(mf -> free != NULL)
-  mf -> free(mf -> internal_picture_variables);
+if(permanent_free != NULL)
+  permanent_free(mf -> internal_picture_variables);
 @
 \fimcodigo
 
@@ -6203,8 +6412,8 @@ void assign_path_variable(struct metafont *mf,
   void *(*alloc)(size_t);
   void (*disalloc)(void *);
   if(target -> nesting_level == 0){
-    disalloc = mf -> free;
-    alloc = mf -> alloc;
+    disalloc = permanent_free;
+    alloc = permanent_alloc;
   }
   else{
     disalloc = temporary_free;
@@ -9400,8 +9609,8 @@ void assign_pen_variable(struct metafont *mf,
   int nesting_level = target -> nesting_level;
   struct variable *next = target -> next;
   if(nesting_level == 0){
-    disalloc = mf -> free;
-    alloc = mf -> alloc;
+    disalloc = permanent_free;
+    alloc = permanent_alloc;
   }
   else{
     disalloc = temporary_free;
@@ -14782,31 +14991,6 @@ caractere. O código dentro do corpo de \monoespaco{beginchar} nem
 chega a ser executado e interpretado. No modo de execução, aí sim este
 código será executado para que o caracteres seja renderizado.
 
-Armazenamos o modo de operação na seguinte variável:
-
-\iniciocodigo
-@<Atributos (struct metafont)@>+=
-bool loading;
-@
-\fimcodigo
-
-Durante a inicialização, nós começamos no modo de carregamento:
-
-\iniciocodigo
-@<Inicialização (struct metafont)@>+=
-mf -> loading = true;
-@
-\fimcodigo
-
-Nós saímos do modo de carregamento e entramos no modo de execução
-assim que lemos um \monoespaco{end} ou \monoespaco{dump}:
-
-\iniciocodigo
-@<Após Execução de Programa@>+=
-mf -> loading = false;
-@
-\fimcodigo
-
 \subsecao{13.1 Unicode e UTF-8}
 
 Mas onde devemos armazenar o código de um caractere quando estamos no
@@ -15046,15 +15230,15 @@ lista encadeada de kerning quando ela existir:
         struct kerning *kern = mf -> glyphs[block][index].kern;
         if(mf -> glyphs[block][index].texture != 0)
           glDeleteTextures(1, &(mf -> glyphs[block][index].texture));
-        while(kern != NULL && mf -> free != NULL){
+        while(kern != NULL && permanent_free != NULL){
           struct kerning *to_be_erased;
           to_be_erased = kern;
           kern = kern -> next;
-          mf -> free(to_be_erased);          
+          permanent_free(to_be_erased);          
         }
       }
-      if(mf -> free != NULL)
-        mf -> free(mf -> glyphs[block]);
+      if(permanent_free != NULL)
+        permanent_free(mf -> glyphs[block]);
     }
   }
 }
@@ -15451,9 +15635,9 @@ struct metafont *_Wnew_metafont(char *filename){
   struct context *cx;
   struct generic_token *first, *last;
   bool ret;
-  mf = init_metafont(permanent_alloc, permanent_free, filename);
+  mf = init_metafont(filename);
   lexer(mf, filename, &first, &last);
-  cx = init_context();
+  cx = init_context(mf);
   ret = eval_program(mf, cx, first, last);
   destroy_context(mf, cx);
   if(!ret){
@@ -15489,15 +15673,21 @@ bool _Wrender_glyph(struct metafont *mf, char *glyph,
   struct _glyph *current;
   struct kerning *k;
   struct context *cx = NULL;
+  MUTEX_WAIT(mf -> mutex);
   current = get_glyph(mf, (unsigned char *) glyph, false);
-  if(current == NULL || current -> begin == NULL || current -> end == NULL)
+  if(current == NULL || current -> begin == NULL || current -> end == NULL){
+    MUTEX_SIGNAL(mf -> mutex);
     return false;
+  }
   if(current -> need_rendering){
-    cx = init_context();
-    if(cx  == NULL)
+    cx = init_context(mf);
+    if(cx  == NULL){
+      MUTEX_SIGNAL(mf -> mutex);
       return false;
+    }
     if(!eval_list_of_statements(mf, cx, current -> begin, current -> end)){
       destroy_context(mf, cx);
+      MUTEX_SIGNAL(mf -> mutex);
       return false;
     }
   }
@@ -15517,6 +15707,7 @@ bool _Wrender_glyph(struct metafont *mf, char *glyph,
   }
   if(cx != NULL)
     destroy_context(mf, cx);
+  MUTEX_SIGNAL(mf -> mutex);
   return true;
 }
 @
