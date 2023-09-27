@@ -5,7 +5,7 @@
 \font\fonteemail=cmtt10
 \font\twelvenegit=cmbxti12
 \font\twelvebold=cmbx12
-\font\trezebold=cmbx13
+\font\trezebold=cmbx12
 \font\twelveit=cmsl12
 \font\monodoze=cmtt12
 \font\it=cmti12
@@ -93,7 +93,11 @@
 
 5.3. Splitting List of Statements in Individual Statements \indice{27}
 
-6. A Compound Statement: The Compound Block \indice{28}
+6. A Compound Statement: The Compound Block \indice{29}
+
+6.1. Supporting Compound Statements \indice{29}
+
+6.2. The Statement \monoespaco{begingroup}$\ldots$\monoespaco{endgroup} \indice{33}
 
 7. Variable Declarations \indice{XX}
 
@@ -1015,7 +1019,7 @@ void lexer(struct metafont *mf, char *path, struct generic_token **first_token,
     @<Lexer: Rule 5@>
     @<Lexer: Rule 6@>
     // No rule applied: error
-    RAISE_ERROR_INVALID_CHAR(mf, line, c);
+    RAISE_ERROR_INVALID_CHAR(mf, NULL, line, c);
     free_token_list(first_token);
     *first_token = NULL;
     *last_token = NULL;
@@ -1090,7 +1094,7 @@ if((c == '.' && isdigit(next_char)) || isdigit(c)){
   if(new_token == NULL){
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
-    RAISE_ERROR_NO_MEMORY(mf, 0); // We will define errors on Section 5.2.
+    RAISE_ERROR_NO_MEMORY(mf, NULL, 0); //We will define errors on Section 5.2.
     return;
   }
   new_token -> type = TYPE_NUMERIC;
@@ -1142,7 +1146,7 @@ if(c == 34){ // 34: ASCII  for double quote
   if(new_token == NULL){
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
-    RAISE_ERROR_NO_MEMORY(mf, line);
+    RAISE_ERROR_NO_MEMORY(mf, NULL, line);
     return;
   }
   new_token -> type = TYPE_STRING;
@@ -1162,7 +1166,7 @@ if(c == 34){ // 34: ASCII  for double quote
   i --;
   new_token -> value[i] = '\0';
   if(c == '\n' || c == EOF){
-    RAISE_ERROR_UNCLOSED_STRING(mf, line, new_token -> value);
+    RAISE_ERROR_UNCLOSED_STRING(mf, NULL, line, new_token -> value);
     if(permanent_free != NULL)
       permanent_free(new_token);
     free_token_list(*first_token);
@@ -1192,7 +1196,7 @@ if(c == '(' || c == ')' || c == ',' || c == ';'){
   if(new_token == NULL){
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
-    RAISE_ERROR_NO_MEMORY(mf, line);
+    RAISE_ERROR_NO_MEMORY(mf, NULL,  line);
     return;
   }
   if(c == '(')
@@ -1477,7 +1481,7 @@ in this list:
     if(new_token == NULL){
       free_token_list(*first_token);
       *first_token = *last_token = NULL;
-      RAISE_ERROR_NO_MEMORY(mf, line);
+      RAISE_ERROR_NO_MEMORY(mf, NULL, line);
       return;
     }
     new_token -> type = token_type;
@@ -1520,7 +1524,7 @@ if(buffer[0] != '\0'){
   if(new_token == NULL){
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
-    RAISE_ERROR_NO_MEMORY(mf, line);
+    RAISE_ERROR_NO_MEMORY(mf, NULL, line);
     return;
   }
   new_token -> type = TYPE_SYMBOLIC;
@@ -1604,11 +1608,15 @@ bool eval_program(struct metafont *mf, struct context *cx,
 \fimcodigo
 
 The context struct still will not be entirely defined. We will show
-its content while each attribute becames necessary:
+its content while each attribute becames necessary. For now we will
+just show a single variable in this structure that will store the
+current UTF-8 character that is being rendered, or the empty string
+if no character is being rendered:
 
 \iniciocodigo
 @<Data Structures (metafont.h)@>=
 struct context{
+  char current_character[5];
   @<Attributes (struct context)@>
 };
 @
@@ -1676,9 +1684,10 @@ struct context *init_context(struct metafont *mf){
   struct context *cx;
   cx = (struct context *) temporary_alloc(sizeof(struct context));
   if(cx == NULL){
-    RAISE_ERROR_NO_MEMORY(mf, 0); // We will define errors on Section 5.2.
+    RAISE_ERROR_NO_MEMORY(mf, NULL, 0); // We will define errors on Section 5.2.
     return NULL;
   }
+  cx -> current_character[0] = '\0';
   // To be defined in the future:
   @<Initialization (struct context)@>
   return cx;
@@ -1739,9 +1748,10 @@ error handling and diagnostic:
 
 \iniciocodigo
 @<Attributes (struct metafont)@>=
-  int errno, errno_line;
-  char *errno_str;
-  int errno_int;
+  int errno, errno_line; // Error code and error line
+  char errno_character[5]; // Character being rendered during error
+  char *errno_str; // String with additional info
+  int errno_int; // Integer with additional info
 @
 \fimcodigo
 
@@ -1752,6 +1762,7 @@ to zero:
 \iniciocodigo
 @<Initialization (struct metafont)@>=
 mf -> errno = mf -> errno_line = 0;
+mf -> errno_character[0] = '\0';
 mf -> errno_str = NULL;
 mf -> errno_int = 0;
 @
@@ -1822,6 +1833,10 @@ void _Wprint_metafont_error(struct metafont *mf){
   default:
     fprintf(stderr, "%s:%s Unknown error.\n", mf -> file, line_number);
   }
+  if(mf -> errno_character[0] != '\0')
+    fprintf(stderr, " (while rendering '%s')\n", mf -> errno_character);
+  else
+    fprintf(stderr, "\n");
   if(temporary_free != NULL)
     temporary_free(line_number);
 }
@@ -1839,39 +1854,59 @@ ERROR_NO_MEMORY, ERROR_INVALID_CHAR, ERROR_UNCLOSED_STRING,
 @
 \fimcodigo
 
-Now we will define macros to raise these errors. For the insufficient
-memory error:
+All errro code have some common elements. All them get a struct with a
+meta-font, an optional struct with the context, a numeric value equal
+either zero or the line number where the error was found and all
+errors are identified by their numeric code. The following macro is
+the generic code that all errrors execute when are raised:
 
 \iniciocodigo
 @<Local Macros (metafont.c)@>+=
-#define RAISE_ERROR_NO_MEMORY(mf, line) {\
+#define RAISE_GENERIC_ERROR(mf, cx, line, error_code) {\
+  struct context *_cx = cx;\
   if(!mf -> errno){\
-    mf -> errno = ERROR_NO_MEMORY;\
-    mf -> errno_line = line;}}
+    mf -> errno = error_code;\
+    mf -> errno_line = line;\
+    if(cx != NULL && _cx -> current_character[0] != '\0')\
+      memcpy(mf -> errno_character, _cx -> current_character, 5);}}
 @
 \fimcodigo
 
-If we have an unsupported character, we store its value
-in \monoespaco{errno\_int}:
+The difference between all different errors is that they could store
+different data in variables \monoespaco{errno\_int}
+and \monoespaco{errno\_str} depending on their type. And some type of
+errors do not store anything in these variables.
+
+The error for insufficient memory, for example, is one of those that
+do not store any other specific information:
 
 \iniciocodigo
 @<Local Macros (metafont.c)@>+=
-#define RAISE_ERROR_INVALID_CHAR(mf, line, char) {\
+#define RAISE_ERROR_NO_MEMORY(mf, cx, line) {\
+  RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NO_MEMORY);}
+@
+\fimcodigo
+
+If we have an unsupported character, the raised error store the
+character value at \monoespaco{errno\_int}:
+
+\iniciocodigo
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_INVALID_CHAR(mf, cx, line, char) {\
   if(!mf -> errno){\
-    mf -> errno = ERROR_INVALID_CHAR;\
-    mf -> errno_line = line;\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INVALID_CHAR);\
     mf -> errno_int = char;}}
 @
 \fimcodigo
 
-And finally, to raise the error for an unclosed string:
+And finally, when raising the error for an unclosed string, we store
+the string:
 
 \iniciocodigo
 @<Local Macros (metafont.c)@>+=
-#define RAISE_ERROR_UNCLOSED_STRING(mf, line, str) {\
+#define RAISE_ERROR_UNCLOSED_STRING(mf, cx, line, str) {\
   if(!mf -> errno){\
-    mf -> errno = ERROR_UNCLOSED_STRING;\
-    mf -> errno_line = line;\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNCLOSED_STRING);\
     mf -> errno_str = (char *) permanent_alloc(sizeof(str)+1);\
     memcpy(mf -> errno_str, str, sizeof(str)+1);}}
 @
@@ -1883,15 +1918,15 @@ output for each one of the three types of errors, we use the code:
 \iniciocodigo
 @<Print Error Message@>=
 case ERROR_NO_MEMORY:
-  fprintf(stderr, "%s:%s Not enough memory for allocation.\n", mf -> file,
+  fprintf(stderr, "%s:%s Not enough memory for allocation.", mf -> file,
           line_number);
   break;
 case ERROR_INVALID_CHAR:
-  fprintf(stderr, "%s:%s UNsupported character in source code: '%x'.\n",
+  fprintf(stderr, "%s:%s UNsupported character in source code: '%x'.",
           mf -> file, line_number, (unsigned) mf -> errno_int);
   break;
 case ERROR_UNCLOSED_STRING:
-  fprintf(stderr, "%s:%s Unclosed string \"%s\".\n", mf -> file,
+  fprintf(stderr, "%s:%s Unclosed string \"%s\".", mf -> file,
           line_number, mf -> errno_str);
   break;
 @
@@ -2050,6 +2085,8 @@ very simple.
 
 \secao{6. A Compound Statement: The Compound Block}
 
+\subsecao{6.1. Supporting Compound Statements}
+
 As we seen in the last Section, there are compound statements that can
 be composed by several other statements. The gramatical rules for them
 are:
@@ -2128,7 +2165,7 @@ bool eval_statement(struct metafont *mf, struct context *cx,
   @<Statement: Assignment@>
   @<Statement: Command@>
   // If we are here, we could not identify the statement:
-  RAISE_ERROR_UNKNOWN_STATEMENT(mf, OPTIONAL(begin -> line));
+  RAISE_ERROR_UNKNOWN_STATEMENT(mf, cx, OPTIONAL(begin -> line));
   return false;
 }
 @
@@ -2149,10 +2186,8 @@ And when raising this error, we store information about it:
 
 \iniciocodigo
 @<Local Macros (metafont.c)@>+=
-#define RAISE_ERROR_UNKNOWN_STATEMENT(mf, line) {\
-  if(!mf -> errno){\
-    mf -> errno = ERROR_UNKNOWN_STATEMENT;\
-    mf -> errno_line = line;}}
+#define RAISE_ERROR_UNKNOWN_STATEMENT(mf, cx, line) {\
+  RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNKNOWN_STATEMENT);}
 @
 \fimcodigo
 
@@ -2163,7 +2198,7 @@ And if the user asks what went wrong, we print an error message:
 case ERROR_UNKNOWN_STATEMENT:
   fprintf(stderr, "%s:%s Unknown statement. Perhaps you misspelled some "
           "operator, forgot an assignment or placed a ';' in the wrong "
-          "place.\n", mf -> file, line_number);
+          "place.", mf -> file, line_number);
   break;
 @
 \fimcodigo
@@ -2226,7 +2261,7 @@ bool begin_nesting_level(struct metafont *mf, struct context *cx,
   end_token = (struct generic_token *)
                     temporary_alloc(sizeof(struct generic_token));
   if(end_token == NULL){
-    RAISE_ERROR_NO_MEMORY(mf, OPTIONAL(tok -> line));
+    RAISE_ERROR_NO_MEMORY(mf, cx, OPTIONAL(tok -> line));
     return false;
   }
   // Only three types of tokens will be passed for this function:
@@ -2243,6 +2278,9 @@ bool begin_nesting_level(struct metafont *mf, struct context *cx,
   default:
     return false;
   }
+#if defined(W_DEBUG_METAFONT)
+  end_token -> line = tok -> line;
+#endif
   cx -> nesting_level ++;
   end_token -> next = cx -> end_token_stack;
   cx -> end_token_stack = end_token;
@@ -2258,8 +2296,12 @@ And the second function:
 bool end_nesting_level(struct metafont *mf, struct context *cx,
                        struct generic_token *tok){
   struct generic_token *end_tok = cx -> end_token_stack;
-  if(end_tok == NULL || end_tok-> type != tok -> type){
-    RAISE_ERROR_EXPECTED_FOUND(mf, OPTIONAL(tok -> line),
+  if(end_tok == NULL){
+    RAISE_ERROR_UNEXPECTED_TOKEN(mf, cx, OPTIONAL(tok -> line), tok -> type);
+    return false;
+  }
+  else if(end_tok-> type != tok -> type){
+    RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL(tok -> line),
                                end_tok -> type, tok -> type);
     return false;
   }
@@ -2272,33 +2314,42 @@ bool end_nesting_level(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
-An error that we can catch above is when we find
-an \monoespaco{endgroup} when, given the order in which each previous
-compound statement was opened, we should first find
-an \monoespaco{endchar}, for example. We can have 8 different pairs of
-wrong tokens found together with the expected token that should close
-the most recent unfinished compound statement. We will add a new error
-type for our list to represent this:
+Two different errors can be detected above. We could read the closing
+of a compound statement when no compound statement was previously
+opened or we could find the closing of some compound statement, when
+the last opened compound statement was from another type. We will add
+these two different types of error to the list:
 
 \iniciocodigo
 @<Types of Error@>+=
-ERROR_EXPECTED_FOUND,
+ERROR_UNEXPECTED_TOKEN, ERROR_EXPECTED_FOUND,
 @
 \fimcodigo
 
-This, in fact, is a more general error, where we expect to find a
-given symbolic token, but instead we found another. We must store in
-the error data which was the expected type and what we found
-instead. The first we will store as a numeric code with its type. The
-other we will store as a string containing its name:
+In the first case, we store the unexpected token type as an integer in
+the error variable:
 
 \iniciocodigo
 @<Local Macros (metafont.c)@>+=
-#define RAISE_ERROR_EXPECTED_FOUND(mf, line, expected, found) {\
+#define RAISE_ERROR_UNEXPECTED_TOKEN(mf, cx, line, tok) {\
+  if(!mf -> errno){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNEXPECTED_TOKEN);\
+    mf -> errno_int = tok;}}
+@
+\fimcodigo
+
+The second case is the errror where we expected to find a given
+symbolic token, but instead we found another. We must store in the
+error data which was the expected type and what we found instead. The
+first we will store as a numeric code with its type. The other we will
+store as a string containing its name:
+
+\iniciocodigo
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_EXPECTED_FOUND(mf, cx, line, expected, found) {\
   if(!mf -> errno){\
     size_t _s = strlen(list_of_keywords[found - 8]);\
-    mf -> errno = ERROR_EXPECTED_FOUND;\
-    mf -> errno_line = line;\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_EXPECTED_FOUND);\
     mf -> errno_int = expected;\
     mf -> errno_str = (char *) permanent_alloc(_s+1);\
     memcpy(mf -> errno_str, list_of_keywords[found - 8], _s+1);}}
@@ -2316,20 +2367,24 @@ an index to check the list of names. For some tokens, this does not
 work, but these tokens would not generate this kind of error, so we
 will not care about them.
 
-To print the error message, we use the same conversion from numeric
-code for the type to the string name. We just apply this to the
-expected token type, which was stored as an integer:
+To print the error message in both cases, we use the same conversion
+from numeric code for the type to the string name, but apply to the
+informationstored as integer in \monoespaco{errno\_int}:
 
 \iniciocodigo
 @<Print Error Message@>+=
+case ERROR_UNEXPECTED_TOKEN:
+  fprintf(stderr, "%s:%s We found token '%s' in a context where such "
+          "token makes no sense.", mf -> file, line_number,
+          list_of_keywords[mf -> errno_int - 8]);
+  break;
 case ERROR_EXPECTED_FOUND:
-  fprintf(stderr, "%s:%s Expected token '%s'. Found '%s'.\n",
+  fprintf(stderr, "%s:%s Expected token '%s'. Found '%s'.",
           mf -> file, line_number, list_of_keywords[mf -> errno_int - 8],
           mf -> errno_str);
   break;
 @
 \fimcodigo
-
 
 Notice that if an error happens inside a compound statement, we could
 stop the code execution before calling
@@ -2349,13 +2404,15 @@ if(temporary_free != NULL){
 @
 \fimcodigo
 
-How exactly a statement is evaluated? First, recall that the
-function \monoespaco{eval\_list\_of\_statements} splits the code using
-semiconlons as delimiters. Next, each part is given to
-function \monoespaco{eval\_statement}. This behaviour may be a little
-naive, as compound statements are full statements that can contain
-semicolons and other statements. Besides this, consider the following
-list of tokens:
+\subsecao{6.2. The Statement \monoespaco{begingroup}$\ldots$\monoespaco{endgroup}}
+
+How exactly a statement is evaluated? First, recall
+that \monoespaco{eval\_list\_of\_statements} function splits the code
+using semiconlons as delimiters. Next, each part is given as input to
+function \monoespaco{eval\_statement}. As already mentioned, this
+behaviour may be a little naive, as compound statements are full
+statements that can contain semicolons and other statements. Consider
+the following list of tokens:
 
 \alinhaverbatim
 [begingroup][T1][T2][;][T3][T4][;][endgroup][;][T5];
@@ -2369,16 +2426,16 @@ with \monoespaco{[begingroup]}. Next, each statement in the
 block. Next, we end the nesting with \monoespaco{[endgroup]}. And only
 then we evaluate \monoespaco{[T5]}.
 
-Fortunately, it's easy to evaluate things in this order. This can be
-done because the function \monoespaco{eval\_statement} can change the
-pointer for the end of the expression. If it did not evaluate all
-tokens given to it, it should place the pointer in the last evaluated
-token. Therefore, when getting the first three tokens above, where the
-first one is a \monoespaco{[begingroup]}, the function can just create
-a new nesting and return, setting the end of the evaluated expression
-to the first token. This makes the
-function \monoespaco{eval\_list\_of\_statements} send again the
-tokens \monoespaco{[T1][T2]} to be evaluated.
+Fortunately, it's easy to evaluate things in this order. When we get
+the three first tokens in the example above, we will evaluate
+only \monoespaco{begingroup}, and we will give back the other two
+tokens to be evaluated later. We can do this changing the position of
+the pointer that marks the end of current statement, like explained in
+Subsection 5.3.
+
+When we get the \monoespaco{endgroup}, we will do the same: we
+evaluate only the \monoespaco{endgroup} part to close the compound
+statement and give back any remaining tokens.
 
 The code to deal with any statement that begins
 with \monoespaco{begingroup} is:
@@ -2387,6 +2444,7 @@ with \monoespaco{begingroup} is:
 @<Statement: Compound@>=
 if(begin -> type == TYPE_BEGINGROUP){
   begin_nesting_level(mf, cx, begin);
+  // This sets the beginning of next statement as the token after 'begingroup':
   *end = begin;
   return true;
 }
@@ -2408,18 +2466,47 @@ else if(begin -> type == TYPE_ENDGROUP){
 @
 \fimcodigo
 
-This is also a good moment to evaluate the end of the program, when we
-find an \monoespaco{end} token (despite not being an compound
-statement). In this case, we should generate an error if we are inside
-a some nesting in a compound statement:
+What if we finish the evaluation of a program, but we did not finished
+some compound statement? In this case, we have a new type of error:
+
+\iniciocodigo
+@<Types of Error@>+=
+ERROR_UNFINISHED_STATEMENT,
+@
+\fimcodigo
+
+When this error is raised, we store as an integer the token that began
+the unfinished compound statement:
+
+\iniciocodigo
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_UNFINISHED_STATEMENT(mf, cx, line, statement) {\
+  if(!mf -> errno){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNFINISHED_STATEMENT);\
+    mf -> errno_int = statement;}}
+@
+\fimcodigo
+
+The error message warns the user what happened:
+
+\iniciocodigo
+@<Print Error Message@>+=
+case ERROR_UNFINISHED_STATEMENT:
+  fprintf(stderr, "%s:%s Unfinished statement '%s'.",
+          mf -> file, line_number, list_of_keywords[mf -> errno_int - 8]);
+  break;
+@
+\fimcodigo
+
+Always at the end, after evaluating a WEAVEFONT code, the following
+test is done to check for this error:
 
 \iniciocodigo
 @<After Program Execution@>=
 if(cx -> nesting_level > 0){
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s: Program ending with unclosed "
-                  "compound statement.\n", mf -> file);
-#endif
+  RAISE_ERROR_UNFINISHED_STATEMENT(mf, cx,
+                                  OPTIONAL(cx -> end_token_stack -> line),
+                                  cx -> end_token_stack -> type);
   return false;
 }
 @
@@ -15324,6 +15411,8 @@ else if(begin -> type == TYPE_BEGINCHAR){
   t = t -> next;
   str = (struct string_token *) t;
   cx -> current_glyph = str -> glyph;
+  memset(cx -> current_character, 0, 5);
+  memcpy(cx -> current_character, str -> value, 4);
   // Reading the values in the header
   t = t -> next;
   t = t -> next;

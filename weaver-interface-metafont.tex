@@ -4,7 +4,7 @@
 \font\fonteemail=cmtt10
 \font\twelvenegit=cmbxti12
 \font\twelvebold=cmbx12
-\font\trezebold=cmbx13
+\font\trezebold=cmbx12
 \font\twelveit=cmsl12
 \font\monodoze=cmtt12
 \font\it=cmti12
@@ -107,7 +107,11 @@
 
 5.3. Separando Lista de Instruções em Instruções Individuais \indice{27}
 
-6. Uma Instrução Composta: O Bloco Composto \indice{28}
+6. Uma Instrução Composta: O Bloco Composto \indice{29}
+
+6.1. Suportando Instruções Compostas \indice{29}
+
+6.2. A Instrução \monoespaco{begingroup}$\ldots$\monoespaco{endgroup}\indice{33}
 
 7. Declaração de Variáveis \indice{XX}
 
@@ -1050,7 +1054,7 @@ void lexer(struct metafont *mf, char *path, struct generic_token **first_token,
     @<Análise Léxica: Regra 5@>
     @<Análise Léxica: Regra 6@>
     // Nenhuma regra aplicada: erro. Definiremos erros na Subseção 5.2.
-    RAISE_ERROR_INVALID_CHAR(mf, line, c);
+    RAISE_ERROR_INVALID_CHAR(mf, NULL, line, c);
     free_token_list(first_token);
     *first_token = NULL;
     *last_token = NULL;
@@ -1125,7 +1129,7 @@ if((c == '.' && isdigit(next_char)) || isdigit(c)){
   if(new_token == NULL){
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
-    RAISE_ERROR_NO_MEMORY(mf, line); // Vamos definir erros na Seção 5.2.
+    RAISE_ERROR_NO_MEMORY(mf, NULL, line); // Vamos definir erros na Seção 5.2.
     return;
   }
   new_token -> type = TYPE_NUMERIC;
@@ -1179,7 +1183,7 @@ if(c == 34){ // 34: ASCII para aspas duplas
   if(new_token == NULL){
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
-    RAISE_ERROR_NO_MEMORY(mf, line);
+    RAISE_ERROR_NO_MEMORY(mf, NULL, line);
     return;
   }
   new_token -> type = TYPE_STRING;
@@ -1199,7 +1203,7 @@ if(c == 34){ // 34: ASCII para aspas duplas
   i --;
   new_token -> value[i] = '\0';
   if(c == '\n' || c == EOF){
-    RAISE_ERROR_UNCLOSED_STRING(mf, line, new_token -> value);
+    RAISE_ERROR_UNCLOSED_STRING(mf, NULL, line, new_token -> value);
     if(permanent_free != NULL)
       permanent_free(new_token);
     free_token_list(*first_token);
@@ -1229,7 +1233,7 @@ if(c == '(' || c == ')' || c == ',' || c == ';'){
   if(new_token == NULL){
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
-    RAISE_ERROR_NO_MEMORY(mf, line);
+    RAISE_ERROR_NO_MEMORY(mf, NULL, line);
     return;
   }
   if(c == '(')
@@ -1514,7 +1518,7 @@ dependendo de sua posição na lista:
     if(new_token == NULL){
       free_token_list(*first_token);
       *first_token = *last_token = NULL;
-      RAISE_ERROR_NO_MEMORY(mf, line);
+      RAISE_ERROR_NO_MEMORY(mf, NULL, line);
       return;
     }
     new_token -> type = token_type;
@@ -1557,7 +1561,7 @@ if(buffer[0] != '\0'){
   if(new_token == NULL){
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
-    RAISE_ERROR_NO_MEMORY(mf, line);
+    RAISE_ERROR_NO_MEMORY(mf, NULL, line);
     return;
   }
   new_token -> type = TYPE_SYMBOLIC;
@@ -1642,11 +1646,15 @@ bool eval_program(struct metafont *mf, struct context *cx,
 \fimcodigo
 
 A estrutura de contexto ainda não será definida inteiramente. Iremos
-mostrar o conteúdo dela à medida que for necessário:
+mostrar o conteúdo dela à medida que for necessário. Por hora, a única
+variável que mostraremos será a styring que armazena qual caractere
+UTF-8 está sendo renderizado no momento, ou que armazena a string
+vazia se não houver nenhum:
 
 \iniciocodigo
 @<Estrutura de Dados (metafont.h)@>=
 struct context{
+  char current_character[5];
   @<Atributos (struct context)@>
 };
 @
@@ -1715,9 +1723,10 @@ struct context *init_context(struct metafont *mf){
   struct context *cx;
   cx = (struct context *) temporary_alloc(sizeof(struct context));
   if(cx == NULL){
-    RAISE_ERROR_NO_MEMORY(mf, 0); // Vamos definir erros na Seção 5.2.
+    RAISE_ERROR_NO_MEMORY(mf, NULL, 0); // Vamos definir erros na Seção 5.2.
     return NULL;
   }
+  cx -> current_character[0] = '\0';
   // A ser definido futuramente:
   @<Inicialização (struct context)@>
   return cx;
@@ -1778,9 +1787,10 @@ diagnóstico do quê aconteceu de errado:
 
 \iniciocodigo
 @<Atributos (struct metafont)@>=
-  int errno, errno_line;
-  char *errno_str;
-  int errno_int;
+  int errno, errno_line; // Código de erro, linnha em que teve erro
+  char errno_character[5]; // Caractere sendo renderizado durante erro
+  char *errno_str; // Informações adicionais na forma de string
+  int errno_int; // INformações adicionais na forma de inteiro
 @
 \fimcodigo
 
@@ -1792,6 +1802,7 @@ que indicam ausência de erro:
 \iniciocodigo
 @<Inicialização (struct metafont)@>=
 mf -> errno = mf -> errno_line = 0;
+mf -> errno_character[0] = '\0';
 mf -> errno_str = NULL;
 mf -> errno_int = 0;
 @
@@ -1861,12 +1872,16 @@ void _Wprint_metafont_error(struct metafont *mf){
     sprintf(line_number, "%d: ", mf -> errno_line);
   switch(mf -> errno){
   case ERROR_NO_ERROR:
-    fprintf(stderr, "%s:%s No errors.\n", mf -> file, line_number);
+    fprintf(stderr, "%s:%s No errors.", mf -> file, line_number);
     break;
   @<Imprime Mensagem de Erro@>
   default:
-    fprintf(stderr, "%s:%s Unknown error.\n", mf -> file, line_number);
+    fprintf(stderr, "%s:%s Unknown error.", mf -> file, line_number);
   }
+  if(mf -> errno_character[0] != '\0')
+    fprintf(stderr, " (while rendering '%s')\n", mf -> errno_character);
+  else
+    fprintf(stderr, "\n");
   if(temporary_free != NULL)
     temporary_free(line_number);
 }
@@ -1885,39 +1900,60 @@ ERROR_NO_MEMORY, ERROR_INVALID_CHAR, ERROR_UNCLOSED_STRING,
 @
 \fimcodigo
 
-Iremos definir macros para gerar tais erros. No caso de falta de memória:
+Todo código de gerar erro tem algumas coisas em comum: eles recebem
+uma estrutura com a meta-fonte que gerou o erro, opcionalmente pode
+ter uma estrutura de contexto e tem um valor numérico que é zero ou o
+número da linha onde teve o erro e todos os erros tem seu tipo
+identificado por um código numérico. A seguinte macro genérica é o
+código que todo erro produzido executa no momento que é gerado:
 
 \iniciocodigo
 @<Macros Locais (metafont.c)@>+=
-#define RAISE_ERROR_NO_MEMORY(mf, line) {\
+#define RAISE_GENERIC_ERROR(mf, cx, line, error_code) {\
+  struct context *_cx = cx;\
   if(!mf -> errno){\
-    mf -> errno = ERROR_NO_MEMORY;\
-    mf -> errno_line = line;}}
+    mf -> errno = error_code;\
+    mf -> errno_line = line;\
+    if(cx != NULL && _cx -> current_character[0] != '\0')\
+      memcpy(mf -> errno_character, _cx -> current_character, 5);}}
 @
 \fimcodigo
 
-No caso de termos um caractere não suportado, além de tentar guardar o
-número da linha, nós também armazenamos em \monoespaco{errno\_int}
-qual o caractere inválido encontrado.
+A única coisa mais específica é que cada tipo de erro diferente pode
+querer armazenar diferentes tipos de informações adicionais nas
+variáveis \monoespaco{errno\_str} e \monoespaco{errno\_int}. E há
+erros que não armazenam nada nelas.
+
+O erro de memória insuficiente é um dos casos em que nada mais é
+armazenado:
 
 \iniciocodigo
 @<Macros Locais (metafont.c)@>+=
-#define RAISE_ERROR_INVALID_CHAR(mf, line, char) {\
+#define RAISE_ERROR_NO_MEMORY(mf, cx, line) {\
+  RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NO_MEMORY);}
+@
+\fimcodigo
+
+No caso de termos um caractere não suportado, este erro armazena o
+caractere em questão como um inteiro:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_INVALID_CHAR(mf, cx, line, char) {\
   if(!mf -> errno){\
-    mf -> errno = ERROR_INVALID_CHAR;\
-    mf -> errno_line = line;\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INVALID_CHAR);\
     mf -> errno_int = char;}}
 @
 \fimcodigo
 
-E finalmente, quando estamos com uma string não-finalizada:
+E finalmente, quando estamos com uma string não-finalizada, nós
+armazenamos a string em questão:
 
 \iniciocodigo
 @<Macros Locais (metafont.c)@>+=
-#define RAISE_ERROR_UNCLOSED_STRING(mf, line, str) {\
+#define RAISE_ERROR_UNCLOSED_STRING(mf, cx, line, str) {\
   if(!mf -> errno){\
-    mf -> errno = ERROR_UNCLOSED_STRING;\
-    mf -> errno_line = line;\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNCLOSED_STRING);\
     mf -> errno_str = (char *) permanent_alloc(sizeof(str)+1);\
     memcpy(mf -> errno_str, str, sizeof(str)+1);}}
 @
@@ -1929,15 +1965,15 @@ definidos, usamos:
 \iniciocodigo
 @<Imprime Mensagem de Erro@>=
 case ERROR_NO_MEMORY:
-  fprintf(stderr, "%s:%s Not enough memory for allocation.\n", mf -> file,
+  fprintf(stderr, "%s:%s Not enough memory for allocation.", mf -> file,
           line_number);
   break;
 case ERROR_INVALID_CHAR:
-  fprintf(stderr, "%s:%s Unsupported character in source code: '%x'.\n",
+  fprintf(stderr, "%s:%s Unsupported character in source code: '%x'.",
           mf -> file, line_number, (unsigned) mf -> errno_int);
   break;
 case ERROR_UNCLOSED_STRING:
-  fprintf(stderr, "%s:%s Unclosed string \"%s\".\n", mf -> file,
+  fprintf(stderr, "%s:%s Unclosed string \"%s\".", mf -> file,
           line_number, mf -> errno_str);
   break;
 @
@@ -2103,6 +2139,8 @@ Seções.
 
 \secao{6. Uma Instrução Composta: O Bloco Composto}
 
+\subsecao{6.1. Suportando Instruções Compostas}
+
 Vimos na Seção anterior que existem instruções compostas que podem ser
 formadas por muitas outras instruções. As regras gramaticais para elas é:
 
@@ -2181,8 +2219,8 @@ bool eval_statement(struct metafont *mf, struct context *cx,
   @<Instrução: Declaração de Variável@>
   @<Instrução: Atribuição@>
   @<Instrução: Comando@>
-  // Se estamos aqui, não identificamos o tipo de declaração:
-  RAISE_ERROR_UNKNOWN_STATEMENT(mf, OPTIONAL(begin -> line));
+  // Se estamos aqui, não identificamos o tipo de instrução:
+  RAISE_ERROR_UNKNOWN_STATEMENT(mf, cx, OPTIONAL(begin -> line));
   return false;
 }
 @
@@ -2203,10 +2241,8 @@ E colocamos informação sobre ele nas variáveis de erro.
 
 \iniciocodigo
 @<Macros Locais (metafont.c)@>+=
-#define RAISE_ERROR_UNKNOWN_STATEMENT(mf, line) {\
-  if(!mf -> errno){\
-    mf -> errno = ERROR_UNKNOWN_STATEMENT;\
-    mf -> errno_line = line;}}
+#define RAISE_ERROR_UNKNOWN_STATEMENT(mf, cx, line) {\
+  RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNKNOWN_STATEMENT);}
 @
 \fimcodigo
 
@@ -2218,7 +2254,7 @@ errado:
 case ERROR_UNKNOWN_STATEMENT:
   fprintf(stderr, "%s:%s Unknown statement. Perhaps you misspelled some "
           "operator, forgot an assignment or placed a ';' in the wrong "
-          "place.\n", mf -> file, line_number);
+          "place.", mf -> file, line_number);
   break;
 @
 \fimcodigo
@@ -2285,7 +2321,7 @@ bool begin_nesting_level(struct metafont *mf, struct context *cx,
   end_token = (struct generic_token *)
                     temporary_alloc(sizeof(struct generic_token));
   if(end_token == NULL){
-    RAISE_ERROR_NO_MEMORY(mf, OPTIONAL(tok -> line));
+    RAISE_ERROR_NO_MEMORY(mf, cx, OPTIONAL(tok -> line));
     return false;
   }
   // Somente 3 tipos de tokens serão passados para esta função:
@@ -2302,6 +2338,9 @@ bool begin_nesting_level(struct metafont *mf, struct context *cx,
   default:
     return false;
   }
+#if defined(W_DEBUG_METAFONT)
+  end_token -> line = tok -> line;
+#endif
   cx -> nesting_level ++;
   end_token -> next = cx -> end_token_stack;
   cx -> end_token_stack = end_token;
@@ -2317,8 +2356,12 @@ E a implementação da segunda função:
 bool end_nesting_level(struct metafont *mf, struct context *cx,
                        struct generic_token *tok){
   struct generic_token *end_tok = cx -> end_token_stack;
-  if(end_tok == NULL || end_tok-> type != tok -> type){
-    RAISE_ERROR_EXPECTED_FOUND(mf, OPTIONAL(tok -> line),
+  if(end_tok == NULL){
+    RAISE_ERROR_UNEXPECTED_TOKEN(mf, cx, OPTIONAL(tok -> line), tok -> type);
+    return false;
+  }
+  else if(end_tok-> type != tok -> type){
+    RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL(tok -> line),
                                end_tok -> type, tok -> type);
     return false;
   }
@@ -2331,32 +2374,43 @@ bool end_nesting_level(struct metafont *mf, struct context *cx,
 @
 \fimcodigo
 
-Um erro que podemos detectar acima é que achamos
-um \monoespaco{endgroup} quando pela ordem de abertura das instruções
-compostas, deveríamos receber um \monoespaco{endchar}, por exemplo. Ou
-qualquer outra das 8 combinações de abertura e fechamento que não
-casam. Vamos adicionar este novo tipo de erro à nossa lista:
+Dois erros diferentes podem ser detectados acima. Podemos ter o
+fechamento de uma instrução composta quando nenhuma instrução composta
+foi aberta ou achamos o fechamento de uma instrução, sendo que a
+última instrução que foi aberta era outra. Vamos adicionar então estes
+dois tipos à lista:
 
 \iniciocodigo
 @<Tipos de Erros@>+=
-ERROR_EXPECTED_FOUND,
+ERROR_UNEXPECTED_TOKEN, ERROR_EXPECTED_FOUND,
 @
 \fimcodigo
 
-Este é um tipo de erro mais geral, onde esperávamos encontrar um tipo
-de token simbólico, mas ao invés disso encontramos outro. Devemos
-então armazenar nas variáveis de erro qual o tipo de token que
-esperávamos e qual o tipo que achamos no lugar disso. O esperado terá
-seu tipo armazenado como inteiro e o tipo encontrado será armazenado
-como uma string contendo seu nome:
+No primeiro caso, nós armazenamos o token inesperado na forma de um
+inteiro na variável de erro:
 
 \iniciocodigo
 @<Macros Locais (metafont.c)@>+=
-#define RAISE_ERROR_EXPECTED_FOUND(mf, line, expected, found) {\
+#define RAISE_ERROR_UNEXPECTED_TOKEN(mf, cx, line, tok) {\
+  if(!mf -> errno){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNEXPECTED_TOKEN);\
+    mf -> errno_int = tok;}}
+@
+\fimcodigo
+
+O segundo tipo de erro é quando esperávamos encontrar um tipo de token
+simbólico, mas ao invés disso encontramos outro. Devemos então
+armazenar nas variáveis de erro qual o tipo de token que esperávamos e
+qual o tipo que achamos no lugar disso. O esperado terá seu tipo
+armazenado como inteiro e o tipo encontrado será armazenado como uma
+string contendo seu nome:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_EXPECTED_FOUND(mf, cx, line, expected, found) {\
   if(!mf -> errno){\
     size_t _s = strlen(list_of_keywords[found - 8]);\
-    mf -> errno = ERROR_EXPECTED_FOUND;\
-    mf -> errno_line = line;\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_EXPECTED_FOUND);\
     mf -> errno_int = expected;\
     mf -> errno_str = (char *) permanent_alloc(_s+1);\
     memcpy(mf -> errno_str, list_of_keywords[found - 8], _s+1);}}
@@ -2375,18 +2429,22 @@ erro deste tipo, então não nos preocupamos com eles.
 
 Já para imprimirmos uma mensagem de erro, fazemos o mesmo tipo de
 transformação, mas desta vez para converter para string o tipo de
-token que esperávamos, mas não encontramos:
+token que armazenamos como inteiro em \monoespaco{errno\_int}:
 
 \iniciocodigo
 @<Imprime Mensagem de Erro@>+=
+case ERROR_UNEXPECTED_TOKEN:
+  fprintf(stderr, "%s:%s We found token '%s' in a context where such "
+          "token makes no sense.", mf -> file, line_number,
+          list_of_keywords[mf -> errno_int - 8]);
+  break;
 case ERROR_EXPECTED_FOUND:
-  fprintf(stderr, "%s:%s Expected token '%s'. Found '%s'.\n",
+  fprintf(stderr, "%s:%s Expected token '%s'. Found '%s'.",
           mf -> file, line_number, list_of_keywords[mf -> errno_int - 8],
           mf -> errno_str);
   break;
 @
 \fimcodigo
-
 
 Note que se um erro ocorrer ao interpretar código quando estamos no
 meio de uma função composta, nós podemos interromper a execução antes
@@ -2406,13 +2464,16 @@ if(temporary_free != NULL){
 @
 \fimcodigo
 
+\subsecao{6.2. A Instrução \monoespaco{begingroup}$\ldots$\monoespaco{endgroup}}
+
 Como exatamente uma instrução composta é avaliada? Primeiro lembre-se
 que a função \monoespaco{eval\_list\_of\_statements} separa o código
 em partes usando o ponto-e-vírgula como delimitador. Em seguida, ele
-passa cada parte para a função \monoespaco{eval\_statement}. Esse
-comportamento é um pouco ingênuo, pois instruções compostas são
-instruções que podem possuir outras instruções e ponto-e-vírgula
-dentro delas. Além disso, considere a seguinte lista de tokens:
+passa cada parte para a função \monoespaco{eval\_statement}. Conforme
+comentado, esse comportamento é um pouco ingênuo, pois instruções
+compostas são instruções que podem possuir outras instruções e
+ponto-e-vírgula dentro delas. Considere a seguinte lista
+de tokens:
 
 \alinhaverbatim
 [begingroup][T1][T2][;][T3][T4][;][endgroup][T5];
@@ -2422,21 +2483,14 @@ Nessa sequência, os três primeiros tokens seriam passados para serem
 avaliados. depois, seria o \monoespaco{[T3][T4]}. E por fim,
 o \monoespaco{[endgroup]}. Mas vamos fazer as coisas um pouco
 diferentes. Quando recebermos um \monoespaco{[begingroup][T5]},
-devemos avaliar só ele iniciando um novo aninhamento. Esta é uma ordem
-incorreta. Idealmente nós deveríamos primeiro
-avaliar \monoespaco{[begingroup]}, iniciando um novo bloco de
-aninhamento. Depois, cada uma das instruções dentro do bloco. Depois,
-o fim do bloco com \monoespaco{[endgroup]}. E só então o
-token \monoespaco{[T5]}.
+devemos avaliar só ele iniciando um novo aninhamento. Os dois outros
+tokens recebidos serão devolvidos, para serem avaliados logo em
+seguida. Fazemos isso mudando a posição do ponteiro que marca o fim da
+instrução atual, conforme discutido na Subseção 5.3.
 
-Felizmente, é fácil tornar a avaliação nesta ordem. Isso pode ser
-feito porque a função \monoespaco{eval\_statement} pode modificar a
-posição do ponteiro que marca o fim da expressão que ela
-avaliou. Sendo assim, ao receber os três primeiros tokens onde o
-primeiro é um \monoespaco{[begingroup]}, ela pode tratar só o primeiro
-token e colocar o ponteiro de fim da expressão nele. Isso faz com
-que \monoespaco{eval\_list\_of\_statements} envie de novo
-tokens \monoespaco{[T1][T2]} para serem avaliados.
+Quando recebermos o \monoespaco{endgroup}, faremos o mesmo:
+interpretaremos só ele, marcando o fim da ĩnstrução composta e
+devolvemos o token que vem a seguir para ser interpretado depois.
 
 O código para tratar então qualquer declaração que comece
 com \monoespaco{begingroup } é:
@@ -2445,6 +2499,7 @@ com \monoespaco{begingroup } é:
 @<Instrução: Composta@>=
 if(begin -> type == TYPE_BEGINGROUP){
   begin_nesting_level(mf, cx, begin);
+  // Para que o começo da próxima instrução benha depois de 'begingroup':
   *end = begin;
   return true;
 }
@@ -2466,18 +2521,47 @@ else if(begin -> type == TYPE_ENDGROUP){
 @
 \fimcodigo
 
-Esse também é um bom momento para avaliarmos o fim do programa, quando
-há um token \monoespaco{end} (apesar dele não ser uma declaração
-composta). Neste caso, devemos gerar um erro se estivermos dentro de
-um aninhamento de declaração composta:
+E se nós finalizarmos um programa sem finalizar uma instrução
+composta? Neste caso, temos um novo tipo de erro:
+
+\iniciocodigo
+@<Tipos de Erros@>+=
+ERROR_UNFINISHED_STATEMENT,
+@
+\fimcodigo
+
+Quando este erro ocorrer, devemos armazenar como um inteiro o tipo de
+instrução que não foi finalizada:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_UNFINISHED_STATEMENT(mf, cx, line, statement) {\
+  if(!mf -> errno){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNFINISHED_STATEMENT);\
+    mf -> errno_int = statement;}}
+@
+\fimcodigo
+
+E a mensagem de erro que avisa o que aconteceu:
+
+\iniciocodigo
+@<Imprime Mensagem de Erro@>+=
+case ERROR_UNFINISHED_STATEMENT:
+  fprintf(stderr, "%s:%s Unfinished statement '%s'.",
+          mf -> file, line_number, list_of_keywords[mf -> errno_int - 8]);
+  break;
+@
+\fimcodigo
+
+Após executar qualquer código WEAVEFONT, o seguinte teste é realizado
+para ver se estamos diante deste tipo de erro:
 
 \iniciocodigo
 @<Após Execução de Programa@>=
 if(cx -> nesting_level > 0){
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s: Program ending with unclosed "
-                  "compound statement.\n", mf -> file);
-#endif
+  RAISE_ERROR_UNFINISHED_STATEMENT(mf, cx,
+                                  OPTIONAL(cx -> end_token_stack -> line),
+                                  cx -> end_token_stack -> type);
   return false;
 }
 @
@@ -15525,6 +15609,8 @@ else if(begin -> type == TYPE_BEGINCHAR){
   t = t -> next;
   str = (struct string_token *) t;
   cx -> current_glyph = str -> glyph;
+  memset(cx -> current_character, 0, 5);
+  memcpy(cx -> current_character, str -> value, 4);
   // Lendo os valores no cabeçalho
   t = t -> next;
   t = t -> next;
