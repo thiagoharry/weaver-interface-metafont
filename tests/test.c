@@ -116,8 +116,10 @@ void test_variables(void){
   lexer(mf,  "tests/variables.mf", &first, &last);
   ret = eval_program(mf, cx, first, last);
   ret = ret && (mf -> named_variables != NULL) &&
-    (mf -> global_variables != NULL) &&
-    (cx -> variables != NULL);
+    (mf -> variables != NULL) &&
+    (cx -> variables == NULL);
+  if(!ret)
+    _Wprint_metafont_error(mf);
   assert("Testing variable declaration", ret);
   named = (struct named_variable *) mf -> named_variables;
   n = (struct numeric_variable *) named -> var;
@@ -129,7 +131,7 @@ void test_variables(void){
   named = (struct named_variable *) named -> next;
   n = (struct numeric_variable *) named -> var;
   assert("Chained assignments are working", n -> value == 116.0);
-  p = (struct pair_variable *) mf -> global_variables;
+  p = (struct pair_variable *) mf -> variables;
   assert("Testing pair expression", p -> type == TYPE_T_PAIR &&
          fabs(p -> x) < 0.00002 && fabs(p -> y - 3.0) < 0.00002);
   if(fabs(p -> x) >= 0.00002 && fabs(p -> y - 3.0) >= 0.00002){

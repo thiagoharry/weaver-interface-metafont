@@ -103,21 +103,21 @@
 
 5.1. Executando Programas \indice{22}
 
-5.2. Lidando com Erros \indice{24}
+5.2. Lidando com Erros \indice{25}
 
-5.3. Separando Lista de Instruções em Instruções Individuais \indice{27}
+5.3. Separando Lista de Instruções em Instruções Individuais \indice{28}
 
 6. Uma Instrução Composta: O Bloco Composto \indice{29}
 
 6.1. Suportando Instruções Compostas \indice{29}
 
-6.2. A Instrução \monoespaco{begingroup}$\ldots$\monoespaco{endgroup}\indice{33}
+6.2. A Instrução \monoespaco{begingroup}$\ldots$\monoespaco{endgroup}\indice{34}
 
-7. Declaração de Variáveis \indice{XX}
+7. Declaração de Variáveis \indice{35}
 
-7.1. Variáveis Numéricas \indice{XX}
+7.1. Variáveis Numéricas \indice{41}
 
-7.2. Variáveis de Pares \indice{XX}
+7.2. Variáveis de Pares \indice{43}
 
 7.3. Variáveis de Transformação \indice{XX}
 
@@ -1863,7 +1863,9 @@ void _Wprint_metafont_error(struct metafont *mf){
   char *line_number;
   // Primeiro tentamos gerar uma string com o número de linha onde teve erro.
   // Assim é como podemos calcular o tamanho desta string:
-  int str_size = (int)((ceil(log10(mf -> errno_line))+1)*sizeof(char));
+  int str_size = 128;
+  //(int)(((int)ceil(log10((double) (mf -> errno_line)))+1));
+  //          printf("AQUIII %d\n", (int) log10((double) (mf -> errno_line)));
   line_number = (char *) temporary_alloc(str_size);
   // Mas se não temos um número de linha, só deixamos a string vazia:
   if(mf -> errno_line == 0)
@@ -1878,8 +1880,9 @@ void _Wprint_metafont_error(struct metafont *mf){
   default:
     fprintf(stderr, "%s:%s Unknown error.", mf -> file, line_number);
   }
-  if(mf -> errno_character[0] != '\0')
+  if(mf -> errno_character[0] != '\0'){
     fprintf(stderr, " (while rendering '%s')\n", mf -> errno_character);
+  }
   else
     fprintf(stderr, "\n");
   if(temporary_free != NULL)
@@ -2402,30 +2405,45 @@ O segundo tipo de erro é quando esperávamos encontrar um tipo de token
 simbólico, mas ao invés disso encontramos outro. Devemos então
 armazenar nas variáveis de erro qual o tipo de token que esperávamos e
 qual o tipo que achamos no lugar disso. O esperado terá seu tipo
-armazenado como inteiro e o tipo encontrado será armazenado como uma
-string contendo seu nome:
+representado como string e o encontrado será armazenado como um
+inteiro com seu tipo:
 
 \iniciocodigo
 @<Macros Locais (metafont.c)@>+=
 #define RAISE_ERROR_EXPECTED_FOUND(mf, cx, line, expected, found) {\
   if(!mf -> errno){\
-    size_t _s = strlen(list_of_keywords[found - 8]);\
+    mf -> errno_int = found;\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_EXPECTED_FOUND);\
-    mf -> errno_int = expected;\
-    mf -> errno_str = (char *) permanent_alloc(_s+1);\
-    memcpy(mf -> errno_str, list_of_keywords[found - 8], _s+1);}}
+    if(found >= 8){\
+      size_t _s = strlen(list_of_keywords[found - 8]);\
+      mf -> errno_str = (char *) permanent_alloc(_s+1);\
+      memcpy(mf -> errno_str, list_of_keywords[expected - 8], _s+1);\
+    } else{\
+      size_t _s = strlen(token_names_not_in_list_of_keywords[found]);\
+      mf -> errno_str = (char *) permanent_alloc(_s+1);\
+      memcpy(mf -> errno_str, \
+             token_names_not_in_list_of_keywords[expected], _s+1);}}}
 @
 \fimcodigo
 
 Na macro acima nós geramos a string correta para o tipo de token
-encontrado porque cada tipo de token possui um código numérico
+esperado porque cada tipo de token possui um código numérico
 sequencial (todos estão em um \monoespaco{enum} definido da Subseção
 4.1) e o nome da maioria dos tokens também está em uma lista de
-strings sequencial (definida na Subseção 4.2). Converter do tipo para
-o nome, para a maioria deles é apenas uma questão de subtrair o código
-numérico do tipo para obter o índice em que o nome dele está na lista
-de nomes. Os tokens para os quais isso não funciona não gerariam um
-erro deste tipo, então não nos preocupamos com eles.
+strings sequencial com o nome de todas as palavras-chave (definida na
+Subseção 4.2). Converter do tipo para o nome, para a maioria deles é
+apenas uma questão de subtrair o código numérico do tipo para obter o
+índice em que o nome dele está na lista de nomes. Entretanto, isso não
+funciona para tokens cujo valor numérico é menor que 8, já que eles
+não são tratados como palavras-chave. Para representar o nome destes
+outros tokens possíveis, lemos os seus nomes desta outra lista:
+
+\iniciocodigo
+@<Variáveis Locais (metafont.c)@>+=
+static char *token_names_not_in_list_of_keywords[] = {
+  "nil", "<Numeric>", "<String>", "<Variable Name>", "(", ")", ",", ";"};
+@
+\fimcodigo
 
 Já para imprimirmos uma mensagem de erro, fazemos o mesmo tipo de
 transformação, mas desta vez para converter para string o tipo de
@@ -2434,14 +2452,18 @@ token que armazenamos como inteiro em \monoespaco{errno\_int}:
 \iniciocodigo
 @<Imprime Mensagem de Erro@>+=
 case ERROR_UNEXPECTED_TOKEN:
-  fprintf(stderr, "%s:%s We found token '%s' in a context where such "
+  fprintf(stderr, "%s:%s We found '%s' token in a context where such "
           "token makes no sense.", mf -> file, line_number,
-          list_of_keywords[mf -> errno_int - 8]);
+          ((mf -> errno_int < 8)?
+          (token_names_not_in_list_of_keywords[mf -> errno_int]):
+          (list_of_keywords[mf -> errno_int - 8])));
   break;
 case ERROR_EXPECTED_FOUND:
-  fprintf(stderr, "%s:%s Expected token '%s'. Found '%s'.",
-          mf -> file, line_number, list_of_keywords[mf -> errno_int - 8],
-          mf -> errno_str);
+  fprintf(stderr, "%s:%s Expected '%s' token. Found '%s' token.",
+          mf -> file, line_number, mf -> errno_str,
+          ((mf -> errno_int < 8)?
+          (token_names_not_in_list_of_keywords[mf -> errno_int]):
+          (list_of_keywords[mf -> errno_int - 8])));
   break;
 @
 \fimcodigo
@@ -2567,12 +2589,13 @@ if(cx -> nesting_level > 0){
 @
 \fimcodigo
 
-
 \secao{7. Declaração de Variáveis}
 
-A sintaxe para declarar variáveis é:
+A declaração de variáveis é a primeira das instruções simples que
+veremos. A sintaxe para declarar variáveis é:
 
 \alinhaverbatim
+<Instrução Simples> -> <Declaração de Variável> | ...
 <Declaração de Variável> -> <Tipo> <Lista de Declaração>
 <Tipo> -> boolean | string | path | pen | picture | transform | pair |
           numeric
@@ -2598,14 +2621,13 @@ TYPE_T_NUMERIC,               // O token simbólico 'numeric'
 @
 \fimcodigo
 
-E adicionamos todos à lsita de palavras reservadas:
+E adicionamos todos à lista de palavras reservadas:
 
 \iniciocodigo
 @<Lista de Palavras Reservadas@>+=
 "boolean", "path", "pen", "picture", "transform", "pair", "numeric",
 @
 \fimcodigo
-
 
 Quando uma variável é declarada, devemos fazer duas coisas:
 
@@ -2630,15 +2652,14 @@ diferir. O que todas as variáveis tem em comum é a seguinte estrutura:
 // Variável genérica
 struct variable{
   int type;
-  int nesting_level;
-  void *next;
+  struct variable *next;
 };
 @
 \fimcodigo
 
-Todas armazenam primeiro o seu tipo, depois o nível de aninhamento em
-que estão e um ponteiro para a próxima. Mas dependendo do tipo da
-variável haverá mais informações após o ponteiro para a próxima.
+Todas armazenam primeiro o seu tipo e depois um ponteiro para a
+próxima. Dependendo do tipo da variável haverá mais informações
+após o ponteiro.
 
 Se estivermos diante de uma variável global, podemos querer preservar
 e armazenar o nome da variável para o caso de querermos depois
@@ -2649,19 +2670,20 @@ estrutura que armazena o nome e a variável:
 @<Estrutura de Dados Locais (metafont.c)@>+=
 struct named_variable{
   char *name;
-  void *next;
+  struct named_variable *next;
   struct variable *var;
 };
 @
 \fimcodigo
 
-E a estrutura de dados da fonte possui ponteiros para as variáveis
-globais com nome armazenado e as sem nome armazenado:
+E a estrutura de dados da meta-fonte possui ponteiros para as
+variáveis globais com nome armazenado e também para as outras
+variáveis armazenadas nela:
 
 \iniciocodigo
 @<Atributos (struct metafont)@>=
-  void *named_variables;
-  void *global_variables;
+  struct named_variable *named_variables;
+  struct variable *variables;
 @
 \fimcodigo
 
@@ -2670,19 +2692,20 @@ Tais ponteiros para variáveis são inicializados como NULL:
 \iniciocodigo
 @<Inicialização (struct metafont)@>=
 mf -> named_variables = NULL;
-mf -> global_variables = NULL;
+mf -> variables = NULL;
 @
 \fimcodigo
 
-Para desalocar a lista de variáveis globais, basta percorrer a lista
-encadeada que elas formam. Algumas variáveis mais complexas precisarão
-de operações adicionais para serem removidas, mas trataremos delas
-posteriormente.
+Para desalocar a lista de variáveis armazenadas na meta-fonte, basta
+percorrer a lista encadeada delas. Algumas variáveis mais complexas
+precisarão de operações adicionais para serem removidas, mas
+trataremos delas posteriormente. Aqui desalocamos as variáveis cujos
+nomes nós não armazenamos nem preservamos:
 
 \iniciocodigo
 @<Finalização (struct metafont)@>+=
 if(permanent_free != NULL){
-  struct variable *v = (struct variable *) (mf -> global_variables);
+  struct variable *v = (struct variable *) (mf -> variables);
   struct variable *next;
   while(v != NULL){
     next = (struct variable *) (v -> next);
@@ -2695,7 +2718,8 @@ if(permanent_free != NULL){
 \fimcodigo
 
 Já desalocar a lista de variáveis globais com nomes preservados é
-feito de maneira semelhante:
+praaticamente a mesma coisa, só precisamos desalocar também a
+estrutura onde guardamos o nome delas:
 
 \iniciocodigo
 @<Finalização (struct metafont)@>+=
@@ -2716,13 +2740,14 @@ if(permanent_free != NULL){
 @
 \fimcodigo
 
-No caso das variáveis que não são globais, elas serão armazenadas no
-contexto, não na estrutura da fonte. Afinal, a duração delas será
-sempre temporária:
+No caso das variáveis que forem declaradas dentro da especificação de
+um caractere a ser renderizado, elas serão armazenadas no contexto,
+não na estrutura da fonte. Afinal, a duração delas será sempre
+temporária:
 
 \iniciocodigo
 @<Atributos (struct context)@>=
-  void *variables;
+  struct variable *variables;
 @
 \fimcodigo
 
@@ -2751,7 +2776,12 @@ if(temporary_free != NULL){
 @
 \fimcodigo
 
-Agora vamos à interpretação da declaração de variável:
+Agora vamos à interpretação da declaração de variável. Toda vez que
+uma instrução começa com um tipo de variável, significa que estamos
+diante de uma declaração de variável. Só temos então que obter o tipo
+e o nome de cada variável, que estará separada por vírgulas quando há
+mais de uma sendo declarada. E para cada nome encontrado, criaremos a
+variável:
 
 \iniciocodigo
 @<Instrução: Declaração de Variável@>=
@@ -2760,11 +2790,8 @@ else if(begin -> type >= TYPE_T_BOOLEAN && begin -> type <= TYPE_T_NUMERIC){
   struct symbolic_token *variable = (struct symbolic_token *) (begin -> next);
   do{
     if(variable -> type != TYPE_SYMBOLIC){
-#if defined(W_DEBUG_METAFONT)
-      fprintf(stderr, "METAFONT: Error: %s:%d: A declared variable "
-                    "should be a single symbolic token.\n", mf -> file,
-                    variable -> line);
-#endif
+      RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL(variable -> line),
+                                 TYPE_SYMBOLIC, variable -> type);
       return false;
     }
     @<Insere Variável Declarada@>
@@ -2775,19 +2802,13 @@ else if(begin -> type >= TYPE_T_BOOLEAN && begin -> type <= TYPE_T_NUMERIC){
       continue;
     }
     if(variable -> type != TYPE_COMMA){
-#if defined(W_DEBUG_METAFONT)
-      fprintf(stderr, "METAFONT: Error: %s:%d: Declared variables "
-                    "should be separed by commas.\n", mf -> file,
-                    variable -> line);
-#endif
+      RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL(variable -> line),
+                                 TYPE_COMMA, variable -> type);
       return false;
     }
-    if(variable == (struct symbolic_token *) *end){
-#if defined(W_DEBUG_METAFONT)
-      fprintf(stderr, "METAFONT: Error: %s:%d: Variable declaration "
-                    "shouldn't end with comma.\n", mf -> file,
-                    variable -> line);
-#endif
+    if(variable == (struct symbolic_token *) *end){ // Erro: Terminou com ','
+      RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL((*end) -> line),
+                                TYPE_SEMICOLON, TYPE_COMMA);
       return false;
     }
     variable = (struct symbolic_token *) (variable -> next);
@@ -2797,29 +2818,25 @@ else if(begin -> type >= TYPE_T_BOOLEAN && begin -> type <= TYPE_T_NUMERIC){
 @
 \fimcodigo
 
-A inserção de uma nova variável segue a seguinte lógica:
+Criar e inserir uma variável no fragmento de código acima significa:
 
 \iniciocodigo
 @<Insere Variável Declarada@>=
 {
   void *variable_pointer;
-  if(cx -> nesting_level == 0){ // Variável global
-    if(variable -> value[0] == '_')
-      variable_pointer = insert_variable(0, permanent_alloc, type, variable,
-                                         &(mf -> global_variables));
+  if(mf -> loading){ // Variável deve ser guardada em 'struct metafont'
+    if(cx -> nesting_level != 0 || variable -> value[0] == '_')
+      variable_pointer = insert_variable(permanent_alloc, type, variable,
+                                         &(mf -> variables));
     else
       variable_pointer = insert_named_global_variable(mf, type, variable);
   }
-  else{
-    variable_pointer = insert_variable(cx -> nesting_level,
-                                      temporary_alloc, type,
+  else{ // Variável guardada em 'struct context'
+    variable_pointer = insert_variable(temporary_alloc, type,
                                       variable, &(cx -> variables));
   }
   if(variable_pointer == NULL){
-#if defined(W_DEBUG_METAFONT)
-      fprintf(stderr, "METAFONT: Error: %s:%d: No memory to create "
-                    "variable.\n", mf -> file, variable -> line);
-#endif
+    RAISE_ERROR_NO_MEMORY(mf, cx, OPTIONAL(variable -> line));
     return false;
   }
   update_token_pointer_for_variable(variable, variable_pointer);
@@ -2831,59 +2848,40 @@ A função que insere uma nova variável sem o nome é:
 
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
-struct variable *insert_variable(int nesting_level,
-                                 void *(*alloc)(size_t),
+struct variable *insert_variable(void *(*alloc)(size_t),
                                  int type,
                                  struct symbolic_token *variable,
-                                 void **target);
+                                 struct variable **target);
 @
 \fimcodigo
 
 Ela aloca uma nova variável e a coloca no local indicado
-por \monoespaco{target}:
+por \monoespaco{target}, que será a lista
+encadeada \monoespaco{variables} dentro da estrutura da meta-fonte ou
+do contexto. No primeiro caso, a variável deve ser alocada pela função
+de alocação permanente, e no segundo, pela alocação temporária. Por
+isso passamos como argumento a função de alocação que deve ser usada:
 
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
-struct variable *insert_variable(int nesting_level,
-                                 void *(*alloc)(size_t),
+struct variable *insert_variable(void *(*alloc)(size_t),
                                  int type,
                                  struct symbolic_token *variable,
-                                 void **target){
+                                 struct variable **target){
   struct variable *var;
-  size_t var_size;
-  switch(type){
-    case TYPE_T_NUMERIC:
-      var_size = sizeof(struct numeric_variable);
-      break;
-    case TYPE_T_PAIR:
-      var_size = sizeof(struct pair_variable);
-      break;
-    case TYPE_T_PATH:
-      var_size = sizeof(struct path_variable);
-      break;
-    case TYPE_T_PEN:
-      var_size = sizeof(struct pen_variable);
-      break;
-    case TYPE_T_PICTURE:
-      var_size = sizeof(struct picture_variable);
-      break;
-    case TYPE_T_TRANSFORM:
-      var_size = sizeof(struct transform_variable);
-      break;
-    case TYPE_T_BOOLEAN:
-      var_size = sizeof(struct boolean_variable);
-      break;
-    default:
-      var_size = sizeof(struct variable);
-  }
+  size_t var_sizes[] = {
+    sizeof(struct boolean_variable), sizeof(struct path_variable),
+    sizeof(struct pen_variable), sizeof(struct picture_variable),
+    sizeof(struct transform_variable), sizeof(struct pair_variable),
+    sizeof(struct numeric_variable)
+  };
+  size_t var_size = var_sizes[type-TYPE_T_BOOLEAN];
   var = (struct variable *) alloc(var_size);
   if(var != NULL){
     var -> type = type;
     var -> next = NULL;
-    var -> nesting_level = nesting_level;
     @<Inicialização de Nova Variável@>
-  }
-  
+  }  
   if(*target == NULL)
     *target = var;
   else{
@@ -2909,7 +2907,8 @@ struct variable *insert_named_global_variable(struct metafont *mf,
 \fimcodigo
 
 Ela funciona de maneira similar, apenas alocando a estrutura do nome e
-colocando a nova variável ali:
+colocando a nova variável ali. Como só preservamos o nome de variáveis
+globais, então certamente usaremos a alocação permanente para elas:
 
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
@@ -2933,8 +2932,8 @@ struct variable *insert_named_global_variable(struct metafont *mf,
   memcpy(named -> name, var -> value, name_size);
   named -> next = NULL;
   named -> var = NULL;
-  new_var = insert_variable(0, permanent_alloc, type, var,
-                           (void **) &(named -> var));
+  new_var = insert_variable(permanent_alloc, type, var,
+                           &(named -> var));
   if(new_var == NULL){
     if(permanent_free != NULL){
       permanent_free(named -> name);
@@ -2971,8 +2970,8 @@ void update_token_pointer_for_variable(struct symbolic_token *var_token,
 A função percorre todos os tokens que vem depois do token com o nome
 da nova variável e só para quando percorre a lista inteira ou quando
 sai do nível de aninhamento atual para um onde a variável não existe
-mais (quando acha um \monoespaco{endgroup} encerrando o nível de
-aninhamento da variável):
+mais (quando acha um \monoespaco{endgroup}, \monoespaco{fi}
+ou \monoespaco{endchar} encerrando o nível de aninhamento da variável):
 
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
@@ -3006,7 +3005,6 @@ Uma variável numérica será armazenada na seguinte estrutura:
 @<Estrutura de Dados Locais (metafont.c)@>+=
 struct numeric_variable{
   int type; // Deve set 'TYPE_T_NUMERIC'
-  int nesting_level;
   void *next;
   float value;
 };
@@ -3040,11 +3038,10 @@ No caso das variáveis numéricas, nada a mais é necessário durante a
 finalização, já que não há nada muito complexo além de um número em
 ponto flutuante nelas.
 
-Entretanto, além de variáveis declaradas pelo usuário, a nossa versão
-da linguagem Metafont irá possuir algumas variáveis internas numéricas
-próprias. Elas sempre estarão presentes e não precisam ser
-declaradas. Iremos ter ao todo seis
-delas: \monoespaco{pt}, \monoespaco{cm}, \monoespaco{mm}, \monoespaco{w},
+Entretanto, além de variáveis declaradas pelo usuário, teremos também
+algumas variáveis internas numéricas próprias. Elas sempre estarão
+presentes e não precisam ser declaradas. Temos seis delas que são
+numéricas: \monoespaco{pt}, \monoespaco{cm}, \monoespaco{mm}, \monoespaco{w},
 \monoespaco{h} e \monoespaco{d}. Basicamente as três primeiras
 irão armazenar quantos pixels correspondem a 1pt, 1cm e 1mm
 respectivamente. As próximas três irão armazenar a largura, altura e
@@ -3052,7 +3049,7 @@ profundidade de um novo glifo caso estejamos renderizando algum no
 momento. Nos demais casos, elas conterão zero.
 
 Tais variáveis numéricas internas serão armazenadas na estrutura
-metafont:
+da meta-fonte:
 
 \iniciocodigo
 @<Atributos (struct metafont)@>+=
@@ -3078,10 +3075,7 @@ mf -> internal_numeric_variables =
     ((struct numeric_variable *)
       mf -> internal_numeric_variables)[i].type = TYPE_T_NUMERIC;
     ((struct numeric_variable *)
-      mf -> internal_numeric_variables)[i].nesting_level = 0;
-    ((struct numeric_variable *)
       mf -> internal_numeric_variables)[i].next = NULL;
-
   }
 }
 @
@@ -3160,7 +3154,6 @@ será armazenada na seguinte estrutura:
 @<Estrutura de Dados Locais (metafont.c)@>+=
 struct pair_variable{
   int type; // Deve ser 'TYPE_T_PAIR'
-  int nesting_level;
   void *next;
   float x, y;
 };
@@ -3195,7 +3188,7 @@ $$
 Ou: $(x', y') = (a+cx+dy, b+ex+fy)$.
 
 A ordem em que os elementos são representados pode parecer estranha,
-mas é feito assim como compatibilidade com a linguagem METAFONT
+mas é feito assim por compatibilidade com a linguagem METAFONT
 original criada por Knuth.
 
 Uma variável de transformação então simplesmente deve armazenar uma
@@ -3205,7 +3198,6 @@ transformação linear na forma de uma matriz:
 @<Estrutura de Dados Locais (metafont.c)@>+=
 struct transform_variable{
   int type; // Deve ser 'TYPE_T_TRANSFORM'
-  int nesting_level;
   void *next;
   float value[9];
 };
@@ -3267,7 +3259,6 @@ if(permanent_free != NULL)
 @
 \fimcodigo
 
-
 A variável \monoespaco{identity} deve ser registrada como tendo a
 primeira posição:
 
@@ -3288,8 +3279,6 @@ else if(!strcmp(buffer, "identity"))
           &(mf -> internal_transform_variables[INTERNAL_TRANSFORM_IDENTITY]);
 @
 \fimcodigo
-
-
 
 \subsecao{7.4. Variáveis de Caminhos}
 
@@ -3947,6 +3936,8 @@ else if(begin -> type ==  TYPE_SYMBOLIC){
   int number_of_variables = 0;
   do{
     if(var -> type != TYPE_SYMBOLIC){
+      RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL(var -> line),
+                                TYPE_SYMBOLIC, var -> type);
 #if defined(W_DEBUG_METAFONT)
       fprintf(stderr, "METAFONT: Error: %s:%d: Non-symbolic "
               "token in left side of assignment (type: %d).\n",
@@ -13246,7 +13237,7 @@ else if(begin -> type == TYPE_IF){
 #if defined(W_DEBUG_METAFONT)
           fprintf(stderr, "METAFONT: Error: %s:%d: Expected ':' after "
                   "'else'.\n", mf -> file,
-                  ((struct generic_token *) *end_token_list) -> line);
+                  (*end) -> line);
 #endif
           return false;
         }
@@ -13280,7 +13271,7 @@ else if(begin -> type == TYPE_IF){
 #if defined(W_DEBUG_METAFONT)
   fprintf(stderr, "METAFONT: Error: %s:%d: Not found corresponding 'fi' "
           "for 'if' statement.\n", mf -> file,
-          ((struct generic_token *) begin_token_list) -> line);
+          begin -> line);
 #endif  
   return false;
 }
@@ -13310,7 +13301,7 @@ else if(begin -> type == TYPE_ELSEIF || begin -> type == TYPE_ELSE){
 #if defined(W_DEBUG_METAFONT)
   fprintf(stderr, "METAFONT: Error: %s:%d: Token 'elseif' or 'else' should "
           "have a corresponding 'if'.\n", mf -> file,
-          ((struct generic_token *) begin_token_list) -> line);
+          begin -> line);
 #endif  
     return false;
   }
@@ -13336,7 +13327,7 @@ else if(begin -> type == TYPE_ELSEIF || begin -> type == TYPE_ELSE){
 #if defined(W_DEBUG_METAFONT)
   fprintf(stderr, "METAFONT: Error: %s:%d: Not found corresponding 'fi' "
           "for 'else' or 'elseif' statement.\n", mf -> file,
-          ((struct generic_token *) begin_token_list) -> line);
+          begin -> line);
 #endif
   return false;
 }
@@ -15462,7 +15453,7 @@ else if(begin -> type == TYPE_BEGINCHAR && mf -> loading){
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr, "METAFONT: Error: %s:%d: Missing '(' "
                     "after 'beginchar'.\n", mf -> file,
-                    ((struct generic_token *) begin_token_list) -> line);
+                    begin -> line);
 #endif
     return false;
   }
@@ -15472,7 +15463,7 @@ else if(begin -> type == TYPE_BEGINCHAR && mf -> loading){
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr, "METAFONT: Error: %s:%d: Missing UTF-8 string "
                     "after 'beginchar('.\n", mf -> file,
-            ((struct generic_token *) begin_token_list) -> line);
+            begin  -> line);
 #endif
     return false;
   }
@@ -15487,7 +15478,7 @@ else if(begin -> type == TYPE_BEGINCHAR && mf -> loading){
 #if defined(W_DEBUG_METAFONT)
       fprintf(stderr, "METAFONT: Error: %s:%d: Glyph \"%s\" is defined "
                       "twice.\n", mf -> file,
-              ((struct generic_token *) begin_token_list) -> line,
+              begin -> line,
               str -> value);
 #endif
       return false;
@@ -15514,7 +15505,7 @@ else if(begin -> type == TYPE_BEGINCHAR && mf -> loading){
 #if defined(W_DEBUG_METAFONT)
       fprintf(stderr, "METAFONT: Error: %s:%d: Malformed 'beginchar' "
                       "compound command.\n", mf -> file,
-              ((struct generic_token *) begin_token_list) -> line);
+              begin -> line);
 #endif
       return false;
     }
@@ -15533,7 +15524,7 @@ else if(begin -> type == TYPE_BEGINCHAR && mf -> loading){
 #if defined(W_DEBUG_METAFONT)
       fprintf(stderr, "METAFONT: Error: %s:%d: Missing 'endchar' "
                       "after'beginchar' command.\n", mf -> file,
-              ((struct generic_token *) begin_token_list) -> line);
+              begin -> line);
 #endif
       return false;
     }
