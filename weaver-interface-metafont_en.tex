@@ -105,17 +105,17 @@
 
 7.2. Pair Variables \indice{43}
 
-7.3. Transform Variables \indice{XX}
+7.3. Transform Variables \indice{43}
 
-7.4. Path Variables \indice{XX}
+7.4. Path Variables \indice{44}
 
-7.5. Pen Variables \indice{XX}
+7.5. Pen Variables \indice{46}
 
-7.6. Picture Variables \indice{XX}
+7.6. Picture Variables \indice{50}
 
-7.7. Boolean Variables \indice{XX}
+7.7. Boolean Variables \indice{52}
 
-8. Assignments \indice{XX}
+8. Assignments \indice{52}
 
 8.1. Numeric Assignments and Expressions \indice{XX}
 
@@ -2652,7 +2652,7 @@ if(permanent_free != NULL){
   struct variable *next;
   while(v != NULL){
     next = (struct variable *) (v -> next);
-    @<Finalize Global Variable 'v'@>
+    @<Finalize Variable 'v' in 'struct metafont'@>
     permanent_free(v);
     v = next;
   }
@@ -2674,7 +2674,7 @@ if(permanent_free != NULL){
     struct variable *v = (struct variable *) named -> var;
     next = (struct named_variable *) (named -> next);
     permanent_free(named -> name);
-    @<Finalize Global Variable 'v'@>
+    @<Finalize Variable 'v' in 'struct metafont'@>
     permanent_free(v);
     permanent_free(named);
     named = next;
@@ -2711,7 +2711,7 @@ if(temporary_free != NULL){
   struct variable *next;
   while(v != NULL){
     next = (struct variable *) (v -> next);
-    @<Finalize Local Variable 'v'@>
+    @<Finalize Variable 'v' in 'struct context'@>
     temporary_free(v);
     v = next;
   }
@@ -2770,14 +2770,13 @@ means:
   void *variable_pointer;
   if(mf -> loading){ // Variable should be stored in 'struct metafont'
     if(cx -> nesting_level != 0 || variable -> value[0] == '_')
-      variable_pointer = insert_variable(permanent_alloc, type, variable,
+      variable_pointer = insert_variable(mf, type, variable,
                                          &(mf -> variables));
     else
       variable_pointer = insert_named_global_variable(mf, type, variable);
   }
   else
-    variable_pointer = insert_variable(temporary_alloc, type,
-                                      variable, &(cx -> variables));
+    variable_pointer = insert_variable(mf, type, variable, &(cx -> variables));
   if(variable_pointer == NULL){
     RAISE_ERROR_NO_MEMORY(mf, cx, OPTIONAL(variable -> line));
     return false;
@@ -2791,7 +2790,7 @@ The function that inserts a new global variable without its name is:
 
 \iniciocodigo
 @<Local Function Declaration (metafont.c)@>+=
-struct variable *insert_variable(void *(*alloc)(size_t),
+struct variable *insert_variable(struct metafont *mf,
                                  int type,
                                  struct symbolic_token *variable,
                                  struct variable **target);
@@ -2803,7 +2802,7 @@ by \monoespaco{target}:
 
 \iniciocodigo
 @<Auxiliary Local Functions (metafont.c)@>+=
-struct variable *insert_variable(void *(*alloc)(size_t),
+struct variable *insert_variable(struct metafont *mf,
                                  int type,
                                  struct symbolic_token *variable,
                                  struct variable **target){
@@ -2815,7 +2814,10 @@ struct variable *insert_variable(void *(*alloc)(size_t),
     sizeof(struct numeric_variable)
   };
   size_t var_size = var_sizes[type-TYPE_T_BOOLEAN];
-  var = (struct variable *) alloc(var_size);
+  if(mf -> loading)
+    var = (struct variable *) permanent_alloc(var_size);
+  else
+    var = (struct variable *) temporary_alloc(var_size);
   if(var != NULL){
     var -> type = type;
     var -> next = NULL;
@@ -2871,8 +2873,7 @@ struct variable *insert_named_global_variable(struct metafont *mf,
   memcpy(named -> name, var -> value, name_size);
   named -> next = NULL;
   named -> var = NULL;
-  new_var = insert_variable(permanent_alloc, type, var,
-                           &(named -> var));
+  new_var = insert_variable(mf, type, var, &(named -> var));
   if(new_var == NULL){
     if(permanent_free != NULL){
       permanent_free(named -> name);
@@ -3262,8 +3263,8 @@ struct path_points{
 };
 struct path_variable{
   int type; // Must be 'TYPE_T_PATH'
-  int nesting_level;
   void *next;
+  bool permanent; // Which allocation was used: permanent or temporary
   bool cyclic;
   int length, total_length;
   struct path_points *points;
@@ -3289,36 +3290,38 @@ the control points in the last point or subpath show how it is
 connected to the first point in the path. If we are not in a cyclic
 path, then the control points of the last point is ignored.
 
-We will represent a non-initialized oath variable setting its length
+We will represent a non-initialized path variable setting its length
 as -1:
 
 \iniciocodigo
 @<Initializing New Variable@>+=
 if(type == TYPE_T_PATH){
   ((struct path_variable *) var) -> length = -1;
+  ((struct path_variable *) var) -> permanent = mf -> loading;
 }
 @
 \fimcodigo
 
 When we remove a global variable, if it is a path variable and if it
 is initialized, then we also need to remove the allocated list of
-points:
+points. If the variable is in the meta-font structure, we use
+permanent disallocation:
 
 \iniciocodigo
-@<Finalize Global Variable 'v'@>=
+@<Finalize Variable 'v' in 'struct metafont'@>=
 if(v -> type == TYPE_T_PATH){
-  struct path_variable *path = (struct path_variable *) v;
+  struct path_variable *path = (struct path_variable *) v;  
   if(path -> length != -1 && permanent_free != NULL)
     path_recursive_free(permanent_free, path, false);
 }
 @
 \fimcodigo
 
-If the variable is not global we do the same, but using a different
-disallocation function:
+If the variable is in the context structure we do the same, but using
+a different disallocation function:
 
 \iniciocodigo
-@<Finalize Local Variable 'v'@>=
+@<Finalize Variable 'v' in 'struct context'@>=
 if(v -> type == TYPE_T_PATH){
   struct path_variable *path = (struct path_variable *) v;
   if(path -> length != -1 && temporary_free != NULL)
@@ -3373,8 +3376,8 @@ and points. They are stored in the following structure:
 @<Local Data Structures (metafont.c)@>+=
 struct pen_variable{
   int type; // Must be 'TYPE_T_PEN'
-  int nesting_level;
   void *next;
+  bool permanent; // Variable allocation is permanent or temporary?
   struct path_variable *format; // The format as a cyclic path
   int flags;
   struct pen_variable *referenced; // Not null only in 'currentpen'
@@ -3487,6 +3490,7 @@ if(type == TYPE_T_PEN){
   ((struct pen_variable *) var) -> indices = 0;
   ((struct pen_variable *) var) -> flags = false;
   ((struct pen_variable *) var) -> referenced = NULL;
+  ((struct pen_variable *) var) -> permanent = mf -> loading;
 }
 @
 \fimcodigo
@@ -3496,7 +3500,7 @@ Which means that when we remove a global variable and it is a pen
 variable, we need to deallocate the format and throw away its vertices:
 
 \iniciocodigo
-@<Finalize Global Variable 'v'@>+=
+@<Finalize Variable 'v' in 'struct metafont'@>+=
 if(v -> type == TYPE_T_PEN){
   struct pen_variable *pen = (struct pen_variable *) v;
   if(pen -> format != NULL && permanent_free != NULL)
@@ -3511,7 +3515,7 @@ If the variable is not global we do the same, but using a different
 disallocation function:
 
 \iniciocodigo
-@<Finalize Local Variable 'v'@>=
+@<Finalize Variable 'v' in 'struct context'@>=
 if(v -> type == TYPE_T_PEN){
   struct pen_variable *pen = (struct pen_variable *) v;
   if(pen -> format != NULL && temporary_free != NULL)
@@ -3559,7 +3563,7 @@ mf -> internal_pen_variables[0].flags = FLAG_NULL;
 mf -> internal_pen_variables[0].referenced = NULL;
 mf -> internal_pen_variables[0].gl_vbo = 0;
 mf -> internal_pen_variables[0].indices = 0;
-mf -> internal_pen_variables[0].nesting_level = 0;
+mf -> internal_pen_variables[0].permanent = true;
 mf -> internal_pen_variables[1].format = NULL; // A caneta 'pensquare'
 mf -> internal_pen_variables[1].type = TYPE_T_PEN;
 mf -> internal_pen_variables[1].flags = FLAG_CONVEX | FLAG_STRAIGHT |
@@ -3567,7 +3571,7 @@ mf -> internal_pen_variables[1].flags = FLAG_CONVEX | FLAG_STRAIGHT |
 mf -> internal_pen_variables[1].referenced = NULL;
 mf -> internal_pen_variables[1].gl_vbo = 0;
 mf -> internal_pen_variables[1].indices = 4;
-mf -> internal_pen_variables[1].nesting_level = 0;
+mf -> internal_pen_variables[1].permanent = true;
 { // Initializing transform matrices
   int j;
   for(j = 0; j < 2; j ++)
@@ -3648,7 +3652,6 @@ also an OpenGL identifier to a texture:
 @<Local Data Structures (metafont.c)@>+=
 struct picture_variable{
   int type; // Must be 'TYPE_T_PICTURE'
-  int nesting_level;
   void *next;
   int width, height;
   GLuint texture;
@@ -3673,7 +3676,7 @@ When removing a global variable, if it is a picture variable, we need
 to destroy its texture with OpenGL if the texture exists:
 
 \iniciocodigo
-@<Finalize Global Variable 'v'@>+=
+@<Finalize Variable 'v' in 'struct metafont'@>+=
 if(v -> type == TYPE_T_PICTURE){
   struct picture_variable *pic = (struct picture_variable *) v;
   if(pic -> texture != 0)
@@ -3685,7 +3688,7 @@ if(v -> type == TYPE_T_PICTURE){
 If the variable is not global we do the same:
 
 \iniciocodigo
-@<Finalize Local Variable 'v'@>=
+@<Finalize Variable 'v' in 'struct context'@>=
 if(v -> type == TYPE_T_PICTURE){
   struct picture_variable *pic = (struct picture_variable *) v;
   if(pic -> texture != 0)
@@ -3767,7 +3770,6 @@ false. Its struct format is:
 @<Local Data Structures (metafont.c)@>+=
 struct boolean_variable{
   int type; // Deve ser 'TYPE_T_BOOLEAN'
-  int nesting_level;
   void *next;
   short value;
 };
@@ -3793,6 +3795,7 @@ values and how we store the result of expressions.
 The syntax for an assignment is:
 
 \alinhaverbatim
+<Simple Statement> -> <Declaration> | <Assignment> | ...
 <Assignment> -> <Variable> = <Right Side> |
                 <Variable> := <Right Side> |
 <Right Side> -> <Expression> | <Assignment>
@@ -3808,14 +3811,13 @@ a = b = c = 5;
 If in the beginning of a statement we find a variable, then certainly
 we are dealing with an assignment.
 
-We will begin teaching our lexer that both tokens ``\monoespaco{=}''
-and ``\monoespaco{:=}'' are equivalent, represent the same thing and
-have an special meaning:
+In an assignment statement, the tokens ``\monoespaco{=}'' and
+``\monoespaco{:=}'' are equivalent:
 
 \iniciocodigo
 @<WEAVEFONT: Symbolic Token Definition@>+=
-TYPE_ASSIGNMENT,            // Symbolic token '='
-TYPE_ASSIGNMENT2,           // Symbolic token ':='
+TYPE_EQUAL,            // Symbolic token '='
+TYPE_ASSIGNMENT,       // Symbolic token ':='
 @
 \fimcodigo
 
@@ -3832,7 +3834,7 @@ assignments is described below. What it does is walk over the tokens
 in the assignment detecting all variables that should pass by the
 assignment. While it does it, it checks if all them are declared, if
 all them have the same type, if we are assigning to something that is
-not a variable, if we forget the assignment symbol, or if we are
+not a variable, if we forgot the assignment symbol, or if we are
 missing an expression after the assignment. If one of these things are
 detected, an error is generated.
 
@@ -3852,57 +3854,41 @@ else if(begin -> type == TYPE_SYMBOLIC){
   int number_of_variables = 0;
   do{
     if(var -> type != TYPE_SYMBOLIC){
-#if defined(W_DEBUG_METAFONT)
-      fprintf(stderr, "METAFONT: Error: %s:%d: Non-symbolic "
-              "token in left side of assignment.\n", mf -> file,
-              var -> line);
-#endif
+      RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL(var -> line),
+                                TYPE_SYMBOLIC, var -> type);
       return false;
     }
     if(var -> var == NULL){
-#if defined(W_DEBUG_METAFONT)
-      fprintf(stderr, "METAFONT: Error: %s:%d: Undeclared variable "
-              "'%s'.\n", mf -> file, var -> line, var -> value);
-#endif
+      //RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, OPTIONAL(var -> line),
+      //                                var -> value);
       return false;
     }
     number_of_variables ++;
     if(type == 0)
       type = ((struct variable *) (var -> var)) -> type;
     else if(((struct variable *) (var -> var)) -> type != type){
-#if defined(W_DEBUG_METAFONT)
-      fprintf(stderr, "METAFONT: Error: %s:%d: Assigning variables "
-              "with different types: '%s'.\n", mf -> file,
-              var -> line, var -> value);
-#endif
+      //RAISE_ERROR_CANNOT_ASSIGN(mf, cx, OPTIONAL(var -> line), type,
+      //                         ((struct variable *) (var -> var)) -> type);
       return false;
     }
     if((void *) var != (struct symbolic_token *) end)
       var = (struct symbolic_token *) (var -> next);
     else
       var = NULL;
-    if(var -> type != TYPE_ASSIGNMENT && var -> type != TYPE_ASSIGNMENT2){
-#if defined(W_DEBUG_METAFONT)
-      fprintf(stderr, "METAFONT: Error: %s:%d: Variable in left-side "
-              "without assignment.\n", mf -> file, var -> line);
-#endif
+    if(var -> type != TYPE_EQUAL && var -> type != TYPE_ASSIGNMENT){
+      RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL(var -> line),
+                                TYPE_EQUAL, var -> type);
       return false;
     }
     if(var != (struct symbolic_token *) end)
       var = (struct symbolic_token *) (var -> next);
     else
       var = NULL;
-  } while(var != NULL &&
-          (((struct generic_token *) (var -> next)) -> type ==
-          TYPE_ASSIGNMENT ||
-          ((struct generic_token *) (var -> next)) -> type ==
-          TYPE_ASSIGNMENT2));
+  } while(var != NULL && (var -> next -> type == TYPE_EQUAL ||
+                          var -> next -> type == TYPE_ASSIGNMENT));
   if(var == NULL){
-#if defined(W_DEBUG_METAFONT)
-      fprintf(stderr, "METAFONT: Error: %s:%d: Empty expression in "
-              "assignment.\n", mf -> file, var -> line);
-#endif
-      return false;
+    //RAISE_ERROR_INCOMPLETE_ASSIGNMENT(mf, cx, OPTIONAL(var -> line));
+    return false;
   }
   begin_expression = (struct generic_token *) var;
   @<Assignment for Numeric Variables@>
@@ -6508,7 +6494,7 @@ void assign_path_variable(struct metafont *mf,
                           struct path_variable *source){
   void *(*alloc)(size_t);
   void (*disalloc)(void *);
-  if(target -> nesting_level == 0){
+  if(target -> permanent){
     disalloc = permanent_free;
     alloc = permanent_alloc;
   }
@@ -9661,9 +9647,8 @@ void assign_pen_variable(struct metafont *mf,
                           struct pen_variable *source){
   void *(*alloc)(size_t);
   void (*disalloc)(void *);
-  int nesting_level = target -> nesting_level;
   struct variable *next = target -> next;
-  if(nesting_level == 0){
+  if(target -> permanent == 0){
     disalloc = permanent_free;
     alloc = permanent_alloc;
   }
@@ -9676,7 +9661,6 @@ void assign_pen_variable(struct metafont *mf,
   if(target -> gl_vbo != 0)
     glDeleteBuffers(1, &(target -> gl_vbo));
   memcpy(target, source, sizeof(struct pen_variable));
-  target -> nesting_level = nesting_level;
   target -> type = TYPE_T_PEN;
   target -> next = next;
   if(! (source -> flags & (FLAG_CIRCULAR | FLAG_SQUARE | FLAG_NULL)))
@@ -12133,7 +12117,7 @@ bool eval_boolean_expression(struct metafont *mf, struct context *cx,
     if(IS_NOT_NESTED() && p != begin_expression &&
        (p -> type == TYPE_LT || p -> type == TYPE_LEQ ||
         p -> type == TYPE_GT || p -> type == TYPE_GEQ ||
-        p -> type == TYPE_NEQ || p -> type == TYPE_ASSIGNMENT)){
+        p -> type == TYPE_NEQ || p -> type == TYPE_EQUAL)){
       last_operator = p;
       before_last_operator = prev;
     }
@@ -12177,7 +12161,7 @@ bool eval_boolean_expression(struct metafont *mf, struct context *cx,
       case TYPE_GEQ:
         result -> value = a.value >= b.value;
         return true;
-      case TYPE_ASSIGNMENT:
+      case TYPE_EQUAL:
         result -> value = a.value == b.value;
         return true;
       case TYPE_NEQ:
@@ -12208,7 +12192,7 @@ bool eval_boolean_expression(struct metafont *mf, struct context *cx,
       case TYPE_GEQ:
         result -> value = (a.x > b.x) || (a.x == b.x && a.y > b.y);
         return true;
-      case TYPE_ASSIGNMENT:
+      case TYPE_EQUAL:
         result -> value = (a.x == b.x && a.y == b.y);
         return true;
       case TYPE_NEQ:
@@ -12260,7 +12244,7 @@ bool eval_boolean_expression(struct metafont *mf, struct context *cx,
             }
           result -> value = (a.value[order[i]] >= b.value[order[i]]);
           return true;
-        case TYPE_ASSIGNMENT:
+        case TYPE_EQUAL:
           for(i = 0; i < 5; i ++)
             if(a.value[order[i]] != b.value[order[i]]){
               result -> value = false;
@@ -12302,7 +12286,7 @@ bool eval_boolean_expression(struct metafont *mf, struct context *cx,
       case TYPE_GEQ:
         result -> value = a.value >= b.value;
         return true;
-      case TYPE_ASSIGNMENT:
+      case TYPE_EQUAL:
         result -> value = (a.value == b.value);
         return true;
       case TYPE_NEQ:
@@ -12899,7 +12883,7 @@ int get_tertiary_expression_type(struct metafont *mf, struct context *cx,
     if(IS_NOT_NESTED()){
       if(t -> type == TYPE_OR || t -> type == TYPE_LT ||
            t -> type == TYPE_GT || t -> type == TYPE_GEQ ||
-           t -> type == TYPE_LEQ || t -> type == TYPE_ASSIGNMENT ||
+           t -> type == TYPE_LEQ || t -> type == TYPE_EQUAL ||
            t -> type == TYPE_NEQ)
         return TYPE_T_BOOLEAN;
       if(t -> type == TYPE_PYTHAGOREAN_SUM ||
