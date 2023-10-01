@@ -131,7 +131,7 @@
 
 8. Atribuições \indice{52}
 
-8.1. Atribuições e Expressões Numéricas \indice{XX}
+8.1. Atribuições e Expressões Numéricas \indice{56}
 
 8.1.1. Soma e Subtração: Normal e Pitagórica \indice{XX}
 
@@ -3943,16 +3943,18 @@ else if(begin -> type ==  TYPE_SYMBOLIC){
       return false;
     }
     if(var -> var == NULL){
-      //RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, OPTIONAL(var -> line),
-      //                                var -> value);
+      RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, OPTIONAL(var -> line),
+                                      var -> value);
       return false;
     }
     number_of_variables ++;
     if(type == 0)
       type = ((struct variable *) (var -> var)) -> type;
     else if(((struct variable *) (var -> var)) -> type != type){
-      //RAISE_ERROR_CANNOT_ASSIGN(mf, cx, OPTIONAL(var -> line), type,
-      //                         ((struct variable *) (var -> var)) -> type);
+      RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, OPTIONAL(var -> line),
+                                     var -> value, 
+                                     ((struct variable *)(var -> var)) -> type,
+                                     type);
       return false;
     }
     if(var != (struct symbolic_token *) end)
@@ -3960,8 +3962,7 @@ else if(begin -> type ==  TYPE_SYMBOLIC){
     else
       var = NULL;
     if(var -> type != TYPE_EQUAL && var -> type != TYPE_ASSIGNMENT){
-      RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL(var -> line),
-                                TYPE_EQUAL, var -> type);
+      RAISE_ERROR_UNKNOWN_STATEMENT(mf, cx, OPTIONAL(begin -> line));
       return false;
     }
     if(var != (struct symbolic_token *) end)
@@ -3971,7 +3972,7 @@ else if(begin -> type ==  TYPE_SYMBOLIC){
   } while(var != NULL && (var -> next -> type == TYPE_EQUAL ||
                           var -> next -> type == TYPE_ASSIGNMENT));
   if(var == NULL){
-    //RAISE_ERROR_INCOMPLETE_ASSIGNMENT(mf, cx, OPTIONAL(var -> line));
+    RAISE_ERROR_MISSING_EXPRESSION(mf, cx, OPTIONAL(var -> line), type);
     return false;
   }
   begin_expression = (struct generic_token *) var;
@@ -3984,6 +3985,164 @@ else if(begin -> type ==  TYPE_SYMBOLIC){
   @<Atribuição de Variável Booleana@>
   return true;
 }
+@
+\fimcodigo
+
+O código de atribuição acima será executado sempre que o primeiro
+token de uma instrução for um nome de variável. Isso só ocorre em um
+programa válido quando estamos prestes a fazer uma atribuição.
+
+O código foca-se primariamente em lidar com erros. O
+laço \monoespaco{do...while} acima serve basicamente para verificar se
+o lado esquerdo da atribuição está correto. O invariante do laço é que
+no começo de cada iteração, temos \monoespaco{var} apontando para um
+token que é a próxima variável de uma atribuição encadeada. Podemos
+encontrar aqui alguns erros já definidos antes, mas há alguns novos
+como:
+
+\iniciocodigo
+@<Tipos de Erros@>+=
+ERROR_UNDECLARED_VARIABLE, ERROR_WRONG_VARIABLE_TYPE, ERROR_MISSING_EXPRESSION,
+@
+\fimcodigo
+
+O primeiro erro tratado é um erro já declarado antes e ocorre quando
+estamos em uma série de atribuições encadeadas, mas um dos tokens que
+deveria ser um nome de variável, não é. Por exemplo:
+
+\alinhaverbatim
+numeric a;
+a = , = 3; % ERRO: esperava um nome de variável, obteve um ","
+\alinhanormal
+
+Neste caso, um erro será gerado na segunda iteração do laço.
+
+O próximo erro que pode ocorrer é encontrarmos uma variável que não
+foi declarada na atribuição. Isso pode ocorrer com variáveis de
+qualquer posição no encadeamento. No exemplo acima, o erro seria
+gerado se a variável \monoespaco{a} não tivesse sido declarada. Este é
+um novo tipo de erro e vamos definir a macro que gera ele:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, line, name) {\
+  if(!mf -> errno){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNDECLARED_VARIABLE);\
+    mf -> errno_str = (char *) permanent_alloc(sizeof(name)+1);\
+    memcpy(mf -> errno_str, name, sizeof(name)+1);}}
+@
+\fimcodigo
+
+Como armazenamos o nome da variável não declarada que encontremos,
+iremos usar esta informação para avisar o usuário que ela não está
+declarada, caso ele pergunte o quê deu errado:
+
+\iniciocodigo
+@<Imprime Mensagem de Erro@>+=
+case ERROR_UNDECLARED_VARIABLE:
+  fprintf(stderr, "%s:%s Variable '%s' was not declared.", mf -> file,
+          line_number, mf -> errno_str);
+  break;
+@
+\fimcodigo
+
+O próximo erro detectado também é novo e pode ocorrer em código do
+tipo:
+
+\alinhaverbatim
+numeric a;
+picture b;
+a = b = 3; % ERRO: Variáveis de tipos diferentes na mesma atribuição
+\alinhanormal
+
+Para este tipo de erro, devemos informar ao usuário o nome da variável
+com tipo diferente do esperado, o tipo dela e qual o tipo que
+esperávamos no lugar disso. São três informações diferentes. Mas as
+duas primeiras podem ser representadas juntas. A macro abaixo gera a
+representação na forma de string de um token de nome de variável
+declarado. No exemplo acima, a representação do token \monoespaco{b}
+seria ``\monoespaco{<b:picture>}''. A macro que nos ajuda a montar tal
+representação é:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#define VARIABLE_TO_STRING(name, type, str) {\
+  size_t _s = strlen(name) + 13;\
+  str = (char *) permanent_alloc(_s);\
+  str[0] = '\0';\
+  strcat(str, "<");\
+  strcat(str, name);\
+  strcat(str, ":");\
+  strcat(str, list_of_keywords[type - 8]);\
+  strcat(str, ">");}
+@
+\fimcodigo
+
+Com ajuda desta macro, podemos representar melhor informações sobre o
+erro, usando uma string para indicar tanto o nome como tipo da
+variável incorreta encontrada. O tipo esperado podemos armazenar como
+um inteiro ao gerar o erro:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, line, name, type, expected) {\
+  if(!mf -> errno){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_WRONG_VARIABLE_TYPE);\
+    VARIABLE_TO_STRING(name, type, mf -> errno_str);\
+    mf -> errno_int = expected;}}
+@
+\fimcodigo
+
+E aqui avisamos ao usuário o quê deu errado:
+
+\iniciocodigo
+@<Imprime Mensagem de Erro@>+=
+case ERROR_WRONG_VARIABLE_TYPE:
+  fprintf(stderr, "%s:%s Found '%s', but a variable of type '%s' was expected.",
+          mf -> file, line_number, mf -> errno_str,
+          list_of_keywords[mf -> errno_int - 8]);
+  break;
+@
+\fimcodigo
+
+O próximo erro ocorre somente quando estamos na primeira iteração. O
+primeiro token é um nome de variável, mas o próximo não é
+um \monoespaco{=} nem um \monoespaco{:=}. Neste caso pode ter ocorrido
+que o usuário esqueceu de colocar a atribuição. Ou pode ser que ele
+tentou digitar algum outro comando, mas errou o nome durante a
+digitação. Neste caso é difícil produzir uma mensagem de erro útil, já
+que a causa pode ser duas coisas bem diferentes. Por isso apenas
+geramos um erro de instrução desconhecida.
+
+E finalmente, o último erro detectado no código acima, que só é
+percebido depois que o laço se encerrar, acontece quando temos uma
+atribuição incompleta como em:
+
+\alinhaverbatim
+numeric a;
+a=;
+\alinhanormal
+
+Neste caso, o usuário esqueceu de colocar uma expressão. E devemos
+armazenar o tipo de expressão esperada para avisar o usuário:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_MISSING_EXPRESSION(mf, cx, line, type) {\
+  if(!mf -> errno){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_MISSING_EXPRESSION);\
+    mf -> errno_int = type;}}
+@
+\fimcodigo
+
+E aqui imprimimos a mensagem com o dignóstico do erro:
+
+\iniciocodigo
+@<Imprime Mensagem de Erro@>+=
+case ERROR_MISSING_EXPRESSION:
+  fprintf(stderr, "%s:%s Missing %s expression.",
+          mf -> file, line_number, list_of_keywords[mf -> errno_int - 8]);
+  break;
 @
 \fimcodigo
 

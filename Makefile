@@ -4,11 +4,6 @@ doc:
 doc_en:
 	tex weaver-interface-metafont_en.tex
 	dvipdf weaver-interface-metafont_en.dvi
-benchmark:
-	@ctangle weaver-interface-metafont.tex
-	@cp src/metafont.* tests/
-	@$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -Wall -g -O2 tests/benchmark_mf.c  -o benchmark_mf -lX11 -lEGL -lGLESv2 -lm #-DW_DEBUG_METAFONT
-	@bash tests/benchmark.sh
 tangle:
 	ctangle weaver-interface-metafont.tex
 tangle_en:
