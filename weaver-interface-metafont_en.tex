@@ -119,12 +119,12 @@
 
 8.1. Numeric Assignments and Expressions \indice{56}
 
-8.1.1. Sum and Subtraction: Normal and Pythagorean \indice{XX}
+8.1.1. Sum and Subtraction: Normal and Pythagorean \indice{56}
 
-8.1.2. Multiplication and Division \indice{XX}
+8.1.2. Multiplication and Division \indice{60}
 
 8.1.3. Modulus, Sine, Cosine, Exponentials, Floor and
-  Random Uniform Values \indice{XX}
+  Random Uniform Values \indice{63}
 
 8.1.4. Isolated Numbers and Random Normal Values \indice{XX}
 
@@ -1922,7 +1922,7 @@ case ERROR_NO_MEMORY:
           line_number);
   break;
 case ERROR_INVALID_CHAR:
-  fprintf(stderr, "%s:%s UNsupported character in source code: '%x'.",
+  fprintf(stderr, "%s:%s Unsupported character in source code: '%x'.",
           mf -> file, line_number, (unsigned) mf -> errno_int);
   break;
 case ERROR_UNCLOSED_STRING:
@@ -4063,45 +4063,25 @@ case ERROR_MISSING_EXPRESSION:
 
 \subsecao{8.1. Numeric Assignments and Expressions}
 
-How do we assign numeric variables given the code above? We use the
-following code:
+How do we assign numeric variables once we checked that we had no
+errors on the left side of the assignment? We use the following code:
 
 \iniciocodigo
 @<Assignment for Numeric Variables@>=
 if(type == TYPE_T_NUMERIC){
   int i;
-  bool ret;
   struct numeric_variable result;
-  ret = eval_numeric_expression(mf, cx, begin_expression, *end, &result);
-  if(!ret)
+  // Get right-side expression value:
+  if(!eval_numeric_expression(mf, cx, begin_expression, *end, &result))
     return false;
   var = (struct symbolic_token *) begin;
   for(i = 0; i < number_of_variables; i ++){
-    assign_numeric_variable((struct numeric_variable *) var -> var,
-                            &result);
+    // The assignment:
+    ((struct numeric_variable *) (var -> var)) -> value = result.value;
+    // Getting next variable to assign:
     var = (struct symbolic_token *) (var -> next);
     var = (struct symbolic_token *) (var -> next);
   }
-}
-@
-\fimcodigo
-
-The function that makes the assignment is declared here:
-
-\iniciocodigo
-@<Local Function Declaration (metafont.c)@>+=
-void assign_numeric_variable(struct numeric_variable *target,
-                            struct numeric_variable *source);
-@
-\fimcodigo
-
-And its simple implementation is given below:
-
-\iniciocodigo
-@<Auxiliary Local Functions (metafont.c)@>+=
-void assign_numeric_variable(struct numeric_variable *target,
-                            struct numeric_variable *source){
-  target -> value = source -> value;
 }
 @
 \fimcodigo
@@ -4144,25 +4124,33 @@ that minimizes errors involving overflows and underflows.
 The four operators above are the ones with smaller precedence. These
 operations will be done only after all other mathematical operations.
 
-Now we will improve our lexer making it identify and create the new
-tokens for these operators. We also will create new token types for
-``['' and ``]'', as we will need to identify these tokens in our
-parser:
+We define below the tokens for the operators:
 
 \iniciocodigo
 @<WEAVEFONT: Symbolic Token Definition@>+=
-TYPE_SUM,                   // Symbolic token '+'
-TYPE_SUBTRACT,              // Symbolic token '-'
-TYPE_PYTHAGOREAN_SUM,       // Symbolic token '++'
-TYPE_PYTHAGOREAN_SUBTRACT,  // Symbolic token '+-+'
-TYPE_OPEN_BRACKETS,         // Symbolic token '['
-TYPE_CLOSE_BRACKETS,        // Symbolic token ']'
-TYPE_OPEN_BRACES,           // Symbolic token '{'
-TYPE_CLOSE_BRACES,          // Symbolic token '}'
+TYPE_SUM,                   // O token simbólico '+'
+TYPE_SUBTRACT,              // O token simbólico '-'
+TYPE_PYTHAGOREAN_SUM,       // O token simbólico '++'
+TYPE_PYTHAGOREAN_SUBTRACT,  // O token simbólico '+-+'
 @
 \fimcodigo
 
-And we add them to the list of keywords:
+However, to correctly identify the tertiary operators insine some
+expression requires taking into account delimiters like ``['',
+``]'', ``$\{$'' e ``$\}$'', besides parenthesis, whose tokens were
+already defined when we introduced the lexer. Because of this, we add
+new token types for the delimiters that still were not defined:
+
+\iniciocodigo
+@<WEAVEFONT: Symbolic Token Definition@>+=
+TYPE_OPEN_BRACKETS,         // O token simbólico '['
+TYPE_CLOSE_BRACKETS,        // O token simbólico ']'
+TYPE_OPEN_BRACES,           // O token simbólico '{'
+TYPE_CLOSE_BRACES,          // O token simbólico '}'
+@
+\fimcodigo
+
+And we add all them to the list of keywords:
 
 \iniciocodigo
 @<List of Keywords@>+=
@@ -4215,24 +4203,111 @@ the nesting level for parenthesis, braces and brackets:
 @
 \fimcodigo
 
+After walking over an expression, we may want to raise an error if we
+opened a parenthesis, a bracket or braces which was not closed. For
+this, the following macro may be useful:
 
-Everything in the left side should be recursively evaluated as another
-tertiary expression. Everything in the right side should be
-interpreted as a secondary numeric expression. Finally, if we did not
-find any tertiary operator, the entire expression is evaluated as a
-secondary numeric expression.
+\iniciocodigo
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_AND_EXIT_IF_WRONG_NESTING(mf, cx, line) {\
+  if(nesting_parenthesis > 0){\
+    RAISE_ERROR_UNCLOSED_DELIMITER(mf, cx, line, '(');\
+    return false;\
+  } else if(nesting_parenthesis < 0){\
+    RAISE_ERROR_UNOPENED_DELIMITER(mf, cx, line, ')');\
+    return false;\
+  } else if(nesting_brackets > 0){\
+    RAISE_ERROR_UNCLOSED_DELIMITER(mf, cx, line, '[');\
+    return false;\
+  } else if(nesting_brackets < 0){\
+    RAISE_ERROR_UNOPENED_DELIMITER(mf, cx, line, ']');\
+    return false;\
+  } else if(nesting_braces > 0){\
+    RAISE_ERROR_UNCLOSED_DELIMITER(mf, cx, line, '{');\
+    return false;\
+  } else if(nesting_braces < 0){\
+    RAISE_ERROR_UNOPENED_DELIMITER(mf, cx, line, '}');\
+    return false;}}
+@
+\fimcodigo
+
+This requires two new types of error:
+
+\iniciocodigo
+@<Types of Error@>+=
+ERROR_UNCLOSED_DELIMITER, ERROR_UNOPENED_DELIMITER,
+@
+\fimcodigo
+
+When raising this error, we store the unclosed delimiter as an integer
+(as it is composed by a single character):
+
+\iniciocodigo
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_UNCLOSED_DELIMITER(mf, cx, line, delimiter) {\
+  if(!mf -> errno){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNCLOSED_DELIMITER);\
+    mf -> errno_int = delimiter;}}
+#define RAISE_ERROR_UNOPENED_DELIMITER(mf, cx, line, delimiter) {\
+  if(!mf -> errno){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNOPENED_DELIMITER);\
+    mf -> errno_int = delimiter;}}
+@
+\fimcodigo
+
+And this is the error message:
+
+\iniciocodigo
+@<Print Error Message@>+=
+case ERROR_UNCLOSED_DELIMITER:
+  fprintf(stderr, "%s:%s Delimiter '%c' was not closed.",
+          mf -> file, line_number, mf -> errno_int);
+  break;
+case ERROR_UNOPENED_DELIMITER:
+  fprintf(stderr, "%s:%s Delimiter '%c' was not previously opened.",
+          mf -> file, line_number, mf -> errno_int);
+  break;
+@
+\fimcodigo
+
+This does not detect all possible errors involving delimiters. For
+example, we may get a ``\monoespaco{($\{$)$\}$}'', which is wrong, but
+we cannot detect. We will worry about this later. For now, we are
+caring about delimiters only because we need to check for operators
+outside them to correctly find the operators in tertiary expressions,
+and we will worry only about errors that would prevent us to detect
+this.
+
+In a tertiary expression, everything in the left side of the rightmost
+tertiary operator should be recursively evaluated as another tertiary
+expression. Everything in the right side should be interpreted as a
+secondary numeric expression. Finally, if we did not find any tertiary
+operator, the entire expression is evaluated as a secondary numeric
+expression.
 
 However, there are some exceptions, cases in which the
 symbols \monoespaco{+} and \monoespaco{-} should not be treated as a
-sum or subtraction. This happens if they are in the beginning of the
-numeric expression, or if before them there is a comma, an opening
-bracket, a multiplication or division symbol, another tertiary
-operator, or one of the following tokens that we will define later:
+sum or subtraction. For example:
+
+\alinhaverbatim
+a = +1;
+\alinhanormal
+
+In this case, it is just an unary operator that does not change the
+signal for the next element. If we had a \monoespaco{-}, then it would
+invert the signal of the next element. There is no sum or subtraction
+occurring.
+
+This happens if the operators are in the beginning of the numeric
+expression, or if before them there is a comma, an opening bracket, a
+multiplication or division symbol, another tertiary operator, or one
+of the following tokens that we will define later:
 \monoespaco{length}, \monoespaco{sqrt}, \monoespaco{sind},
 \monoespaco{cosd}, \monoespaco{log}, \monoespaco{exp},
 \monoespaco{floor},  \monoespaco{uniformdeviate}, \monoespaco{rotated},
 \monoespaco{shifted}, \monoespaco{slanted}, \monoespaco{xscaled},
-\monoespaco{yscaled}, \monoespaco{zscaled}--.
+\monoespaco{yscaled}, \monoespaco{zscaled}, \monoespaco{of}, \monoespaco{point},
+\monoespaco{precontrol} ou \monoespaco{postcontrol}.
 
 If we have a previous token (\monoespaco{prev}) and the current one
 (\monoespaco{cur}), we can check if it represents a valid sum or
@@ -4272,23 +4347,6 @@ subtraction with the macro below:
           prev -> type != TYPE_UNIFORMDEVIATE))
 @
 \fimcodigo
-\iniciocodigo
-@<Operador Secundário de Pares: Escala-X@>=
-else if(last_mul -> type == TYPE_XSCALED){
-  struct pair_variable a;
-  struct numeric_variable b;
-  ret = eval_pair_secondary(mf, cx, begin_expression, end_secondary, &a);
-  if(!ret)
-    return false;
-  ret = eval_numeric_primary(mf, cx, begin_primary, end_expression, &b);
-  if(!ret)
-    return false;
-  result -> x = a.x * b.value;
-  result -> y = a.y;
-  return true;
-}
-@
-\fimcodigo
 
 The following code interprets tertiary numeric expressions and
 identify correctly the tertiary operators with the help of the macro:
@@ -4297,15 +4355,15 @@ identify correctly the tertiary operators with the help of the macro:
 \iniciocodigo
 @<Auxiliary Local Functions (metafont.c)@>+=
 bool eval_numeric_expression(struct metafont *mf, struct context *cx,
-                             struct generic_token *begin_expression,
-                             struct generic_token *end_token_list,
+                             struct generic_token *begin,
+                             struct generic_token *end,
                              struct numeric_variable *result){
   struct generic_token *end_tertiary = NULL, *begin_secondary,
                        *last_sum = NULL, *p, *prev = NULL;
   DECLARE_NESTING_CONTROL();
   struct numeric_variable a, b;
-  p = begin_expression;
-  do{
+  p = begin;
+  do{ // Find last tertiary operator: '+', '-', '++' or '+-+'
     COUNT_NESTING(p);
     if(IS_NOT_NESTED() && (p -> type == TYPE_PYTHAGOREAN_SUM ||
                           p -> type == TYPE_PYTHAGOREAN_SUBTRACT ||
@@ -4314,39 +4372,70 @@ bool eval_numeric_expression(struct metafont *mf, struct context *cx,
       end_tertiary = prev;
     }
     prev = p;
-    if(p != end_token_list)
+    if(p != end)
       p = (struct generic_token *) p -> next;
     else
       p = NULL;
   }while(p != NULL);
-  if(end_tertiary != NULL){
+  RAISE_ERROR_AND_EXIT_IF_WRONG_NESTING(mf, cx, OPTIONAL(begin -> line));
+  if(end_tertiary != NULL){ // If we have tertiary operator:
     begin_secondary = (struct generic_token *) (last_sum -> next);
-    eval_numeric_expression(mf, cx, begin_expression, end_tertiary, &a);
-    eval_numeric_secondary(mf, cx, begin_secondary, end_token_list, &b);
-    if(last_sum -> type == TYPE_SUM)
+    eval_numeric_expression(mf, cx, begin, end_tertiary, &a);
+    eval_numeric_secondary(mf, cx, begin_secondary, end, &b);
+    if(last_sum -> type == TYPE_SUM) // Evaluate '+':
       result -> value = a.value + b.value;
-    else if(last_sum -> type == TYPE_SUBTRACT)
+    else if(last_sum -> type == TYPE_SUBTRACT) // Evaluate '-':
       result -> value = a.value - b.value;
-    else if(last_sum -> type == TYPE_PYTHAGOREAN_SUM)
+    else if(last_sum -> type == TYPE_PYTHAGOREAN_SUM) // Evaluate '++'
       result -> value = hypotf(a.value, b.value);
-    else if(last_sum -> type == TYPE_PYTHAGOREAN_SUBTRACT){
+    else if(last_sum -> type == TYPE_PYTHAGOREAN_SUBTRACT){ // Evaluate '+-+':
       result -> value = sqrtf(a.value + b.value) *
         sqrtf(a.value - b.value);
       if(isnan(result -> value)){
-#if defined(W_DEBUG_METAFONT)
-        fprintf(stderr, "METAFONT: Error: %s:%d: Negative square root "
-                " in pythagorean subtraction.\n", mf -> file,
-                last_sum -> line);
-#endif
+        RAISE_ERROR_NEGATIVE_SQUARE_ROOT(mf, cx, OPTIONAL(last_sum -> line),
+                                         a.value - b.value);
         return false;
       }
     }
     return true;
   }
-  else
-    return eval_numeric_secondary(mf, cx, begin_expression,
-                                   end_token_list, result);
+  else // No tertiary operator:
+    return eval_numeric_secondary(mf, cx, begin, end, result);
 }
+@
+\fimcodigo
+
+Notice that an error may happen in the code above when evaluating
+pitagorig subtraction. We may get the square root of a negative
+number. In this case, we get the following new type of error:
+
+\iniciocodigo
+@<Types of Error@>+=
+ERROR_NEGATIVE_SQUARE_ROOT,
+@
+\fimcodigo
+
+When this happens, we store the offending negative number as a string:
+
+\iniciocodigo
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_NEGATIVE_SQUARE_ROOT(mf, cx, line, number) {\
+  if(!mf -> errno){\
+    mf -> errno_str = (char *) permanent_alloc(64);\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NEGATIVE_SQUARE_ROOT);\
+    snprintf(mf -> errno_str, 63, "%g", number);\
+    mf -> errno_str[63] = '\0';}}
+@
+\fimcodigo
+
+And this is how we warn the user about this error:
+
+\iniciocodigo
+@<Print Error Message@>+=
+case ERROR_NEGATIVE_SQUARE_ROOT:
+  fprintf(stderr, "%s:%s Tried to compute square root of negative value '%s'.",
+          mf -> file, line_number, mf -> errno_str);
+  break;
 @
 \fimcodigo
 
@@ -4383,8 +4472,8 @@ The function that will evaluate numeric secondary expressions is:
 \iniciocodigo
 @<Local Function Declaration (metafont.c)@>+=
 bool eval_numeric_secondary(struct metafont *mf, struct context *cx,
-                             struct generic_token *begin_expression,
-                             struct generic_token *end_token_list,
+                             struct generic_token *begin,
+                             struct generic_token *end,
                              struct numeric_variable *result);
 @
 \fimcodigo
@@ -4405,8 +4494,8 @@ is interpreted as a division between two fractions $(1/3)/(1/3)$:
 \iniciocodigo
 @<Auxiliary Local Functions (metafont.c)@>+=
 bool eval_numeric_secondary(struct metafont *mf, struct context *cx,
-                             struct generic_token *begin_expression,
-                             struct generic_token *end_token_list,
+                             struct generic_token *begin,
+                             struct generic_token *end,
                              struct numeric_variable *result){
   struct generic_token *end_secondary = NULL, *begin_primary,
                        *last_mul = NULL, *p, *prev = NULL,
@@ -4414,14 +4503,13 @@ bool eval_numeric_secondary(struct metafont *mf, struct context *cx,
   DECLARE_NESTING_CONTROL();
   struct numeric_variable a, b;
   b.value = 0.0;
-  p = begin_expression;
-  do{
+  p = begin;
+  do{ // Find last secondary operator '*' or '/'
     COUNT_NESTING(p);
     if(IS_NOT_NESTED() && (p -> type == TYPE_MULTIPLICATION ||
                           p -> type == TYPE_DIVISION)){
       if(p -> type == TYPE_DIVISION && prev -> type == TYPE_NUMERIC &&
-         p != end_token_list &&
-         ((struct generic_token *) p -> next) -> type != TYPE_NUMERIC &&
+         p != end &&  p -> next -> type != TYPE_NUMERIC &&
          last_fraction != prev_prev) // Fraction separator
          last_fraction = p;
        else{ // Valid multiplication or division
@@ -4431,35 +4519,73 @@ bool eval_numeric_secondary(struct metafont *mf, struct context *cx,
     }
     prev_prev = prev;
     prev = p;
-    if(p != end_token_list)
+    if(p != end)
       p = (struct generic_token *) p -> next;
     else
       p = NULL;
   }while(p != NULL);
+  RAISE_ERROR_AND_EXIT_IF_WRONG_NESTING(mf, cx, OPTIONAL(begin -> line));
   if(end_secondary != NULL){
     begin_primary = (struct generic_token *) (last_mul -> next);
-    eval_numeric_secondary(mf, cx, begin_expression, end_secondary, &a);
-    eval_numeric_primary(mf, cx, begin_primary, end_token_list, &b);
-    if(last_mul -> type == TYPE_MULTIPLICATION)
+    eval_numeric_secondary(mf, cx, begin, end_secondary, &a);
+    eval_numeric_primary(mf, cx, begin_primary, end, &b);
+    if(last_mul -> type == TYPE_MULTIPLICATION) // Evaluate '*':
       result -> value = a.value * b.value;
-    else if(last_mul -> type == TYPE_DIVISION){
+    else if(last_mul -> type == TYPE_DIVISION){ // Evaluate '/':
       if(b.value == 0.0){
-#if defined(W_DEBUG_METAFONT)
-        fprintf(stderr, "METAFONT: Error: %s:%d: Division by zero.\n",
-                mf -> file, last_mul -> line);
-#endif
+        RAISE_ERROR_DIVISION_BY_ZERO(mf, cx, OPTIONAL(last_mul -> line));
         return false;
       }
       result -> value = a.value / b.value;
     }
     return true;
   }
-  else
-    return eval_numeric_primary(mf, cx, begin_expression,
-                                end_token_list, result);
+  else // No secondary operator:
+    return eval_numeric_primary(mf, cx, begin, end, result);
 }
 @
 \fimcodigo
+
+In the avove code, we check again for errors in our delimiters,
+despite the fact that we also checked when evaluating the tertiary
+expression. This is needed because, for example, the following
+incorrect code would not raise any error during tertiary expression
+evaluation, but would produce the error only in the above code, when evaluating the secondary expression:
+
+\alinhaverbatim
+numeric a;
+a=(4*{8)*3}+1;
+\alinhanormal
+
+Now we will add the new error caused by division by zero, which can
+also happen when we evaluate a division:
+
+\iniciocodigo
+@<Types of Error@>+=
+ERROR_DIVISION_BY_ZERO,
+@
+\fimcodigo
+
+When raising this error, no additional information needs to be stored:
+
+\iniciocodigo
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_DIVISION_BY_ZERO(mf, cx, line) {\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_DIVISION_BY_ZERO);}
+@
+\fimcodigo
+
+And this is the diagnostic message:
+
+\iniciocodigo
+@<Print Error Message@>+=
+case ERROR_DIVISION_BY_ZERO:
+  fprintf(stderr, "%s:%s Division by zero.", mf -> file, line_number);
+  break;
+@
+\fimcodigo
+
+
 
 \subsubsecao{8.1.3. Modulus, Sine, Cosine, Exponentials, Floor and
   Random Uniform Values}
