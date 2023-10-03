@@ -126,7 +126,7 @@
 8.1.3. Modulus, Sine, Cosine, Exponentials, Floor and
   Random Uniform Values \indice{63}
 
-8.1.4. Isolated Numbers and Random Normal Values \indice{XX}
+8.1.4. Isolated Numbers and Random Normal Values \indice{69}
 
 8.2. Pair Assignments and Expressions \indice{XX}
 
@@ -4585,8 +4585,6 @@ case ERROR_DIVISION_BY_ZERO:
 @
 \fimcodigo
 
-
-
 \subsubsecao{8.1.3. Modulus, Sine, Cosine, Exponentials, Floor and
   Random Uniform Values}
 
@@ -4609,9 +4607,7 @@ The operator \monoespaco{length}, when appearing before a numeric
 primery means that we want its modulus. If it appears before another
 kind of primary expression, it could mean different things.
 
-The new modulus operator should be added to the list of reserved
-words. We will add also the other new operators from the list of
-numeric operators. The brackets are already in this list:
+All these new operators must be added to the token list:
 
 \iniciocodigo
 @<WEAVEFONT: Symbolic Token Definition@>+=
@@ -4637,8 +4633,8 @@ The function that evaluates a primary numeric expression is this:
 \iniciocodigo
 @<Local Function Declaration (metafont.c)@>+=
 bool eval_numeric_primary(struct metafont *mf, struct context *cx,
-                          struct generic_token *begin_expression,
-                          struct generic_token *end_expression,
+                          struct generic_token *begin,
+                          struct generic_token *end,
                           struct numeric_variable *result);
 @
 \fimcodigo
@@ -4650,15 +4646,16 @@ primary numeric expression using seven different interpretation rules:
 \iniciocodigo
 @<Auxiliary Local Functions (metafont.c)@>+=
 bool eval_numeric_primary(struct metafont *mf, struct context *cx,
-                          struct generic_token *begin_expression,
-                          struct generic_token *end_expression,
+                          struct generic_token *begin,
+                          struct generic_token *end,
                           struct numeric_variable *result){
   @<Numeric Primary: Rule 1@>
   @<Numeric Primary: Rule 2@>
   @<Numeric Primary: Rule 3@>
   @<Numeric Primary: Additional Operators@>
   @<Numeric Primary: Rule 4@>
-  return true;
+  RAISE_ERROR_UNKNOWN_STATEMENT(mf, cx, OPTIONAL(begin -> line));
+  return false;
 }
 @
 
@@ -4671,18 +4668,12 @@ is a numeric atom:
 
 \iniciocodigo
 @<Numeric Primary: Rule 1@>=
-if(begin_expression == end_expression ||
-   (begin_expression -> type == TYPE_OPEN_PARENTHESIS &&
-    end_expression -> type == TYPE_CLOSE_PARENTHESIS) ||
-    (begin_expression -> type == TYPE_NUMERIC &&
-     begin_expression -> next != end_expression &&
-     ((struct generic_token *) begin_expression -> next) -> type ==
-       TYPE_DIVISION &&
-     ((struct generic_token *) begin_expression -> next) -> next ==
-       end_expression &&
-     end_expression -> type == TYPE_NUMERIC)){
-  return eval_numeric_atom(mf, cx, begin_expression, end_expression,
-                          result);
+if(begin == end || (begin -> type == TYPE_OPEN_PARENTHESIS &&
+                    end -> type == TYPE_CLOSE_PARENTHESIS) ||
+    (begin -> type == TYPE_NUMERIC &&  begin -> next != end &&
+     begin -> next -> type == TYPE_DIVISION && begin -> next -> next == end &&
+     end -> type == TYPE_NUMERIC)){
+  return eval_numeric_atom(mf, cx, begin, end, result);
 }
 @
 \fimcodigo
@@ -4695,30 +4686,20 @@ type of a primary expression.
 
 \iniciocodigo
 @<Numeric Primary: Rule 2@>=
-else if(begin_expression -> type == TYPE_LENGTH){
-  int expr_type = get_primary_expression_type(mf, cx,
-                                             (struct generic_token *)
-                                             begin_expression -> next,
-                                             end_expression);
+else if(begin -> type == TYPE_LENGTH){
+  int expr_type = get_primary_expression_type(mf, cx, begin -> next, end);
   if(expr_type == TYPE_T_NUMERIC){
-    bool ret;
     struct numeric_variable num;
-    ret = eval_numeric_primary(mf, cx, (struct generic_token *)
-                               begin_expression -> next,
-                               end_expression, &num);
-    if(!ret)
+    if(!eval_numeric_primary(mf, cx, begin -> next, end, &num))
       return false;
     result -> value = ((num.value > 0)?(num.value):(-num.value));
     return true;
   }
   @<Evaluate 'length'@>
   else{
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
-            "primary expression after 'length'.\n", mf -> file,
-            begin_expression -> line);
-#endif
-      return false;
+    RAISE_ERROR_UNKNOWN_EXPRESSION_TYPE(mf, cx, OPTIONAL(begin -> line),
+                                       expr_type);
+    return false;
   }
 }
 @
@@ -4728,30 +4709,63 @@ Notice that identifying if we have or not a numeric primary expression
 involves calling \monoespaco{get\_primatry\_expression\_type}. This
 function will be defined in Subsection 8.8. For now, we just need to
 know that given the beginning and ending tokens for some expression,
-it returns the expression type.
+it returns the expression type. If the type is numeric, the code above
+shows how we compute the modulus. Otherwise, we will evaluate it using
+other rules that we should define later (in Subsection 8.2.4 and
+8.4.5). If the expression is not recognized or is an expression with
+an unsupported type in this context, the following error is raised:
+
+\iniciocodigo
+@<Types of Error@>+=
+ERROR_UNKNOWN_EXPRESSION_TYPE,
+@
+\fimcodigo
+
+The expression type is stored when we raise this error. The type may
+be unknown (is equal -1) or is some type which is not supported:
+
+\iniciocodigo
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_UNKNOWN_EXPRESSION_TYPE(mf, cx, line, type) {\
+  if(!mf -> errno){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNKNOWN_EXPRESSION_TYPE);\
+    mf -> errno_int = type;}}
+@
+\fimcodigo
+
+Depending on the case, we generate different error messages:
+
+\iniciocodigo
+@<Print Error Message@>+=
+case ERROR_UNKNOWN_EXPRESSION_TYPE:
+  if(mf -> errno_int == -1)
+    fprintf(stderr, "%s:%s We could not identity the expression type.",
+            mf -> file, line_number);
+  else
+    fprintf(stderr, "%s:%s Found %s expression in a context where such"
+                    "expression was not expected.", mf -> file, line_number,
+                    list_of_keywords[mf -> errno_int - 8]);
+  break;
+@
+\fimcodigo
 
 
 3) If we find some of the numeric operators, we have a numeric
 operator followed by a numeric primary expression.
 
+
+
 The first numeric operator is the square root:
 
 \iniciocodigo
 @<Numeric Primary: Rule 3@>=
-else if(begin_expression -> type == TYPE_SQRT){
-  bool ret;
+else if(begin -> type == TYPE_SQRT){
   struct numeric_variable num;
-  ret = eval_numeric_primary(mf, cx, (struct generic_token *)
-                             begin_expression -> next,
-                             end_expression, &num);
-  if(!ret)
+  if(!eval_numeric_primary(mf, cx, begin -> next, end, &num))
     return false;
   if(num.value < 0.0){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s:%d: Square root "
-            "of negative number.\n", mf -> file,
-            begin_expression -> line);
-#endif
+    RAISE_ERROR_NEGATIVE_SQUARE_ROOT(mf, cx, OPTIONAL(begin -> line),
+                                    num.value);
     return false;
   }
   result -> value = sqrtf(num.value);
@@ -4766,13 +4780,9 @@ and computes the sine:
 
 \iniciocodigo
 @<Numeric Primary: Rule 3@>+=
-else if(begin_expression -> type == TYPE_SIND){
-  bool ret;
+else if(begin -> type == TYPE_SIND){
   struct numeric_variable num;
-  ret = eval_numeric_primary(mf, cx, (struct generic_token *)
-                             begin_expression -> next,
-                             end_expression, &num);
-  if(!ret)
+  if(!eval_numeric_primary(mf, cx, begin -> next, end, &num))
     return false;
   // 1 degree = 0,0174533 radians
   result -> value = sinf(num.value * 0.0174533);
@@ -4785,13 +4795,9 @@ Computing the cosine:
 
 \iniciocodigo
 @<Numeric Primary: Rule 3@>+=
-else if(begin_expression -> type == TYPE_COSD){
-  bool ret;
+else if(begin -> type == TYPE_COSD){
   struct numeric_variable num;
-  ret = eval_numeric_primary(mf, cx, (struct generic_token *)
-                             begin_expression -> next,
-                             end_expression, &num);
-  if(!ret)
+  if(!eval_numeric_primary(mf, cx, begin -> next, end, &num))
     return false;
   // 1 degree = 0,0174533 radians
   result -> value = cosf(num.value * 0.0174533);
@@ -4804,20 +4810,13 @@ Computing the logarithm in $e$ basis:
 
 \iniciocodigo
 @<Numeric Primary: Rule 3@>+=
-else if(begin_expression -> type == TYPE_LOG){
-  bool ret;
+else if(begin -> type == TYPE_LOG){
   struct numeric_variable num;
-  ret = eval_numeric_primary(mf, cx, (struct generic_token *)
-                             begin_expression -> next,
-                             end_expression, &num);
-  if(!ret)
+  if(!eval_numeric_primary(mf, cx, begin -> next, end, &num))
     return false;
   if(num.value <= 0.0){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s:%d: Computing logarithm of "
-            "non-positive number.\n", mf -> file,
-            begin_expression -> line);
-#endif
+    RAISE_ERROR_NEGATIVE_LOGARITHM(mf, cx, OPTIONAL(begin -> line),
+                                   num.value);
     return false;
   }
   result -> value = logf(num.value);
@@ -4826,17 +4825,47 @@ else if(begin_expression -> type == TYPE_LOG){
 @
 \fimcodigo
 
-And the exponential which means $exp x = e^x$:
+This is the new error that is raised when one tries to compute the
+logarithm of a negative value:
+
+\iniciocodigo
+@<Types of Error@>+=
+ERROR_NEGATIVE_LOGARITHM,
+@
+\fimcodigo
+
+When the error is raised, we convert the offending negative number
+that caused the problem to a string:
+
+\iniciocodigo
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_NEGATIVE_LOGARITHM(mf, cx, line, number) {\
+  if(!mf -> errno){\
+    mf -> errno_str = (char *) permanent_alloc(64);\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NEGATIVE_LOGARITHM);\
+    snprintf(mf -> errno_str, 63, "%g", number);\
+    mf -> errno_str[63] = '\0';}}
+@
+\fimcodigo
+
+And warn the user about the problem:
+
+\iniciocodigo
+@<Print Error Message@>+=
+case ERROR_NEGATIVE_LOGARITHM:
+  fprintf(stderr, "%s:%s Tried to compute logarithm of negative value '%s'.",
+          mf -> file, line_number, mf -> errno_str);
+  break;
+@
+\fimcodigo
+
+And this is how we compute the exponential which means $exp x = e^x$:
 
 \iniciocodigo
 @<Numeric Primary: Rule 3@>+=
-else if(begin_expression -> type == TYPE_EXP){
-  bool ret;
+else if(begin -> type == TYPE_EXP){
   struct numeric_variable num;
-  ret = eval_numeric_primary(mf, cx, (struct generic_token *)
-                             begin_expression -> next,
-                             end_expression, &num);
-  if(!ret)
+  if(!eval_numeric_primary(mf, cx, begin -> next, end, &num))
     return false;
   result -> value = expf(num.value);
   return true;
@@ -4848,13 +4877,9 @@ The floor of a given value:
 
 \iniciocodigo
 @<Numeric Primary: Rule 3@>+=
-else if(begin_expression -> type == TYPE_FLOOR){
-  bool ret;
+else if(begin -> type == TYPE_FLOOR){
   struct numeric_variable num;
-  ret = eval_numeric_primary(mf, cx, (struct generic_token *)
-                             begin_expression -> next,
-                             end_expression, &num);
-  if(!ret)
+  if(!eval_numeric_primary(mf, cx, begin -> next, end, &num))
     return false;
   result -> value = floorf(num.value);
   return true;
@@ -4878,13 +4903,9 @@ the result would be sufficiently precise for our purposes:
 
 \iniciocodigo
 @<Numeric Primary: Rule 3@>+=
-else if(begin_expression -> type == TYPE_UNIFORMDEVIATE){
-  bool ret;
+else if(begin -> type == TYPE_UNIFORMDEVIATE){
   struct numeric_variable num;
-  ret = eval_numeric_primary(mf, cx, (struct generic_token *)
-                             begin_expression -> next,
-                             end_expression, &num);
-  if(!ret)
+  if(!eval_numeric_primary(mf, cx, begin -> next, end, &num))
     return false;
   { // Generating the random number
     uint64_t random_bits = random_func();
@@ -4901,12 +4922,8 @@ multiplication by 1. This operation can be ignored:
 
 \iniciocodigo
 @<Numeric Primary: Rule 3@>+=
-else if(begin_expression -> type == TYPE_SUM){
-  bool ret;
-  ret = eval_numeric_primary(mf, cx, (struct generic_token *)
-                             begin_expression -> next,
-                             end_expression, result);
-  if(!ret)
+else if(begin -> type == TYPE_SUM){
+  if(!eval_numeric_primary(mf, cx, begin -> next, end, result))
     return false;
   return true;
 }
@@ -4918,12 +4935,8 @@ multiplication by -1:
 
 \iniciocodigo
 @<Numeric Primary: Rule 3@>+=
-else if(begin_expression -> type == TYPE_SUBTRACT){
-  bool ret;
-  ret = eval_numeric_primary(mf, cx, (struct generic_token *)
-                             begin_expression -> next,
-                             end_expression, result);
-  if(!ret)
+else if(begin -> type == TYPE_SUBTRACT){
+  if(!eval_numeric_primary(mf, cx, begin -> next, end, result))
     return false;
   result -> value *= -1;
   return true;
@@ -4943,32 +4956,24 @@ numeric primary expression):
 \iniciocodigo
 @<Numeric Primary: Rule 4@>=
 else{
-  bool ret;
   float token_value;
   struct generic_token *after_token;
-  if(begin_expression -> type != TYPE_NUMERIC){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
-            "expression.\n", mf -> file, begin_expression -> line);
-#endif
+  if(begin -> type != TYPE_NUMERIC){
+    RAISE_ERROR_UNKNOWN_STATEMENT(mf, cx, OPTIONAL(begin -> line));
     return false;
   }
-  token_value = ((struct numeric_token *) begin_expression) -> value;
-  after_token = (struct generic_token *) (begin_expression -> next);
+  token_value = ((struct numeric_token *) begin) -> value;
+  after_token = begin -> next;
   if(after_token -> type == TYPE_DIVISION){
-    if(after_token == end_expression){
-#if defined(W_DEBUG_METAFONT)
-      fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
-              "expression.\n", mf -> file, begin_expression -> line);
-#endif
+    if(after_token == end){
+      RAISE_ERROR_UNKNOWN_STATEMENT(mf, cx, OPTIONAL(begin -> line));
       return false;
     }
-    after_token = (struct generic_token *) (after_token -> next);
+    after_token = after_token -> next;
     token_value /= ((struct numeric_token *) after_token) -> value;
-    after_token = (struct generic_token *) (after_token -> next);
+    after_token = after_token -> next;
   }
-  ret = eval_numeric_primary(mf, cx, after_token, end_expression, result);
-  if(!ret)
+  if(!eval_numeric_primary(mf, cx, after_token, end, result))
     return false;
   result -> value *= token_value;
   return true;
@@ -5009,8 +5014,8 @@ The function that evaluates numeric atoms is:
 \iniciocodigo
 @<Local Function Declaration (metafont.c)@>+=
 bool eval_numeric_atom(struct metafont *mf, struct context *cx,
-                       struct generic_token *begin_expression,
-                       struct generic_token *end_expression,
+                       struct generic_token *begin,
+                       struct generic_token *end,
                        struct numeric_variable *result);
 @
 \fimcodigo
@@ -5022,10 +5027,10 @@ different rules based on this:
 \iniciocodigo
 @<Auxiliary Local Functions (metafont.c)@>+=
 bool eval_numeric_atom(struct metafont *mf, struct context *cx,
-                       struct generic_token *begin_expression,
-                       struct generic_token *end_expression,
+                       struct generic_token *begin,
+                       struct generic_token *end,
                        struct numeric_variable *result){
-  if(begin_expression == end_expression){
+  if(begin == end){
     @<Numeric Atom: Rule 1@>
     @<Numeric Atom: Rule 2@>
     @<Numeric Atom: Rule 3@>
@@ -5043,8 +5048,8 @@ its value:
 
 \iniciocodigo
 @<Numeric Atom: Rule 1@>=
-if(begin_expression -> type == TYPE_NUMERIC){
-  result -> value = ((struct numeric_token *) begin_expression) -> value;
+if(begin -> type == TYPE_NUMERIC){
+  result -> value = ((struct numeric_token *) begin) -> value;
   return true;
 }
 @
@@ -5056,32 +5061,24 @@ it is numeric and if it was initialized:
 
 \iniciocodigo
 @<Numeric Atom: Rule 2@>=
-if(begin_expression -> type == TYPE_SYMBOLIC){
+if(begin -> type == TYPE_SYMBOLIC){
+  struct symbolic_token *var_token = ((struct symbolic_token *) begin);
   struct numeric_variable *var;
-  var = ((struct symbolic_token *) begin_expression) -> var;
+  var = var_token -> var;
   if(var == NULL){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s:%d: Undeclared variable "
-            "'%s'.\n", mf -> file, begin_expression -> line,
-            ((struct symbolic_token *) begin_expression) -> value);
-#endif
+    RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, OPTIONAL(begin -> line),
+                                   var_token -> value);
     return false;
   }
   if(var -> type != TYPE_T_NUMERIC){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s:%d: Non-numeric variable "
-            "'%s' in numeric expression.\n", mf -> file,
-            begin_expression -> line,
-            ((struct symbolic_token *) begin_expression) -> value);
-#endif
+    RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, OPTIONAL(begin -> line),
+                                   var_token -> value, var -> type,
+                                   TYPE_T_NUMERIC);
     return false;
   }
   if(isnan(var -> value)){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s:%d: Unitialized variable "
-            "'%s'.\n", mf -> file, begin_expression -> line,
-            ((struct symbolic_token *) begin_expression) -> value);
-#endif
+    //RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, OPTIONAL(begin -> line),
+    //                                  var_token -> value);
     return false;
   }
   result -> value = var -> value;
@@ -5143,7 +5140,7 @@ generate two values:
 
 \iniciocodigo
 @<Numeric Atom: Rule 3@>=
-if(begin_expression -> type == TYPE_NORMALDEVIATE){
+if(begin -> type == TYPE_NORMALDEVIATE){
   if(mf -> have_stored_normaldeviate){
     mf -> have_stored_normaldeviate = false;
     result -> value = mf -> normaldeviate;
@@ -5178,23 +5175,16 @@ parenthesis:
 
 \iniciocodigo
 @<Numeric Atom: Rule 4@>=
-if(begin_expression -> type == TYPE_OPEN_PARENTHESIS &&
-   end_expression -> type == TYPE_CLOSE_PARENTHESIS){
-   bool ret;
-   struct generic_token *p = begin_expression;
-   while(p -> next != end_expression)
-     p = (struct generic_token *) p -> next;
-   if(p == begin_expression){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s:%d: Empty parenthesis.",
-            mf -> file, begin_expression -> line);
-#endif
+if(begin -> type == TYPE_OPEN_PARENTHESIS &&
+   end -> type == TYPE_CLOSE_PARENTHESIS){
+   struct generic_token *p = begin;
+   while(p -> next != end)
+     p = p -> next;
+   if(p == begin){
+     // RAISE_ERROR_EMPTY_PARENTHESIS(mf, cx, OPTIONAL(begin -> line));
      return false;
    }
-   ret = eval_numeric_expression(mf, cx, (struct generic_token *)
-                                         begin_expression -> next, p,
-                                         result);
-   if(!ret)
+   if(!eval_numeric_expression(mf, cx, begin -> next, p, result))
      return false;
    return true;
 }
@@ -5207,12 +5197,14 @@ obtained dividing both tokens:
 
 \iniciocodigo
 @<Numeric Atom: Rule 5@>=
-if(begin_expression -> type == TYPE_NUMERIC &&
-   end_expression -> type == TYPE_NUMERIC &&
-   ((struct generic_token * ) begin_expression -> next) -> type ==
-   TYPE_DIVISION){
-  result -> value = ((struct numeric_token *) begin_expression) -> value /
-           ((struct numeric_token *) end_expression) -> value;
+if(begin -> type == TYPE_NUMERIC && end -> type == TYPE_NUMERIC &&
+   begin -> next -> type == TYPE_DIVISION){
+  if(((struct numeric_token *) end) -> value == 0.0){
+    RAISE_ERROR_DIVISION_BY_ZERO(mf, cx, OPTIONAL(begin -> line));
+    return false;
+  }
+  result -> value = ((struct numeric_token *) begin) -> value /
+           ((struct numeric_token *) end) -> value;
   return true;
 }
 @
@@ -6033,9 +6025,7 @@ returns the euclidean norm:
 @<Evaluate 'length'@>=
 else if(expr_type == TYPE_T_PAIR){
   struct pair_variable p;
-  if(!eval_pair_primary(mf, cx, (struct generic_token *)
-                                begin_expression -> next, end_expression,
-                                &p))
+  if(!eval_pair_primary(mf, cx, begin -> next, end, &p))
     return false;
   result -> value = (float) hypot(p.x * p.x, p.y * p.y);
   return true;
@@ -6051,15 +6041,11 @@ have after the operator is a pair. If so, we return the first value:
 
 \iniciocodigo
 @<Numeric Primary: Additional Operators@>=
-else if(begin_expression -> type == TYPE_XPART){
+else if(begin -> type == TYPE_XPART){
   struct pair_variable p;
-  int expr_type = get_primary_expression_type(mf, cx, (struct generic_token *)
-                                                      begin_expression -> next,
-                                                      end_expression);
+  int expr_type = get_primary_expression_type(mf, cx, begin -> next, end);
   if(expr_type == TYPE_T_PAIR){
-    if(!eval_pair_primary(mf, cx, (struct generic_token *)
-                                  begin_expression -> next, end_expression,
-                                  &p))
+    if(!eval_pair_primary(mf, cx, begin -> next, end, &p))
       return false;
     result -> value = p.x;
     return true;
@@ -6077,15 +6063,11 @@ operand is a pair or some other thing:
 
 \iniciocodigo
 @<Numeric Primary: Additional Operators@>+=
-else if(begin_expression -> type == TYPE_YPART){
+else if(begin -> type == TYPE_YPART){
   struct pair_variable p;
-  int expr_type = get_primary_expression_type(mf, cx, (struct generic_token *)
-                                                      begin_expression -> next,
-                                                      end_expression);
+  int expr_type = get_primary_expression_type(mf, cx, begin -> next, end);
   if(expr_type == TYPE_T_PAIR){
-    if(!eval_pair_primary(mf, cx, (struct generic_token *)
-                                  begin_expression -> next, end_expression,
-                          &p))
+    if(!eval_pair_primary(mf, cx, begin -> next, end, &p))
       return false;
     result -> value = p.y;
     return true;
@@ -6105,17 +6087,15 @@ the angle of $(0,0)$:
 
 \iniciocodigo
 @<Numeric Primary: Additional Operators@>+=
-else if(begin_expression -> type == TYPE_ANGLE){
+else if(begin -> type == TYPE_ANGLE){
   struct pair_variable p;
-  if(!eval_pair_primary(mf, cx, (struct generic_token *)
-                                begin_expression -> next, end_expression,
-                                &p))
+  if(!eval_pair_primary(mf, cx, begin -> next, end, &p))
     return false;
   if(p.x == 0.0 && p.y == 0.0){
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr, "METAFONT: Error: %s:%d: Measuring the angle "
             "of (0,0).\n ", mf -> file,
-            begin_expression -> line);
+            begin -> line);
 #endif
     return false;
   }
@@ -6648,20 +6628,17 @@ primary numeric expressions:
 
 \iniciocodigo
 @<Numeric Primary: Additional Operators@>+=
-else if(begin_expression -> type >= TYPE_XXPART &&
-         begin_expression -> type <= TYPE_YYPART){
+else if(begin -> type >= TYPE_XXPART && begin -> type <= TYPE_YYPART){
   struct transform_variable t;
-  if(!eval_transform_primary(mf, cx, (struct generic_token *)
-                                       begin_expression -> next, end_expression,
-                             &t))
+  if(!eval_transform_primary(mf, cx, begin -> next, end, &t))
     return false;
-  if(begin_expression -> type == TYPE_XXPART)
+  if(begin -> type == TYPE_XXPART)
     result -> value = t.value[0];
-  else if(begin_expression -> type == TYPE_XYPART)
+  else if(begin -> type == TYPE_XYPART)
     result -> value = t.value[3];
-  else if(begin_expression -> type == TYPE_YXPART)
+  else if(begin -> type == TYPE_YXPART)
     result -> value = t.value[1];
-  else if(begin_expression -> type == TYPE_YYPART)
+  else if(begin -> type == TYPE_YYPART)
     result -> value = t.value[4];
   return true;
 }
@@ -6678,9 +6655,7 @@ the \monoespaco{xpart} operator:
 \iniciocodigo
 @<Numeric Primary: X-Part in Non-Pair@>=
 struct transform_variable t;
-if(!eval_transform_primary(mf, cx, (struct generic_token *)
-                                   begin_expression -> next, end_expression,
-                           &t))
+if(!eval_transform_primary(mf, cx, begin -> next, end, &t))
   return false;
 result -> value = t.value[6];
 return true;
@@ -6692,9 +6667,7 @@ And the same must be done for the \monoespaco{ypart} operator:
 \iniciocodigo
 @<Numeric Primary: Y-Part in Non-Pair@>=
 struct transform_variable t;
-if(!eval_transform_primary(mf, cx, (struct generic_token *)
-                                   begin_expression -> next, end_expression,
-                           &t))
+if(!eval_transform_primary(mf, cx, begin -> next, end, &t))
   return false;
 result -> value = t.value[7];
 return true;
@@ -9680,9 +9653,7 @@ simpler:
 @<Evaluate 'length'@>+=
 else if(expr_type == TYPE_T_PATH){
   struct path_variable p;
-  if(!eval_path_primary(mf, cx, (struct generic_token *)
-                                begin_expression -> next, end_expression,
-                                &p))
+  if(!eval_path_primary(mf, cx, begin -> next, end, &p))
     return false;
   result -> value = (float) (p.total_length - 1);
   if(temporary_free != NULL)
@@ -12178,7 +12149,7 @@ the framebuffer content:
 
 \iniciocodigo
 @<Numeric Primary: Additional Operators@>+=
-else if(begin_expression -> type == TYPE_TOTALWEIGHT){
+else if(begin -> type == TYPE_TOTALWEIGHT){
   struct picture_variable p;
   char *data;
   GLuint temporary_framebuffer = 0;
@@ -12187,16 +12158,14 @@ else if(begin_expression -> type == TYPE_TOTALWEIGHT){
   float identity_matrix[9] = {1.0, 0.0, 0.0,
                                0.0, 1.0, 0.0,
                                0.0, 0.0, 1.0};
-  if(begin_expression == end_expression){
+  if(begin == end){
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr, "METAFONT: Error: %s:%d: Missing picture expression after "
-                    "'totalweight'.\n", mf -> file, begin_expression -> line);
+                    "'totalweight'.\n", mf -> file, begin -> line);
 #endif
     return false;
   }
-  if(!eval_picture_primary(mf, cx, (struct generic_token *)
-                                   begin_expression -> next, end_expression,
-                           &p))
+  if(!eval_picture_primary(mf, cx, begin -> next, end, &p))
     return false;
   data = temporary_alloc(p.width * p.height * 4);
   if(data == NULL){
@@ -12250,18 +12219,16 @@ the image and get their width and height respectively. For the width:
 
 \iniciocodigo
 @<Numeric Primary: Additional Operators@>+=
-else if(begin_expression -> type == TYPE_WIDTH){
+else if(begin -> type == TYPE_WIDTH){
   struct picture_variable p;
-  if(begin_expression == end_expression){
+  if(begin == end){
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr, "METAFONT: Error: %s:%d: Missing picture expression after "
-                    "'width'.\n", mf -> file, begin_expression -> line);
+                    "'width'.\n", mf -> file, begin -> line);
 #endif
     return false;
   }
-  if(!eval_picture_primary(mf, cx, (struct generic_token *)
-                                   begin_expression -> next, end_expression,
-                           &p))
+  if(!eval_picture_primary(mf, cx, begin -> next, end, &p))
     return false;
   result -> value = (float) p.width;
   return true;
@@ -12273,18 +12240,16 @@ And for the height:
 
 \iniciocodigo
 @<Numeric Primary: Additional Operators@>+=
-else if(begin_expression -> type == TYPE_HEIGHT){
+else if(begin -> type == TYPE_HEIGHT){
   struct picture_variable p;
-  if(begin_expression == end_expression){
+  if(begin == end){
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr, "METAFONT: Error: %s:%d: Missing picture expression after "
-                    "'height'.\n", mf -> file, begin_expression -> line);
+                    "'height'.\n", mf -> file, begin -> line);
 #endif
     return false;
   }
-  if(!eval_picture_primary(mf, cx, (struct generic_token *)
-                                   begin_expression -> next, end_expression,
-                           &p))
+  if(!eval_picture_primary(mf, cx, begin -> next, end, &p))
     return false;
   result -> value = (float) p.height;
   return true;
