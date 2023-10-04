@@ -128,11 +128,11 @@
 
 8.1.4. Isolated Numbers and Random Normal Values \indice{69}
 
-8.2. Pair Assignments and Expressions \indice{XX}
+8.2. Pair Assignments and Expressions \indice{73}
 
-8.2.1. Sum and Subtraction \indice{XX}
+8.2.1. Sum and Subtraction \indice{73}
 
-8.2.2. Transformers and Scalar Multiplication and Division \indice{XX}
+8.2.2. Transformers and Scalar Multiplication and Division \indice{74}
 
 8.2.3. Pair Intermediary Values, Literals and Variables \indice{XX}
 
@@ -1907,8 +1907,8 @@ the string:
 #define RAISE_ERROR_UNCLOSED_STRING(mf, cx, line, str) {\
   if(!mf -> errno){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNCLOSED_STRING);\
-    mf -> errno_str = (char *) permanent_alloc(sizeof(str)+1);\
-    memcpy(mf -> errno_str, str, sizeof(str)+1);}}
+    mf -> errno_str = (char *) permanent_alloc(strlen(str)+1);\
+    memcpy(mf -> errno_str, str, strlen(str)+1);}}
 @
 \fimcodigo
 
@@ -3946,8 +3946,8 @@ that raises it:
 #define RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, line, name) {\
   if(!mf -> errno){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNDECLARED_VARIABLE);\
-    mf -> errno_str = (char *) permanent_alloc(sizeof(name)+1);\
-    memcpy(mf -> errno_str, name, sizeof(name)+1);}}
+    mf -> errno_str = (char *) permanent_alloc(strlen(name)+1);\
+    memcpy(mf -> errno_str, name, strlen(name)+1);}}
 @
 \fimcodigo
 
@@ -5039,7 +5039,8 @@ bool eval_numeric_atom(struct metafont *mf, struct context *cx,
     @<Numeric Atom: Rule 4@>
     @<Numeric Atom: Rule 5@>
   }
-  return true;
+  RAISE_ERROR_UNKNOWN_STATEMENT(mf, cx, OPTIONAL(begin -> line));
+  return false;
 }
 @
 
@@ -5077,13 +5078,46 @@ if(begin -> type == TYPE_SYMBOLIC){
     return false;
   }
   if(isnan(var -> value)){
-    //RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, OPTIONAL(begin -> line),
-    //                                  var_token -> value);
+    RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, OPTIONAL(begin -> line),
+                                      var_token -> value);
     return false;
   }
   result -> value = var -> value;
   return true;
 }
+@
+\fimcodigo
+
+If the variable was not declared or is not numeric, we raise errors
+that were already previously defined. If the variable was not
+initialized, then we need to raise a new type of error:
+
+\iniciocodigo
+@<Types of Error@>+=
+ERROR_UNINITIALIZED_VARIABLE,
+@
+\fimcodigo
+
+When this error happens, we store the variable name to warn the user:
+
+\iniciocodigo
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, line, name) {\
+  if(!mf -> errno){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNINITIALIZED_VARIABLE);\
+    mf -> errno_str = (char *) permanent_alloc(strlen(name)+1);\
+    memcpy(mf -> errno_str, name, strlen(name)+1);}}
+@
+\fimcodigo
+
+And this is the error message:
+
+\iniciocodigo
+@<Print Error Message@>+=
+case ERROR_UNINITIALIZED_VARIABLE:
+  fprintf(stderr, "%s:%s Uninitialized variable '%s'.",
+          mf -> file, line_number, mf -> errno_str);
+  break;
 @
 \fimcodigo
 
@@ -5181,7 +5215,7 @@ if(begin -> type == TYPE_OPEN_PARENTHESIS &&
    while(p -> next != end)
      p = p -> next;
    if(p == begin){
-     // RAISE_ERROR_EMPTY_PARENTHESIS(mf, cx, OPTIONAL(begin -> line));
+     RAISE_ERROR_EMPTY_DELIMITER(mf, cx, OPTIONAL(begin -> line), '(');
      return false;
    }
    if(!eval_numeric_expression(mf, cx, begin -> next, p, result))
@@ -5190,6 +5224,42 @@ if(begin -> type == TYPE_OPEN_PARENTHESIS &&
 }
 @
 \fimcodigo
+
+If we find just an empty parenthesis, this is an error. The user
+forgot to put some expression in the parenthesis. The raised error has
+this new type:
+
+\iniciocodigo
+@<Types of Error@>+=
+ERROR_EMPTY_DELIMITER,
+@
+\fimcodigo
+
+When raising this error, we must inform which empty delimiter we
+found. It may be parenthesis, braces or brackets:
+
+\iniciocodigo
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_EMPTY_DELIMITER(mf, cx, line, delimiter) {\
+  if(!mf -> errno){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_EMPTY_DELIMITER);\
+    mf -> errno_int = delimiter;}}
+@
+\fimcodigo
+
+The error message will be slightly different depending on the delimiter:
+
+\iniciocodigo
+@<Print Error Message@>+=
+case ERROR_EMPTY_DELIMITER:
+  fprintf(stderr, "%s:%s Unexpected empty delimiter '%c%c'.",
+          mf -> file, line_number, mf -> errno_int,
+          ((mf -> errno_int == '(')?(')'):
+            ((mf -> errno_int == '[')?(']'):('}'))));
+  break;
+@
+\fimcodigo
+
 
 5) Finally, the case when the numeric atom is a fraction composed by a
 numeric token, \monoespaco{/} and another numeric token. The result is
@@ -5261,7 +5331,7 @@ subtraction:
 
 \alinhaverbatim
 <Pair Expression> -> <Pair Tertiary>
-<Pair Tertiary> -> <Pair Secondary> | (...) |
+<Pair Tertiary> -> <Pair Secondary> |
                    <Pair Tertiary> <PT-Op> <Pair Secondary>
 <PT-Op> -> + | -
 \alinhanormal
@@ -5274,8 +5344,8 @@ The function that evaluates pair expressions is declared here:
 \iniciocodigo
 @<Local Function Declaration (metafont.c)@>+=
 bool eval_pair_expression(struct metafont *mf, struct context *cx,
-                          struct generic_token *begin_expression,
-                          struct generic_token *end_token_list,
+                          struct generic_token *begin,
+                          struct generic_token *end,
                           struct pair_variable *result);
 @
 \fimcodigo
@@ -5287,43 +5357,43 @@ fewer tertiary operators here.
 \iniciocodigo
 @<Auxiliary Local Functions (metafont.c)@>+=
 bool eval_pair_expression(struct metafont *mf, struct context *cx,
-                          struct generic_token *begin_expression,
-                          struct generic_token *end_token_list,
+                          struct generic_token *begin,
+                          struct generic_token *end,
                           struct pair_variable *result){
   struct generic_token *end_tertiary = NULL, *begin_secondary,
                        *last_sum = NULL, *p, *prev = NULL;
   DECLARE_NESTING_CONTROL();
   struct pair_variable a, b;
-  p = begin_expression;
-  do{
+  p = begin;
+  do{ // Find last tertiary operator '+' or '-'
     COUNT_NESTING(p);
     if(IS_NOT_NESTED() && IS_VALID_SUM_OR_SUB(prev, p)){
       last_sum = p;
       end_tertiary = prev;
     }
     prev = p;
-    if(p != end_token_list)
-      p = (struct generic_token *) p -> next;
+    if(p != end)
+      p = p -> next;
     else
       p = NULL;
   }while(p != NULL);
+  RAISE_ERROR_AND_EXIT_IF_WRONG_NESTING(mf, cx, OPTIONAL(begin -> line));
   if(end_tertiary != NULL){
-    begin_secondary = (struct generic_token *) (last_sum -> next);
-    eval_pair_expression(mf, cx, begin_expression, end_tertiary, &a);
-    eval_pair_secondary(mf, cx, begin_secondary, end_token_list, &b);
-    if(last_sum -> type == TYPE_SUM){
+    begin_secondary = last_sum -> next;
+    eval_pair_expression(mf, cx, begin, end_tertiary, &a);
+    eval_pair_secondary(mf, cx, begin_secondary, end, &b);
+    if(last_sum -> type == TYPE_SUM){ // Evaluate '+'
       result -> x = a.x + b.x;
       result -> y = a.y + b.y;
     }
-    else if(last_sum -> type == TYPE_SUBTRACT){
+    else if(last_sum -> type == TYPE_SUBTRACT){ // Evaluate '-'
       result -> x = a.x - b.x;
       result -> y = a.y - b.y;
     }
     return true;
   }
-  else
-    return eval_pair_secondary(mf, cx, begin_expression,
-                                   end_token_list, result);
+  else // No tertiary operator:
+    return eval_pair_secondary(mf, cx, begin, end, result);
 }
 @
 \fimcodigo
@@ -5347,7 +5417,11 @@ The grammar for secondary pair expressions is:
                  zscaled <Pair Primary> | (...)
 \alinhanormal
 
-Let's add the seven new keywords representing transformers:
+The above transformer rule is incomplete because we will see the last
+existing transformer in Subsection 8.3.1.
+
+For now let's add the seven new keywords representing known
+transformers:
 
 \iniciocodigo
 @<WEAVEFONT: Symbolic Token Definition@>+=
@@ -5375,8 +5449,8 @@ below:
 \iniciocodigo
 @<Local Function Declaration (metafont.c)@>+=
 bool eval_pair_secondary(struct metafont *mf, struct context *cx,
-                         struct generic_token *begin_expression,
-                         struct generic_token *end_expression,
+                         struct generic_token *begin,
+                         struct generic_token *end,
                          struct pair_variable *result);
 @
 \fimcodigo
@@ -5394,14 +5468,14 @@ the code block below:
 \iniciocodigo
 @<Auxiliary Local Functions (metafont.c)@>+=
 bool eval_pair_secondary(struct metafont *mf, struct context *cx,
-                             struct generic_token *begin_expression,
-                             struct generic_token *end_expression,
+                             struct generic_token *begin,
+                             struct generic_token *end,
                              struct pair_variable *result){
   struct generic_token *end_secondary = NULL, *begin_primary,
                        *last_mul = NULL, *p, *prev = NULL,
                        *prev_prev = NULL, *last_fraction = NULL;
   DECLARE_NESTING_CONTROL();
-  p = begin_expression;
+  p = begin;
   do{
     COUNT_NESTING(p);
     if(IS_NOT_NESTED() && (p -> type == TYPE_MULTIPLICATION ||
@@ -5410,11 +5484,10 @@ bool eval_pair_secondary(struct metafont *mf, struct context *cx,
              p -> type == TYPE_SLANTED || p -> type == TYPE_XSCALED ||
              p -> type == TYPE_YSCALED || p -> type == TYPE_ZSCALED ||
              // Operator 'transformed' still not defined. We will see
-             // it in Subsubsection 8.3.4.
+             // it defined in Subsection 8.3.4.
              p -> type == TYPE_TRANSFORMED)){
       if(p -> type == TYPE_DIVISION && prev -> type == TYPE_NUMERIC &&
-         p != end_expression &&
-         ((struct generic_token *) p -> next) -> type != TYPE_NUMERIC &&
+         p != end && p -> next -> type != TYPE_NUMERIC &&
          last_fraction != prev_prev) // Fraction separator
          last_fraction = p;
        else{ //  Divisão ou operadores válidos
@@ -5424,14 +5497,14 @@ bool eval_pair_secondary(struct metafont *mf, struct context *cx,
     }
     prev_prev = prev;
     prev = p;
-    if(p != end_expression)
-      p = (struct generic_token *) p -> next;
+    if(p != end)
+      p = p -> next;
     else
       p = NULL;
   }while(p != NULL);
   if(end_secondary != NULL){
     bool ret;
-    begin_primary = (struct generic_token *) (last_mul -> next);
+    begin_primary = last_mul -> next;
     @<Secondary Pair Operator: Multiplication@>
     @<Secondary Pair Operator: Division@>
     @<Secondary Pair Operator: Rotation@>
@@ -5444,12 +5517,8 @@ bool eval_pair_secondary(struct metafont *mf, struct context *cx,
     @<Secondary Pair Operator: Additional Operators@>
   }
   else
-    return eval_pair_primary(mf, cx, begin_expression,
-                             end_expression, result);
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
-          "expression.",  mf -> file, begin_expression -> line);
-#endif
+    return eval_pair_primary(mf, cx, begin, end, result);
+  RAISE_ERROR_UNKNOWN_STATEMENT(mf, cx, OPTIONAL(begin -> line));
   return false;
 }
 @
@@ -5465,14 +5534,12 @@ identifies the type of a primary expression:
 \iniciocodigo
 @<Secondary Pair Operator: Multiplication@>=
 if(last_mul -> type == TYPE_MULTIPLICATION){
-  if(get_primary_expression_type(mf, cx, begin_primary, end_expression) ==
-     TYPE_T_PAIR){
+  if(get_primary_expression_type(mf, cx, begin_primary, end) == TYPE_T_PAIR){
     struct numeric_variable a;
     struct pair_variable b;
-    if(!eval_numeric_secondary(mf, cx, begin_expression, end_secondary,
-                               &a))
+    if(!eval_numeric_secondary(mf, cx, begin, end_secondary, &a))
       return false;
-    if(!eval_pair_primary(mf, cx, begin_primary, end_expression, &b))
+    if(!eval_pair_primary(mf, cx, begin_primary, end, &b))
       return false;
     result -> x = b.x * a.value;
     result -> y = b.y * a.value;
@@ -5481,11 +5548,10 @@ if(last_mul -> type == TYPE_MULTIPLICATION){
   else{
     struct pair_variable a;
     struct numeric_variable b;
-    ret = eval_pair_secondary(mf, cx, begin_expression, end_secondary,
-                              &a);
+    ret = eval_pair_secondary(mf, cx, begin, end_secondary, &a);
     if(!ret)
       return false;
-    ret = eval_numeric_primary(mf, cx, begin_primary, end_expression, &b);
+    ret = eval_numeric_primary(mf, cx, begin_primary, end, &b);
     if(!ret)
       return false;
     result -> x = a.x * b.value;
@@ -5504,10 +5570,10 @@ numeric. We should generate an error in case of division by zero:
 else if(last_mul -> type == TYPE_DIVISION){
   struct pair_variable a;
   struct numeric_variable b;
-  ret = eval_pair_secondary(mf, cx, begin_expression, end_secondary, &a);
+  ret = eval_pair_secondary(mf, cx, begin, end_secondary, &a);
   if(!ret)
     return false;
-  ret = eval_numeric_primary(mf, cx, begin_primary, end_expression, &b);
+  ret = eval_numeric_primary(mf, cx, begin_primary, end, &b);
   if(!ret)
     return false;
   if(b.value == 0.0){
@@ -5533,10 +5599,10 @@ else if(last_mul -> type == TYPE_ROTATED){
   struct pair_variable a;
   struct numeric_variable b;
   double sin_theta, cos_theta, theta;
-  ret = eval_pair_secondary(mf, cx, begin_expression, end_secondary, &a);
+  ret = eval_pair_secondary(mf, cx, begin, end_secondary, &a);
   if(!ret)
     return false;
-  ret = eval_numeric_primary(mf, cx, begin_primary, end_expression, &b);
+  ret = eval_numeric_primary(mf, cx, begin_primary, end, &b);
   if(!ret)
     return false;
   theta = 0.0174533 * b.value;
@@ -5556,10 +5622,10 @@ A scaling is the same thing than a multiplication:
 else if(last_mul -> type == TYPE_SCALED){
   struct pair_variable a;
   struct numeric_variable b;
-  ret = eval_pair_secondary(mf, cx, begin_expression, end_secondary, &a);
+  ret = eval_pair_secondary(mf, cx, begin, end_secondary, &a);
   if(!ret)
     return false;
-  ret = eval_numeric_primary(mf, cx, begin_primary, end_expression, &b);
+  ret = eval_numeric_primary(mf, cx, begin_primary, end, &b);
   if(!ret)
     return false;
   result -> x = a.x * b.value;
@@ -5575,10 +5641,10 @@ A shifting is equal a sum, but this operator have a higher precedence:
 @<Secondary Pair Operator: Shifting@>=
 else if(last_mul -> type == TYPE_SHIFTED){
   struct pair_variable a, b;
-  ret = eval_pair_secondary(mf, cx, begin_expression, end_secondary, &a);
+  ret = eval_pair_secondary(mf, cx, begin, end_secondary, &a);
   if(!ret)
     return false;
-  ret = eval_pair_primary(mf, cx, begin_primary, end_expression, &b);
+  ret = eval_pair_primary(mf, cx, begin_primary, end, &b);
   if(!ret)
     return false;
   result -> x = a.x + b.x;
@@ -5597,10 +5663,10 @@ below the axis $x$ it is:
 else if(last_mul -> type == TYPE_SLANTED){
   struct pair_variable a;
   struct numeric_variable b;
-  ret = eval_pair_secondary(mf, cx, begin_expression, end_secondary, &a);
+  ret = eval_pair_secondary(mf, cx, begin, end_secondary, &a);
   if(!ret)
     return false;
-  ret = eval_numeric_primary(mf, cx, begin_primary, end_expression, &b);
+  ret = eval_numeric_primary(mf, cx, begin_primary, end, &b);
   if(!ret)
     return false;
   result -> x = a.x + b.value * a.y;
@@ -5618,10 +5684,10 @@ pair:
 else if(last_mul -> type == TYPE_XSCALED){
   struct pair_variable a;
   struct numeric_variable b;
-  ret = eval_pair_secondary(mf, cx, begin_expression, end_secondary, &a);
+  ret = eval_pair_secondary(mf, cx, begin, end_secondary, &a);
   if(!ret)
     return false;
-  ret = eval_numeric_primary(mf, cx, begin_primary, end_expression, &b);
+  ret = eval_numeric_primary(mf, cx, begin_primary, end, &b);
   if(!ret)
     return false;
   result -> x = a.x * b.value;
@@ -5639,10 +5705,10 @@ in the pair:
 else if(last_mul -> type == TYPE_YSCALED){
   struct pair_variable a;
   struct numeric_variable b;
-  ret = eval_pair_secondary(mf, cx, begin_expression, end_secondary, &a);
+  ret = eval_pair_secondary(mf, cx, begin, end_secondary, &a);
   if(!ret)
     return false;
-  ret = eval_numeric_primary(mf, cx, begin_primary, end_expression, &b);
+  ret = eval_numeric_primary(mf, cx, begin_primary, end, &b);
   if(!ret)
     return false;
   result -> x = a.x;
@@ -5663,10 +5729,10 @@ $$
 @<Secondary Pair Operator: Z-Scaling@>=
 else if(last_mul -> type == TYPE_ZSCALED){
   struct pair_variable a, b;
-  ret = eval_pair_secondary(mf, cx, begin_expression, end_secondary, &a);
+  ret = eval_pair_secondary(mf, cx, begin, end_secondary, &a);
   if(!ret)
     return false;
-  ret = eval_pair_primary(mf, cx, begin_primary, end_expression, &b);
+  ret = eval_pair_primary(mf, cx, begin_primary, end, &b);
   if(!ret)
     return false;
   result -> x = a.x * b.x - a.y * b.y;
@@ -6695,9 +6761,9 @@ pair secondary expressions.
 else if(last_mul -> type == TYPE_TRANSFORMED){
   struct pair_variable a;
   struct transform_variable b;
-  if(!eval_pair_secondary(mf, cx, begin_expression, end_secondary, &a))
+  if(!eval_pair_secondary(mf, cx, begin, end_secondary, &a))
     return false;
-  if(!eval_transform_primary(mf, cx, begin_primary, end_expression, &b))
+  if(!eval_transform_primary(mf, cx, begin_primary, end, &b))
     return false;
   result -> x = LINEAR_TRANSFORM_X(a.x, a.y, b.value);
   result -> y = LINEAR_TRANSFORM_Y(a.x, a.y, b.value);
