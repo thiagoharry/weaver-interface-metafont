@@ -147,7 +147,7 @@
 
 8.2.2. Transformações, Multiplicação e Divisão Escalar \indice{75}
 
-8.2.3. Valores Intermediários de Pares, Literais e Variáveis \indice{XX}
+8.2.3. Valores Intermediários de Pares, Literais e Variáveis \indice{79}
 
 8.2.4. Pares em Expressões Numéricas \indice{XX}
 
@@ -4657,7 +4657,7 @@ secundária acima:
 
 \alinhaverbatim
 numeric a;
-a=(4*{8)*3}+1;
+a=(4*{8)+3}+1;
 \alinhanormal
 
 Vamos agora adicionar o novo erro que podemos encontrar de divisão por
@@ -5569,7 +5569,7 @@ tokens até achar a operação secundária mais à direita, ignorando
 aquilo que está aninhado entre parênteses e colchetes. Deve-se seguir
 as mesmas regras para determinar se o \monoespaco{/} é mesmo uma
 divisão ou se é uma fração. Mas como aqui temos um total de nove
-operadores secundários, incluindo os transformadores, devido à
+operadores secundários, incluindo os transformadores. Devido à
 quantidade, vamos mostrar separadamente cada um deles ao invés de
 colocá-los todos neste bloco de código abaixo:
 
@@ -5584,7 +5584,7 @@ bool eval_pair_secondary(struct metafont *mf, struct context *cx,
                        *prev_prev = NULL, *last_fraction = NULL;
   DECLARE_NESTING_CONTROL();
   p = begin;
-  do{
+  do{ // Encontra o operador secundário mais à direita
     COUNT_NESTING(p);
     if(IS_NOT_NESTED() && (p -> type == TYPE_MULTIPLICATION ||
              p -> type == TYPE_DIVISION || p -> type == TYPE_ROTATED ||
@@ -5610,8 +5610,8 @@ bool eval_pair_secondary(struct metafont *mf, struct context *cx,
     else
       p = NULL;
   }while(p != NULL);
+  RAISE_ERROR_AND_EXIT_IF_WRONG_NESTING(mf, cx, OPTIONAL(begin -> line));
   if(end_secondary != NULL){
-    bool ret;
     begin_primary = last_mul -> next;
     @<Operador Secundário de Pares: Multiplicação@>
     @<Operador Secundário de Pares: Divisão@>
@@ -5622,7 +5622,7 @@ bool eval_pair_secondary(struct metafont *mf, struct context *cx,
     @<Operador Secundário de Pares: X-Escala@>
     @<Operador Secundário de Pares: Y-Escala@>
     @<Operador Secundário de Pares: Z-Escala@>
-    @<Operador Secundário de Pares: Operadores Adicionais@>
+    @<Operador Secundário de Pares: Outros@>
   }
   else
     return eval_pair_primary(mf, cx, begin, end, result);
@@ -5635,9 +5635,7 @@ bool eval_pair_secondary(struct metafont *mf, struct context *cx,
 O primeiro operador é o de multiplicação. Note que podemos ter dois
 tipos de multiplicação: um par por um numérico ou um numérico por um
 par. Para identificar qual dos dois tipos se aplica, devemos examinar
-o tipo da expressão à direita do operador. Ela é uma expressão
-primária e nós temos uma função que descobre o tipo de expressões
-primárias:
+o tipo da expressão à direita do operador.
 
 \iniciocodigo
 @<Operador Secundário de Pares: Multiplicação@>=
@@ -5645,11 +5643,9 @@ if(last_mul -> type == TYPE_MULTIPLICATION){
   if(get_primary_expression_type(mf, cx, begin_primary, end) ==  TYPE_T_PAIR){
     struct numeric_variable a;
     struct pair_variable b;
-    ret = eval_numeric_secondary(mf, cx, begin, end_secondary, &a);
-    if(!ret)
+    if(!eval_numeric_secondary(mf, cx, begin, end_secondary, &a))
       return false;
-    ret = eval_pair_primary(mf, cx, begin_primary, end, &b);
-    if(!ret)
+    if(!eval_pair_primary(mf, cx, begin_primary, end, &b))
       return false;
     result -> x = b.x * a.value;
     result -> y = b.y * a.value;
@@ -5658,11 +5654,9 @@ if(last_mul -> type == TYPE_MULTIPLICATION){
   else{
     struct pair_variable a;
     struct numeric_variable b;
-    ret = eval_pair_secondary(mf, cx, begin, end_secondary, &a);
-    if(!ret)
+    if(!eval_pair_secondary(mf, cx, begin, end_secondary, &a))
       return false;
-    ret = eval_numeric_primary(mf, cx, begin_primary, end, &b);
-    if(!ret)
+    if(!eval_numeric_primary(mf, cx, begin_primary, end, &b))
       return false;
     result -> x = a.x * b.value;
     result -> y = a.y * b.value;
@@ -5680,17 +5674,12 @@ numérico. Devemos gerar erro em caso de divisão por zero:
 else if(last_mul -> type == TYPE_DIVISION){
   struct pair_variable a;
   struct numeric_variable b;
-  ret = eval_pair_secondary(mf, cx, begin, end_secondary, &a);
-  if(!ret)
+  if(!eval_pair_secondary(mf, cx, begin, end_secondary, &a))
     return false;
-  ret = eval_numeric_primary(mf, cx, begin_primary, end, &b);
-  if(!ret)
+  if(!eval_numeric_primary(mf, cx, begin_primary, end, &b))
     return false;
   if(b.value == 0.0){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s:%d: Division by zero.",
-            mf -> file, last_mul -> line);
-#endif
+    RAISE_ERROR_DIVISION_BY_ZERO(mf, cx, OPTIONAL(last_mul -> line));
     return false;
   }
   result -> x = a.x / b.value;
@@ -5709,13 +5698,11 @@ else if(last_mul -> type == TYPE_ROTATED){
   struct pair_variable a;
   struct numeric_variable b;
   double sin_theta, cos_theta, theta;
-  ret = eval_pair_secondary(mf, cx, begin, end_secondary, &a);
-  if(!ret)
+  if(!eval_pair_secondary(mf, cx, begin, end_secondary, &a))
     return false;
-  ret = eval_numeric_primary(mf, cx, begin_primary, end, &b);
-  if(!ret)
+  if(!eval_numeric_primary(mf, cx, begin_primary, end, &b))
     return false;
-  theta = 0.0174533 * b.value;
+  theta = 0.0174533 * b.value; // 1 grau = 0,0174533 radianos
   sin_theta = sin(theta);
   cos_theta = cos(theta);
   result -> x = a.x * cos_theta - a.y * sin_theta;
@@ -5732,11 +5719,9 @@ Se temos uma mudança de escala, isso é sinônimo a uma multiplicação:
 else if(last_mul -> type == TYPE_SCALED){
   struct pair_variable a;
   struct numeric_variable b;
-  ret = eval_pair_secondary(mf, cx, begin, end_secondary, &a);
-  if(!ret)
+  if(!eval_pair_secondary(mf, cx, begin, end_secondary, &a))
     return false;
-  ret = eval_numeric_primary(mf, cx, begin_primary, end, &b);
-  if(!ret)
+  if(!eval_numeric_primary(mf, cx, begin_primary, end, &b))
     return false;
   result -> x = a.x * b.value;
   result -> y = a.y * b.value;
@@ -5752,11 +5737,9 @@ maior:
 @<Operador Secundário de Pares: Deslocamento@>=
 else if(last_mul -> type == TYPE_SHIFTED){
   struct pair_variable a, b;
-  ret = eval_pair_secondary(mf, cx, begin, end_secondary, &a);
-  if(!ret)
+  if(!eval_pair_secondary(mf, cx, begin, end_secondary, &a))
     return false;
-  ret = eval_pair_primary(mf, cx, begin_primary, end, &b);
-  if(!ret)
+  if(!eval_pair_primary(mf, cx, begin_primary, end, &b))
     return false;
   result -> x = a.x + b.x;
   result -> y = a.y + b.y;
@@ -5774,11 +5757,9 @@ eixo $x$ ele está:
 else if(last_mul -> type == TYPE_SLANTED){
   struct pair_variable a;
   struct numeric_variable b;
-  ret = eval_pair_secondary(mf, cx, begin, end_secondary, &a);
-  if(!ret)
+  if(!eval_pair_secondary(mf, cx, begin, end_secondary, &a))
     return false;
-  ret = eval_numeric_primary(mf, cx, begin_primary, end, &b);
-  if(!ret)
+  if(!eval_numeric_primary(mf, cx, begin_primary, end, &b))
     return false;
   result -> x = a.x + b.value * a.y;
   result -> y = a.y;
@@ -5795,11 +5776,9 @@ primeiro valor do par:
 else if(last_mul -> type == TYPE_XSCALED){
   struct pair_variable a;
   struct numeric_variable b;
-  ret = eval_pair_secondary(mf, cx, begin, end_secondary, &a);
-  if(!ret)
+  if(!eval_pair_secondary(mf, cx, begin, end_secondary, &a))
     return false;
-  ret = eval_numeric_primary(mf, cx, begin_primary, end, &b);
-  if(!ret)
+  if(!eval_numeric_primary(mf, cx, begin_primary, end, &b))
     return false;
   result -> x = a.x * b.value;
   result -> y = a.y;
@@ -5816,11 +5795,9 @@ par:
 else if(last_mul -> type == TYPE_YSCALED){
   struct pair_variable a;
   struct numeric_variable b;
-  ret = eval_pair_secondary(mf, cx, begin, end_secondary, &a);
-  if(!ret)
+  if(!eval_pair_secondary(mf, cx, begin, end_secondary, &a))
     return false;
-  ret = eval_numeric_primary(mf, cx, begin_primary, end, &b);
-  if(!ret)
+  if(!eval_numeric_primary(mf, cx, begin_primary, end, &b))
     return false;
   result -> x = a.x;
   result -> y = a.y * b.value;
@@ -5840,11 +5817,9 @@ $$
 @<Operador Secundário de Pares: Z-Escala@>=
 else if(last_mul -> type == TYPE_ZSCALED){
   struct pair_variable a, b;
-  ret = eval_pair_secondary(mf, cx, begin, end_secondary, &a);
-  if(!ret)
+  if(!eval_pair_secondary(mf, cx, begin, end_secondary, &a))
     return false;
-  ret = eval_pair_primary(mf, cx, begin_primary, end, &b);
-  if(!ret)
+  if(!eval_pair_primary(mf, cx, begin_primary, end, &b))
     return false;
   result -> x = a.x * b.x - a.y * b.y;
   result -> y = a.x * b.y + b.x * a.y;
@@ -5867,7 +5842,10 @@ As regras gramaticais finais para a expressão de pares é:
                      <Operador de Multiplicação Escalar><Primário de Par>
 \alinhanormal
 
-A novidade é a construção do tipo $a[b, c]$ onde $b$ e $c$ são
+Temos uma parte omitida na regra gramatical acima porque há alguns
+operadores primários que vamos definir só nas Subseções 8.4.6 e 10.4.
+
+Uma novidade é a construção do tipo $a[b, c]$ onde $b$ e $c$ são
 pares. Ela representa um valor intermediário entre os
 pontos. Basicamente é avaliado como $a(b+c)$, de modo que $.5[b,c]$
 representa o meio do caminho entre os dois pontos.
@@ -5880,8 +5858,8 @@ A função que avaliará expressões de pares primárias é:
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
 bool eval_pair_primary(struct metafont *mf, struct context *cx,
-                       struct generic_token *begin_expression,
-                       struct generic_token *end_expression,
+                       struct generic_token *begin,
+                       struct generic_token *end,
                        struct pair_variable *result);
 @
 \fimcodigo
@@ -5893,14 +5871,14 @@ uma expressão primária:
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
 bool eval_pair_primary(struct metafont *mf, struct context *cx,
-                       struct generic_token *begin_expression,
-                       struct generic_token *end_expression,
+                       struct generic_token *begin,
+                       struct generic_token *end,
                        struct pair_variable *result){
-  if(begin_expression == end_expression){
+  if(begin == end){
     @<Primário de Par: Regra 1@>
   }
-  else if(begin_expression -> type == TYPE_OPEN_PARENTHESIS &&
-          end_expression -> type == TYPE_CLOSE_PARENTHESIS){
+  else if(begin -> type == TYPE_OPEN_PARENTHESIS &&
+          end -> type == TYPE_CLOSE_PARENTHESIS){
     @<Primário de Par: Regra 2@>
     @<Primário de Par: Regra 3@>
   }
@@ -5909,7 +5887,7 @@ bool eval_pair_primary(struct metafont *mf, struct context *cx,
   @<Primário de Par: Regra 5@>
 #if defined(W_DEBUG_METAFONT)
   fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
-          "expression.\n",  mf -> file, begin_expression -> line);
+          "expression.\n",  mf -> file, begin -> line);
 #endif
   return false;
 }
@@ -5921,12 +5899,12 @@ variável de par:
 
 \iniciocodigo
 @<Primário de Par: Regra 1@>=
-struct symbolic_token *tok = (struct symbolic_token *) begin_expression;
+struct symbolic_token *tok = (struct symbolic_token *) begin;
 struct pair_variable *var;
 if(tok -> type != TYPE_SYMBOLIC){
 #if defined(W_DEBUG_METAFONT)
   fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable token "
-          "in pair expression.",  mf -> file, begin_expression -> line);
+          "in pair expression.",  mf -> file, begin -> line);
 #endif
   return false;
 }
@@ -5934,7 +5912,7 @@ var = (struct pair_variable *) tok -> var;
 if(var == NULL){
 #if defined(W_DEBUG_METAFONT)
   fprintf(stderr, "METAFONT: Error: %s:%d: Undeclared variable "
-          "'%s'.\n", mf -> file, begin_expression -> line, tok -> value);
+          "'%s'.\n", mf -> file, begin -> line, tok -> value);
 #endif
   return false;
 }
@@ -5942,7 +5920,7 @@ if(var -> type != TYPE_T_PAIR){
 #if defined(W_DEBUG_METAFONT)
   fprintf(stderr, "METAFONT: Error: %s:%d: Non-pair variable "
           "'%s' in pair expression.\n", mf -> file,
-          begin_expression -> line, tok -> value);
+          begin -> line, tok -> value);
 #endif
   return false;
 }
@@ -5962,15 +5940,15 @@ $b$, não deve estar dentro de outros parênteses e colchetes.
 \iniciocodigo
 @<Primário de Par: Regra 2@>=
   struct generic_token *begin_a, *end_a, *begin_b, *end_b, *comma;
-  if(begin_expression -> next == end_expression){
+  if(begin -> next == end){
 #if defined(W_DEBUG_METAFONT)
       fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
               "expression (empty parenthesis).\n ", mf -> file,
-              begin_expression -> line);
+              begin -> line);
 #endif
     return false;
   }
-  begin_a = (struct generic_token *) begin_expression -> next;
+  begin_a = (struct generic_token *) begin -> next;
   end_a = begin_a;
   DECLARE_NESTING_CONTROL();
   bool literal = true;
@@ -5979,7 +5957,7 @@ $b$, não deve estar dentro de outros parênteses e colchetes.
     if(IS_NOT_NESTED() &&
        ((struct generic_token *) end_a -> next) -> type == TYPE_COMMA)
       break;
-    if(end_a -> next != end_expression)
+    if(end_a -> next != end)
       end_a = (struct generic_token *) end_a -> next;
     else{
       literal = false;
@@ -5991,15 +5969,15 @@ $b$, não deve estar dentro de outros parênteses e colchetes.
     bool ret;
     comma = (struct generic_token *) end_a -> next;
     begin_b = (struct generic_token *) comma -> next;
-    if(begin_b == end_expression){
+    if(begin_b == end){
 #if defined(W_DEBUG_METAFONT)
       fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
-              "expression.\n ", mf -> file, begin_expression -> line);
+              "expression.\n ", mf -> file, begin -> line);
 #endif
       return false;
     }
     end_b = begin_b;
-    while(end_b -> next != end_expression)
+    while(end_b -> next != end)
       end_b = (struct generic_token *) end_b -> next;
     ret = eval_numeric_expression(mf, cx, begin_a, end_a, &a);
     if(!ret)
@@ -6034,13 +6012,13 @@ $c$, interpretá-las e retornar $a(b+c)$:
 
 \iniciocodigo
 @<Primário de Par: Regra 4@>=
-else if(end_expression -> type == TYPE_CLOSE_BRACKETS){
+else if(end -> type == TYPE_CLOSE_BRACKETS){
   struct generic_token *begin_a, *end_a, *begin_b, *end_b, *begin_c,
                        *end_c;
   struct numeric_variable a;
   struct pair_variable b, c;
   DECLARE_NESTING_CONTROL();
-  begin_a = begin_expression;
+  begin_a = begin;
   end_a = begin_a;
   while(end_a != NULL){
     COUNT_NESTING(end_a);
@@ -6048,52 +6026,52 @@ else if(end_expression -> type == TYPE_CLOSE_BRACKETS){
        ((struct generic_token *) end_a -> next) -> type ==
         TYPE_OPEN_BRACKETS)
       break;
-    if(end_a -> next != end_expression)
+    if(end_a -> next != end)
       end_a = (struct generic_token *) end_a -> next;
     else{
 #if defined(W_DEBUG_METAFONT)
       fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
-              "expression.\n ", mf -> file, begin_expression -> line);
+              "expression.\n ", mf -> file, begin -> line);
 #endif
       return false;
     }
   }
   begin_b = (struct generic_token *) end_a -> next;
   begin_b = (struct generic_token *) begin_b -> next;
-  if(begin_b == end_expression){
+  if(begin_b == end){
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
-            "expression.\n ", mf -> file, begin_expression -> line);
+            "expression.\n ", mf -> file, begin -> line);
 #endif
     return false;
   }
   end_b = begin_b;
-  while(end_b != end_expression){
+  while(end_b != end){
     COUNT_NESTING(end_b);
     if(IS_NOT_NESTED() &&
        ((struct generic_token *) end_b -> next) -> type == TYPE_COMMA)
       break;
-    if(end_b -> next != end_expression)
+    if(end_b -> next != end)
       end_b = (struct generic_token *) end_b -> next;
     else{
 #if defined(W_DEBUG_METAFONT)
       fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
-              "expression.\n ", mf -> file, begin_expression -> line);
+              "expression.\n ", mf -> file, begin -> line);
 #endif
       return false;
     }
   }
   begin_c = (struct generic_token *) end_b -> next;
   begin_c = (struct generic_token *) begin_c -> next;
-  if(begin_c == end_expression){
+  if(begin_c == end){
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
-            "expression.\n ", mf -> file, begin_expression -> line);
+            "expression.\n ", mf -> file, begin -> line);
 #endif
     return false;
   }
   end_c = begin_c;
-  while(end_c -> next != end_expression)
+  while(end_c -> next != end)
     end_c = (struct generic_token *) end_c -> next;
   if(!eval_numeric_atom(mf, cx, begin_a, end_a, &a))
     return false;
@@ -6119,40 +6097,40 @@ uma fração:
 @<Primário de Par: Regra 5@>=
 else{
   bool ret;
-  if(begin_expression -> type == TYPE_SUM)
+  if(begin -> type == TYPE_SUM)
     return eval_pair_primary(mf, cx, (struct generic_token *)
-                                     begin_expression -> next,
-                             end_expression, result);
-  else if(begin_expression -> type == TYPE_SUBTRACT){
+                                     begin -> next,
+                             end, result);
+  else if(begin -> type == TYPE_SUBTRACT){
     ret = eval_pair_primary(mf, cx, (struct generic_token *)
-                                     begin_expression -> next,
-                             end_expression, result);
+                                     begin -> next,
+                             end, result);
     if(!ret)
       return false;
     result -> x = - (result -> x);
     result -> y = - (result -> y);
     return true;
   }
-  else if(begin_expression -> type == TYPE_NUMERIC){
+  else if(begin -> type == TYPE_NUMERIC){
     struct generic_token *tok;
-    float value = ((struct numeric_token *) begin_expression) -> value;
-    tok = (struct generic_token *) begin_expression -> next;
+    float value = ((struct numeric_token *) begin) -> value;
+    tok = (struct generic_token *) begin -> next;
     if(tok -> type == TYPE_DIVISION){
-      tok = (struct generic_token *) begin_expression -> next;
-      if(tok == end_expression || tok -> next == end_expression ||
+      tok = begin -> next;
+      if(tok == end || tok -> next == end ||
          tok -> type != TYPE_NUMERIC){
 #if defined(W_DEBUG_METAFONT)
         fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
-                "expression.\n ", mf -> file, begin_expression -> line);
+                "expression.\n ", mf -> file, begin -> line);
 #endif
         return false;
       }
       value /= ((struct numeric_token *) tok) -> value;
-      tok = (struct generic_token *) tok -> next;
+      tok = tok -> next;
     }
     ret = eval_pair_primary(mf, cx, (struct generic_token *)
-                                     begin_expression -> next,
-                             end_expression, result);
+                                     begin -> next,
+                             end, result);
     if(!ret)
       return false;
     result -> x *= value;
@@ -6882,7 +6860,7 @@ somar ao código que implementa transformações sobre pares da
 Subsubseção 8.2.2.
 
 \iniciocodigo
-@<Operador Secundário de Pares: Operadores Adicionais@>=
+@<Operador Secundário de Pares: Outros@>=
 else if(last_mul -> type == TYPE_TRANSFORMED){
   struct pair_variable a;
   struct transform_variable b;
@@ -10010,17 +9988,17 @@ imediatamente antes do ponto indicado.
 
 \iniciocodigo
 @<Primário de Par: Outras Regras a Definir Depois@>=
-if(begin_expression -> type == TYPE_POINT ||
-   begin_expression -> type == TYPE_PRECONTROL ||
-   begin_expression -> type == TYPE_POSTCONTROL){
+if(begin -> type == TYPE_POINT ||
+   begin -> type == TYPE_PRECONTROL ||
+   begin -> type == TYPE_POSTCONTROL){
   DECLARE_NESTING_CONTROL();
   struct generic_token *begin_num, *end_num , *of = NULL, *begin_path, *end_path;
   struct numeric_variable a;
   struct path_variable b;
-  begin_num = begin_expression -> next;
+  begin_num = begin -> next;
   end_num = begin_num;
   int index;
-  while(end_num != NULL && end_num -> next != end_expression){
+  while(end_num != NULL && end_num -> next != end){
     COUNT_NESTING(end_num);
     if(IS_NOT_NESTED() &&
        ((struct generic_token *) end_num -> next) -> type == TYPE_OF){
@@ -10032,40 +10010,40 @@ if(begin_expression -> type == TYPE_POINT ||
   if(of == NULL){
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr, "METAFONT: Error: %s:%d: Missing 'of' in 'point' expression\n",
-            mf -> file, begin_expression -> line);
+            mf -> file, begin -> line);
 #endif
     return false;
   }
-  if(of -> next == NULL || of == end_expression){
+  if(of -> next == NULL || of == end){
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr, "METAFONT: Error: %s:%d: Missing path expression in "
-            "'point' expression\n", mf -> file, begin_expression -> line);
+            "'point' expression\n", mf -> file, begin -> line);
 #endif
     return false;
   }
   begin_path = of -> next;
-  end_path = end_expression;
+  end_path = end;
   if(!eval_numeric_expression(mf, cx, begin_num, end_num, &a))
     return false;
   if(!eval_path_primary(mf, cx, begin_path, end_path, &b))
     return false;
   if(b.cyclic){
     index = ((int)(a.value)) % (b.total_length - 1);
-    if(begin_expression -> type == TYPE_PRECONTROL)
+    if(begin -> type == TYPE_PRECONTROL)
       index = (index - 1) % (b.total_length - 1);
   }
   else{
     index = (int) (a.value);
     if(index < 0) index = 0;
     if(index >= b.total_length) index = b.total_length - 1;
-    if(begin_expression -> type == TYPE_PRECONTROL)
+    if(begin -> type == TYPE_PRECONTROL)
       index --;
   }
-  if(begin_expression -> type == TYPE_POINT){
+  if(begin -> type == TYPE_POINT){
     result -> x = get_point(&b, index) -> x;
     result -> y = get_point(&b, index) -> y;
   }
-  else if(begin_expression -> type == TYPE_PRECONTROL){
+  else if(begin -> type == TYPE_PRECONTROL){
     if(index < 0){
       result -> x = get_point(&b, 0) -> x;
       result -> y = get_point(&b, 0) -> y;
@@ -10741,7 +10719,7 @@ int read_flags(struct path_variable *path){
           if(positive_cross_product == -1)
             positive_cross_product = (z_cross_product > 0);
           else if((z_cross_product > 0) != positive_cross_product){
-            flag -= FLAG_CONVEX;
+            //flag -= FLAG_CONVEX;
             break;
           }
         }
@@ -14904,10 +14882,10 @@ abaixo da caneta:
 
 \iniciocodigo
 @<Primário de Par: Outras Regras a Definir Depois@>+=
-else if(begin_expression -> type == TYPE_BOT){
+else if(begin -> type == TYPE_BOT){
   if(!eval_pair_primary(mf, cx, (struct generic_token *)
-                                begin_expression -> next,
-                        end_expression, result))
+                                begin -> next,
+                        end, result))
     return false;
   result -> y += mf -> pen_bot;
   return true;
@@ -14921,10 +14899,10 @@ caneta se esta for posicionada em $(x_0, y_o)$.
 
 \iniciocodigo
 @<Primário de Par: Outras Regras a Definir Depois@>+=
-else if(begin_expression -> type == TYPE_TOP){
+else if(begin -> type == TYPE_TOP){
   if(!eval_pair_primary(mf, cx, (struct generic_token *)
-                                begin_expression -> next,
-                        end_expression, result))
+                                begin -> next,
+                        end, result))
     return false;
   result -> y += mf -> pen_top;
   return true;
@@ -14941,10 +14919,10 @@ $x_0$ com o menor valor no eixo $x$ do perímetro da caneta:
 
 \iniciocodigo
 @<Primário de Par: Outras Regras a Definir Depois@>+=
-else if(begin_expression -> type == TYPE_LFT){
+else if(begin -> type == TYPE_LFT){
   if(!eval_pair_primary(mf, cx, (struct generic_token *)
-                                begin_expression -> next,
-                        end_expression, result))
+                                begin -> next,
+                        end, result))
     return false;
   result -> x += mf -> pen_lft;
   return true;
@@ -14959,10 +14937,10 @@ caneta centralizada em $(x_0, y_0)$:
 
 \iniciocodigo
 @<Primário de Par: Outras Regras a Definir Depois@>+=
-else if(begin_expression -> type == TYPE_RT){
+else if(begin  -> type == TYPE_RT){
   if(!eval_pair_primary(mf, cx, (struct generic_token *)
-                                begin_expression -> next,
-                        end_expression, result))
+                                begin -> next,
+                        end, result))
     return false;
   result -> x += mf -> pen_rt;
   return true;

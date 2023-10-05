@@ -9,8 +9,10 @@
 #include "metafont.h"
 #include "interface.h"
 
-#define MIN_SIZE 200
-#define MAX_SIZE 200
+// In 96 dp1: 300 pt = 400 px
+
+#define MIN_SIZE 12
+#define MAX_SIZE 20
 
 #define ZOOM 1.0
 
@@ -153,6 +155,7 @@ void test(struct metafont *mf, char *font_name, char *c, int weight, int italic)
 			   &depth, &italcorr, &kerning);
       if(!ret){
 	fprintf(stderr, "ERROR loading WEAVEFONT glyph ['%s'].\n", c);
+	_Wprint_metafont_error(mf);
 	exit(1);
       }
       end = (float)clock()/CLOCKS_PER_SEC;
