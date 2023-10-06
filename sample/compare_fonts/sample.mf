@@ -52,25 +52,18 @@ beginchar("\"", (0.225+0.108*(weight-1))*size*pt, 0.667*size*pt, -(0.445-0.0125*
   draw t;
 endchar;
 
-beginchar("#", 
-          ((0.575+0.175*(weight-1)+0.05*italic-0.05*(weight-1)*italic) * size + 
-          (0.883-0.133*(weight-1)-0.716*italic-0.034*(weight-1)*italic)) * pt,
-      (0.625 * size + 0.917) * pt, 0);
-  pickup pensquare scaled ((0.119+0.090*(weight-1)) * h) slanted 0.15;
-  draw rt (0, (0.313-0.02*(weight-1)) * h) --
-    lft (0.948 * w, (0.313-0.02*(weight-1)) * h);
-  draw rt (0.0517 * w, (0.687+0.02*(weight-1)) * h) --
-    lft (w, (0.687+0.02*(weight-1)) * h);
-  draw top (0.241 * w, 0) -- bot (0.396 * w, h);
-  draw top (0.595 * w, 0) -- bot (0.75 * w, h);
+beginchar("#", (0.579+0.158*(weight-1))*size*pt, 0.668*size*pt, 0);
+  pickup pensquare scaled ((0.12+0.090*(weight-1)) * h) slanted 0.15;
+  draw rt (0, (0.31-0.02*(weight-1)) * h) --
+    lft (0.948 * w, (0.31-0.02*(weight-1)) * h);
+  draw rt (0.0517 * w, (0.68+0.02*(weight-1)) * h) --
+    lft (w, (0.68+0.02*(weight-1)) * h);
+  draw top ((0.241-0.01*(weight-1)) * w, 0) -- bot ((0.396-0.01*(weight-1)) * w, h);
+  draw top ((0.595+0.01*(weight-1)) * w, 0) -- bot ((0.75+0.01*(weight-1)) * w, h);
 endchar;
 
-beginchar("$",
-    ((0.488+0.1*(weight-1)+0.037*italic) * size +
-     (1.28-0.764*(weight-1)-0.26*italic)) * pt,
-      ((0.675-0.02*(weight-1)+0.075*italic) * size +
-      (1.53 + 0.89*(weight-1)-1.53*italic)) * pt,
-      (0.05 * size + 0.783) * pt);
+beginchar("$", (0.517+0.057*(weight-1)+0.01*italic+0.015*italic*(weight-1))*size*pt,
+    0.745*size*pt, 0.0875*size*pt);
   pair p0, p1, p2, p3, p4, p5, p6;
   path s;
   transform t;
@@ -145,8 +138,7 @@ beginchar("$",
   draw p7--p8;
 endchar;
 
-beginchar("%", ((0.825+0.125*(weight-1)+0.1*italic-0.162*italic*(weight-1)) * size + 1.3-0.834*(weight-1)-1.25*italic+2.5*italic*(weight-1)) * pt,
-    (0.625000 * size + 0.916667) * pt, 0);
+beginchar("%", (0.852+0.08*(weight-1)+0.025*italic)*size*pt, 0.68*size*pt, 0);
   path circle;
   pair p1, p2, p3, p4;
   pickup pencircle scaled (0.108+0.065*(weight-1)) * h;
@@ -174,21 +166,22 @@ beginchar("%", ((0.825+0.125*(weight-1)+0.1*italic-0.162*italic*(weight-1)) * si
   draw (0.228*w, 0)--(0.772*w,h);
 endchar;
 
-beginchar("&", ((0.612500+0.025*(weight-1)+0.025*italic+0.2*italic*(weight-1)) * size + 1.53-0.23*(weight-1)-1.48*italic-0.37*italic) * pt, ((0.625+0.1*(weight-1)-0.0125*italic*(weight-1)) * size + 0.917-0.767*(weight-1)+0.117*italic*(weight-1)) * pt, 0);
+beginchar("&", (0.657+0.02*(weight-1)-0.045*italic)*size*pt,
+    (0.68+0.027*(weight-1))*size*pt, 0);
   pair p0, p1, p2, p3, p4, p5, p6, p7, p8;
   path p, q;
-  pickup pensquare xscaled 0.17*h;
-  p0 = lft (w, 0);
-  p2 = (0.356*w, 0.561*h);
-  p1 = 0.4[p0, p2];
+  pickup pensquare xscaled (0.17+0.07*(weight-1)-0.04*italic*(weight-1))*h;
+  p0 = lft (w-(0.1w*italic*(weight-1)), 0);
+  p2 = ((0.356+0.082*italic+0.00*italic*(weight-1))*w, 0.561*h);
   draw p0--p2;
-  pickup pencircle scaled 0.13*h;
-  p4 = bot (0.423*w, h);
-  p3 = (0.21*w, ypart p2 + 0.66 * (ypart p4 - ypart p2));
-  p5 = (0.624*w, ypart p2 + 0.61 * (ypart p4 - ypart p2));
+  pickup pencircle scaled (0.13+0.05*(weight-1)-0.01*italic*(weight-1))*h;
+  p4 = bot ((0.423+0.174*italic-0.1*italic*(weight-1))*w, h);
+  p3 = ((0.21+0.135*italic-0.02*italic*(weight-1))*w, ypart p2 + 0.66 * (ypart p4 - ypart p2));
+  p5 = ((0.624+0.168*italic-0.09*italic*(weight-1))*w, ypart p2 + 0.61 * (ypart p4 - ypart p2));
   p6 = rt (0, 0.28*h);
-  p7 = top (0.342 * w, 0);
-  p8 = (0.8*w, 0.539*h);
+  p7 = top ((0.342+0.01*italic*(weight-1)) * w, 0);
+  p8 = ((0.8+0.119*italic)*w, (0.539-0.03*italic)*h);
+  p8 = italic[p8, lft (w, ypart p8)];
   p = p2 .. controls
     (xpart p2 + (0.543760 * (xpart p3 - xpart p2)),
       ypart p2 + (0.314640 * (ypart p3 - ypart p2)))
@@ -226,23 +219,64 @@ beginchar("&", ((0.612500+0.025*(weight-1)+0.025*italic+0.2*italic*(weight-1)) *
     (xpart p6 + (0.452067 * (xpart p7 - xpart p6)),
       ypart p6 + (0.953419 * (ypart p7 - ypart p6)))
     .. p7 .. controls
-    (xpart p7 + (0.538469 * (xpart p1 - xpart p7)),
-      ypart p7 + (-0.012226 * (ypart p1 - ypart p7)))
+    (xpart p7 + (0.538469 * (xpart p8 - xpart p7)),
+      ypart p7 + (-0.012226 * (ypart p8 - ypart p7)))
     and
-    (xpart p7 + (0.814176 * (xpart p1 - xpart p7)),
-      ypart p7 + (0.589757 * (ypart p1 - ypart p7)))
-    .. p1;
-  draw p;
-  %pickup pensquare xscaled 0.17*h; % Este pincel expõe problema no blending?
-  q = p1 .. controls
-    (xpart p1 + (0.673745 * (xpart p8 - xpart p1)),
-      ypart p1 + (0.316709 * (ypart p8 - ypart p1)))
-    and
-    (xpart p1 + (0.821956 * (xpart p8 - xpart p1)),
-      ypart p1 + (0.591944 * (ypart p8 - ypart p1)))
+    (xpart p7 + (0.814176 * (xpart p8 - xpart p7)),
+      ypart p7 + (0.589757 * (ypart p8 - ypart p7)))
     .. p8;
-  draw q;
+  draw p;
+  path semicircle;
+  pen eraser;
+  semicircle =   (0.5, 0)
+  .. controls (0.5, 0.13261) and (0.44733, 0.2598) ..
+  (0.35356, 0.35356)
+  .. controls (0.2598, 0.44733) and (0.13261, 0.5) ..
+  (0, 0.5);
+  semicircle = semicircle & semicircle rotated 90 -- (0.5, 0) & cycle;
+  eraser = makepen(semicircle);
+  pickup eraser scaled (0.14+0.05*(weight-1))*h;
+  erase p8;
 endchar;
+
+beginchar("'", (0.0825+0.0625*(weight-1))*size*pt, 0.667*size*pt, -(0.445-0.0125*(weight-1))*size*pt);
+  pen body;
+  pair p1, p2, p3, p4;
+  p3 = (0, h);
+  p4 = (w, h);
+  p1 = (w/2 -(0.3+0.075*(weight-1))*w, -d);
+  p2 = (w/2 +(0.3+0.075*(weight-1))*w, -d);
+  body = makepen(p1--p2--p4--p3--cycle);
+  pickup body;
+  draw (0, 0);
+endchar;
+
+beginchar("(", (0.217+0.08*(weight-1))*size*pt, 0.667*size*pt, 0.162*size*pt);
+  pair p1, p2, p3;
+  path body;
+  pickup pensquare xscaled (0.11+0.11*(weight-1))*h;
+  p1 = lft (w, -d); % 0.333w
+  p1 = italic[p1, (0.4w, -d)];
+  p2 = rt (0, (0.527-0.164*italic)*(h+d)-d);
+  p3 = lft (0.86w, h);
+  p3 = italic[p3, lft (w, h)];
+  body =
+    p1 .. controls
+    (xpart p1 + (0.572125 * (xpart p2 - xpart p1)),
+      ypart p1 + (0.275821 * (ypart p2 - ypart p1)))
+    and
+    (xpart p1 + (0.863152 * (xpart p2 - xpart p1)),
+      ypart p1 + (0.610297 * (ypart p2 - ypart p1)))
+    .. p2 .. controls
+    (xpart p2 + (0.017102 * (xpart p3 - xpart p2)),
+      ypart p2 + (0.476997 * (ypart p3 - ypart p2)))
+    and
+    (xpart p2 + (0.281357 * (xpart p3 - xpart p2)),
+      ypart p2 + (0.665754 * (ypart p3 - ypart p2)))
+    .. p3;
+  draw body;
+endchar;
+
 
 beginchar("0",
     ((0.525 - (weight-1) * 0.025 - 0.025 * italic +

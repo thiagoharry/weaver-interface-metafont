@@ -132,13 +132,13 @@ k\input tex/epsf.tex
 
 8.2.1. Sum and Subtraction \indice{73}
 
-8.2.2. Transformers and Scalar Multiplication and Division \indice{74}
+8.2.2. Transformers and Scalar Multiplication and Division \indice{75}
 
-8.2.3. Pair Intermediary Values, Literals and Variables \indice{79}
+8.2.3. Pair Intermediary Values, Literals and Variables \indice{80}
 
-8.2.4. Pairs in Numeric Expressions \indice{XX}
+8.2.4. Pairs in Numeric Expressions \indice{84}
 
-8.3. Transform Assignments and Expressions \indice{XX}
+8.3. Transform Assignments and Expressions \indice{86}
 
 8.3.1. Transforming Transformers \indice{XX}
 
@@ -4654,12 +4654,45 @@ bool eval_numeric_primary(struct metafont *mf, struct context *cx,
   @<Numeric Primary: Rule 3@>
   @<Numeric Primary: Additional Operators@>
   @<Numeric Primary: Rule 4@>
-  RAISE_ERROR_UNKNOWN_STATEMENT(mf, cx, OPTIONAL(begin -> line));
+  RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(begin -> line),
+                                 TYPE_T_NUMERIC);
   return false;
 }
 @
 
-The rules are:
+If we are not able to recognize the primary expression given the
+rules, we raise the error:
+
+\iniciocodigo
+@<Types of Error@>+=
+ERROR_UNKNOWN_EXPRESSION,
+@
+\fimcodigo
+
+Raising this error means storing the expression type that we weve
+evaluating when we found an unrecognizable construction:
+
+\iniciocodigo
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, line, type) {\
+  if(!mf -> errno){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNKNOWN_EXPRESSION);\
+    mf -> errno_int = type;}}
+@
+\fimcodigo
+
+And this is the diagnostic message:
+
+\iniciocodigo
+@<Print Error Message@>+=
+case ERROR_UNKNOWN_EXPRESSION:
+  fprintf(stderr, "%s:%s Unrecognizable %s expression.", mf -> file,
+          line_number, list_of_keywords[mf -> errno_int - 8]);
+  break;
+@
+\fimcodigo
+
+The rules to recognize the expression are:
 
 1) If the expression is composed by a single token, or if it begins
 with ``('' and ends with ``)'', or if it is composed by three tokens,
@@ -4959,14 +4992,16 @@ else{
   float token_value;
   struct generic_token *after_token;
   if(begin -> type != TYPE_NUMERIC){
-    RAISE_ERROR_UNKNOWN_STATEMENT(mf, cx, OPTIONAL(begin -> line));
+    RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(begin -> line),
+                                   TYPE_T_NUMERIC);
     return false;
   }
   token_value = ((struct numeric_token *) begin) -> value;
   after_token = begin -> next;
   if(after_token -> type == TYPE_DIVISION){
     if(after_token == end){
-      RAISE_ERROR_UNKNOWN_STATEMENT(mf, cx, OPTIONAL(begin -> line));
+      RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(begin -> line),
+                                     TYPE_T_NUMERIC);
       return false;
     }
     after_token = after_token -> next;
@@ -5039,7 +5074,8 @@ bool eval_numeric_atom(struct metafont *mf, struct context *cx,
     @<Numeric Atom: Rule 4@>
     @<Numeric Atom: Rule 5@>
   }
-  RAISE_ERROR_UNKNOWN_STATEMENT(mf, cx, OPTIONAL(begin -> line));
+  RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(begin -> line),
+                                 TYPE_T_NUMERIC);
   return false;
 }
 @
@@ -5293,31 +5329,12 @@ else if(type == TYPE_T_PAIR){
     return false;
   var = (struct symbolic_token *) begin;
   for(i = 0; i < number_of_variables; i ++){
-    assign_pair_variable((struct pair_variable *) var -> var, &result);
+    struct pair_variable *v = (struct pair_variable *) var -> var;
+    v -> x = result.x;
+    v -> y = result.y;
     var = (struct symbolic_token *) (var -> next);
     var = (struct symbolic_token *) (var -> next);
   }
-}
-@
-\fimcodigo
-
-The declaration for the assignment function:
-
-\iniciocodigo
-@<Local Function Declaration (metafont.c)@>+=
-void assign_pair_variable(struct pair_variable *target,
-                          struct pair_variable *source);
-@
-\fimcodigo
-
-And its implementation:
-
-\iniciocodigo
-@<Auxiliary Local Functions (metafont.c)@>+=
-void assign_pair_variable(struct pair_variable *target,
-                          struct pair_variable *source){
-  target -> x = source -> x;
-  target -> y = source -> y;
 }
 @
 \fimcodigo
@@ -5518,7 +5535,7 @@ bool eval_pair_secondary(struct metafont *mf, struct context *cx,
   }
   else
     return eval_pair_primary(mf, cx, begin, end, result);
-  RAISE_ERROR_UNKNOWN_STATEMENT(mf, cx, OPTIONAL(begin -> line));
+  RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(begin -> line), TYPE_T_PAIR);
   return false;
 }
 @
@@ -5775,10 +5792,7 @@ bool eval_pair_primary(struct metafont *mf, struct context *cx,
   @<Pair Primary: Other Rules to Be Defined Later@>
   @<Pair Primary: Rule 4@>
   @<Pair Primary: Rule 5@>
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
-          "expression.",  mf -> file, begin -> line);
-#endif
+  RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(begin -> line), TYPE_T_PAIR);
   return false;
 }
 @
@@ -5792,27 +5806,24 @@ pair variable:
 struct symbolic_token *tok = (struct symbolic_token *) begin;
 struct pair_variable *var;
 if(tok -> type != TYPE_SYMBOLIC){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable token "
-            "in pair expression.",  mf -> file, begin -> line);
-#endif
+  RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(begin -> line), TYPE_T_PAIR);
   return false;
 }
 var = (struct pair_variable *) tok -> var;
 if(var == NULL){
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s:%d: Undeclared variable "
-          "'%s'.\n", mf -> file, begin -> line,
-          tok -> value);
-#endif
+  RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, OPTIONAL(begin -> line),
+                                 tok -> value);
   return false;
 }
 if(var -> type != TYPE_T_PAIR){
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s:%d: Non-pair variable "
-          "'%s' in pair expression.\n", mf -> file,
-          begin -> line, tok -> value);
-#endif
+  RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, OPTIONAL(begin -> line),
+                                  tok -> value, var -> type,
+                                  TYPE_T_PAIR);
+  return false;
+}
+if(isnan(var -> x)){
+  RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, OPTIONAL(begin -> line),
+                                    tok -> value);
   return false;
 }
 result -> x = var -> x;
@@ -5823,20 +5834,16 @@ return true;
 
 If the expression is delimited by parenthesis, we could be facing a
 literal representation of a pair in the form $(a, b)$, or we could be
-dealing with a pair expression inside parenthesis. We can
-differentiate the two cases checking the presence of a comma inside
-the parenthesis, but not inside any other internal parenthesis or
-bracket.
+dealing with a pair expression inside parenthesis like in $(pair1+(a,
+b))$. We can differentiate the two cases checking the presence of a
+comma inside the parenthesis which is not nested in other internal
+parenthesis.
 
 \iniciocodigo
 @<Pair Primary: Rule 2@>=
   struct generic_token *begin_a, *end_a, *begin_b, *end_b, *comma;
   if(begin -> next == end){
-#if defined(W_DEBUG_METAFONT)
-      fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
-              "expression (empty parenthesis).\n ", mf -> file,
-              begin -> line);
-#endif
+    RAISE_ERROR_EMPTY_DELIMITER(mf, cx, OPTIONAL(begin -> line), '(');
     return false;
   }
   begin_a = (struct generic_token *) begin -> next;
@@ -5857,24 +5864,19 @@ bracket.
   }
   if(literal){
     struct numeric_variable a, b;
-    bool ret;
     comma = (struct generic_token *) end_a -> next;
     begin_b = (struct generic_token *) comma -> next;
     if(begin_b == end){
-#if defined(W_DEBUG_METAFONT)
-      fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
-              "expression.\n ", mf -> file, begin -> line);
-#endif
+      RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(comma -> line),
+                                     TYPE_T_PAIR);
       return false;
     }
     end_b = begin_b;
     while(end_b -> next != end)
       end_b = (struct generic_token *) end_b -> next;
-    ret = eval_numeric_expression(mf, cx, begin_a, end_a, &a);
-    if(!ret)
+    if(!eval_numeric_expression(mf, cx, begin_a, end_a, &a))
       return false;
-    ret = eval_numeric_expression(mf, cx, begin_b, end_b, &b);
-    if(!ret)
+    if(!eval_numeric_expression(mf, cx, begin_b, end_b, &b))
       return false;
     result -> x = a.value;
     result -> y = b.value;
@@ -5884,21 +5886,22 @@ bracket.
 \fimcodigo
 
 In the code above we identify if we are dealing with a literal
-checking for a comma and we set in the boolean
-variable \monoespaco{literal} if we found it. If this variable is not
-true, immediately after the last \monoespaco{if} above, we run the
-following \monoespaco{else} as the next rule:
+checking for a comma. If so, we set in the boolean
+variable \monoespaco{literal} as true. Otherwise, immediately after
+the last \monoespaco{if} above, we run the following \monoespaco{else}
+as the next rule:
 
 \iniciocodigo
 @<Pair Primary: Rule 3@>=
-else{
+else
   return eval_pair_expression(mf, cx, begin_a, end_a, result);
-}
 @
 \fimcodigo
 
 If the last token is a \monoespaco{]}, then we have a construction of
-type $a[b,c]$. Our task is separate the three parts $a$, $b$ and $c$, evaluate them and return $a(b+c)$:
+type $a[B,C]$ for some numeric $a$ and pairs $B$ and $C$. Our task is
+separate the three parts $a$, $B$ and $C$, evaluate them and return
+$B+a(C-B)$:
 
 \iniciocodigo
 @<Pair Primary: Rule 4@>=
@@ -5910,66 +5913,51 @@ else if(end -> type == TYPE_CLOSE_BRACKETS){
   DECLARE_NESTING_CONTROL();
   begin_a = begin;
   end_a = begin_a;
-  while(end_a != NULL){
+  while(end_a != end){ // a: From beginning expression to token before '['
     COUNT_NESTING(end_a);
-    if(IS_NOT_NESTED() &&
-       ((struct generic_token *) end_a -> next) -> type ==
-        TYPE_OPEN_BRACKETS)
+    if(IS_NOT_NESTED() && end_a -> next -> type == TYPE_OPEN_BRACKETS)
       break;
-    if(end_a -> next != end)
-      end_a = (struct generic_token *) end_a -> next;
-    else{
-#if defined(W_DEBUG_METAFONT)
-      fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
-              "expression.\n ", mf -> file, begin -> line);
-#endif
-      return false;
-    }
+    end_a = end_a -> next;
   }
-  begin_b = (struct generic_token *) end_a -> next;
-  begin_b = (struct generic_token *) begin_b -> next;
-  if(begin_b == end){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
-            "expression.\n ", mf -> file, begin -> line);
-#endif
+  if(end_a == end){
+    RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(begin -> line),
+                                   TYPE_T_PAIR);
     return false;
   }
+  begin_b = end_a -> next;
+  begin_b = begin_b -> next; // b: Begin after '['
   end_b = begin_b;
-  while(end_b != end){
+  while(end_b != end){ // b: Ends before ','
     COUNT_NESTING(end_b);
-    if(IS_NOT_NESTED() &&
-       ((struct generic_token *) end_b -> next) -> type == TYPE_COMMA)
+    if(IS_NOT_NESTED() && end_b -> next -> type == TYPE_COMMA)
       break;
-    if(end_b -> next != end)
-      end_b = (struct generic_token *) end_b -> next;
-    else{
-#if defined(W_DEBUG_METAFONT)
-      fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
-              "expression.\n ", mf -> file, begin -> line);
-#endif
-      return false;
-    }
+    end_b = end_b -> next;
   }
-  begin_c = (struct generic_token *) end_b -> next;
-  begin_c = (struct generic_token *) begin_c -> next;
-  if(begin_c == end){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
-            "expression.\n ", mf -> file, begin -> line);
-#endif
+  if(end_b == end){
+    RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(begin -> line),
+                                   TYPE_T_PAIR);
     return false;
   }
+  begin_c = end_b -> next;
+  begin_c = begin_c -> next; // c: Begins after ','
   end_c = begin_c;
-  while(end_c -> next != end)
-    end_c = (struct generic_token *) end_c -> next;
-  if(!eval_numeric_atom(mf, cx, begin_a, end_a, &a))
+  while(end_c != end){ // c: ends in the second to last token
+    if(end_c -> next == end)
+      break;
+    end_c =  end_c -> next;
+  }
+  if(end_c == end){
+    RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(begin -> line),
+                                   TYPE_T_PAIR);
     return false;
-  if(!eval_pair_expression(mf, cx, begin_b, end_b, &b))
+  }
+  if(!eval_numeric_atom(mf, cx, begin_a, end_a, &a)) // Eval 'a'
     return false;
-  if(!eval_pair_expression(mf, cx, begin_c, end_c, &c))
+  if(!eval_pair_expression(mf, cx, begin_b, end_b, &b)) // Eval 'b'
     return false;
-  result -> x = b.x + a.value * (c.x - b.x);
+  if(!eval_pair_expression(mf, cx, begin_c, end_c, &c)) // Eval 'c'
+    return false;
+  result -> x = b.x + a.value * (c.x - b.x); // Computes b + a(c-b)
   result -> y = b.y + a.value * (c.y - b.y);
   return true;
 }
@@ -5978,47 +5966,49 @@ else if(end -> type == TYPE_CLOSE_BRACKETS){
 
 The last rule is when we have a scalar multiplication operator. The
 operator can be \monoespaco{+}, \monoespaco{-}, a single numeric token
-or a fraction:
+or a fraction. We have one example for each of the four cases below:
+
+\alinhaverbatim
+pair a, b, c, d;
+a = +(1, 2);
+b = -(1, 2);
+c = 2a;
+d = 1/2b;
+\alinhanormal
+
+The code that deals with such expressions are:
 
 \iniciocodigo
 @<Pair Primary: Rule 5@>=
 else{
-  bool ret;
-  if(begin -> type == TYPE_SUM)
-    return eval_pair_primary(mf, cx, (struct generic_token *)
-                                     begin -> next,
-                             end, result);
-  else if(begin -> type == TYPE_SUBTRACT){
-    ret = eval_pair_primary(mf, cx, (struct generic_token *)
-                                     begin -> next,
-                             end, result);
-    if(!ret)
+  if(begin -> type == TYPE_SUM) // Unary '+' before expression
+    return eval_pair_primary(mf, cx, begin -> next, end, result);
+  else if(begin -> type == TYPE_SUBTRACT){ // Unary '-'
+    if(!eval_pair_primary(mf, cx, begin -> next, end, result))
       return false;
     result -> x = - (result -> x);
     result -> y = - (result -> y);
     return true;
   }
-  else if(begin -> type == TYPE_NUMERIC){
+  else if(begin -> type == TYPE_NUMERIC){ // Number/fraction before expression
     struct generic_token *tok;
     float value = ((struct numeric_token *) begin) -> value;
-    tok = (struct generic_token *) begin -> next;
-    if(tok -> type == TYPE_DIVISION){
+    tok = begin -> next;
+    if(tok -> type == TYPE_DIVISION){ // It is a fraction
       tok = begin -> next;
-      if(tok == end || tok -> next == end ||
-         tok -> type != TYPE_NUMERIC){
-#if defined(W_DEBUG_METAFONT)
-        fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
-                "expression.\n ", mf -> file, begin -> line);
-#endif
+      if(tok == end || tok -> next == end || tok -> type != TYPE_NUMERIC){
+        RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(begin -> line),
+                                       TYPE_T_PAIR);
+        return false;
+      }
+      if(((struct numeric_token *) tok) -> value == 0.0){
+        RAISE_ERROR_DIVISION_BY_ZERO(mf, cx, OPTIONAL(begin -> line));
         return false;
       }
       value /= ((struct numeric_token *) tok) -> value;
       tok = tok -> next;
     }
-    ret = eval_pair_primary(mf, cx, (struct generic_token *)
-                                     begin -> next,
-                             end, result);
-    if(!ret)
+    if(!eval_pair_primary(mf, cx, begin -> next, end, result))
       return false;
     result -> x *= value;
     result -> y *= value;
@@ -6137,17 +6127,41 @@ else if(begin -> type == TYPE_ANGLE){
   if(!eval_pair_primary(mf, cx, begin -> next, end, &p))
     return false;
   if(p.x == 0.0 && p.y == 0.0){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s:%d: Measuring the angle "
-            "of (0,0).\n ", mf -> file,
-            begin -> line);
-#endif
+    RAISE_ERROR_ANGLE_OF_ORIGIN(mf, cx, OPTIONAL(begin -> line));
     return false;
   }
   result -> value = (float) asin(p.y / (hypot(p.x * p.x, p.y * p.y)));
   result -> value *= 57.2958; // Radianos para graus
   return true;
 }
+@
+\fimcodigo
+
+Measuring the angle of origin $(0, 0)$ is an error of type:
+
+\iniciocodigo
+@<Types of Error@>+=
+ERROR_ANGLE_OF_ORIGIN,
+@
+\fimcodigo
+
+This is the macro that raises the error:
+
+\iniciocodigo
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_ANGLE_OF_ORIGIN(mf, cx, line) {\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_ANGLE_OF_ORIGIN);}
+@
+\fimcodigo
+
+And the error message that is shown in the screen:
+
+\iniciocodigo
+@<Print Error Message@>+=
+case ERROR_ANGLE_OF_ORIGIN:
+  fprintf(stderr, "%s:%s Undefined operation 'angle (0, 0)'.",
+          mf -> file, line_number);
+  break;
 @
 \fimcodigo
 
