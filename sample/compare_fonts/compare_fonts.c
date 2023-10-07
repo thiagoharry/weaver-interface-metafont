@@ -165,7 +165,7 @@ void test(struct metafont *mf, char *font_name, char *c, int weight, int italic)
     }
     { // Screen rendering
       int i, j, p;
-      struct user_interface *line, *f, *m;
+      struct user_interface *line, *f, *m, *h, *h1, *h2;
       _Wmark_history_interface(); 
       f = _Wnew_interface(NULL, NULL,
 			  (window_width - ZOOM * face->glyph -> bitmap.width) / 2
@@ -179,6 +179,9 @@ void test(struct metafont *mf, char *font_name, char *c, int weight, int italic)
 			  (window_height + ZOOM * (height+depth)) / 2 - depth + 1,
 		          0.0, ZOOM * width, ZOOM * (height + depth));
       line = _Wnew_interface(NULL, NULL, window_width / 2, window_height / 2, 0.0, window_width, 1);
+      h = _Wnew_interface(NULL, NULL, window_width / 2, window_height / 2, 0.0, 1, window_height);
+      h1 = _Wnew_interface(NULL, NULL, (window_width - 2 * ZOOM * face->glyph -> bitmap.width) / 2, window_height / 2, 0.0, 1, window_height);
+      h2 = _Wnew_interface(NULL, NULL, (window_width + 2 * ZOOM * width) / 2, window_height / 2, 0.0, 1, window_height);
       unsigned char *f_buffer;
       f_buffer = (unsigned char *) malloc(face->glyph -> bitmap.width * face->glyph -> bitmap.rows * 4);
       if(f_buffer == NULL){
@@ -197,6 +200,42 @@ void test(struct metafont *mf, char *font_name, char *c, int weight, int italic)
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
       glBindTexture(GL_TEXTURE_2D, 0);
       line -> _loaded_texture = true;
+      h -> _texture1 = (GLuint *) malloc(sizeof(GLuint));
+      glGenTextures(1, h -> _texture1);
+      glBindTexture(GL_TEXTURE_2D, *(h -> _texture1));
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0,
+		   GL_RGBA, GL_UNSIGNED_BYTE, f_buffer);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+      glBindTexture(GL_TEXTURE_2D, 0);
+      h -> _loaded_texture = true;
+
+      h1 -> _texture1 = (GLuint *) malloc(sizeof(GLuint));
+      glGenTextures(1, h1 -> _texture1);
+      glBindTexture(GL_TEXTURE_2D, *(h1 -> _texture1));
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0,
+		   GL_RGBA, GL_UNSIGNED_BYTE, f_buffer);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+      glBindTexture(GL_TEXTURE_2D, 0);
+      h1 -> _loaded_texture = true;
+
+      h2 -> _texture1 = (GLuint *) malloc(sizeof(GLuint));
+      glGenTextures(1, h2 -> _texture1);
+      glBindTexture(GL_TEXTURE_2D, *(h2 -> _texture1));
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0,
+		   GL_RGBA, GL_UNSIGNED_BYTE, f_buffer);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+      glBindTexture(GL_TEXTURE_2D, 0);
+      h2 -> _loaded_texture = true;
+      
       p = 0;
       for(i = 0; i < face->glyph -> bitmap.rows; i ++)
 	for(j = 0; j < face->glyph -> bitmap.width; j ++){

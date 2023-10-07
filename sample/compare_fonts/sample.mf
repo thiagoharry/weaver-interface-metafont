@@ -251,12 +251,13 @@ beginchar("'", (0.0825+0.0625*(weight-1))*size*pt, 0.667*size*pt, -(0.445-0.0125
   draw (0, 0);
 endchar;
 
-beginchar("(", (0.217+0.08*(weight-1))*size*pt, 0.667*size*pt, 0.162*size*pt);
+beginchar("(", (0.217+0.08*(weight-1)+0.09*italic)*size*pt,
+    0.667*size*pt, 0.162*size*pt);
   pair p1, p2, p3;
   path body;
   pickup pensquare xscaled (0.11+0.11*(weight-1))*h;
-  p1 = lft (w, -d); % 0.333w
-  p1 = italic[p1, (0.4w, -d)];
+  p1 = lft (w, -d);
+  p1 = italic[p1, (0.35w, -d)];
   p2 = rt (0, (0.527-0.164*italic)*(h+d)-d);
   p3 = lft (0.86w, h);
   p3 = italic[p3, lft (w, h)];
@@ -275,6 +276,61 @@ beginchar("(", (0.217+0.08*(weight-1))*size*pt, 0.667*size*pt, 0.162*size*pt);
       ypart p2 + (0.665754 * (ypart p3 - ypart p2)))
     .. p3;
   draw body;
+endchar;
+
+beginchar(")", (0.217+0.08*(weight-1)+0.1*italic)*size*pt,
+    0.667*size*pt, 0.162*size*pt);
+  pair p1, p2, p3;
+  path body;
+  pickup pensquare xscaled (0.11+0.11*(weight-1))*h;
+  p1 = rt (0, -d);
+  p2 = lft (w, (0.533+0.112*italic)*(h+d)-d);
+  p3 = rt (0.14w, h);
+  p3 = italic[p3, rt (0.544w, h)];
+  body =
+    p1 .. controls
+    (xpart p1 + (0.572125 * (xpart p2 - xpart p1)),
+      ypart p1 + (0.275821 * (ypart p2 - ypart p1)))
+    and
+    (xpart p1 + (0.863152 * (xpart p2 - xpart p1)),
+      ypart p1 + (0.610297 * (ypart p2 - ypart p1)))
+    .. p2 .. controls
+    (xpart p2 + (0.017102 * (xpart p3 - xpart p2)),
+      ypart p2 + (0.476997 * (ypart p3 - ypart p2)))
+    and
+    (xpart p2 + (0.281357 * (xpart p3 - xpart p2)),
+      ypart p2 + (0.665754 * (ypart p3 - ypart p2)))
+    .. p3;
+  draw body;
+endchar;
+
+beginchar("*", (0.297+0.04*(weight-1)-0.01*italic)*size*pt,
+    0.667*size*pt, (-0.387+0.037*(weight-1)+0.015*italic)*size*pt);
+  numeric radius;
+  if w <= (h+d):
+    radius = w/2;
+  else:
+    radius = (h+d)/2;
+  fi
+  pair p0, p1, p2, p3, p4, p5;
+  p0 = (w/2, (h-d)/2);
+  p1 = (radius, 0) rotated (16-5*italic) shifted p0;
+  p2 = (radius, 0) rotated (90-5*italic) shifted p0;
+  p3 = (radius, 0) rotated (164-5*italic) shifted p0;
+  p4 = (radius, 0) rotated (235-5*italic) shifted p0;
+  p5 = (radius, 0) rotated (305-5*italic) shifted p0;
+  pen brush;
+  brush = pensquare yscaled ((0.15+0.1*(weight-1))*(h-w));
+  pickup brush rotated (angle (p1-p0));
+  draw p0-- p1;
+  pickup brush rotated (angle (p2-p0));
+  draw p0-- p2;
+  pickup brush rotated (angle (p3-p0));
+  draw p0--p3;
+  pickup brush rotated (-angle (p4-p0));
+  draw p0-- p4;
+  pickup brush rotated (-angle (p5-p0));
+  draw p0-- p5;
 endchar;
 
 
