@@ -333,13 +333,48 @@ beginchar("*", (0.297+0.04*(weight-1)-0.01*italic)*size*pt,
   draw p0-- p5;
 endchar;
 
+beginchar("+", (0.497+0.015*(weight-1)+0.0025*italic)*size*pt, 0.495*size*pt, 0);
+  pickup pensquare scaled 0.16*h;
+  draw top (w/2, 0) -- bot (w/2, h);
+  draw rt (0, h/2) -- lft (w, h/2);
+endchar;
 
-beginchar("0",
-    ((0.525 - (weight-1) * 0.025 - 0.025 * italic +
-     (italic * (weight-1) * 0.137500)) * size +
-     (0.833 + (weight-1) * 1.15 + italic * 1.483334 -
-     (italic * (weight-1) * 1.616667))) * pt,
-     (0.625000 * size + 0.916667) * pt, 0);
+beginchar(",", (0.13+0.068*(weight-1)+0.03*italic-0.009*italic*(weight-1))*size*pt,
+    (0.12+0.0625*(weight-1)+0.0025*italic+0.005*italic*(weight-1))*size*pt,
+      (0.132+0.015*(weight-1))*size*pt);
+  numeric c;
+  if w < h:
+    c = w;
+  else:
+    c = h;
+  fi
+  pickup pencircle scaled c;
+  draw top lft (w, 0);
+  pickup pensquare xscaled c/2;
+  draw lft (w+0.1*c, c/2) -- rt (0, -d);
+endchar;
+
+beginchar("-", (0.292+0.035*(weight-1)+0.02*italic-0.01*italic*(weight-1))*size*pt,
+    (0.29+0.0225*(weight-1))*size*pt,
+    (-0.208+0.025*(weight-1))*size*pt);
+  pickup pensquare scaled (h+d) slanted (0.3 * italic);
+  draw rt (0, (h-d)/2) -- lft (w, (h-d)/2);
+endchar;
+
+beginchar(".", (0.13+0.068*(weight-1)+0.002*italic-0.002*italic*(weight-1))*size*pt,
+    (0.118+0.065*(weight-1))*size*pt,
+    0.0125*size*pt);
+  pickup pencircle scaled (h+d);
+  draw (w/2, (h-d)/2);
+endchar;
+
+beginchar("/", (0.35+0.065*(weight-1)+0.14*italic)*size*pt, 0.668*size*pt, 0);
+  pickup pensquare xscaled (0.14+0.09*(weight-1))*h;
+  draw rt (0, 0) -- lft (w, h);
+endchar;
+
+beginchar("0", (0.532+0.045*(weight-1)+0.055*italic-0.015*italic*(weight-1))*size*pt,
+    0.68*size*pt, 0.0125*size*pt);
   pen dot;
   pair tmp;
   numeric wf, ang, zero_height, zero_width;
@@ -347,7 +382,7 @@ beginchar("0",
   % Creating pen
   wf = (weight - 1);
   dot = pencircle scaled (0.11594202898550725 * h);
-  dot = dot xscaled (1.3 + (0.7 * wf));
+  dot = dot xscaled (1.3 + (0.6 * wf));
   dot = dot yscaled (1 + (0.25 * wf));
   dot = dot yscaled (1 + (0.125 * italic) + (0.125 * wf));
   pickup dot;
@@ -362,12 +397,12 @@ beginchar("0",
   circle = circle & circle rotated 180 & cycle;
   ang = -15 * italic;
   zero_height = 0.988 * (h / (cosd ang));
-  zero_width = w * (cosd ang) - italic * 0.2 * size;
+  zero_width = w * (cosd ang) - italic * 0.07 * size;
   tmp = (w, h) xscaled (zero_width / w);
   tmp = tmp yscaled (zero_height / h);
   tmp = tmp - (top rt (0, 0)) + (bot lft (0, 0));
   circle = circle xscaled (xpart tmp) yscaled (ypart tmp);
-  circle = circle rotated ang shifted (w/2, h/2);
+  circle = circle rotated ang shifted (w/2, h/2 - 2);
   draw circle;
   % Creating the dash
   dash = (-0.5, 0) -- (0.5, 0);
@@ -379,5 +414,52 @@ beginchar("0",
   draw dash;
 endchar
 
+beginchar("1", (0.265+0.04*(weight-1)+0.035*italic+0.02*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+  pair p1, p2, p3;
+  pickup pensquare xscaled (0.13+0.1*(weight-1))*h;
+  p1 = lft (w - 0.5w * italic, 0);
+  p3 = lft (w, h);
+  p2 = (0.8-0.03*(weight-1))[p1, p3];
+  draw p1 -- p2;
+  pickup pensquare yscaled (0.12+0.075*(weight-1)-0.02*italic)*h rotated (-10 * italic);
+  draw rt (0, (0.8-0.03*(weight-1))*h) -- p2;
+  p2 = p2 + ((0.065+0.05*(weight-1))*h, 0);
+  pickup pensquare xscaled (0.1+0.07*(weight-1))*h ;
+  draw lft p2 -- lft (w, h);
+  pickup pensquare xscaled 0.1h yscaled 0.03h;
+  p1 = rt bot (w-(0.1+0.07*(weight-1))*h, h);
+  p2 = rt bot (0 + italic * 0.02h + italic * (weight-1) * 0.01h, (0.86+0.0075*(weight-1))*h);
+  path p;
+  p =
+    p1 .. controls
+    (xpart p1 + (0.110926 * (xpart p2 - xpart p1)),
+      ypart p1 + (1.088190 * (ypart p2 - ypart p1)))
+    and
+    (xpart p1 + (0.679659 * (xpart p2 - xpart p1)),
+      ypart p1 + (0.951881 * (ypart p2 - ypart p1)))
+    .. p2;
+  draw p;
+  pen eraser;
+  eraser = makepen((w, h)--(w, 0)--(0.065w +w - 0.5w * italic, 0)--cycle);
+  pickup eraser;
+  erase (0,0);
+endchar;
 
-  
+beginchar("2", 0, 0, 0);
+endchar;
+beginchar("3", 0, 0, 0);
+endchar;
+beginchar("4", 0, 0, 0);
+endchar;
+beginchar("5", 0, 0, 0);
+endchar;
+beginchar("6", 0, 0, 0);
+endchar;
+beginchar("7", 0, 0, 0);
+endchar;
+beginchar("8", 0, 0, 0);
+endchar;
+beginchar("9", 0, 0, 0);
+endchar;
+

@@ -3434,6 +3434,95 @@ void path_recursive_free(void (*free_func)(void *),
 @
 \fimcodigo
 
+\subsubsecao{7.4.1. Removendo Recursão de Variáveis de Caminho}
+
+As variáveis de caminho são as mais complexas da linguagem WEAVEFONT,
+e podem estar representadas de diferentes formas. Entretanto, muitas
+destas formas são provisórias e apresentam características
+indesejáveis. Por exemplo, embora um caminho possa armazenar seus
+subcaminhos de maneira recursiva por meio de vários ponteiros, muitas
+vezes isso é indesejável, pois nos impede de acessar rapidamente cada
+um dos seus pontos.
+
+Depois de avaliar um caminho, antes de armazenar ele como variável, é
+interessante transformá-lo para o formato em que seja mais fácil
+manipulá-lo. O caminho inicialmente vem no formato que foi mais fácil
+montá-lo, dado a expressão de caminho que o gerou. Devemos então
+aproveitar que o caminho será armazenado para convertê-lo de um
+formato para outro.
+
+A primeira destas conversões é remover a recursão dos caminhos. Isso
+fará com que sua \monoespaco{length} e \monoespaco{total\_length}
+fiquem com o mesmo tamanho, eliminando possibilidade de
+confusões. Além disso, nenhum de seus pontos irá apontar para qualquer
+subcaminho: cada um deles será efetivamente um ponto.
+
+Para isso, vamos definir uma função que fará uma cópia de um
+caminho. Mas ao fazer tal cópia, toda a recursão da origem será
+eliminada no destino. A função que fará isso tem seu cabeçalho
+mostrado abaixo, seguido do cabeçalho da função de cópia recursiva
+auxiliar que ela chamará:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+void recursive_copy_points(void *(*alloc)(size_t),
+                          struct path_variable **target,
+                          struct path_variable *source,
+                          bool alloc_target); // Precisa alocar destino?
+void recursive_aux_copy(struct path_points **dst, struct path_variable *origin);
+@
+\fimcodigo
+
+A função usa a função de alocação indicada, que pode ser a permanente
+ou temporária. Em seguida, preenche as variáveis relevantes no destino
+e começa a copiar recursivamente.
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+void recursive_copy_points(void *(*alloc)(size_t),
+                          struct path_variable **target,
+                          struct path_variable *source,
+                          bool alloc_target){
+  struct path_points *p;
+  if(alloc_target)
+    *target = (struct path_variable *) alloc(sizeof(struct path_variable));
+  (*target) -> cyclic = source -> cyclic;
+  (*target) -> length = source -> total_length;
+  (*target) -> total_length = source -> total_length;
+  (*target) -> points = (struct path_points *)
+                          alloc(sizeof(struct path_points) *
+                                (*target) -> total_length);
+  p = (*target) -> points;
+  recursive_aux_copy(&p, source);
+}
+@
+\fimcodigo
+
+Já a função recursiva que efetivamente copia os pontos:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+void recursive_aux_copy(struct path_points **dst, struct path_variable *origin){
+  int index = 0;
+  while(index <= origin -> length - 1){
+    if(origin -> points[index].subpath == NULL &&
+       !isnan(origin -> points[index].x)){
+      // Copy:
+      memcpy(*dst, &(origin -> points[index]),  sizeof(struct path_points));
+      (*dst) -> subpath = NULL;
+      (*dst) ++;
+    }
+    else if(origin -> points[index].subpath != NULL)
+      recursive_aux_copy(dst, (struct path_variable *)
+                              (origin -> points[index].subpath));
+    index  ++;
+  }
+  return;
+}
+@
+\fimcodigo
+
+
 \subsecao{7.5. Variáveis de Caneta}
 
 Uma variável de caneta armazena a estrutura utilizada para desenhar
@@ -6934,69 +7023,14 @@ caminho a ser copiado e copiar seus dados. Ao copiar seus pontos,
 devemos também checar se há outros subcaminhos que devem ser copiados
 recursivamente. Para fazer isso, usamos a seguinte função auxiliar:
 
-\iniciocodigo
-@<Declaração de Função Local (metafont.c)@>+=
-void recursive_copy_points(void *(*alloc)(size_t),
-                          struct path_variable **target,
-                          struct path_variable *source,
-                          bool alloc_target);
-@
-\fimcodigo
 
 Essa função faz a alocação se necessário, obtém ponteiros necessários
 e em seguida chama a função que efetivamente percorre recursivamente a
 origem enquanto copia para o destino os pontos da origem:
 
-\iniciocodigo
-@<Funções Auxiliares Locais (metafont.c)@>+=
-void recursive_copy_points(void *(*alloc)(size_t),
-                          struct path_variable **target,
-                          struct path_variable *source,
-                          bool alloc_target){
-  struct path_points *p;
-  if(alloc_target)
-    *target = (struct path_variable *) alloc(sizeof(struct path_variable));
-  (*target) -> cyclic = source -> cyclic;
-  (*target) -> length = source -> total_length;
-  (*target) -> total_length = source -> total_length;
-  (*target) -> points = (struct path_points *)
-                          alloc(sizeof(struct path_points) *
-                                (*target) -> total_length);
-  p = (*target) -> points;
-  recursive_aux_copy(&p, source);
-}
-@
-\fimcodigo
 
 A função que efetivamente percorre os pontos recursivamente e copia:
 
-\iniciocodigo
-@<Declaração de Função Local (metafont.c)@>+=
-void recursive_aux_copy(struct path_points **dst, struct path_variable *origin);
-@
-\fimcodigo
-
-\iniciocodigo
-@<Funções Auxiliares Locais (metafont.c)@>+=
-void recursive_aux_copy(struct path_points **dst, struct path_variable *origin){
-  int index = 0;
-  while(index <= origin -> length - 1){
-    if(origin -> points[index].subpath == NULL &&
-       !isnan(origin -> points[index].x)){
-      // Copy:
-      memcpy(*dst, &(origin -> points[index]),  sizeof(struct path_points));
-      (*dst) -> subpath = NULL;
-      (*dst) ++;
-    }
-    else if(origin -> points[index].subpath != NULL)
-      recursive_aux_copy(dst, (struct path_variable *)
-                              (origin -> points[index].subpath));
-    index  ++;
-  }
-  return;
-}
-@
-\fimcodigo
 
 
 Vejamos agora a expressões que existem para expressões de caminhos:

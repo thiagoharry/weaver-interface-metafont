@@ -3366,6 +3366,92 @@ void path_recursive_free(void (*free_func)(void *),
 @
 \fimcodigo
 
+\subsubsecao{7.4.1. Removing Recursion from Path Variables}
+
+Pathh variables are the most complex variables in WEAVEFONT
+language. They can be stored in memory in several different
+format. However, some of these formats are provisional and has
+undesirable properties. For example, while we can represent a path
+storing its subpaths recursively using several pointers, this is not
+desirable because it makes hard to access quickly random points in the
+path.
+
+After evaluating a path, it will be in the format in which it was more
+convenient to assemble given the expression that created the path. But
+before storing such variables, we should convert its format for the
+one that it is more convenient to handle in future operations.
+
+The first of these conversions is removing recursion from paths. This
+will turn \monoespaco{length} and \monoespaco{total\_length} equal,
+removing possible confusions and misunderstandings when these values
+differ. Besided this, no point in the path will point to a subpath:
+all point structures will indeeed represent a single point.
+
+For this, we will define a function that copies a path variable, but
+while performing the copy, it will remove the recursion. The function
+that performs this copy has the following header, followed by the
+header of the auxiliary and recursive function that it will call:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+void recursive_copy_points(void *(*alloc)(size_t),
+                          struct path_variable **target,
+                          struct path_variable *source,
+                          bool alloc_target); // Should we alloc target?
+void recursive_aux_copy(struct path_points **dst, struct path_variable *origin);
+@
+\fimcodigo
+
+The function will use the allocation function given as argument, which
+could be the permanent or temporary. Then it initialize the relevant
+variables in the target and copy recursively:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+void recursive_copy_points(void *(*alloc)(size_t),
+                          struct path_variable **target,
+                          struct path_variable *source,
+                          bool alloc_target){
+  struct path_points *p;
+  if(alloc_target)
+    *target = (struct path_variable *) alloc(sizeof(struct path_variable));
+  (*target) -> cyclic = source -> cyclic;
+  (*target) -> length = source -> total_length;
+  (*target) -> total_length = source -> total_length;
+  (*target) -> points = (struct path_points *)
+                          alloc(sizeof(struct path_points) *
+                                (*target) -> total_length);
+  p = (*target) -> points;
+  recursive_aux_copy(&p, source);
+}
+@
+\fimcodigo
+
+The recursive function that copy each point:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+void recursive_aux_copy(struct path_points **dst, struct path_variable *origin){
+  int index = 0;
+  while(index <= origin -> length - 1){
+    if(origin -> points[index].subpath == NULL &&
+       !isnan(origin -> points[index].x)){
+      // Copy:
+      memcpy(*dst, &(origin -> points[index]),  sizeof(struct path_points));
+      (*dst) -> subpath = NULL;
+      (*dst) ++;
+    }
+    else if(origin -> points[index].subpath != NULL)
+      recursive_aux_copy(dst, (struct path_variable *)
+                              (origin -> points[index].subpath));
+    index  ++;
+  }
+  return;
+}
+@
+\fimcodigo
+
+
 \subsecao{7.5. Pen Variables}
 
 A pen variable stores the structure needed to draw lines and forms in
@@ -6813,71 +6899,15 @@ copying the data. While copying the points, we should also check if
 there are other subpaths that should be copyied recursively. To do
 this, we use the following auxiliary function:
 
-\iniciocodigo
-@<Local Function Declaration (metafont.c)@>+=
-void recursive_copy_points(void *(*alloc)(size_t),
-                          struct path_variable **target,
-                          struct path_variable *source,
-                          bool alloc_target);
-@
-\fimcodigo
 
 This function will make the allocation for the new variable if
 necessary, will also get the pointers por the point array in the
 destiny and will call another auxiliary function to walk recursively
 over the destiny while copying the points:
 
-\iniciocodigo
-@<Auxiliary Local Functions (metafont.c)@>+=
-void recursive_copy_points(void *(*alloc)(size_t),
-                          struct path_variable **target,
-                          struct path_variable *source,
-                          bool alloc_target){
-  struct path_points *p;
-  if(alloc_target)
-    *target = (struct path_variable *) alloc(sizeof(struct path_variable));
-  (*target) -> cyclic = source -> cyclic;
-  (*target) -> length = source -> total_length;
-  (*target) -> total_length = source -> total_length;
-  (*target) -> points = (struct path_points *)
-                          alloc(sizeof(struct path_points) *
-                                (*target) -> total_length);
-  p = (*target) -> points;
-  recursive_aux_copy(&p, source);
-}
-@
-\fimcodigo
 
 The function that will walk over the origin recursively copying the
 points:
-
-\iniciocodigo
-@<Local Function Declaration (metafont.c)@>+=
-void recursive_aux_copy(struct path_points **dst, struct path_variable *origin);
-@
-\fimcodigo
-
-\iniciocodigo
-@<Auxiliary Local Functions (metafont.c)@>+=
-void recursive_aux_copy(struct path_points **dst, struct path_variable *origin){
-  int index = 0;
-  while(index <= origin -> length - 1){
-    if(origin -> points[index].subpath == NULL &&
-       !isnan(origin -> points[index].x)){
-      // Copy:
-      memcpy(*dst, &(origin -> points[index]),  sizeof(struct path_points));
-      (*dst) -> subpath = NULL;
-      (*dst) ++;
-    }
-    else if(origin -> points[index].subpath != NULL)
-      recursive_aux_copy(dst, (struct path_variable *)
-                              (origin -> points[index].subpath));
-    index  ++;
-  }
-  return;
-}
-@
-\fimcodigo
 
 
 Now we can examine the path expressions.
