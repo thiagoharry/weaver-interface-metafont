@@ -3219,8 +3219,50 @@ else if(!strcmp(buffer, "identity"))
 
 \subsecao{7.4. Path Variables}
 
-A path variable store a sequence of points and control
-points. Together they compose a sequence of Cubic Beziér Curves.
+Path variables are the most complex variables in the WEAVEFONT
+language. They store a sequence of curves, where the next curve begins
+in the same point where the last ended. Each curve can be represented
+in several different formats. But all them are cubic Beziér
+curves. The path may be cyclic, when the last curve ends in the same
+point where the first curbe begins. To store the path contents, we may
+need to allocate additional structures. Basically a path variable
+store most of it data in a ``point'' array, where each point in the
+array is a literal point of the curve with additional data, or is a
+pointer to several points that compose a subpath. The variable that
+stores a path is:
+
+\iniciocodigo
+@<Local Data Structures (metafont.c)@>+=
+struct path_variable{
+  int type; // Must be 'TYPE_T_PATH'
+  void *next;
+  bool permanent; // Which allocation was used: permanent or temporary
+  bool cyclic;
+  int length, number_of_points;
+  struct path_points *points;
+};
+@
+\fimcodigo
+
+The number of points in a path variable is always greater or equal
+than the variable \monoespaco{length}, as each position in the array
+with \monoespaco{length} elements is either a point or a subpath with
+1 or more points.
+
+In fact, each point in the array may be in one of three different
+formats:
+
+\iniciocodigo
+@<Local Macros (metafont.c)@>+=
+#define UNINITIALIZED_FORMAT 0 // Do not use, it's just for initialization
+#define PROVISIONAL_FORMAT   1 // Still collecting data about the point
+#define SUBPATH_FORMAT       2 // Pointer for several points in subpath
+#define FINAL_FORMAT         3 // Final format, ready for use
+@
+\fimcodigo
+
+Now we describe how is the final format, which we expect for our
+points.
 
 A Cubic Beziér Curve is defined by two extremity points ($z_1$ and
 $z_4$) and two control points ($z_2'$ and $z_3'$). The two extremity
@@ -3257,17 +3299,23 @@ Curves is:
 \iniciocodigo
 @<Local Data Structures (metafont.c)@>+=
 struct path_points{
-  float x, y; // Extremity point
-  float u_x, u_y, v_x, v_y;   // Control Points
-  void *subpath;
-};
-struct path_variable{
-  int type; // Must be 'TYPE_T_PATH'
-  void *next;
-  bool permanent; // Which allocation was used: permanent or temporary
-  bool cyclic;
-  int length, total_length;
-  struct path_points *points;
+  int format; // The point format
+  union{
+    // Final format: extremity point and 2 control points
+    struct{
+      float x, y; // Extremity point
+      float u_x, u_y, v_x, v_y;   // Next 2 control points after it
+    } point;
+    // Subpath format: pointer to subpath
+    struct path_variable *subpath;
+    // Provisional format: other info besides the control points
+    struct{
+      float x, y; // Ponto de extremidade
+      float dir1_x, dir1_y, dir2_x, dir2_y; // Especificadores de direção
+      float tension1, tension2;
+      bool at_least1, at_least2;
+    } prov;
+  };
 };
 @
 \fimcodigo
@@ -3354,7 +3402,7 @@ void path_recursive_free(void (*free_func)(void *),
   if(free_func != NULL){
     int i;
     for(i = 0; i < path -> length; i ++){
-      if(path -> points[i].subpath != NULL)
+      if(path -> points[i].format == SUBPATH_FORMAT)
         path_recursive_free(free_func, (struct path_variable *)
                                        path -> points[i].subpath, true);
     }
@@ -3416,11 +3464,11 @@ void recursive_copy_points(void *(*alloc)(size_t),
   if(alloc_target)
     *target = (struct path_variable *) alloc(sizeof(struct path_variable));
   (*target) -> cyclic = source -> cyclic;
-  (*target) -> length = source -> total_length;
-  (*target) -> total_length = source -> total_length;
+  (*target) -> length = source -> number_of_points;
+  (*target) -> number_of_points = source -> number_of_points;
   (*target) -> points = (struct path_points *)
                           alloc(sizeof(struct path_points) *
-                                (*target) -> total_length);
+                                (*target) -> number_of_points);
   p = (*target) -> points;
   recursive_aux_copy(&p, source);
 }
@@ -3434,14 +3482,12 @@ The recursive function that copy each point:
 void recursive_aux_copy(struct path_points **dst, struct path_variable *origin){
   int index = 0;
   while(index <= origin -> length - 1){
-    if(origin -> points[index].subpath == NULL &&
-       !isnan(origin -> points[index].x)){
-      // Copy:
+    if(origin -> points[index].format != SUBPATH_FORMAT &&
+       !isnan(origin -> points[index].point.x)){
       memcpy(*dst, &(origin -> points[index]),  sizeof(struct path_points));
-      (*dst) -> subpath = NULL;
       (*dst) ++;
     }
-    else if(origin -> points[index].subpath != NULL)
+    else if(origin -> points[index].format == SUBPATH_FORMAT)
       recursive_aux_copy(dst, (struct path_variable *)
                               (origin -> points[index].subpath));
     index  ++;
@@ -7080,8 +7126,8 @@ if(result -> points == NULL){
     return false;
 }
 result -> length = 0; // Initialization
-result -> total_length = 0;
-result -> points[0].x = NAN;
+result -> number_of_points = 0;
+result -> points[0].format = UNINITIALIZED_FORMAT;
 result -> cyclic = false;
 @
 \fimcodigo
@@ -7310,18 +7356,19 @@ if(begin_z1 == begin_expression){
   ret = eval_path_tertiary(mf, cx, begin_z1, end_z1, &z1);
   if(!ret)
     return false;
-  if(z1.length == 1 && z1.points[0].subpath == 0){
-    result -> points[0].subpath = NULL;
-    result -> points[0].x = z1.points[0].x;
-    result -> points[0].y = z1.points[0].y;
-    result -> total_length ++;
+  if(z1.length == 1 && z1.points[0].format != SUBPATH_FORMAT){
+    result -> points[0].format = PROVISIONAL_FORMAT;
+    result -> points[0].prov.x = z1.points[0].prov.x;
+    result -> points[0].prov.y = z1.points[0].prov.y;
+    result -> number_of_points ++;
   }
   else{
+    result -> points[0].format = SUBPATH_FORMAT;
     recursive_copy_points(temporary_alloc, (struct path_variable **)
                                            &(result -> points[0].subpath), &z1,
                                            true);
-    result -> total_length += ((struct path_variable *)
-                                result -> points[0].subpath) -> total_length;
+    result -> number_of_points += ((struct path_variable *)
+                                result -> points[0].subpath) -> number_of_points;
   }
   result -> length ++;
   if(temporary_free != NULL)
@@ -7339,17 +7386,11 @@ we interpret the value like we did for $z_1$:
 @<Path Expression: Interpret Join Extremities@>+=
 if(begin_z2 == end_z2 && begin_z2 -> type == TYPE_CYCLE){
   struct path_points *p = result -> points;
-  while(p[0].subpath != NULL)
+  while(p[0].format == SUBPATH_FORMAT)
     p = ((struct path_variable *) p[0].subpath) -> points;
-  result -> points[result -> length].subpath = NULL;
-  result -> points[result -> length].x = p[0].x;
-  result -> points[result -> length].y = p[0].y;
-  result -> points[result -> length].u_x = p[0].u_x;
-  result -> points[result -> length].u_y = p[0].u_y;
-  result -> points[result -> length].v_x = p[0].v_x;
-  result -> points[result -> length].v_y = p[0].v_y;
+  memcpy(&(result -> points[result -> length]), p, sizeof(struct path_points));
   result -> length ++;
-  result -> total_length ++;
+  result -> number_of_points ++;
   result -> cyclic = true;
 }
 else{
@@ -7358,20 +7399,21 @@ else{
   ret = eval_path_tertiary(mf, cx, begin_z2, end_z2, &z2);
   if(!ret)
     return false;
-  if(z2.length == 1 && z2.points[0].subpath == 0){
-    result -> points[result -> length].subpath = NULL;
-    result -> points[result -> length].x = z2.points[0].x;
-    result -> points[result -> length].y = z2.points[0].y;
-    result -> total_length ++;
+  if(z2.length == 1 && z2.points[0].format != SUBPATH_FORMAT){
+    result -> points[result -> length].format = PROVISIONAL_FORMAT;
+    result -> points[result -> length].prov.x = z2.points[0].prov.x;
+    result -> points[result -> length].prov.y = z2.points[0].prov.y;
+    result -> number_of_points ++;
   }
   else{
+    result -> points[result -> length].format = SUBPATH_FORMAT;
     recursive_copy_points(temporary_alloc,
                          (struct path_variable **)
                          &(result -> points[result -> length].subpath), &z2,
                          true);
-    result -> total_length +=
+    result -> number_of_points +=
         ((struct path_variable *)
-            result -> points[result -> length].subpath) -> total_length;
+            result -> points[result -> length].subpath) -> number_of_points;
   }
   result -> length ++;
   if(temporary_free != NULL)
@@ -7391,12 +7433,12 @@ variable \monoespaco{result} that we are filling:
 \iniciocodigo
 @<Path Expression: Interpret Join Extremities@>+=
 z1_point = &(result -> points[result -> length - 2]);
-while(z1_point -> subpath != NULL){
+while(z1_point -> format == SUBPATH_FORMAT){
   struct path_variable *p = (struct path_variable *) z1_point -> subpath;
   z1_point = &(p -> points[p -> length - 1]);
 }
 z2_point = &(result -> points[result -> length - 1]);
-while(z2_point -> subpath != NULL){
+while(z2_point -> format == SUBPATH_FORMAT){
   struct path_variable *p = (struct path_variable *) z2_point -> subpath;
   z2_point = &(p -> points[0]);
 }
@@ -7569,8 +7611,8 @@ where the join is happening.
 \iniciocodigo
 @<Path Expression: Interpret the Join@>+=
 if(begin_j == end_j && begin_j -> type == TYPE_AMPERSAND){
-  double dif_x = z1_point -> x - z2_point -> x;
-  double dif_y = z1_point -> y - z2_point -> y;
+  double dif_x = z1_point -> prov.x - z2_point -> prov.x;
+  double dif_y = z1_point -> prov.y - z2_point -> prov.y;
   if(hypot(dif_x * dif_x, dif_y * dif_y) > 0.00002){
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr,
@@ -7579,13 +7621,13 @@ if(begin_j == end_j && begin_j -> type == TYPE_AMPERSAND){
 #endif
     return false;
   }
-  v_x = u_x = z1_point -> x;
-  v_y = u_y = z1_point -> y;
+  v_x = u_x = z1_point -> prov.x;
+  v_y = u_y = z1_point -> prov.y;
   // This will overwrite the second extremity point
   // and also the control points below in the case of a next iteration:
-  result -> total_length --;
-  z1_point -> x = NAN;
-  z1_point -> y = NAN;
+  result -> number_of_points --;
+  z1_point -> point.x = NAN;
+  z1_point -> point.y = NAN;
 }
 @
 \fimcodigo
@@ -7597,10 +7639,14 @@ extremity points. This will create a straight line between them:
 \iniciocodigo
 @<Path Expression: Interpret the Join@>+=
 else if(begin_j == end_j && begin_j -> type == TYPE_STRAIGHT_JOIN){
-  u_x = z1_point -> x + (1.0/3.0) * (z2_point -> x - z1_point -> x);
-  u_y = z1_point -> y + (1.0/3.0) * (z2_point -> y - z1_point -> y);
-  v_x = z1_point -> x + (2.0/3.0) * (z2_point -> x - z1_point -> x);
-  v_y = z1_point -> y + (2.0/3.0) * (z2_point -> y - z1_point -> y);
+  u_x = z1_point -> point.x + (1.0/3.0) *
+        (z2_point -> point.x - z1_point -> point.x);
+  u_y = z1_point -> point.y + (1.0/3.0) *
+        (z2_point -> point.y - z1_point -> point.y);
+  v_x = z1_point -> point.x + (2.0/3.0) *
+        (z2_point -> point.x - z1_point -> point.x);
+  v_y = z1_point -> point.y + (2.0/3.0) *
+        (z2_point -> point.y - z1_point -> point.y);
 }
 @
 \fimcodigo
@@ -8090,8 +8136,8 @@ whose distance is lesser or equal than 0.00002.
 @<Path Expression: Determine Curve Shape@>+=
 if(begin_d == NULL && end_d == NULL && !isnan(previous_point_x) &&
    !isnan(previous_point_y) && isnan(w0_x)){
-  w0_x = z1_point -> x - previous_point_x;
-  w0_y = z1_point -> y - previous_point_y;
+  w0_x = z1_point -> point.x - previous_point_x;
+  w0_y = z1_point -> point.y - previous_point_y;
   if(hypot(w0_x * w0_x, w0_y * w0_y) <= 0.00002){
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr, "METAFONT: Error: %s:%d: Could not find a suitable "
@@ -8160,8 +8206,8 @@ if(begin_e == NULL && end_e == NULL &&  isnan(w1_x) &&
         struct pair_variable var;
         if(!eval_pair_primary(mf, cx, begin_point, end_point, &var))
           return false;
-        w1_x = var.x - z2_point -> x;
-        w1_y = var.y - z2_point -> y;
+        w1_x = var.x - z2_point -> point.x;
+        w1_y = var.y - z2_point -> point.y;
         if(hypot(w1_x * w1_x, w1_y * w1_y) <= 0.00002){
 #if defined(W_DEBUG_METAFONT)
           fprintf(stderr, "METAFONT: Error: %s:%d: Could not find a suitable "
@@ -8207,8 +8253,8 @@ extremity, we take into account the existance of this variable:
 @<Path Expression: Determine Curve Shape@>+=
 if(begin_z2 == end_z2 && begin_z2 -> type == TYPE_CYCLE && begin_d == NULL &&
    end_d == NULL && isnan(w1_x) && !isnan(first_point_x) && isnan(w1_x)){
-  w1_x = first_point_x - z2_point -> x;
-  w1_y = first_point_y - z2_point -> y;
+  w1_x = first_point_x - z2_point -> point.x;
+  w1_y = first_point_y - z2_point -> point.y;
   if(hypot(w1_x * w1_x, w1_y * w1_y) <= 0.00002){
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr, "METAFONT: Error: %s:%d: Could not find a suitable "
@@ -8251,8 +8297,8 @@ if(last_join != NULL && last_join -> type == TYPE_JOIN){
       struct pair_variable var;
       if(!eval_pair_primary(mf, cx, p, p_end, &var))
         return false;
-      w0_x = z1_point -> x - var.x;
-      w0_y = z1_point -> y - var.y;
+      w0_x = z1_point -> point.x - var.x;
+      w0_y = z1_point -> point.y - var.y;
       if(hypot(w0_x * w0_x, w0_y * w0_y) <= 0.00002){
 #if defined(W_DEBUG_METAFONT)
         fprintf(stderr, "METAFONT: Error: %s:%d: Could not find a suitable "
@@ -8362,8 +8408,8 @@ we compute the formula for the control points:
 @<Path Expression: Determine Curve Shape@>+=
 if(isnan(u_x) || isnan(u_y) || isnan(v_x) ||  isnan(v_y)){
   double complex u, v;
-  double complex z0 = z1_point -> x + z1_point -> y * I;
-  double complex z1 = z2_point -> x + z2_point -> y * I;
+  double complex z0 = z1_point -> point.x + z1_point -> point.y * I;
+  double complex z1 = z2_point -> point.x + z2_point -> point.y * I;
   double theta = carg((w0_x + w0_y * I) / (z1 - z0));
   double phi = carg((z1 - z0)/(w1_x + w1_y * I));
   u = z0 + (cexp(theta * I) * (z1 - z0) * compute_f(theta, phi)) / tension0;
@@ -8556,10 +8602,12 @@ function if we are dealing with this case:
 \iniciocodigo
 @<Adjust tension in case of 'atleast'@>=
 if(atleast0)
-  correct_tension(z1_point -> x, z1_point -> y, z2_point -> x, z2_point -> y,
+  correct_tension(z1_point -> point.x, z1_point -> point.y,
+                  z2_point -> point.x, z2_point -> point.y,
                   w0_x, w0_y, w1_x, w1_y, &u_x, &u_y);
 if(atleast1)
-  correct_tension(z1_point -> x, z1_point -> y, z2_point -> x, z2_point -> y,
+  correct_tension(z1_point -> point.x, z1_point -> point.y,
+                  z2_point -> point.x, z2_point -> point.y,
                   w0_x, w0_y, w1_x, w1_y, &v_x, &v_y);
 @
 \fimcodigo
@@ -8571,22 +8619,24 @@ points turning them equal the last extremity point:
 
 \iniciocodigo
 @<Path Expression: Determine Curve Shape@>+=
-z1_point -> u_x = u_x;
-z1_point -> u_y = u_y;
-z1_point -> v_x = v_x;
-z1_point -> v_y = v_y;
+z1_point -> format = FINAL_FORMAT;
+z1_point -> point.u_x = u_x;
+z1_point -> point.u_y = u_y;
+z1_point -> point.v_x = v_x;
+z1_point -> point.v_y = v_y;
 if(result -> length >= expected_length && result -> cyclic == false){
   struct path_points *final_point =
                            &(result -> points[result -> length - 1]);
-  while(final_point -> subpath != NULL){
+  while(final_point -> format == SUBPATH_FORMAT){
     struct path_variable *p = (struct path_variable *)
                                 (final_point -> subpath);
     final_point = &(p -> points[p -> length - 1]);
   }
-  final_point -> u_x = final_point -> x;
-  final_point -> u_y = final_point -> y;
-  final_point -> v_x = final_point -> x;
-  final_point -> v_y = final_point -> y;
+  final_point -> format = FINAL_FORMAT;
+  final_point -> point.u_x = final_point -> point.x;
+  final_point -> point.u_y = final_point -> point.y;
+  final_point -> point.v_x = final_point -> point.x;
+  final_point -> point.v_y = final_point -> point.y;
 }
 @
 \fimcodigo
@@ -8655,7 +8705,7 @@ bool eval_path_tertiary(struct metafont *mf, struct context *cx,
       return false;
     result -> cyclic = false;
     result -> length = 1;
-    result -> total_length = 1;
+    result -> number_of_points = 1;
     result -> points = (struct path_points *)
                          temporary_alloc(sizeof(struct path_points));
     if(result -> points == NULL){
@@ -8665,13 +8715,13 @@ bool eval_path_tertiary(struct metafont *mf, struct context *cx,
 #endif
       return false;
     }
-    result -> points -> x = pair.x;
-    result -> points -> y = pair.y;
-    result -> points -> u_x = pair.x;
-    result -> points -> u_y = pair.y;
-    result -> points -> v_x = pair.x;
-    result -> points -> v_y = pair.y;
-    result -> points -> subpath = NULL;
+    result -> points -> format = FINAL_FORMAT;
+    result -> points -> point.x = pair.x;
+    result -> points -> point.y = pair.y;
+    result -> points -> point.u_x = pair.x;
+    result -> points -> point.u_y = pair.y;
+    result -> points -> point.v_x = pair.x;
+    result -> points -> point.v_y = pair.y;
     return true;
   }
   else
@@ -8784,7 +8834,7 @@ bool eval_path_secondary(struct metafont *mf, struct context *cx,
       return false;
     result -> cyclic = false;
     result -> length = 1;
-    result -> total_length = 1;
+    result -> number_of_points = 1;
     result -> points = (struct path_points *)
                          temporary_alloc(sizeof(struct path_points));
     if(result -> points == NULL){
@@ -8794,13 +8844,13 @@ bool eval_path_secondary(struct metafont *mf, struct context *cx,
 #endif
       return false;
     }
-    result -> points[0].x = pair.x;
-    result -> points[0].y = pair.y;
-    result -> points[0].u_x = pair.x;
-    result -> points[0].u_y = pair.y;
-    result -> points[0].v_x = pair.x;
-    result -> points[0].v_y = pair.y;
-    result -> points[0].subpath = NULL;
+    result -> points -> format = FINAL_FORMAT;
+    result -> points[0].point.x = pair.x;
+    result -> points[0].point.y = pair.y;
+    result -> points[0].point.u_x = pair.x;
+    result -> points[0].point.u_y = pair.y;
+    result -> points[0].point.v_x = pair.x;
+    result -> points[0].point.v_y = pair.y;
     return true;    
   }
   else
@@ -8855,21 +8905,21 @@ void path_rotate(struct path_variable *p, double sin_theta,
                  double cos_theta){
   int i;
   for(i = 0; i < p -> length; i ++){
-    if(p -> points[i].subpath != NULL)
+    if(p -> points[i].format == SUBPATH_FORMAT)
       path_rotate((struct path_variable *) (p -> points[i].subpath),
                   sin_theta, cos_theta);
     else{
-      double x = p -> points[i].x, y = p -> points[i].y;
-      p -> points[i].x = x * cos_theta - y * sin_theta;
-      p -> points[i].y = x * sin_theta + y * cos_theta;
-      x = p -> points[i].u_x;
-      y = p -> points[i].u_y;
-      p -> points[i].u_x = x * cos_theta - y * sin_theta;
-      p -> points[i].u_y = x * sin_theta + y * cos_theta;
-      x = p -> points[i].v_x;
-      y = p -> points[i].v_y;
-      p -> points[i].v_x = x * cos_theta - y * sin_theta;
-      p -> points[i].v_y = x * sin_theta + y * cos_theta;
+      double x = p -> points[i].prov.x, y = p -> points[i].prov.y;
+      p -> points[i].prov.x = x * cos_theta - y * sin_theta;
+      p -> points[i].prov.y = x * sin_theta + y * cos_theta;
+      x = p -> points[i].point.u_x;
+      y = p -> points[i].point.u_y;
+      p -> points[i].point.u_x = x * cos_theta - y * sin_theta;
+      p -> points[i].point.u_y = x * sin_theta + y * cos_theta;
+      x = p -> points[i].point.v_x;
+      y = p -> points[i].point.v_y;
+      p -> points[i].point.v_x = x * cos_theta - y * sin_theta;
+      p -> points[i].point.v_y = x * sin_theta + y * cos_theta;
     }
   }
 }
@@ -8912,16 +8962,16 @@ proportions. Its implementation is:
 void path_xyscale(struct path_variable *p, float x, float y){
   int i;
   for(i = 0; i < p -> length; i ++){
-    if(p -> points[i].subpath != NULL)
+    if(p -> points[i].format == SUBPATH_FORMAT)
       path_xyscale((struct path_variable *) (p -> points[i].subpath), x,
                    y);
     else{
-      p -> points[i].x *= x;
-      p -> points[i].y *= y;
-      p -> points[i].u_x *= x;
-      p -> points[i].u_y *= y;
-      p -> points[i].v_x *= x;
-      p -> points[i].v_y *= y;
+      p -> points[i].point.x *= x;
+      p -> points[i].point.y *= y;
+      p -> points[i].point.u_x *= x;
+      p -> points[i].point.u_y *= y;
+      p -> points[i].point.v_x *= x;
+      p -> points[i].point.v_y *= y;
     }
   }
 }
@@ -8958,15 +9008,15 @@ void path_shift(struct path_variable *p, float x, float y);
 void path_shift(struct path_variable *p, float x, float y){
   int i;
   for(i = 0; i < p -> length; i ++){
-    if(p -> points[i].subpath != NULL)
+    if(p -> points[i].format == SUBPATH_FORMAT)
       path_shift((struct path_variable *) (p -> points[i].subpath), x, y);
     else{
-      p -> points[i].x += x;
-      p -> points[i].y += y;
-      p -> points[i].u_x += x;
-      p -> points[i].u_y += y;
-      p -> points[i].v_x += x;
-      p -> points[i].v_y += y;
+      p -> points[i].point.x += x;
+      p -> points[i].point.y += y;
+      p -> points[i].point.u_x += x;
+      p -> points[i].point.u_y += y;
+      p -> points[i].point.v_x += x;
+      p -> points[i].point.v_y += y;
     }
   }
 }
@@ -9004,12 +9054,12 @@ void path_slant(struct path_variable *p, float s);
 void path_slant(struct path_variable *p, float s){
   int i;
   for(i = 0; i < p -> length; i ++){
-    if(p -> points[i].subpath != NULL)
+    if(p -> points[i].format == SUBPATH_FORMAT)
       path_slant((struct path_variable *) (p -> points[i].subpath), s);
     else{
-      p -> points[i].x += s * p -> points[i].y;
-      p -> points[i].u_x += s * p -> points[i].u_y;
-      p -> points[i].v_x += s * p -> points[i].v_y;
+      p -> points[i].point.x += s * p -> points[i].point.y;
+      p -> points[i].point.u_x += s * p -> points[i].point.u_y;
+      p -> points[i].point.v_x += s * p -> points[i].point.v_y;
     }
   }
 }
@@ -9028,7 +9078,7 @@ else if(transform_op -> type == TYPE_XSCALED){
   if(!eval_numeric_primary(mf, cx, transform_op -> next, end_expression,
                            &a))
     return false;
-  path_xyscale(result, a.value, 1.0);  
+  path_xyscale(result, a.value, 1.0);
   return true;
 }
 @
@@ -9088,22 +9138,22 @@ void path_zscale(struct path_variable *p, float x, float y);
 void path_zscale(struct path_variable *p, float x, float y){
   int i;
   for(i = 0; i < p -> length; i ++){
-    if(p -> points[i].subpath != NULL)
+    if(p -> points[i].format == SUBPATH_FORMAT)
       path_zscale((struct path_variable *) (p -> points[i].subpath),
                   x, y);
     else{
-      float x0 = p -> points[i].x;
-      float y0 = p -> points[i].y;
-      p -> points[i].x = x0 * x - y0 * y;
-      p -> points[i].y = x0 * y + y0 * x;
-      x0 = p -> points[i].u_x;
-      y0 = p -> points[i].u_y;
-      p -> points[i].u_x = x0 * x - y0 * y;
-      p -> points[i].u_y = x0 * y + y0 * x;
-      x0 = p -> points[i].v_x;
-      y0 = p -> points[i].v_y;
-      p -> points[i].v_x = x0 * x - y0 * y;
-      p -> points[i].v_x = x0 * y + y0 * x;
+      float x0 = p -> points[i].point.x;
+      float y0 = p -> points[i].point.y;
+      p -> points[i].point.x = x0 * x - y0 * y;
+      p -> points[i].point.y = x0 * y + y0 * x;
+      x0 = p -> points[i].point.u_x;
+      y0 = p -> points[i].point.u_y;
+      p -> points[i].point.u_x = x0 * x - y0 * y;
+      p -> points[i].point.u_y = x0 * y + y0 * x;
+      x0 = p -> points[i].point.v_x;
+      y0 = p -> points[i].point.v_y;
+      p -> points[i].point.v_x = x0 * x - y0 * y;
+      p -> points[i].point.v_x = x0 * y + y0 * x;
     }
   }
 }
@@ -9148,21 +9198,21 @@ Which is defined as below:
 void path_transform(struct path_variable *p, float *M){
   int i;
   for(i = 0; i < p -> length; i ++){
-    if(p -> points[i].subpath != NULL)
+    if(p -> points[i].format == SUBPATH_FORMAT)
       path_transform((struct path_variable *) (p -> points[i].subpath), M);
     else{
-      float x0 = p -> points[i].x;
-      float y0 = p -> points[i].y;
-      p -> points[i].x = LINEAR_TRANSFORM_X(x0, y0, M);
-      p -> points[i].y = LINEAR_TRANSFORM_Y(x0, y0, M);
-      x0 = p -> points[i].u_x;
-      y0 = p -> points[i].u_y;
-      p -> points[i].u_x = LINEAR_TRANSFORM_X(x0, y0, M);
-      p -> points[i].u_y = LINEAR_TRANSFORM_Y(x0, y0, M);
-      x0 = p -> points[i].v_x;
-      y0 = p -> points[i].v_y;
-      p -> points[i].v_x = LINEAR_TRANSFORM_X(x0, y0, M);
-      p -> points[i].v_x = LINEAR_TRANSFORM_Y(x0, y0, M);
+      float x0 = p -> points[i].point.x;
+      float y0 = p -> points[i].point.y;
+      p -> points[i].point.x = LINEAR_TRANSFORM_X(x0, y0, M);
+      p -> points[i].point.y = LINEAR_TRANSFORM_Y(x0, y0, M);
+      x0 = p -> points[i].point.u_x;
+      y0 = p -> points[i].point.u_y;
+      p -> points[i].point.u_x = LINEAR_TRANSFORM_X(x0, y0, M);
+      p -> points[i].point.u_y = LINEAR_TRANSFORM_Y(x0, y0, M);
+      x0 = p -> points[i].point.v_x;
+      y0 = p -> points[i].point.v_y;
+      p -> points[i].point.v_x = LINEAR_TRANSFORM_X(x0, y0, M);
+      p -> points[i].point.v_x = LINEAR_TRANSFORM_Y(x0, y0, M);
     }
   }
 }
@@ -9281,12 +9331,11 @@ bool aux_reverse(struct path_points **right_dst,
                  struct path_variable *pointer, int *index,
                  int *copied_points, int total_points){
   while(*copied_points < total_points){
-    if(pointer -> points[*index].subpath == NULL &&
-       !isnan(pointer -> points[*index].x)){
+    if(pointer -> points[*index].format != SUBPATH_FORMAT &&
+       !isnan(pointer -> points[*index].point.x)){
       // Copy:
       memcpy(*right_dst, &(pointer -> points[*index]),
              sizeof(struct path_points));
-      (*right_dst) -> subpath = NULL;
       (*right_dst) --;
       (*copied_points) ++;
       if(*index < pointer -> length - 1)
@@ -9294,7 +9343,7 @@ bool aux_reverse(struct path_points **right_dst,
       else
         return false;
     }
-    else if(pointer -> points[*index].subpath != NULL){
+    else if(pointer -> points[*index].format == SUBPATH_FORMAT){
       int new_index = 0;
       aux_reverse(right_dst, (struct path_variable *)
                   (pointer -> points[*index].subpath),
@@ -9334,11 +9383,11 @@ if(begin_expression -> next == NULL ||
 if(!eval_path_primary(mf, cx, begin_expression -> next, end_expression,
                       &tmp))
   return false;
-result -> length = tmp.total_length;
-result -> total_length = tmp.total_length;
+result -> length = tmp.number_of_points;
+result -> number_of_points = tmp.number_of_points;
 result -> points =
      (struct path_points *)
-     temporary_alloc(sizeof(struct path_points) * tmp.total_length);
+     temporary_alloc(sizeof(struct path_points) * tmp.number_of_points);
 reverse_path(&tmp, result);
 if(temporary_free != NULL)
   path_recursive_free(temporary_free, &tmp, false);
@@ -9365,15 +9414,15 @@ void reverse_path(struct path_variable *src, struct path_variable *dst){
   struct path_variable *l = src;
   aux_reverse(&right, l, &index, &copied_points, dst -> length);
   for(i = 0; i < dst -> length - 1; i ++){
-    dst -> points[i].u_x = dst -> points[i + 1].v_x;
-    dst -> points[i].u_y = dst -> points[i + 1].v_y;
-    dst -> points[i].v_x = dst -> points[i + 1].u_x;
-    dst -> points[i].v_y = dst -> points[i + 1].u_y;
+    dst -> points[i].point.u_x = dst -> points[i + 1].point.v_x;
+    dst -> points[i].point.u_y = dst -> points[i + 1].point.v_y;
+    dst -> points[i].point.v_x = dst -> points[i + 1].point.u_x;
+    dst -> points[i].point.v_y = dst -> points[i + 1].point.u_y;
   }
-  dst -> points[i].u_x = dst -> points[i].x;
-  dst -> points[i].u_y = dst -> points[i].y;
-  dst -> points[i].v_x = dst -> points[i].x;
-  dst -> points[i].v_y = dst -> points[i].y;
+  dst -> points[i].point.u_x = dst -> points[i].point.x;
+  dst -> points[i].point.u_y = dst -> points[i].point.y;
+  dst -> points[i].point.v_x = dst -> points[i].point.x;
+  dst -> points[i].point.v_y = dst -> points[i].point.y;
   dst -> cyclic = src -> cyclic;
 }
 @
@@ -9452,23 +9501,23 @@ if(!eval_path_primary(mf, cx, begin_subexpr, end_expression, &b))
     a.x = 0;
   if(a.y < 0  && !b.cyclic)
     a.y = 0;
-  if(a.x >= b.total_length  && !b.cyclic)
-    a.x = b.total_length - 1;
-  if(a.y >= b.total_length  && !b.cyclic)
-    a.y = b.total_length - 1;
+  if(a.x >= b.number_of_points  && !b.cyclic)
+    a.x = b.number_of_points - 1;
+  if(a.y >= b.number_of_points  && !b.cyclic)
+    a.y = b.number_of_points - 1;
   final_path_size = a.y - a.x;
   if(final_path_size < 0)
     final_path_size *= -1;
   final_path_size ++;
   offset = (a.x <= a.y)?(a.x):(a.y);
   if(b.cyclic)
-    offset = offset % (b.total_length - 1);
+    offset = offset % (b.number_of_points - 1);
   else
-    offset = offset % b.total_length;
+    offset = offset % b.number_of_points;
   if(offset < 0)
     offset *= -1;
   result -> length = final_path_size;
-  result -> total_length = final_path_size;
+  result -> number_of_points = final_path_size;
   result -> points = (struct path_points *)
                        temporary_alloc(final_path_size *
                                        sizeof(struct path_points));
@@ -9481,22 +9530,23 @@ if(!eval_path_primary(mf, cx, begin_subexpr, end_expression, &b))
   }
   copy_subpath(result -> points, &b, offset, final_path_size);
   // Adjust final control points if we lost the cyclcic property:
-  result -> points[result -> length - 1].u_x =
-                                      result -> points[result -> length - 1].x;
-  result -> points[result -> length - 1].u_y =
-                                      result -> points[result -> length - 1].y;
-  result -> points[result -> length - 1].v_x =
-                                      result -> points[result -> length - 1].x;
-  result -> points[result -> length - 1].v_y =
-                                      result -> points[result -> length - 1].y;
+  result -> points[result -> length - 1].format = FINAL_FORMAT;
+  result -> points[result -> length - 1].point.u_x =
+                                result -> points[result -> length - 1].point.x;
+  result -> points[result -> length - 1].point.u_y =
+                                result -> points[result -> length - 1].point.y;
+  result -> points[result -> length - 1].point.v_x =
+                                result -> points[result -> length - 1].point.x;
+  result -> points[result -> length - 1].point.v_y =
+                                result -> points[result -> length - 1].point.y;
   if(temporary_free != NULL)
     path_recursive_free(temporary_free, &b, false);
   if(a.x > a.y){
     struct path_variable c;
-    c.length = result -> total_length;
-    c.total_length = result -> total_length;
+    c.length = result -> number_of_points;
+    c.number_of_points = result -> number_of_points;
     c.points = (struct path_points *) temporary_alloc(sizeof(struct path_points) *
-                                                      c.total_length);
+                                                      c.number_of_points);
     if(c.points == NULL){
 #if defined(W_DEBUG_METAFONT)
       fprintf(stderr, "METAFONT: Error: %s:%d: No enough memory!\n" , mf -> file,
@@ -9538,7 +9588,7 @@ void copy_subpath(struct path_points *dst, struct path_variable *src, int offset
     recursive_copy_subpath(&dst_pointer, src, &index, &offset, &size);
     // If we copied the last point and we are copying a cyclic path:
     if(offset <= 0 && src -> cyclic &&
-       initial_offset + initial_size >= src -> total_length){
+       initial_offset + initial_size >= src -> number_of_points){
       dst_pointer --; // The last point is redundant, it is equal the first.
       size ++;
     }
@@ -9564,15 +9614,14 @@ int recursive_copy_subpath(struct path_points **dst,
                            struct path_variable *pointer,
                            int *index, int *offset, int *size){
   while(*size > 0){
-    if(pointer -> points[*index].subpath == NULL &&
-       !isnan(pointer -> points[*index].x)){
+    if(pointer -> points[*index].format != SUBPATH_FORMAT &&
+       !isnan(pointer -> points[*index].point.x)){
       if(*offset > 0)
         (*offset) --;
       else{
         // Copy:
         memcpy(*dst, &(pointer -> points[*index]),
                sizeof(struct path_points));
-        (*dst) -> subpath = NULL;
         (*dst) ++;
         (*size) --;
       }
@@ -9581,7 +9630,7 @@ int recursive_copy_subpath(struct path_points **dst,
       else
         return false;
     }
-    else if(pointer -> points[*index].subpath != NULL){
+    else if(pointer -> points[*index].format == SUBPATH_FORMAT){
       int new_index = 0;
       recursive_copy_subpath(dst, (struct path_variable *)
                                   (pointer -> points[*index].subpath),
@@ -9614,17 +9663,17 @@ the result points and copy the variable content to the result:
   void *content = v -> var;
   if(((struct pair_variable *) content) -> type == TYPE_T_PAIR){
     result -> length = 1;
-    result -> total_length = 1;
+    result -> number_of_points = 1;
     result -> cyclic = false;
     result -> points = (struct path_points *)
                          temporary_alloc(sizeof(struct path_points));
-    result -> points[0].x = ((struct pair_variable *) content) -> x;
-    result -> points[0].y = ((struct pair_variable *) content) -> y;
-    result -> points[0].u_x = ((struct pair_variable *) content) -> x;
-    result -> points[0].u_y = ((struct pair_variable *) content) -> y;
-    result -> points[0].v_x = ((struct pair_variable *) content) -> x;
-    result -> points[0].v_y = ((struct pair_variable *) content) -> y;
-    result -> points[0].subpath = NULL;
+    result -> points[0].format = FINAL_FORMAT;
+    result -> points[0].point.x = ((struct pair_variable *) content) -> x;
+    result -> points[0].point.y = ((struct pair_variable *) content) -> y;
+    result -> points[0].point.u_x = ((struct pair_variable *) content) -> x;
+    result -> points[0].point.u_y = ((struct pair_variable *) content) -> y;
+    result -> points[0].point.v_x = ((struct pair_variable *) content) -> x;
+    result -> points[0].point.v_y = ((struct pair_variable *) content) -> y;
     return true;
   }
   else if(((struct path_variable *) content) -> type == TYPE_T_PATH){
@@ -9689,17 +9738,17 @@ struct pair_variable v;
 if(!eval_pair_primary(mf, cx, begin_expression, end_expression, &v))
   return false;
 result -> length = 1;
-result -> total_length = 1;
+result -> number_of_points = 1;
 result -> cyclic = false;
 result -> points = (struct path_points *)
                      temporary_alloc(sizeof(struct path_points));
-result -> points[0].subpath = NULL;
-result -> points[0].x = v.x;
-result -> points[0].y = v.y;
-result -> points[0].u_x = v.x;
-result -> points[0].u_y = v.y;
-result -> points[0].v_x = v.x;
-result -> points[0].v_y = v.y;
+result -> points[0].format = FINAL_FORMAT;
+result -> points[0].point.x = v.x;
+result -> points[0].point.y = v.y;
+result -> points[0].point.u_x = v.x;
+result -> points[0].point.u_y = v.y;
+result -> points[0].point.v_x = v.x;
+result -> points[0].point.v_y = v.y;
 return true;
 @
 \fimcodigo
@@ -9727,7 +9776,7 @@ else if(expr_type == TYPE_T_PATH){
   struct path_variable p;
   if(!eval_path_primary(mf, cx, begin -> next, end, &p))
     return false;
-  result -> value = (float) (p.total_length - 1);
+  result -> value = (float) (p.number_of_points - 1);
   if(temporary_free != NULL)
     path_recursive_free(temporary_free, &p, false);
   return true;
@@ -9783,9 +9832,9 @@ struct path_points *get_point(struct path_variable *v, int n);
 \iniciocodigo
 @<Auxiliary Local Functions (metafont.c)@>+=
 struct path_points *get_point(struct path_variable *v, int n){
-  if(v -> length == v -> total_length){
+  if(v -> length == v -> number_of_points){
     struct path_points *ret = (struct path_points *) &(v -> points[n]);
-    while(ret -> subpath != NULL)
+    while(ret -> format == SUBPATH_FORMAT)
       ret = &(((struct path_variable *) (ret -> subpath)) -> points[0]);
     return ret;
   }
@@ -9816,10 +9865,10 @@ The function definition is:
 struct path_points *_get_point(struct path_variable *v, int n, int *count){
   int i;
   for(i = 0; i < v -> length; i ++){
-    if(v -> points[i].subpath == NULL) {
-      if(*count == n && !isnan(v -> points[i].x))
+    if(v -> points[i].format != SUBPATH_FORMAT) {
+      if(*count == n && !isnan(v -> points[i].point.x))
 	return ((struct path_points *) &(v -> points[i]));
-      else if(!isnan(v -> points[i].x))
+      else if(!isnan(v -> points[i].point.x))
 	(*count) ++;
     }
     else{
@@ -9892,34 +9941,34 @@ if(begin -> type == TYPE_POINT ||
   if(!eval_path_primary(mf, cx, begin_path, end_path, &b))
     return false;
   if(b.cyclic){
-    index = ((int)(a.value)) % (b.total_length - 1);
+    index = ((int)(a.value)) % (b.number_of_points - 1);
     if(begin -> type == TYPE_PRECONTROL)
-      index = (index - 1) % (b.total_length - 1);
+      index = (index - 1) % (b.number_of_points - 1);
   }
   else{
     index = (int) (a.value);
     if(index < 0) index = 0;
-    if(index >= b.total_length) index = b.total_length - 1;
+    if(index >= b.number_of_points) index = b.number_of_points - 1;
     if(begin -> type == TYPE_PRECONTROL)
       index --;
   }
   if(begin -> type == TYPE_POINT){
-    result -> x = get_point(&b, index) -> x;
-    result -> y = get_point(&b, index) -> y;
+    result -> x = get_point(&b, index) -> point.x;
+    result -> y = get_point(&b, index) -> point.y;
   }
   else if(begin -> type == TYPE_PRECONTROL){
     if(index < 0){
-      result -> x = get_point(&b, 0) -> x;
-      result -> y = get_point(&b, 0) -> y;
+      result -> x = get_point(&b, 0) -> point.x;
+      result -> y = get_point(&b, 0) -> point.y;
     }
     else{
-      result -> x = get_point(&b, index) -> v_x;
-      result -> y = get_point(&b, index) -> v_y;
+      result -> x = get_point(&b, index) -> point.v_x;
+      result -> y = get_point(&b, index) -> point.v_y;
     }
   }
   else{
-    result -> x = get_point(&b, index) -> u_x;
-    result -> y = get_point(&b, index) -> u_y;
+    result -> x = get_point(&b, index) -> point.u_x;
+    result -> y = get_point(&b, index) -> point.u_y;
   }
   if(temporary_free != NULL)
     path_recursive_free(temporary_free, &b, false);
@@ -10523,7 +10572,7 @@ if the pen is straight or convex:
 int read_flags(struct path_variable *path){
   int i, positive_cross_product = -1;
   int flag = FLAG_CONVEX | FLAG_STRAIGHT;
-  for(i = 0; i < path -> total_length - 1; i ++){
+  for(i = 0; i < path -> number_of_points - 1; i ++){
     struct path_points *current, *next;
     current = get_point(path, i);
     next = get_point(path, i + 1);
@@ -10531,14 +10580,14 @@ int read_flags(struct path_variable *path){
       // It is straight if the auxiliary and control points are colinear.
       // They are colinear if they form a triangle with area zero (or
       // sufficiently next to zero):
-      double area =  current -> x * (current -> u_y - next -> y) +
-                     current -> u_x * (next -> y - current -> y) +
-                     next -> x * (current -> y - current -> u_y);
+      double area =  current -> point.x * (current -> point.u_y - next -> point.y) +
+                     current -> point.u_x * (next -> point.y - current -> point.y) +
+                     next -> point.x * (current -> point.y - current -> point.u_y);
       if(area > 0.00002)
         flag -= FLAG_STRAIGHT;
-      area =  current -> x * (current -> v_y - next -> y) +
-              current -> v_x * (next -> y - current -> y) +
-              next -> x * (current -> y - current -> v_y);
+      area =  current -> point.x * (current -> point.v_y - next -> point.y) +
+              current -> point.v_x * (next -> point.y - current -> point.y) +
+              next -> point.x * (current -> point.y - current -> point.v_y);
       if((flag & FLAG_STRAIGHT) && area > 0.00002)
         flag -= FLAG_STRAIGHT;        
     }
@@ -10552,19 +10601,19 @@ int read_flags(struct path_variable *path){
       for(j = 0; j < 3; j ++){
         switch(j){
           case 0:
-            p1_x = current -> x; p1_y = current -> y;
-            p2_x = current -> u_x; p2_y = current -> u_y;
-            p3_x = current -> v_x; p3_y = current -> v_y;
+            p1_x = current -> point.x; p1_y = current -> point.y;
+            p2_x = current -> point.u_x; p2_y = current -> point.u_y;
+            p3_x = current -> point.v_x; p3_y = current -> point.v_y;
             break;
           case 1:
             p1_x = p2_x; p1_y = p2_y;
             p2_x = p3_x; p2_y = p3_y;
-            p3_x = next -> x; p3_y = next -> y;
+            p3_x = next -> point.x; p3_y = next -> point.y;
             break;
           default:
             p1_x = p2_x; p1_y = p2_y;
             p2_x = p3_x; p2_y = p3_y;
-            p3_x = next -> u_x; p3_y = next -> u_y;
+            p3_x = next -> point.u_x; p3_y = next -> point.u_y;
             break;
         }
         d1_x = p2_x - p1_x;
@@ -10663,17 +10712,17 @@ drawn:
 \iniciocodigo
 @<'makepath': 'nullpen'@>=
 result -> length = 1;
-result -> total_length = 1;
+result -> number_of_points = 1;
 result -> cyclic = false;
 result -> points =
   (struct path_points *) temporary_alloc(sizeof(struct path_points));
-result -> points[0].x = 0.0;
-result -> points[0].y = 0.0;
-result -> points[0].u_x = 0.0;
-result -> points[0].u_y = 0.0;
-result -> points[0].v_x = 0.0;
-result -> points[0].v_y = 0.0;
-result -> points[0].subpath = NULL;
+result -> points[0].format = FINAL_FORMAT;
+result -> points[0].point.x = 0.0;
+result -> points[0].point.y = 0.0;
+result -> points[0].point.u_x = 0.0;
+result -> points[0].point.u_y = 0.0;
+result -> points[0].point.v_x = 0.0;
+result -> points[0].point.v_y = 0.0;
 @
 \fimcodigo
 
@@ -10685,45 +10734,45 @@ circle:
 \iniciocodigo
 @<'makepath': 'pencircle'@>=
 result -> length = 9;
-result -> total_length = 9;
+result -> number_of_points = 9;
 result -> points =
    (struct path_points *) temporary_alloc(sizeof(struct path_points) * 9);
-result -> points[0].subpath = NULL;
-result -> points[0].x = 0.5; result -> points[0].y = 0.0;
-result -> points[0].u_x = 0.5; result -> points[0].u_y = 0.13261;
-result -> points[0].v_x = 0.44733; result -> points[0].v_y = 0.2598;
-result -> points[1].subpath = NULL;
-result -> points[1].x = 0.35356; result -> points[1].y = 0.35356;
-result -> points[1].u_x = 0.2598; result -> points[1].u_y = 0.44733;
-result -> points[1].v_x = 0.13261; result -> points[1].v_y = 0.5;
-result -> points[2].subpath = NULL;
-result -> points[2].x = 0.0; result -> points[2].y = 0.5;
-result -> points[2].u_x = -0.13261; result -> points[2].u_y = 0.5;
-result -> points[2].v_x = -0.2598; result -> points[2].v_y = 0.44733;
-result -> points[3].subpath = NULL;
-result -> points[3].x = -0.35356; result -> points[3].y = 0.35356;
-result -> points[3].u_x = -0.44733; result -> points[3].u_y = 0.2598;
-result -> points[3].v_x = -0.5; result -> points[3].v_y = 0.13261;
-result -> points[4].subpath = NULL;
-result -> points[4].x = -0.5; result -> points[4].y = 0.0;
-result -> points[4].u_x = -0.5; result -> points[4].u_y = -0.13261;
-result -> points[4].v_x = -0.44733; result -> points[4].v_y = -0.2598;
-result -> points[5].subpath = NULL;
-result -> points[5].x = -0.35356; result -> points[5].y = -0.35356;
-result -> points[5].u_x = -0.2598; result -> points[5].u_y = -0.44733;
-result -> points[5].v_x = -0.13261; result -> points[5].v_y = -0.5;
-result -> points[6].subpath = NULL;
-result -> points[6].x = 0.0; result -> points[6].y = -0.5;
-result -> points[6].u_x = 0.13261; result -> points[6].u_y = -0.5;
-result -> points[6].v_x = 0.2598; result -> points[6].v_y = -0.44733;
-result -> points[7].subpath = NULL;
-result -> points[7].x = 0.35356; result -> points[7].y = -0.35356;
-result -> points[7].u_x = 0.44733; result -> points[7].u_y = -0.2598;
-result -> points[7].v_x = 0.5; result -> points[7].v_y = -0.13261;
-result -> points[8].subpath = NULL;
-result -> points[8].x = 0.5; result -> points[8].y = 0.0;
-result -> points[8].u_x = 0.5; result -> points[8].u_y = 0.13261;
-result -> points[8].v_x = 0.44733; result -> points[8].v_y = 0.2598;
+result -> points[0].format = FINAL_FORMAT;
+result -> points[0].point.x = 0.5; result -> points[0].point.y = 0.0;
+result -> points[0].point.u_x = 0.5; result -> points[0].point.u_y = 0.13261;
+result -> points[0].point.v_x = 0.44733; result -> points[0].point.v_y = 0.2598;
+result -> points[1].format = FINAL_FORMAT;
+result -> points[1].point.x = 0.35356; result -> points[1].point.y = 0.35356;
+result -> points[1].point.u_x = 0.2598; result -> points[1].point.u_y = 0.44733;
+result -> points[1].point.v_x = 0.13261; result -> points[1].point.v_y = 0.5;
+result -> points[2].format = FINAL_FORMAT;
+result -> points[2].point.x = 0.0; result -> points[2].point.y = 0.5;
+result -> points[2].point.u_x = -0.13261; result -> points[2].point.u_y = 0.5;
+result -> points[2].point.v_x = -0.2598; result -> points[2].point.v_y = 0.44733;
+result -> points[3].format = FINAL_FORMAT;
+result -> points[3].point.x = -0.35356; result -> points[3].point.y = 0.35356;
+result -> points[3].point.u_x = -0.44733; result -> points[3].point.u_y = 0.2598;
+result -> points[3].point.v_x = -0.5; result -> points[3].point.v_y = 0.13261;
+result -> points[4].format = FINAL_FORMAT;
+result -> points[4].point.x = -0.5; result -> points[4].point.y = 0.0;
+result -> points[4].point.u_x = -0.5; result -> points[4].point.u_y = -0.13261;
+result -> points[4].point.v_x = -0.44733; result -> points[4].point.v_y = -0.2598;
+result -> points[5].format = FINAL_FORMAT;
+result -> points[5].point.x = -0.35356; result -> points[5].point.y = -0.35356;
+result -> points[5].point.u_x = -0.2598; result -> points[5].point.u_y = -0.44733;
+result -> points[5].point.v_x = -0.13261; result -> points[5].point.v_y = -0.5;
+result -> points[6].format = FINAL_FORMAT;
+result -> points[6].point.x = 0.0; result -> points[6].point.y = -0.5;
+result -> points[6].point.u_x = 0.13261; result -> points[6].point.u_y = -0.5;
+result -> points[6].point.v_x = 0.2598; result -> points[6].point.v_y = -0.44733;
+result -> points[7].format = FINAL_FORMAT;
+result -> points[7].point.x = 0.35356; result -> points[7].point.y = -0.35356;
+result -> points[7].point.u_x = 0.44733; result -> points[7].point.u_y = -0.2598;
+result -> points[7].point.v_x = 0.5; result -> points[7].point.v_y = -0.13261;
+result -> points[7].format = FINAL_FORMAT;
+result -> points[8].point.x = 0.5; result -> points[8].point.y = 0.0;
+result -> points[8].point.u_x = 0.5; result -> points[8].point.u_y = 0.13261;
+result -> points[8].point.v_x = 0.44733; result -> points[8].point.v_y = 0.2598;
 result -> cyclic = true;
 @
 \fimcodigo
@@ -10734,29 +10783,39 @@ extremity and control points:
 \iniciocodigo
 @<'makepath': 'pensquare'@>=
 result -> length = 5;
-result -> total_length = 5;
+result -> number_of_points = 5;
 result -> points =
    (struct path_points *) temporary_alloc(sizeof(struct path_points) * 5);
-result -> points[0].subpath = NULL;
-result -> points[0].x = -0.5; result -> points[0].y = -0.5;
-result -> points[0].u_x = (-0.5+(1.0/3.0)); result -> points[0].u_y = -0.5;
-result -> points[0].v_x = (-0.5+(2.0/3.0)); result -> points[0].v_y = -0.5;
-result -> points[1].subpath = NULL;
-result -> points[1].x = 0.5; result -> points[1].y = -0.5;
-result -> points[1].u_x = 0.5; result -> points[1].u_y = (-0.5+(1.0/3.0));
-result -> points[1].v_x = 0.5; result -> points[1].v_y = (-0.5+(2.0/3.0));
-result -> points[2].subpath = NULL;
-result -> points[2].x = 0.5; result -> points[2].y = 0.5;
-result -> points[2].u_x = (0.5-(1.0/3.0)); result -> points[2].u_y = 0.5;
-result -> points[2].v_x = (0.5-(2.0/3.0)); result -> points[2].v_y = 0.5;
-result -> points[3].subpath = NULL;
-result -> points[3].x = -0.5; result -> points[3].y = 0.5;
-result -> points[3].u_x = -0.5; result -> points[3].u_y = (0.5-(1.0/3.0));
-result -> points[3].v_x = -0.5; result -> points[3].v_y = (0.5-(2.0/3.0));
-result -> points[4].subpath = NULL;
-result -> points[4].x = -0.5; result -> points[4].y = -0.5;
-result -> points[4].u_x = (-0.5+(1.0/3.0)); result -> points[4].u_y = -0.5;
-result -> points[4].v_x = (-0.5+(2.0/3.0)); result -> points[4].v_y = -0.5;
+result -> points[0].format = FINAL_FORMAT;
+result -> points[0].point.x = -0.5; result -> points[0].point.y = -0.5;
+result -> points[0].point.u_x = (-0.5+(1.0/3.0));
+result -> points[0].point.u_y = -0.5;
+result -> points[0].point.v_x = (-0.5+(2.0/3.0));
+result -> points[0].point.v_y = -0.5;
+result -> points[1].format = FINAL_FORMAT;
+result -> points[1].point.x = 0.5; result -> points[1].point.y = -0.5;
+result -> points[1].point.u_x = 0.5;
+result -> points[1].point.u_y = (-0.5+(1.0/3.0));
+result -> points[1].point.v_x = 0.5;
+result -> points[1].point.v_y = (-0.5+(2.0/3.0));
+result -> points[2].format = FINAL_FORMAT;
+result -> points[2].point.x = 0.5; result -> points[2].point.y = 0.5;
+result -> points[2].point.u_x = (0.5-(1.0/3.0));
+result -> points[2].point.u_y = 0.5;
+result -> points[2].point.v_x = (0.5-(2.0/3.0));
+result -> points[2].point.v_y = 0.5;
+result -> points[3].format = FINAL_FORMAT;
+result -> points[3].point.x = -0.5; result -> points[3].point.y = 0.5;
+result -> points[3].point.u_x = -0.5;
+result -> points[3].point.u_y = (0.5-(1.0/3.0));
+result -> points[3].point.v_x = -0.5;
+result -> points[3].point.v_y = (0.5-(2.0/3.0));
+result -> points[4].format = FINAL_FORMAT;
+result -> points[4].point.x = -0.5; result -> points[4].point.y = -0.5;
+result -> points[4].point.u_x = (-0.5+(1.0/3.0));
+result -> points[4].point.u_y = -0.5;
+result -> points[4].point.v_x = (-0.5+(2.0/3.0));
+result -> points[4].point.v_y = -0.5;
 result -> cyclic = true;
 @
 \fimcodigo
@@ -10784,17 +10843,17 @@ shifting, slanting, scaling or other transformations stored there:
 {
   int i;
   for(i = 0; i < result -> length; i ++){
-    float x0 = result -> points[i].x, y0 = result -> points[i].y;
-    result -> points[i].x = LINEAR_TRANSFORM_X(x0, y0, tmp.gl_matrix);
-    result -> points[i].y = LINEAR_TRANSFORM_Y(x0, y0, tmp.gl_matrix);
-    x0 = result -> points[i].u_x;
-    y0 = result -> points[i].u_y;
-    result -> points[i].u_x = LINEAR_TRANSFORM_X(x0, y0, tmp.gl_matrix);
-    result -> points[i].u_y = LINEAR_TRANSFORM_Y(x0, y0, tmp.gl_matrix);
-    x0 = result -> points[i].v_x;
-    y0 = result -> points[i].v_y;
-    result -> points[i].v_x = LINEAR_TRANSFORM_X(x0, y0, tmp.gl_matrix);
-    result -> points[i].v_y = LINEAR_TRANSFORM_Y(x0, y0, tmp.gl_matrix);
+    float x0 = result -> points[i].point.x, y0 = result -> points[i].point.y;
+    result -> points[i].point.x = LINEAR_TRANSFORM_X(x0, y0, tmp.gl_matrix);
+    result -> points[i].point.y = LINEAR_TRANSFORM_Y(x0, y0, tmp.gl_matrix);
+    x0 = result -> points[i].point.u_x;
+    y0 = result -> points[i].point.u_y;
+    result -> points[i].point.u_x = LINEAR_TRANSFORM_X(x0, y0, tmp.gl_matrix);
+    result -> points[i].point.u_y = LINEAR_TRANSFORM_Y(x0, y0, tmp.gl_matrix);
+    x0 = result -> points[i].point.v_x;
+    y0 = result -> points[i].point.v_y;
+    result -> points[i].point.v_x = LINEAR_TRANSFORM_X(x0, y0, tmp.gl_matrix);
+    result -> points[i].point.v_y = LINEAR_TRANSFORM_Y(x0, y0, tmp.gl_matrix);
   }
 }
 @
@@ -13808,16 +13867,16 @@ void path_extremity_points(struct metafont *mf, struct path_variable *p,
   DECLARE_PEN_EXTREMITIES();
   for(i = 0; i < length; i ++){
     float x0, y0, u_x, u_y, v_x, v_y, x1, y1;
-    CHECK_PEN_EXTREMITIES(p -> points[i].x, p -> points[i].y, matrix);
-    x0 = LINEAR_TRANSFORM_X(p -> points[i].x, p -> points[i].y, matrix);
-    y0 = LINEAR_TRANSFORM_Y(p -> points[i].x, p -> points[i].y, matrix);
-    u_x = LINEAR_TRANSFORM_X(p -> points[i].u_x, p -> points[i].u_y, matrix);
-    u_y = LINEAR_TRANSFORM_Y(p -> points[i].u_x, p -> points[i].u_y, matrix);
-    v_x = LINEAR_TRANSFORM_X(p -> points[i].v_x, p -> points[i].v_y, matrix);
-    v_y = LINEAR_TRANSFORM_Y(p -> points[i].v_x, p -> points[i].v_y, matrix);    
-    x1 = LINEAR_TRANSFORM_X(p -> points[(i+1)%length].x, p -> points[i].y,
+    CHECK_PEN_EXTREMITIES(p -> points[i].point.x, p -> points[i].point.y, matrix);
+    x0 = LINEAR_TRANSFORM_X(p -> points[i].point.x, p -> points[i].point.y, matrix);
+    y0 = LINEAR_TRANSFORM_Y(p -> points[i].point.x, p -> points[i].point.y, matrix);
+    u_x = LINEAR_TRANSFORM_X(p -> points[i].point.u_x, p -> points[i].point.u_y, matrix);
+    u_y = LINEAR_TRANSFORM_Y(p -> points[i].point.u_x, p -> points[i].point.u_y, matrix);
+    v_x = LINEAR_TRANSFORM_X(p -> points[i].point.v_x, p -> points[i].point.v_y, matrix);
+    v_y = LINEAR_TRANSFORM_Y(p -> points[i].point.v_x, p -> points[i].point.v_y, matrix);    
+    x1 = LINEAR_TRANSFORM_X(p -> points[(i+1)%length].point.x, p -> points[i].point.y,
                             matrix);
-    y1 = LINEAR_TRANSFORM_Y(p -> points[(i+1)%length].y, p -> points[i].y,
+    y1 = LINEAR_TRANSFORM_Y(p -> points[(i+1)%length].point.y, p -> points[i].point.y,
                             matrix);
     // Bhaskara Formula (axis x)
     float a, b, c, deltah, t;
@@ -13926,11 +13985,11 @@ bool is_pen_counterclockwise(struct pen_variable *pen){
   if(pen -> format == NULL || size <= 0)
     return true;
   for(i = 0; i < size; i ++){
-    if(pen -> format -> points[i].y < smallest_y ||
-       (pen -> format -> points[i].y == smallest_y &&
-        pen -> format -> points[i].y > biggest_x)){
-      smallest_y = pen -> format -> points[i].y;
-      biggest_x = pen -> format -> points[i].x;
+    if(pen -> format -> points[i].point.y < smallest_y ||
+       (pen -> format -> points[i].point.y == smallest_y &&
+        pen -> format -> points[i].point.y > biggest_x)){
+      smallest_y = pen -> format -> points[i].point.y;
+      biggest_x = pen -> format -> points[i].point.x;
       index = i;
     }
   }
@@ -13940,20 +13999,24 @@ bool is_pen_counterclockwise(struct pen_variable *pen){
       n += size;
     if(p < 0)
       p += size;
-    while(pen -> format -> points[index].x == pen -> format -> points[n].x &&
-          pen -> format -> points[index].y == pen -> format -> points[n].y)
+    while(pen -> format -> points[index].point.x ==
+                                    pen -> format -> points[n].point.x &&
+          pen -> format -> points[index].point.y ==
+                                    pen -> format -> points[n].point.y)
       n = (n + 1) % size;
-    while(pen -> format -> points[index].x == pen -> format -> points[p].x &&
-          pen -> format -> points[index].y == pen -> format -> points[p].y)
+    while(pen -> format -> points[index].point.x ==
+                                    pen -> format -> points[p].point.x &&
+          pen -> format -> points[index].point.y ==
+                                       pen -> format -> points[p].point.y)
       p = (p - 1) % size;
-    float ap_x = pen -> format -> points[p].x -
-                 pen -> format -> points[index].x;
-    float ap_y = pen -> format -> points[p].y -
-                 pen -> format -> points[index].y;
-    float an_x = pen -> format -> points[n].x -
-                 pen -> format -> points[index].x;
-    float an_y = pen -> format -> points[n].y -
-                 pen -> format -> points[index].y;
+    float ap_x = pen -> format -> points[p].point.x -
+                 pen -> format -> points[index].point.x;
+    float ap_y = pen -> format -> points[p].point.y -
+                 pen -> format -> points[index].point.y;
+    float an_x = pen -> format -> points[n].point.x -
+                 pen -> format -> points[index].point.x;
+    float an_y = pen -> format -> points[n].point.y -
+                 pen -> format -> points[index].point.y;
     float prod = ap_x * an_x + ap_y * an_y;
     pen -> flags += FLAG_ORIENTATION;
     pen -> flags += FLAG_COUNTERCLOCKWISE * (prod > 0);
@@ -14096,8 +14159,8 @@ if((pen -> flags & FLAG_STRAIGHT) && (pen -> flags & FLAG_CONVEX)){
     increment = -1;
   }
   for(i = 0; i < pen -> format -> length; i ++){
-    data[2 * i] = pen -> format -> points[index].x;
-    data[2 * i + 1] = pen -> format -> points[index].y;
+    data[2 * i] = pen -> format -> points[index].point.x;
+    data[2 * i + 1] = pen -> format -> points[index].point.y;
     CHECK_PEN_EXTREMITIES(data[2 * i], data[2 * i + 1], transform_matrix);
     index += increment;
   }
@@ -14256,29 +14319,29 @@ if((pen -> flags & FLAG_CONVEX)){
     int distance = 0;
     float x0, y0, u_x, u_y, v_x, v_y, x1, y1;
     float dx, dy;
-    x0 = LINEAR_TRANSFORM_X(pen -> format -> points[i].x,
-                            pen -> format -> points[i].y, transform_matrix);
-    y0 = LINEAR_TRANSFORM_Y(pen -> format -> points[i].x,
-                            pen -> format -> points[i].y, transform_matrix);
-    u_x = LINEAR_TRANSFORM_X(pen -> format -> points[i].u_x,
-                            pen -> format -> points[i].u_y, transform_matrix);
-    u_y = LINEAR_TRANSFORM_Y(pen -> format -> points[i].u_x,
-                            pen -> format -> points[i].u_y, transform_matrix);
+    x0 = LINEAR_TRANSFORM_X(pen -> format -> points[i].point.x,
+                            pen -> format -> points[i].point.y, transform_matrix);
+    y0 = LINEAR_TRANSFORM_Y(pen -> format -> points[i].point.x,
+                            pen -> format -> points[i].point.y, transform_matrix);
+    u_x = LINEAR_TRANSFORM_X(pen -> format -> points[i].point.u_x,
+                            pen -> format -> points[i].point.u_y, transform_matrix);
+    u_y = LINEAR_TRANSFORM_Y(pen -> format -> points[i].point.u_x,
+                            pen -> format -> points[i].point.u_y, transform_matrix);
     dx = u_x - x0;
     dy = u_y - y0;
     distance += (int) round(sqrt(dx * dx + dy * dy));
-    v_x = LINEAR_TRANSFORM_X(pen -> format -> points[i].v_x,
-                            pen -> format -> points[i].v_y, transform_matrix);
-    v_y = LINEAR_TRANSFORM_Y(pen -> format -> points[i].v_x,
-                            pen -> format -> points[i].v_y, transform_matrix);
+    v_x = LINEAR_TRANSFORM_X(pen -> format -> points[i].point.v_x,
+                            pen -> format -> points[i].point.v_y, transform_matrix);
+    v_y = LINEAR_TRANSFORM_Y(pen -> format -> points[i].point.v_x,
+                            pen -> format -> points[i].point.v_y, transform_matrix);
     dx = v_x - u_x;
     dy = v_y - u_y;
     distance += (int) round(sqrt(dx * dx + dy * dy));
-    x1 = LINEAR_TRANSFORM_X(pen -> format -> points[i + 1].x,
-                            pen -> format -> points[i + 1].y,
+    x1 = LINEAR_TRANSFORM_X(pen -> format -> points[i + 1].point.x,
+                            pen -> format -> points[i + 1].point.y,
                             transform_matrix);
-    y1 = LINEAR_TRANSFORM_Y(pen -> format -> points[i + 1].x,
-                            pen -> format -> points[i + 1].y,
+    y1 = LINEAR_TRANSFORM_Y(pen -> format -> points[i + 1].point.x,
+                            pen -> format -> points[i + 1].point.y,
                             transform_matrix);
     dx = x1 - v_x;
     dy = y1 - v_y;
@@ -14312,28 +14375,28 @@ if((pen -> flags & FLAG_CONVEX)){
       p0 = &(pen -> format -> points[0]);
     else
       p0 = &(pen -> format -> points[pen -> format -> length - 1]);
-    data[0] = p0 -> x;
-    data[1] = p0 -> y;
+    data[0] = p0 -> point.x;
+    data[1] = p0 -> point.y;
     v = 2;
     for(i = 0; i < pen -> format -> length - 1; i ++){
       float b_x, b_y, c_x, c_y, dx, dy, x0, y0, x1, x2, y1, y2;
       int distance = 0;
       if(counterclockwise){
         p1 = &(pen -> format -> points[1 + i]);
-        b_x = p0 -> u_x;
-        b_y = p0 -> u_y;
-        c_x = p0 -> v_x;
-        c_y = p0 -> v_y;
+        b_x = p0 -> point.u_x;
+        b_y = p0 -> point.u_y;
+        c_x = p0 -> point.v_x;
+        c_y = p0 -> point.v_y;
       }
       else{
         p1 = &(pen -> format -> points[pen -> format -> length - 2 - i]);
-        b_x = p1 -> v_x;
-        b_y = p1 -> v_y;
-        c_x = p1 -> u_x;
-        c_y = p1 -> u_y;
+        b_x = p1 -> point.v_x;
+        b_y = p1 -> point.v_y;
+        c_x = p1 -> point.u_x;
+        c_y = p1 -> point.u_y;
       }
-      x0 = LINEAR_TRANSFORM_X(p0 -> x, p0 -> y, transform_matrix);
-      y0 = LINEAR_TRANSFORM_Y(p0 -> x, p0 -> y, transform_matrix);
+      x0 = LINEAR_TRANSFORM_X(p0 -> point.x, p0 -> point.y, transform_matrix);
+      y0 = LINEAR_TRANSFORM_Y(p0 -> point.x, p0 -> point.y, transform_matrix);
       x2 = LINEAR_TRANSFORM_X(b_x, b_y, transform_matrix);
       y2 = LINEAR_TRANSFORM_Y(b_x, b_y, transform_matrix);
       dx = x2 - x0;
@@ -14348,26 +14411,26 @@ if((pen -> flags & FLAG_CONVEX)){
       distance += (int) round(sqrt(dx * dx + dy * dy));
       x1 = x2;
       y1 = y2;
-      x2 = LINEAR_TRANSFORM_X(p1 -> x, p1 -> y, transform_matrix);
-      y2 = LINEAR_TRANSFORM_Y(p1 -> x, p1 -> y, transform_matrix);
+      x2 = LINEAR_TRANSFORM_X(p1 -> point.x, p1 -> point.y, transform_matrix);
+      y2 = LINEAR_TRANSFORM_Y(p1 -> point.x, p1 -> point.y, transform_matrix);
       dx = x2 - x1;
       dy = y2 - y1;
       distance += (int) round(sqrt(dx * dx + dy * dy));
       dx = x2 - x0;
       dy = y2 - y0;
       if(distance == (int) round(sqrt(dx * dx + dy * dy))){
-        data[v++] = p1 -> x;
-        data[v++] = p1 -> y;
+        data[v++] = p1 -> point.x;
+        data[v++] = p1 -> point.y;
       }
       else{
         int j;
         float dt = 1.0 / ((float) distance);
         for(j = 1; j <= distance; j ++){
           float t = dt * j;
-          data[v++] = (1-t)*(1-t)*(1-t)* p0 -> x + 3*(1-t)*(1-t)*t * b_x +
-                      3*(1-t)*t*t * c_x + t * t * t * p1 -> x;
-          data[v++] = (1-t)*(1-t)*(1-t)* p0 -> y + 3*(1-t)*(1-t)*t * b_y +
-                      3*(1-t)*t*t * c_y + t * t * t * p1 -> y;
+          data[v++] = (1-t)*(1-t)*(1-t)* p0 -> point.x + 3*(1-t)*(1-t)*t * b_x +
+                      3*(1-t)*t*t * c_x + t * t * t * p1 -> point.x;
+          data[v++] = (1-t)*(1-t)*(1-t)* p0 -> point.y + 3*(1-t)*(1-t)*t * b_y +
+                      3*(1-t)*t*t * c_y + t * t * t * p1 -> point.y;
         }
       }
       p0 = p1;
@@ -15059,34 +15122,34 @@ bool drawing_commands(struct metafont *mf, struct context *cx,
   for(i = 0; i < path -> length - 1; i ++){
     int distance = 0;
     float dx, dy, dt;
-    dx = path -> points[i].u_x - path -> points[i].x;
-    dy = path -> points[i].u_y - path -> points[i].y;
+    dx = path -> points[i].point.u_x - path -> points[i].point.x;
+    dy = path -> points[i].point.u_y - path -> points[i].point.y;
     distance += (int) ceil(sqrt(dx * dx + dy * dy));
-    dx = path -> points[i].v_x - path -> points[i].u_x;
-    dy = path -> points[i].v_y - path -> points[i].u_y;
+    dx = path -> points[i].point.v_x - path -> points[i].point.u_x;
+    dy = path -> points[i].point.v_y - path -> points[i].point.u_y;
     distance += (int) ceil(sqrt(dx * dx + dy * dy));
-    dx = path -> points[(i+1) % (path -> length)].x - path -> points[i].v_x;
-    dy = path -> points[(i+1) % (path -> length)].y - path -> points[i].v_y;
+    dx = path -> points[(i+1) % (path -> length)].point.x - path -> points[i].point.v_x;
+    dy = path -> points[(i+1) % (path -> length)].point.y - path -> points[i].point.v_y;
     distance += (int) ceil(sqrt(dx * dx + dy * dy));
     dt = 1 / ((float) distance);
     for(j = 0; j <= distance; j ++){
       float t = dt * j;
-      float x = (1-t)*(1-t)*(1-t) * path -> points[i].x +
-                3*(1-t)*(1-t)*t * path -> points[i].u_x +
-                3*(1-t)*t*t * path -> points[i].v_x +
-                t*t*t * path -> points[(i + 1) % (path -> length)].x;
-      float y = (1-t)*(1-t)*(1-t) * path -> points[i].y +
-                3*(1-t)*(1-t)*t * path -> points[i].u_y +
-                3*(1-t)*t*t * path -> points[i].v_y +
-                t*t*t * path -> points[(i + 1) % (path -> length)].y;
+      float x = (1-t)*(1-t)*(1-t) * path -> points[i].point.x +
+                3*(1-t)*(1-t)*t * path -> points[i].point.u_x +
+                3*(1-t)*t*t * path -> points[i].point.v_x +
+                t*t*t * path -> points[(i + 1) % (path -> length)].point.x;
+      float y = (1-t)*(1-t)*(1-t) * path -> points[i].point.y +
+                3*(1-t)*(1-t)*t * path -> points[i].point.u_y +
+                3*(1-t)*t*t * path -> points[i].point.v_y +
+                t*t*t * path -> points[(i + 1) % (path -> length)].point.y;
       drawpoint(mf, currentpen, currentpicture, x, y, transform_matrix,
                 flags & ERASE_FLAG);
     }
   }
   // When the path has a single point and the loop above do not run:
   if(path -> length == 1)
-    drawpoint(mf, currentpen, currentpicture, path -> points[0].x,
-              path -> points[0].y, transform_matrix, flags & ERASE_FLAG);
+    drawpoint(mf, currentpen, currentpicture, path -> points[0].point.x,
+              path -> points[0].point.y, transform_matrix, flags & ERASE_FLAG);
   // Finalization
   glDisable(GL_BLEND);
   return true;

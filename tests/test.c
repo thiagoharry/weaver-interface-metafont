@@ -429,518 +429,521 @@ void test_path_expressions(void){
   pair_s = (struct pair_variable *) s -> var;
   assert("Assigning pair literal to path",
 	 path_p1 -> cyclic == false && path_p1 -> length == 1 &&
-	 path_p1 -> total_length == 1 &&
-	 path_p1 -> points[0].x == 1.0 && path_p1 -> points[0].y == 5.0 &&
-	 path_p1 -> points[0].u_x == 1.0 && path_p1 -> points[0].u_y == 5.0 &&
-	 path_p1 -> points[0].v_x == 1.0 && path_p1 -> points[0].v_y == 5.0);
+	 path_p1 -> number_of_points == 1 &&
+	 path_p1 -> points[0].point.x == 1.0 &&
+	 path_p1 -> points[0].point.y == 5.0 &&
+	 path_p1 -> points[0].point.u_x == 1.0 &&
+	 path_p1 -> points[0].point.u_y == 5.0 &&
+	 path_p1 -> points[0].point.v_x == 1.0 &&
+	 path_p1 -> points[0].point.v_y == 5.0);
   assert("Assigning between path variables",
 	 path_p2 -> cyclic == false && path_p2 -> length == 1 &&
-	 path_p2 -> total_length == 1 &&
-	 path_p2 -> points[0].x == 1.0 && path_p2 -> points[0].y == 5.0 &&
-	 path_p2 -> points[0].u_x == 1.0 && path_p2 -> points[0].u_y == 5.0 &&
-	 path_p2 -> points[0].v_x == 1.0 && path_p2 -> points[0].v_y == 5.0);
+	 path_p2 -> number_of_points == 1 &&
+	 path_p2 -> points[0].point.x == 1.0 && path_p2 -> points[0].point.y == 5.0 &&
+	 path_p2 -> points[0].point.u_x == 1.0 && path_p2 -> points[0].point.u_y == 5.0 &&
+	 path_p2 -> points[0].point.v_x == 1.0 && path_p2 -> points[0].point.v_y == 5.0);
   assert("Reversing single point",
 	 path_p3 -> cyclic == false && path_p3 -> length == 1 &&
-	 path_p3 -> total_length == 1 &&
-	 path_p3 -> points[0].x == 1.0 &&
-	 path_p3 -> points[0].y == 5.0 &&
-	 path_p3 -> points[0].u_x == 1.0 &&
-	 path_p3 -> points[0].u_y == 5.0 &&
-	 path_p3 -> points[0].v_x == 1.0 &&
-	 path_p3 -> points[0].v_y == 5.0);
+	 path_p3 -> number_of_points == 1 &&
+	 path_p3 -> points[0].point.x == 1.0 &&
+	 path_p3 -> points[0].point.y == 5.0 &&
+	 path_p3 -> points[0].point.u_x == 1.0 &&
+	 path_p3 -> points[0].point.u_y == 5.0 &&
+	 path_p3 -> points[0].point.v_x == 1.0 &&
+	 path_p3 -> points[0].point.v_y == 5.0);
   assert("Reversing bigger path",
-	 path_h -> total_length == 5 &&	 
-	 ALMOST_EQUAL(get_point(path_h, 0) -> x, -0.5) &&
-	 ALMOST_EQUAL(get_point(path_h, 0) -> y, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_h, 0) -> u_x, -0.5) &&
-	 ALMOST_EQUAL(get_point(path_h, 0) -> u_y, 0.13261) &&
-	 ALMOST_EQUAL(get_point(path_h, 0) -> v_x, -0.44733) &&
-	 ALMOST_EQUAL(get_point(path_h, 0) -> v_y, 0.2598) &&
-	 ALMOST_EQUAL(get_point(path_h, 1) -> x, -0.35356) &&
-	 ALMOST_EQUAL(get_point(path_h, 1) -> y, 0.35356) &&
-	 ALMOST_EQUAL(get_point(path_h, 1) -> u_x, -0.2598) &&
-	 ALMOST_EQUAL(get_point(path_h, 1) -> u_y, 0.44733) &&
-	 ALMOST_EQUAL(get_point(path_h, 1) -> v_x, -0.13261) &&
-	 ALMOST_EQUAL(get_point(path_h, 1) -> v_y, 0.5) &&
-	 ALMOST_EQUAL(get_point(path_h, 2) -> x, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_h, 2) -> y, 0.5) &&
-	 ALMOST_EQUAL(get_point(path_h, 2) -> u_x, 0.13261) &&
-	 ALMOST_EQUAL(get_point(path_h, 2) -> u_y, 0.5) &&
-	 ALMOST_EQUAL(get_point(path_h, 2) -> v_x, 0.2598) &&
-	 ALMOST_EQUAL(get_point(path_h, 2) -> v_y, 0.44733) &&
-	 ALMOST_EQUAL(get_point(path_h, 3) -> x, 0.35356) &&
-	 ALMOST_EQUAL(get_point(path_h, 3) -> y, 0.35356) &&
-	 ALMOST_EQUAL(get_point(path_h, 3) -> u_x, 0.44733) &&
-	 ALMOST_EQUAL(get_point(path_h, 3) -> u_y, 0.2598) &&
-	 ALMOST_EQUAL(get_point(path_h, 3) -> v_x, 0.5) &&
-	 ALMOST_EQUAL(get_point(path_h, 3) -> v_y, 0.13261) &&
-	 ALMOST_EQUAL(get_point(path_h, 4) -> x, 0.5) &&
-	 ALMOST_EQUAL(get_point(path_h, 4) -> y, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_h, 4) -> u_x, 0.5) &&
-	 ALMOST_EQUAL(get_point(path_h, 4) -> u_y, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_h, 4) -> v_x, 0.5) &&
-	 ALMOST_EQUAL(get_point(path_h, 4) -> v_y, 0.0) &&
+	 path_h -> number_of_points == 5 &&	 
+	 ALMOST_EQUAL(get_point(path_h, 0) -> point.x, -0.5) &&
+	 ALMOST_EQUAL(get_point(path_h, 0) -> point.y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_h, 0) -> point.u_x, -0.5) &&
+	 ALMOST_EQUAL(get_point(path_h, 0) -> point.u_y, 0.13261) &&
+	 ALMOST_EQUAL(get_point(path_h, 0) -> point.v_x, -0.44733) &&
+	 ALMOST_EQUAL(get_point(path_h, 0) -> point.v_y, 0.2598) &&
+	 ALMOST_EQUAL(get_point(path_h, 1) -> point.x, -0.35356) &&
+	 ALMOST_EQUAL(get_point(path_h, 1) -> point.y, 0.35356) &&
+	 ALMOST_EQUAL(get_point(path_h, 1) -> point.u_x, -0.2598) &&
+	 ALMOST_EQUAL(get_point(path_h, 1) -> point.u_y, 0.44733) &&
+	 ALMOST_EQUAL(get_point(path_h, 1) -> point.v_x, -0.13261) &&
+	 ALMOST_EQUAL(get_point(path_h, 1) -> point.v_y, 0.5) &&
+	 ALMOST_EQUAL(get_point(path_h, 2) -> point.x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_h, 2) -> point.y, 0.5) &&
+	 ALMOST_EQUAL(get_point(path_h, 2) -> point.u_x, 0.13261) &&
+	 ALMOST_EQUAL(get_point(path_h, 2) -> point.u_y, 0.5) &&
+	 ALMOST_EQUAL(get_point(path_h, 2) -> point.v_x, 0.2598) &&
+	 ALMOST_EQUAL(get_point(path_h, 2) -> point.v_y, 0.44733) &&
+	 ALMOST_EQUAL(get_point(path_h, 3) -> point.x, 0.35356) &&
+	 ALMOST_EQUAL(get_point(path_h, 3) -> point.y, 0.35356) &&
+	 ALMOST_EQUAL(get_point(path_h, 3) -> point.u_x, 0.44733) &&
+	 ALMOST_EQUAL(get_point(path_h, 3) -> point.u_y, 0.2598) &&
+	 ALMOST_EQUAL(get_point(path_h, 3) -> point.v_x, 0.5) &&
+	 ALMOST_EQUAL(get_point(path_h, 3) -> point.v_y, 0.13261) &&
+	 ALMOST_EQUAL(get_point(path_h, 4) -> point.x, 0.5) &&
+	 ALMOST_EQUAL(get_point(path_h, 4) -> point.y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_h, 4) -> point.u_x, 0.5) &&
+	 ALMOST_EQUAL(get_point(path_h, 4) -> point.u_y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_h, 4) -> point.v_x, 0.5) &&
+	 ALMOST_EQUAL(get_point(path_h, 4) -> point.v_y, 0.0) &&
 	 path_h -> cyclic == false);
   assert("Subpath of single point",
 	 path_p4 != NULL &&
 	 path_p4 -> cyclic == false &&
-	 path_p4 -> length == 1 && path_p4 -> total_length == 1 &&
-	 path_p4 -> points[0].x == 1.0 && path_p4 -> points[0].y == 5.0 &&
-	 path_p4 -> points[0].u_x == 1.0 && path_p4 -> points[0].u_y == 5.0 &&
-	 path_p4 -> points[0].v_x == 1.0 && path_p4 -> points[0].v_y == 5.0);
+	 path_p4 -> length == 1 && path_p4 -> number_of_points == 1 &&
+	 path_p4 -> points[0].point.x == 1.0 && path_p4 -> points[0].point.y == 5.0 &&
+	 path_p4 -> points[0].point.u_x == 1.0 && path_p4 -> points[0].point.u_y == 5.0 &&
+	 path_p4 -> points[0].point.v_x == 1.0 && path_p4 -> points[0].point.v_y == 5.0);
   assert("Dividing pair by numeric as path expression",
 	 path_p5 -> cyclic == false && path_p5 -> length == 1 &&
-	 path_p5 -> total_length == 1 &&
-	 path_p5 -> points[0].x == 0.5 && path_p5 -> points[0].y == 2.5 &&
-	 path_p5 -> points[0].u_x == 0.5 && path_p5 -> points[0].u_y == 2.5 &&
-	 path_p5 -> points[0].v_x == 0.5 && path_p5 -> points[0].v_y == 2.5);
+	 path_p5 -> number_of_points == 1 &&
+	 path_p5 -> points[0].point.x == 0.5 && path_p5 -> points[0].point.y == 2.5 &&
+	 path_p5 -> points[0].point.u_x == 0.5 && path_p5 -> points[0].point.u_y == 2.5 &&
+	 path_p5 -> points[0].point.v_x == 0.5 && path_p5 -> points[0].point.v_y == 2.5);
   assert("Multiplying numeric by pair as path expression",
 	 path_p6 -> cyclic == false && path_p6 -> length == 1 &&
-	 path_p6 -> total_length == 1 &&
-	 path_p6 -> points[0].x == 2.0 && path_p6 -> points[0].y == 10.0 &&
-	 path_p6 -> points[0].u_x == 2.0 && path_p6 -> points[0].u_y == 10.0 &&
-	 path_p6 -> points[0].v_x == 2.0 && path_p6 -> points[0].v_y == 10.0);
+	 path_p6 -> number_of_points == 1 &&
+	 path_p6 -> points[0].point.x == 2.0 && path_p6 -> points[0].point.y == 10.0 &&
+	 path_p6 -> points[0].point.u_x == 2.0 && path_p6 -> points[0].point.u_y == 10.0 &&
+	 path_p6 -> points[0].point.v_x == 2.0 && path_p6 -> points[0].point.v_y == 10.0);
   assert("Pair with transformer as path expression",
 	 path_p7 -> cyclic == false && path_p7 -> length == 1 &&
-	 path_p7 -> total_length == 1 &&
-	 ALMOST_EQUAL(path_p7 -> points[0].x, 0.0) &&
-	 ALMOST_EQUAL(path_p7 -> points[0].y, 1.0) &&
-	 ALMOST_EQUAL(path_p7 -> points[0].u_x, 0.0) &&
-	 ALMOST_EQUAL(path_p7 -> points[0].u_y, 1.0) &&
-	 ALMOST_EQUAL(path_p7 -> points[0].v_x, 0.0) &&
-	 ALMOST_EQUAL(path_p7 -> points[0].v_y, 1.0));
+	 path_p7 -> number_of_points == 1 &&
+	 ALMOST_EQUAL(path_p7 -> points[0].point.x, 0.0) &&
+	 ALMOST_EQUAL(path_p7 -> points[0].point.y, 1.0) &&
+	 ALMOST_EQUAL(path_p7 -> points[0].point.u_x, 0.0) &&
+	 ALMOST_EQUAL(path_p7 -> points[0].point.u_y, 1.0) &&
+	 ALMOST_EQUAL(path_p7 -> points[0].point.v_x, 0.0) &&
+	 ALMOST_EQUAL(path_p7 -> points[0].point.v_y, 1.0));
   assert("Tertiary pair expression as path expression",
 	 path_p8 -> cyclic == false && path_p8 -> length == 1 &&
-	 path_p8 -> total_length == 1 &&
-	 path_p8 -> points[0].x == 1.0 && path_p8 -> points[0].y == 1.0 &&
-	 path_p8 -> points[0].u_x == 1.0 && path_p8 -> points[0].u_y == 1.0 &&
-	 path_p8 -> points[0].v_x == 1.0 && path_p8 -> points[0].v_y == 1.0);
+	 path_p8 -> number_of_points == 1 &&
+	 path_p8 -> points[0].point.x == 1.0 && path_p8 -> points[0].point.y == 1.0 &&
+	 path_p8 -> points[0].point.u_x == 1.0 && path_p8 -> points[0].point.u_y == 1.0 &&
+	 path_p8 -> points[0].point.v_x == 1.0 && path_p8 -> points[0].point.v_y == 1.0);
   assert("Simple join with single control point between two path variables",
 	 path_p9 -> cyclic == false && path_p9 -> length == 2 &&
-	 path_p9 -> total_length == 2 &&
-	 path_p9 -> points[0].x == 1.0 && path_p9 -> points[0].y == 5.0 &&
-	 path_p9 -> points[0].u_x == 1.0 && path_p9 -> points[0].u_y == 3.0 &&
-	 path_p9 -> points[0].v_x == 1.0 && path_p9 -> points[0].v_y == 3.0 &&
-	 path_p9 -> points[1].x == 1.0 && path_p9 -> points[1].y == 1.0 &&
-	 path_p9 -> points[1].u_x == 1.0 && path_p9 -> points[1].u_y == 1.0 &&
-	 path_p9 -> points[1].v_x == 1.0 && path_p9 -> points[1].v_y == 1.0);
+	 path_p9 -> number_of_points == 2 &&
+	 path_p9 -> points[0].point.x == 1.0 && path_p9 -> points[0].point.y == 5.0 &&
+	 path_p9 -> points[0].point.u_x == 1.0 && path_p9 -> points[0].point.u_y == 3.0 &&
+	 path_p9 -> points[0].point.v_x == 1.0 && path_p9 -> points[0].point.v_y == 3.0 &&
+	 path_p9 -> points[1].point.x == 1.0 && path_p9 -> points[1].point.y == 1.0 &&
+	 path_p9 -> points[1].point.u_x == 1.0 && path_p9 -> points[1].point.u_y == 1.0 &&
+	 path_p9 -> points[1].point.v_x == 1.0 && path_p9 -> points[1].point.v_y == 1.0);
   assert("Simple join with double control points between two path variables",
 	 quartercircle_path -> cyclic == false &&
 	 quartercircle_path -> length == 3 &&
-	 quartercircle_path -> total_length == 3 &&
-	 quartercircle_path -> points[0].x == 0.5 &&
-	 quartercircle_path -> points[0].y == 0.0 &&
-	 quartercircle_path -> points[0].u_x == 0.5 &&
-	 ALMOST_EQUAL(quartercircle_path -> points[0].u_y, 0.13261) &&
-	 ALMOST_EQUAL(quartercircle_path -> points[0].v_x, 0.44733) &&
-	 ALMOST_EQUAL(quartercircle_path -> points[0].v_y, 0.2598) &&
-	 ALMOST_EQUAL(quartercircle_path -> points[1].x, 0.35356) &&
-	 ALMOST_EQUAL(quartercircle_path -> points[1].y, 0.35356) &&
-	 ALMOST_EQUAL(quartercircle_path -> points[1].u_x, 0.2598) &&
-	 ALMOST_EQUAL(quartercircle_path -> points[1].u_y, 0.44733) &&
-	 ALMOST_EQUAL(quartercircle_path -> points[1].v_x, 0.13261) &&
-	 ALMOST_EQUAL(quartercircle_path -> points[1].v_y, 0.5) &&
-	 quartercircle_path -> points[2].x == 0.0 &&
-	 quartercircle_path -> points[2].y == 0.5 &&
-	 quartercircle_path -> points[2].v_x == 0.0 &&
-	 quartercircle_path -> points[2].v_y == 0.5 &&
-	 quartercircle_path -> points[2].v_x == 0.0 &&
-	 quartercircle_path -> points[2].v_y == 0.5);
+	 quartercircle_path -> number_of_points == 3 &&
+	 quartercircle_path -> points[0].point.x == 0.5 &&
+	 quartercircle_path -> points[0].point.y == 0.0 &&
+	 quartercircle_path -> points[0].point.u_x == 0.5 &&
+	 ALMOST_EQUAL(quartercircle_path -> points[0].point.u_y, 0.13261) &&
+	 ALMOST_EQUAL(quartercircle_path -> points[0].point.v_x, 0.44733) &&
+	 ALMOST_EQUAL(quartercircle_path -> points[0].point.v_y, 0.2598) &&
+	 ALMOST_EQUAL(quartercircle_path -> points[1].point.x, 0.35356) &&
+	 ALMOST_EQUAL(quartercircle_path -> points[1].point.y, 0.35356) &&
+	 ALMOST_EQUAL(quartercircle_path -> points[1].point.u_x, 0.2598) &&
+	 ALMOST_EQUAL(quartercircle_path -> points[1].point.u_y, 0.44733) &&
+	 ALMOST_EQUAL(quartercircle_path -> points[1].point.v_x, 0.13261) &&
+	 ALMOST_EQUAL(quartercircle_path -> points[1].point.v_y, 0.5) &&
+	 quartercircle_path -> points[2].point.x == 0.0 &&
+	 quartercircle_path -> points[2].point.y == 0.5 &&
+	 quartercircle_path -> points[2].point.v_x == 0.0 &&
+	 quartercircle_path -> points[2].point.v_y == 0.5 &&
+	 quartercircle_path -> points[2].point.v_x == 0.0 &&
+	 quartercircle_path -> points[2].point.v_y == 0.5);
   assert("Path concatenation and rotation",
 	 halfcircle_path -> cyclic == false &&
-	 halfcircle_path -> total_length == 5 &&
-	 get_point(halfcircle_path, 0) -> x == 0.5 &&
-	 get_point(halfcircle_path, 0) -> y == 0.0 &&
-	 get_point(halfcircle_path, 0) -> u_x == 0.5 &&
-	 ALMOST_EQUAL(get_point(halfcircle_path, 0) -> u_y, 0.13261) &&
-	 ALMOST_EQUAL(get_point(halfcircle_path, 0) -> v_x, 0.44733) &&
-	 ALMOST_EQUAL(get_point(halfcircle_path, 0) -> v_y, 0.2598) &&
-	 ALMOST_EQUAL(get_point(halfcircle_path, 1) -> x, 0.35356) &&
-	 ALMOST_EQUAL(get_point(halfcircle_path, 1) -> y, 0.35356) &&
-	 ALMOST_EQUAL(get_point(halfcircle_path, 1) -> u_x, 0.2598) &&
-	 ALMOST_EQUAL(get_point(halfcircle_path, 1) -> u_y, 0.44733) &&
-	 ALMOST_EQUAL(get_point(halfcircle_path, 1) -> v_x, 0.13261) &&
-	 ALMOST_EQUAL(get_point(halfcircle_path, 1) -> v_y, 0.5) &&
-	 ALMOST_EQUAL(get_point(halfcircle_path, 2) -> x, 0.0) &&
-	 ALMOST_EQUAL(get_point(halfcircle_path, 2) -> y, 0.5) &&
-	 ALMOST_EQUAL(get_point(halfcircle_path, 2) -> u_x, -0.13261) &&
-	 ALMOST_EQUAL(get_point(halfcircle_path, 2) -> u_y, 0.5) &&
-	 ALMOST_EQUAL(get_point(halfcircle_path, 2) -> v_x, -0.2598) &&
-	 ALMOST_EQUAL(get_point(halfcircle_path, 2) -> v_y, 0.44733) &&
-	 ALMOST_EQUAL(get_point(halfcircle_path, 3) -> x, -0.35356) &&
-	 ALMOST_EQUAL(get_point(halfcircle_path, 3) -> y, 0.35356) &&
-	 ALMOST_EQUAL(get_point(halfcircle_path, 3) -> u_x, -0.44733) &&
-	 ALMOST_EQUAL(get_point(halfcircle_path, 3) -> u_y, 0.2598) &&
-	 ALMOST_EQUAL(get_point(halfcircle_path, 3) -> v_x, -0.5) &&
-	 ALMOST_EQUAL(get_point(halfcircle_path, 3) -> v_y, 0.13261) &&
-	 ALMOST_EQUAL(get_point(halfcircle_path, 4) -> x, -0.5) &&
-	 ALMOST_EQUAL(get_point(halfcircle_path, 4) -> y, 0.0) &&
-	 ALMOST_EQUAL(get_point(halfcircle_path, 4) -> u_x, -0.5) &&
-	 ALMOST_EQUAL(get_point(halfcircle_path, 4) -> u_y, 0.0) &&
-	 ALMOST_EQUAL(get_point(halfcircle_path, 4) -> v_x, -0.5) &&
-	 ALMOST_EQUAL(get_point(halfcircle_path, 4) -> v_y, 0.0));
+	 halfcircle_path -> number_of_points == 5 &&
+	 get_point(halfcircle_path, 0) -> point.x == 0.5 &&
+	 get_point(halfcircle_path, 0) -> point.y == 0.0 &&
+	 get_point(halfcircle_path, 0) -> point.u_x == 0.5 &&
+	 ALMOST_EQUAL(get_point(halfcircle_path, 0) -> point.u_y, 0.13261) &&
+	 ALMOST_EQUAL(get_point(halfcircle_path, 0) -> point.v_x, 0.44733) &&
+	 ALMOST_EQUAL(get_point(halfcircle_path, 0) -> point.v_y, 0.2598) &&
+	 ALMOST_EQUAL(get_point(halfcircle_path, 1) -> point.x, 0.35356) &&
+	 ALMOST_EQUAL(get_point(halfcircle_path, 1) -> point.y, 0.35356) &&
+	 ALMOST_EQUAL(get_point(halfcircle_path, 1) -> point.u_x, 0.2598) &&
+	 ALMOST_EQUAL(get_point(halfcircle_path, 1) -> point.u_y, 0.44733) &&
+	 ALMOST_EQUAL(get_point(halfcircle_path, 1) -> point.v_x, 0.13261) &&
+	 ALMOST_EQUAL(get_point(halfcircle_path, 1) -> point.v_y, 0.5) &&
+	 ALMOST_EQUAL(get_point(halfcircle_path, 2) -> point.x, 0.0) &&
+	 ALMOST_EQUAL(get_point(halfcircle_path, 2) -> point.y, 0.5) &&
+	 ALMOST_EQUAL(get_point(halfcircle_path, 2) -> point.u_x, -0.13261) &&
+	 ALMOST_EQUAL(get_point(halfcircle_path, 2) -> point.u_y, 0.5) &&
+	 ALMOST_EQUAL(get_point(halfcircle_path, 2) -> point.v_x, -0.2598) &&
+	 ALMOST_EQUAL(get_point(halfcircle_path, 2) -> point.v_y, 0.44733) &&
+	 ALMOST_EQUAL(get_point(halfcircle_path, 3) -> point.x, -0.35356) &&
+	 ALMOST_EQUAL(get_point(halfcircle_path, 3) -> point.y, 0.35356) &&
+	 ALMOST_EQUAL(get_point(halfcircle_path, 3) -> point.u_x, -0.44733) &&
+	 ALMOST_EQUAL(get_point(halfcircle_path, 3) -> point.u_y, 0.2598) &&
+	 ALMOST_EQUAL(get_point(halfcircle_path, 3) -> point.v_x, -0.5) &&
+	 ALMOST_EQUAL(get_point(halfcircle_path, 3) -> point.v_y, 0.13261) &&
+	 ALMOST_EQUAL(get_point(halfcircle_path, 4) -> point.x, -0.5) &&
+	 ALMOST_EQUAL(get_point(halfcircle_path, 4) -> point.y, 0.0) &&
+	 ALMOST_EQUAL(get_point(halfcircle_path, 4) -> point.u_x, -0.5) &&
+	 ALMOST_EQUAL(get_point(halfcircle_path, 4) -> point.u_y, 0.0) &&
+	 ALMOST_EQUAL(get_point(halfcircle_path, 4) -> point.v_x, -0.5) &&
+	 ALMOST_EQUAL(get_point(halfcircle_path, 4) -> point.v_y, 0.0));
   assert("Cyclic path concatenation and rotation",
-	 fullcircle_path -> total_length == 9 &&
-	 get_point(fullcircle_path, 0) -> x == 0.5 &&
-	 get_point(fullcircle_path, 0) -> y == 0.0 &&
-	 get_point(fullcircle_path, 0) -> u_x == 0.5 &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 0) -> u_y, 0.13261) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 0) -> v_x, 0.44733) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 0) -> v_y, 0.2598) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 1) -> x, 0.35356) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 1) -> y, 0.35356) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 1) -> u_x, 0.2598) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 1) -> u_y, 0.44733) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 1) -> v_x, 0.13261) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 1) -> v_y, 0.5) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 2) -> x, 0.0) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 2) -> y, 0.5) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 2) -> u_x, -0.13261) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 2) -> u_y, 0.5) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 2) -> v_x, -0.2598) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 2) -> v_y, 0.44733) &&
-	 ALMOST_EQUAL(get_point(halfcircle_path, 3) -> x, -0.35356) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 3) -> y, 0.35356) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 3) -> u_x, -0.44733) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 3) -> u_y, 0.2598) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 3) -> v_x, -0.5) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 3) -> v_y, 0.13261) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 4) -> x, -0.5) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 4) -> y, 0.0) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 4) -> u_x, -0.5) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 4) -> u_y, -0.13261) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 4) -> v_x, -0.44733) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 4) -> v_y, -0.2598) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 5) -> x, -0.35356) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 5) -> y, -0.35356) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 5) -> u_x, -0.2598) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 5) -> u_y, -0.44733) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 5) -> v_x, -0.13261) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 5) -> v_y, -0.5) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 6) -> x, 0.0) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 6) -> y, -0.5) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 6) -> u_x, 0.13261) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 6) -> u_y, -0.5) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 6) -> v_x, 0.2598) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 6) -> v_y, -0.44733) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 7) -> x, 0.35356) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 7) -> y, -0.35356) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 7) -> u_x, 0.44733) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 7) -> u_y, -0.2598) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 7) -> v_x, 0.5) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 7) -> v_y, -0.13261) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 8) -> x, 0.5) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 8) -> y, 0.0) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 8) -> u_x, 0.5) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 8) -> u_y, 0.13261) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 8) -> v_x, 0.44733) &&
-	 ALMOST_EQUAL(get_point(fullcircle_path, 8) -> v_y, 0.2598) &&
+	 fullcircle_path -> number_of_points == 9 &&
+	 get_point(fullcircle_path, 0) -> point.x == 0.5 &&
+	 get_point(fullcircle_path, 0) -> point.y == 0.0 &&
+	 get_point(fullcircle_path, 0) -> point.u_x == 0.5 &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 0) -> point.u_y, 0.13261) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 0) -> point.v_x, 0.44733) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 0) -> point.v_y, 0.2598) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 1) -> point.x, 0.35356) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 1) -> point.y, 0.35356) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 1) -> point.u_x, 0.2598) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 1) -> point.u_y, 0.44733) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 1) -> point.v_x, 0.13261) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 1) -> point.v_y, 0.5) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 2) -> point.x, 0.0) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 2) -> point.y, 0.5) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 2) -> point.u_x, -0.13261) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 2) -> point.u_y, 0.5) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 2) -> point.v_x, -0.2598) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 2) -> point.v_y, 0.44733) &&
+	 ALMOST_EQUAL(get_point(halfcircle_path, 3) -> point.x, -0.35356) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 3) -> point.y, 0.35356) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 3) -> point.u_x, -0.44733) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 3) -> point.u_y, 0.2598) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 3) -> point.v_x, -0.5) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 3) -> point.v_y, 0.13261) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 4) -> point.x, -0.5) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 4) -> point.y, 0.0) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 4) -> point.u_x, -0.5) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 4) -> point.u_y, -0.13261) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 4) -> point.v_x, -0.44733) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 4) -> point.v_y, -0.2598) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 5) -> point.x, -0.35356) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 5) -> point.y, -0.35356) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 5) -> point.u_x, -0.2598) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 5) -> point.u_y, -0.44733) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 5) -> point.v_x, -0.13261) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 5) -> point.v_y, -0.5) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 6) -> point.x, 0.0) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 6) -> point.y, -0.5) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 6) -> point.u_x, 0.13261) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 6) -> point.u_y, -0.5) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 6) -> point.v_x, 0.2598) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 6) -> point.v_y, -0.44733) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 7) -> point.x, 0.35356) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 7) -> point.y, -0.35356) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 7) -> point.u_x, 0.44733) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 7) -> point.u_y, -0.2598) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 7) -> point.v_x, 0.5) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 7) -> point.v_y, -0.13261) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 8) -> point.x, 0.5) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 8) -> point.y, 0.0) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 8) -> point.u_x, 0.5) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 8) -> point.u_y, 0.13261) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 8) -> point.v_x, 0.44733) &&
+	 ALMOST_EQUAL(get_point(fullcircle_path, 8) -> point.v_y, 0.2598) &&
 	 fullcircle_path -> cyclic == true);
   assert("Path composed by straight lines",
-	 unitsquare_path -> total_length == 5 &&
-	 ALMOST_EQUAL(get_point(unitsquare_path, 0) -> x, 0.0) &&
-	 ALMOST_EQUAL(get_point(unitsquare_path, 0) -> y, 0.0) &&
-	 ALMOST_EQUAL(get_point(unitsquare_path, 0) -> u_x, 0.33333) &&
-	 ALMOST_EQUAL(get_point(unitsquare_path, 0) -> u_y, 0.0) &&
-	 ALMOST_EQUAL(get_point(unitsquare_path, 0) -> v_x, 0.66667) &&
-	 ALMOST_EQUAL(get_point(unitsquare_path, 0) -> v_y, 0.0) &&
-	 ALMOST_EQUAL(get_point(unitsquare_path, 1) -> x, 1.0) &&
-	 ALMOST_EQUAL(get_point(unitsquare_path, 1) -> y, 0.0) &&
-	 ALMOST_EQUAL(get_point(unitsquare_path, 1) -> u_x, 1.0) &&
-	 ALMOST_EQUAL(get_point(unitsquare_path, 1) -> u_y, 0.33333) &&
-	 ALMOST_EQUAL(get_point(unitsquare_path, 1) -> v_x, 1.0) &&
-	 ALMOST_EQUAL(get_point(unitsquare_path, 1) -> v_y, 0.66667) &&
-	 ALMOST_EQUAL(get_point(unitsquare_path, 2) -> x, 1.0) &&
-	 ALMOST_EQUAL(get_point(unitsquare_path, 2) -> y, 1.0) &&
-	 ALMOST_EQUAL(get_point(unitsquare_path, 2) -> u_x, 0.66667) &&
-	 ALMOST_EQUAL(get_point(unitsquare_path, 2) -> u_y, 1.0) &&
-	 ALMOST_EQUAL(get_point(unitsquare_path, 2) -> v_x, 0.33333) &&
-	 ALMOST_EQUAL(get_point(unitsquare_path, 2) -> v_y, 1.0) &&
-	 ALMOST_EQUAL(get_point(unitsquare_path, 3) -> x, 0.0) &&
-	 ALMOST_EQUAL(get_point(unitsquare_path, 3) -> y, 1.0) &&
-	 ALMOST_EQUAL(get_point(unitsquare_path, 3) -> u_x, 0.0) &&
-	 ALMOST_EQUAL(get_point(unitsquare_path, 3) -> u_y, 0.66667) &&
-	 ALMOST_EQUAL(get_point(unitsquare_path, 3) -> v_x, 0.0) &&
-	 ALMOST_EQUAL(get_point(unitsquare_path, 3) -> v_y, 0.33333) &&
-	 ALMOST_EQUAL(get_point(unitsquare_path, 4) -> x, 0.0) &&
-	 ALMOST_EQUAL(get_point(unitsquare_path, 4) -> y, 0.0) &&
-	 ALMOST_EQUAL(get_point(unitsquare_path, 4) -> u_x, 0.33333) &&
-	 ALMOST_EQUAL(get_point(unitsquare_path, 4) -> u_y, 0.0) &&
-	 ALMOST_EQUAL(get_point(unitsquare_path, 4) -> v_x, 0.66667) &&
-	 ALMOST_EQUAL(get_point(unitsquare_path, 4) -> v_y, 0.0) &&
+	 unitsquare_path -> number_of_points == 5 &&
+	 ALMOST_EQUAL(get_point(unitsquare_path, 0) -> point.x, 0.0) &&
+	 ALMOST_EQUAL(get_point(unitsquare_path, 0) -> point.y, 0.0) &&
+	 ALMOST_EQUAL(get_point(unitsquare_path, 0) -> point.u_x, 0.33333) &&
+	 ALMOST_EQUAL(get_point(unitsquare_path, 0) -> point.u_y, 0.0) &&
+	 ALMOST_EQUAL(get_point(unitsquare_path, 0) -> point.v_x, 0.66667) &&
+	 ALMOST_EQUAL(get_point(unitsquare_path, 0) -> point.v_y, 0.0) &&
+	 ALMOST_EQUAL(get_point(unitsquare_path, 1) -> point.x, 1.0) &&
+	 ALMOST_EQUAL(get_point(unitsquare_path, 1) -> point.y, 0.0) &&
+	 ALMOST_EQUAL(get_point(unitsquare_path, 1) -> point.u_x, 1.0) &&
+	 ALMOST_EQUAL(get_point(unitsquare_path, 1) -> point.u_y, 0.33333) &&
+	 ALMOST_EQUAL(get_point(unitsquare_path, 1) -> point.v_x, 1.0) &&
+	 ALMOST_EQUAL(get_point(unitsquare_path, 1) -> point.v_y, 0.66667) &&
+	 ALMOST_EQUAL(get_point(unitsquare_path, 2) -> point.x, 1.0) &&
+	 ALMOST_EQUAL(get_point(unitsquare_path, 2) -> point.y, 1.0) &&
+	 ALMOST_EQUAL(get_point(unitsquare_path, 2) -> point.u_x, 0.66667) &&
+	 ALMOST_EQUAL(get_point(unitsquare_path, 2) -> point.u_y, 1.0) &&
+	 ALMOST_EQUAL(get_point(unitsquare_path, 2) -> point.v_x, 0.33333) &&
+	 ALMOST_EQUAL(get_point(unitsquare_path, 2) -> point.v_y, 1.0) &&
+	 ALMOST_EQUAL(get_point(unitsquare_path, 3) -> point.x, 0.0) &&
+	 ALMOST_EQUAL(get_point(unitsquare_path, 3) -> point.y, 1.0) &&
+	 ALMOST_EQUAL(get_point(unitsquare_path, 3) -> point.u_x, 0.0) &&
+	 ALMOST_EQUAL(get_point(unitsquare_path, 3) -> point.u_y, 0.66667) &&
+	 ALMOST_EQUAL(get_point(unitsquare_path, 3) -> point.v_x, 0.0) &&
+	 ALMOST_EQUAL(get_point(unitsquare_path, 3) -> point.v_y, 0.33333) &&
+	 ALMOST_EQUAL(get_point(unitsquare_path, 4) -> point.x, 0.0) &&
+	 ALMOST_EQUAL(get_point(unitsquare_path, 4) -> point.y, 0.0) &&
+	 ALMOST_EQUAL(get_point(unitsquare_path, 4) -> point.u_x, 0.33333) &&
+	 ALMOST_EQUAL(get_point(unitsquare_path, 4) -> point.u_y, 0.0) &&
+	 ALMOST_EQUAL(get_point(unitsquare_path, 4) -> point.v_x, 0.66667) &&
+	 ALMOST_EQUAL(get_point(unitsquare_path, 4) -> point.v_y, 0.0) &&
 	 unitsquare_path -> cyclic == true);
   assert("Path composed by direction specifiers",
-	 path_a -> total_length == 2 &&
-	 ALMOST_EQUAL(get_point(path_a, 0) -> x, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_a, 0) -> y, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_a, 0) -> u_x, 5.52284) &&
-	 ALMOST_EQUAL(get_point(path_a, 0) -> u_y, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_a, 0) -> v_x, 10.0) &&
-	 ALMOST_EQUAL(get_point(path_a, 0) -> v_y, 4.47716) &&
-	 ALMOST_EQUAL(get_point(path_a, 1) -> x, 10.0) &&
-	 ALMOST_EQUAL(get_point(path_a, 1) -> y, 10.0) &&
-	 ALMOST_EQUAL(get_point(path_a, 1) -> u_x, 10.0) &&
-	 ALMOST_EQUAL(get_point(path_a, 1) -> u_y, 10.0) &&
-	 ALMOST_EQUAL(get_point(path_a, 1) -> v_x, 10.0) &&
-	 ALMOST_EQUAL(get_point(path_a, 1) -> v_y, 10.0) &&
+	 path_a -> number_of_points == 2 &&
+	 ALMOST_EQUAL(get_point(path_a, 0) -> point.x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_a, 0) -> point.y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_a, 0) -> point.u_x, 5.52284) &&
+	 ALMOST_EQUAL(get_point(path_a, 0) -> point.u_y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_a, 0) -> point.v_x, 10.0) &&
+	 ALMOST_EQUAL(get_point(path_a, 0) -> point.v_y, 4.47716) &&
+	 ALMOST_EQUAL(get_point(path_a, 1) -> point.x, 10.0) &&
+	 ALMOST_EQUAL(get_point(path_a, 1) -> point.y, 10.0) &&
+	 ALMOST_EQUAL(get_point(path_a, 1) -> point.u_x, 10.0) &&
+	 ALMOST_EQUAL(get_point(path_a, 1) -> point.u_y, 10.0) &&
+	 ALMOST_EQUAL(get_point(path_a, 1) -> point.v_x, 10.0) &&
+	 ALMOST_EQUAL(get_point(path_a, 1) -> point.v_y, 10.0) &&
 	 path_a -> cyclic == false);
   assert("Cyclic path composed by minimal direction specifiers",
-	 path_b -> total_length == 4 &&
-	 ALMOST_EQUAL(get_point(path_b, 0) -> x, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_b, 0) -> y, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_b, 0) -> u_x, 1.10457) &&
-	 ALMOST_EQUAL(get_point(path_b, 0) -> u_y, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_b, 0) -> v_x, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_b, 0) -> v_y, 0.89543) &&
-	 ALMOST_EQUAL(get_point(path_b, 1) -> x, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_b, 1) -> y, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_b, 1) -> u_x, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_b, 1) -> u_y, 2.50372) &&
-	 ALMOST_EQUAL(get_point(path_b, 1) -> v_x, 2.60619) &&
-	 ALMOST_EQUAL(get_point(path_b, 1) -> v_y, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_b, 2) -> x, 3.0) &&
-	 ALMOST_EQUAL(get_point(path_b, 2) -> y, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_b, 2) -> u_x, 17.31206) &&
-	 ALMOST_EQUAL(get_point(path_b, 2) -> u_y, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_b, 2) -> v_x, -14.31206) &&
-	 ALMOST_EQUAL(get_point(path_b, 2) -> v_y, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_b, 3) -> x, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_b, 3) -> y, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_b, 3) -> u_x, 1.10457) &&
-	 ALMOST_EQUAL(get_point(path_b, 3) -> u_y, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_b, 3) -> v_x, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_b, 3) -> v_y, 0.89543) &&
+	 path_b -> number_of_points == 4 &&
+	 ALMOST_EQUAL(get_point(path_b, 0) -> point.x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_b, 0) -> point.y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_b, 0) -> point.u_x, 1.10457) &&
+	 ALMOST_EQUAL(get_point(path_b, 0) -> point.u_y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_b, 0) -> point.v_x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_b, 0) -> point.v_y, 0.89543) &&
+	 ALMOST_EQUAL(get_point(path_b, 1) -> point.x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_b, 1) -> point.y, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_b, 1) -> point.u_x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_b, 1) -> point.u_y, 2.50372) &&
+	 ALMOST_EQUAL(get_point(path_b, 1) -> point.v_x, 2.60619) &&
+	 ALMOST_EQUAL(get_point(path_b, 1) -> point.v_y, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_b, 2) -> point.x, 3.0) &&
+	 ALMOST_EQUAL(get_point(path_b, 2) -> point.y, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_b, 2) -> point.u_x, 17.31206) &&
+	 ALMOST_EQUAL(get_point(path_b, 2) -> point.u_y, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_b, 2) -> point.v_x, -14.31206) &&
+	 ALMOST_EQUAL(get_point(path_b, 2) -> point.v_y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_b, 3) -> point.x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_b, 3) -> point.y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_b, 3) -> point.u_x, 1.10457) &&
+	 ALMOST_EQUAL(get_point(path_b, 3) -> point.u_y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_b, 3) -> point.v_x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_b, 3) -> point.v_y, 0.89543) &&
 	 path_b -> cyclic == true);
   assert("Second cyclic path composed by minimal direction specifiers",
-	 path_d -> total_length == 4 &&
-	 ALMOST_EQUAL(get_point(path_d, 0) -> x, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_d, 0) -> y, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_d, 0) -> u_x, 1.10457) &&
-	 ALMOST_EQUAL(get_point(path_d, 0) -> u_y, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_d, 0) -> v_x, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_d, 0) -> v_y, 0.89543) &&
-	 ALMOST_EQUAL(get_point(path_d, 1) -> x, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_d, 1) -> y, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_d, 1) -> u_x, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_d, 1) -> u_y, 2.50372) &&
-	 ALMOST_EQUAL(get_point(path_d, 1) -> v_x, 2.60619) &&
-	 ALMOST_EQUAL(get_point(path_d, 1) -> v_y, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_d, 2) -> x, 3.0) &&
-	 ALMOST_EQUAL(get_point(path_d, 2) -> y, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_d, 2) -> u_x, 17.31206) &&
-	 ALMOST_EQUAL(get_point(path_d, 2) -> u_y, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_d, 2) -> v_x, -14.31206) &&
-	 ALMOST_EQUAL(get_point(path_d, 2) -> v_y, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_d, 3) -> x, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_d, 3) -> y, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_d, 3) -> u_x, 1.10457) &&
-	 ALMOST_EQUAL(get_point(path_d, 3) -> u_y, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_d, 3) -> v_x, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_d, 3) -> v_y, 0.89543) &&
+	 path_d -> number_of_points == 4 &&
+	 ALMOST_EQUAL(get_point(path_d, 0) -> point.x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_d, 0) -> point.y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_d, 0) -> point.u_x, 1.10457) &&
+	 ALMOST_EQUAL(get_point(path_d, 0) -> point.u_y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_d, 0) -> point.v_x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_d, 0) -> point.v_y, 0.89543) &&
+	 ALMOST_EQUAL(get_point(path_d, 1) -> point.x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_d, 1) -> point.y, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_d, 1) -> point.u_x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_d, 1) -> point.u_y, 2.50372) &&
+	 ALMOST_EQUAL(get_point(path_d, 1) -> point.v_x, 2.60619) &&
+	 ALMOST_EQUAL(get_point(path_d, 1) -> point.v_y, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_d, 2) -> point.x, 3.0) &&
+	 ALMOST_EQUAL(get_point(path_d, 2) -> point.y, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_d, 2) -> point.u_x, 17.31206) &&
+	 ALMOST_EQUAL(get_point(path_d, 2) -> point.u_y, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_d, 2) -> point.v_x, -14.31206) &&
+	 ALMOST_EQUAL(get_point(path_d, 2) -> point.v_y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_d, 3) -> point.x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_d, 3) -> point.y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_d, 3) -> point.u_x, 1.10457) &&
+	 ALMOST_EQUAL(get_point(path_d, 3) -> point.u_y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_d, 3) -> point.v_x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_d, 3) -> point.v_y, 0.89543) &&
 	 path_d -> cyclic == true);
   assert("Path with direction derived from neighbor control point",
-	 path_c -> total_length == 3 &&
-	 ALMOST_EQUAL(get_point(path_c, 0) -> x, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_c, 0) -> y, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_c, 0) -> u_x, -1.2818) &&
-	 ALMOST_EQUAL(get_point(path_c, 0) -> u_y, -1.9227) &&
-	 ALMOST_EQUAL(get_point(path_c, 0) -> v_x, 1.2532) &&
-	 ALMOST_EQUAL(get_point(path_c, 0) -> v_y, 0.50641) &&
-	 ALMOST_EQUAL(get_point(path_c, 1) -> x, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_c, 1) -> y, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_c, 1) -> u_x, 3.0) &&
-	 ALMOST_EQUAL(get_point(path_c, 1) -> u_y, 4.0) &&
-	 ALMOST_EQUAL(get_point(path_c, 1) -> v_x, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_c, 1) -> v_y, 3.0) &&
-	 ALMOST_EQUAL(get_point(path_c, 2) -> x, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_c, 2) -> y, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_c, 2) -> u_x, -1.2818) &&
-	 ALMOST_EQUAL(get_point(path_c, 2) -> u_y, -1.9227) &&
-	 ALMOST_EQUAL(get_point(path_c, 2) -> v_x, 1.2532) &&
-	 ALMOST_EQUAL(get_point(path_c, 2) -> v_y, 0.50641) &&
+	 path_c -> number_of_points == 3 &&
+	 ALMOST_EQUAL(get_point(path_c, 0) -> point.x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_c, 0) -> point.y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_c, 0) -> point.u_x, -1.2818) &&
+	 ALMOST_EQUAL(get_point(path_c, 0) -> point.u_y, -1.9227) &&
+	 ALMOST_EQUAL(get_point(path_c, 0) -> point.v_x, 1.2532) &&
+	 ALMOST_EQUAL(get_point(path_c, 0) -> point.v_y, 0.50641) &&
+	 ALMOST_EQUAL(get_point(path_c, 1) -> point.x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_c, 1) -> point.y, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_c, 1) -> point.u_x, 3.0) &&
+	 ALMOST_EQUAL(get_point(path_c, 1) -> point.u_y, 4.0) &&
+	 ALMOST_EQUAL(get_point(path_c, 1) -> point.v_x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_c, 1) -> point.v_y, 3.0) &&
+	 ALMOST_EQUAL(get_point(path_c, 2) -> point.x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_c, 2) -> point.y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_c, 2) -> point.u_x, -1.2818) &&
+	 ALMOST_EQUAL(get_point(path_c, 2) -> point.u_y, -1.9227) &&
+	 ALMOST_EQUAL(get_point(path_c, 2) -> point.v_x, 1.2532) &&
+	 ALMOST_EQUAL(get_point(path_c, 2) -> point.v_y, 0.50641) &&
 	 path_c -> cyclic == true);
   assert("Second path with directions derived from neighbor control points",
-	 path_e -> total_length == 3 &&
-	 ALMOST_EQUAL(get_point(path_e, 0) -> x, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_e, 0) -> y, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_e, 0) -> u_x, 3.0) &&
-	 ALMOST_EQUAL(get_point(path_e, 0) -> u_y, 4.0) &&
-	 ALMOST_EQUAL(get_point(path_e, 0) -> v_x, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_e, 0) -> v_y, 3.0) &&
-	 ALMOST_EQUAL(get_point(path_e, 1) -> x, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_e, 1) -> y, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_e, 1) -> u_x, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_e, 1) -> u_y, 0.07417) &&
-	 ALMOST_EQUAL(get_point(path_e, 1) -> v_x, -1.57869) &&
-	 ALMOST_EQUAL(get_point(path_e, 1) -> v_y, -2.10492) &&
-	 ALMOST_EQUAL(get_point(path_e, 2) -> x, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_e, 2) -> y, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_e, 2) -> u_x, 3.0) &&
-	 ALMOST_EQUAL(get_point(path_e, 2) -> u_y, 4.0) &&
-	 ALMOST_EQUAL(get_point(path_e, 2) -> v_x, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_e, 2) -> v_y, 3.0) &&
+	 path_e -> number_of_points == 3 &&
+	 ALMOST_EQUAL(get_point(path_e, 0) -> point.x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_e, 0) -> point.y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_e, 0) -> point.u_x, 3.0) &&
+	 ALMOST_EQUAL(get_point(path_e, 0) -> point.u_y, 4.0) &&
+	 ALMOST_EQUAL(get_point(path_e, 0) -> point.v_x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_e, 0) -> point.v_y, 3.0) &&
+	 ALMOST_EQUAL(get_point(path_e, 1) -> point.x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_e, 1) -> point.y, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_e, 1) -> point.u_x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_e, 1) -> point.u_y, 0.07417) &&
+	 ALMOST_EQUAL(get_point(path_e, 1) -> point.v_x, -1.57869) &&
+	 ALMOST_EQUAL(get_point(path_e, 1) -> point.v_y, -2.10492) &&
+	 ALMOST_EQUAL(get_point(path_e, 2) -> point.x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_e, 2) -> point.y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_e, 2) -> point.u_x, 3.0) &&
+	 ALMOST_EQUAL(get_point(path_e, 2) -> point.u_y, 4.0) &&
+	 ALMOST_EQUAL(get_point(path_e, 2) -> point.v_x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_e, 2) -> point.v_y, 3.0) &&
 	 path_e -> cyclic == true);
   assert("Computing non-standard path tension",
-	 path_f -> total_length == 2 &&
-	 ALMOST_EQUAL(get_point(path_f, 0) -> x, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_f, 0) -> y, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_f, 0) -> u_x, 1.47276) &&
-	 ALMOST_EQUAL(get_point(path_f, 0) -> u_y, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_f, 0) -> v_x, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_f, 0) -> v_y, 1.72386) &&
-	 ALMOST_EQUAL(get_point(path_f, 1) -> x, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_f, 1) -> y, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_f, 1) -> u_x, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_f, 1) -> u_y, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_f, 1) -> v_x, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_f, 1) -> v_y, 2.0) &&
+	 path_f -> number_of_points == 2 &&
+	 ALMOST_EQUAL(get_point(path_f, 0) -> point.x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_f, 0) -> point.y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_f, 0) -> point.u_x, 1.47276) &&
+	 ALMOST_EQUAL(get_point(path_f, 0) -> point.u_y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_f, 0) -> point.v_x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_f, 0) -> point.v_y, 1.72386) &&
+	 ALMOST_EQUAL(get_point(path_f, 1) -> point.x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_f, 1) -> point.y, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_f, 1) -> point.u_x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_f, 1) -> point.u_y, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_f, 1) -> point.v_x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_f, 1) -> point.v_y, 2.0) &&
 	 path_f -> cyclic == false);
   assert("Computing path tension with 'atleast' keyword",
-	 path_g -> total_length == 2 &&
-	 ALMOST_EQUAL(get_point(path_g, 0) -> x, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_g, 0) -> y, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_g, 0) -> u_x, 0.42995) &&
-	 ALMOST_EQUAL(get_point(path_g, 0) -> u_y, 0.42995) &&
-	 ALMOST_EQUAL(get_point(path_g, 0) -> v_x, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_g, 0) -> v_y, 2.06097) &&
-	 ALMOST_EQUAL(get_point(path_g, 1) -> x, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_g, 1) -> y, 1.0) &&
-	 ALMOST_EQUAL(get_point(path_g, 1) -> u_x, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_g, 1) -> u_y, 1.0) &&
-	 ALMOST_EQUAL(get_point(path_g, 1) -> v_x, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_g, 1) -> v_y, 1.0) &&
+	 path_g -> number_of_points == 2 &&
+	 ALMOST_EQUAL(get_point(path_g, 0) -> point.x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_g, 0) -> point.y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_g, 0) -> point.u_x, 0.42995) &&
+	 ALMOST_EQUAL(get_point(path_g, 0) -> point.u_y, 0.42995) &&
+	 ALMOST_EQUAL(get_point(path_g, 0) -> point.v_x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_g, 0) -> point.v_y, 2.06097) &&
+	 ALMOST_EQUAL(get_point(path_g, 1) -> point.x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_g, 1) -> point.y, 1.0) &&
+	 ALMOST_EQUAL(get_point(path_g, 1) -> point.u_x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_g, 1) -> point.u_y, 1.0) &&
+	 ALMOST_EQUAL(get_point(path_g, 1) -> point.v_x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_g, 1) -> point.v_y, 1.0) &&
 	 path_g -> cyclic == false);
   assert("Creating subpath bigger than non-cyclic path",
-	 path_i -> total_length == 2 &&
-	 ALMOST_EQUAL(get_point(path_i, 0) -> x, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_i, 0) -> y, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_i, 0) -> u_x, 0.42995) &&
-	 ALMOST_EQUAL(get_point(path_i, 0) -> u_y, 0.42995) &&
-	 ALMOST_EQUAL(get_point(path_i, 0) -> v_x, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_i, 0) -> v_y, 2.06097) &&
-	 ALMOST_EQUAL(get_point(path_i, 1) -> x, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_i, 1) -> y, 1.0) &&
-	 ALMOST_EQUAL(get_point(path_i, 1) -> u_x, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_i, 1) -> u_y, 1.0) &&
-	 ALMOST_EQUAL(get_point(path_i, 1) -> v_x, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_i, 1) -> v_y, 1.0) &&
+	 path_i -> number_of_points == 2 &&
+	 ALMOST_EQUAL(get_point(path_i, 0) -> point.x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_i, 0) -> point.y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_i, 0) -> point.u_x, 0.42995) &&
+	 ALMOST_EQUAL(get_point(path_i, 0) -> point.u_y, 0.42995) &&
+	 ALMOST_EQUAL(get_point(path_i, 0) -> point.v_x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_i, 0) -> point.v_y, 2.06097) &&
+	 ALMOST_EQUAL(get_point(path_i, 1) -> point.x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_i, 1) -> point.y, 1.0) &&
+	 ALMOST_EQUAL(get_point(path_i, 1) -> point.u_x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_i, 1) -> point.u_y, 1.0) &&
+	 ALMOST_EQUAL(get_point(path_i, 1) -> point.v_x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_i, 1) -> point.v_y, 1.0) &&
 	 path_i -> cyclic == false);
   assert("Creating subpath bigger than cyclic path",
-	 path_j -> total_length == 5 &&
-	 ALMOST_EQUAL(get_point(path_j, 0) -> x, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_j, 0) -> y, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_j, 0) -> u_x, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_j, 0) -> u_y, 0.07417) &&
-	 ALMOST_EQUAL(get_point(path_j, 0) -> v_x, -1.57869) &&
-	 ALMOST_EQUAL(get_point(path_j, 0) -> v_y, -2.10492) &&
-	 ALMOST_EQUAL(get_point(path_j, 1) -> x, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_j, 1) -> y, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_j, 1) -> u_x, 3.0) &&
-	 ALMOST_EQUAL(get_point(path_j, 1) -> u_y, 4.0) &&
-	 ALMOST_EQUAL(get_point(path_j, 1) -> v_x, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_j, 1) -> v_y, 3.0) &&
-	 ALMOST_EQUAL(get_point(path_j, 2) -> x, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_j, 2) -> y, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_j, 2) -> u_x, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_j, 2) -> u_y, 0.07417) &&
-	 ALMOST_EQUAL(get_point(path_j, 2) -> v_x, -1.57869) &&
-	 ALMOST_EQUAL(get_point(path_j, 2) -> v_y, -2.10492) &&
-	 ALMOST_EQUAL(get_point(path_j, 3) -> x, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_j, 3) -> y, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_j, 3) -> u_x, 3.0) &&
-	 ALMOST_EQUAL(get_point(path_j, 3) -> u_y, 4.0) &&
-	 ALMOST_EQUAL(get_point(path_j, 3) -> v_x, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_j, 3) -> v_y, 3.0) &&
-	 ALMOST_EQUAL(get_point(path_j, 4) -> x, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_j, 4) -> y, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_j, 4) -> u_x, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_j, 4) -> u_y, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_j, 4) -> v_x, 2.0) &&
-	 ALMOST_EQUAL(get_point(path_j, 4) -> v_y, 2.0) &&
+	 path_j -> number_of_points == 5 &&
+	 ALMOST_EQUAL(get_point(path_j, 0) -> point.x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_j, 0) -> point.y, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_j, 0) -> point.u_x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_j, 0) -> point.u_y, 0.07417) &&
+	 ALMOST_EQUAL(get_point(path_j, 0) -> point.v_x, -1.57869) &&
+	 ALMOST_EQUAL(get_point(path_j, 0) -> point.v_y, -2.10492) &&
+	 ALMOST_EQUAL(get_point(path_j, 1) -> point.x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_j, 1) -> point.y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_j, 1) -> point.u_x, 3.0) &&
+	 ALMOST_EQUAL(get_point(path_j, 1) -> point.u_y, 4.0) &&
+	 ALMOST_EQUAL(get_point(path_j, 1) -> point.v_x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_j, 1) -> point.v_y, 3.0) &&
+	 ALMOST_EQUAL(get_point(path_j, 2) -> point.x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_j, 2) -> point.y, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_j, 2) -> point.u_x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_j, 2) -> point.u_y, 0.07417) &&
+	 ALMOST_EQUAL(get_point(path_j, 2) -> point.v_x, -1.57869) &&
+	 ALMOST_EQUAL(get_point(path_j, 2) -> point.v_y, -2.10492) &&
+	 ALMOST_EQUAL(get_point(path_j, 3) -> point.x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_j, 3) -> point.y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_j, 3) -> point.u_x, 3.0) &&
+	 ALMOST_EQUAL(get_point(path_j, 3) -> point.u_y, 4.0) &&
+	 ALMOST_EQUAL(get_point(path_j, 3) -> point.v_x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_j, 3) -> point.v_y, 3.0) &&
+	 ALMOST_EQUAL(get_point(path_j, 4) -> point.x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_j, 4) -> point.y, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_j, 4) -> point.u_x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_j, 4) -> point.u_y, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_j, 4) -> point.v_x, 2.0) &&
+	 ALMOST_EQUAL(get_point(path_j, 4) -> point.v_y, 2.0) &&
 	 path_j -> cyclic == false);
   assert("Creating subpath with reversed indices reverse the result",
-	 path_k -> total_length == path_h -> total_length &&
-	 ALMOST_EQUAL(get_point(path_k, 0) -> x,
-		      get_point(path_h, 0) -> x) &&
-	 ALMOST_EQUAL(get_point(path_k, 0) -> y,
-		      get_point(path_h, 0) -> y) &&
-	 ALMOST_EQUAL(get_point(path_k, 0) -> u_x,
-		      get_point(path_h, 0) -> u_x) &&
-	 ALMOST_EQUAL(get_point(path_k, 0) -> u_y,
-		      get_point(path_h, 0) -> u_y) &&
-	 ALMOST_EQUAL(get_point(path_k, 0) -> v_x,
-		      get_point(path_h, 0) -> v_x) &&
-	 ALMOST_EQUAL(get_point(path_k, 0) -> v_y,
-		      get_point(path_h, 0) -> v_y) &&
-	 ALMOST_EQUAL(get_point(path_k, 1) -> x,
-		      get_point(path_h, 1) -> x) &&
-	 ALMOST_EQUAL(get_point(path_k, 1) -> y,
-		      get_point(path_h, 1) -> y) &&
-	 ALMOST_EQUAL(get_point(path_k, 1) -> u_x,
-		      get_point(path_h, 1) -> u_x) &&
-	 ALMOST_EQUAL(get_point(path_k, 1) -> u_y,
-		      get_point(path_h, 1) -> u_y) &&
-	 ALMOST_EQUAL(get_point(path_k, 1) -> v_x,
-		      get_point(path_h, 1) -> v_x) &&
-	 ALMOST_EQUAL(get_point(path_k, 1) -> v_y,
-		      get_point(path_h, 1) -> v_y) &&
-	 ALMOST_EQUAL(get_point(path_k, 2) -> x,
-		      get_point(path_h, 2) -> x) &&
-	 ALMOST_EQUAL(get_point(path_k, 2) -> y,
-		      get_point(path_h, 2) -> y) &&
-	 ALMOST_EQUAL(get_point(path_k, 2) -> u_x,
-		      get_point(path_h, 2) -> u_x) &&
-	 ALMOST_EQUAL(get_point(path_k, 2) -> u_y,
-		      get_point(path_h, 2) -> u_y) &&
-	 ALMOST_EQUAL(get_point(path_k, 2) -> v_x,
-		      get_point(path_h, 2) -> v_x) &&
-	 ALMOST_EQUAL(get_point(path_k, 2) -> v_y,
-		      get_point(path_h, 2) -> v_y) &&
-	 ALMOST_EQUAL(get_point(path_k, 3) -> x,
-		      get_point(path_h, 3) -> x) &&
-	 ALMOST_EQUAL(get_point(path_k, 3) -> y,
-		      get_point(path_h, 3) -> y) &&
-	 ALMOST_EQUAL(get_point(path_k, 3) -> u_x,
-		      get_point(path_h, 3) -> u_x) &&
-	 ALMOST_EQUAL(get_point(path_k, 3) -> u_y,
-		      get_point(path_h, 3) -> u_y) &&
-	 ALMOST_EQUAL(get_point(path_k, 3) -> v_x,
-		      get_point(path_h, 3) -> v_x) &&
-	 ALMOST_EQUAL(get_point(path_k, 3) -> v_y,
-		      get_point(path_h, 3) -> v_y) &&
-	 ALMOST_EQUAL(get_point(path_k, 4) -> x,
-		      get_point(path_h, 4) -> x) &&
-	 ALMOST_EQUAL(get_point(path_k, 4) -> y,
-		      get_point(path_h, 4) -> y) &&
-	 ALMOST_EQUAL(get_point(path_k, 4) -> u_x,
-		      get_point(path_h, 4) -> u_x) &&
-	 ALMOST_EQUAL(get_point(path_k, 4) -> u_y,
-		      get_point(path_h, 4) -> u_y) &&
-	 ALMOST_EQUAL(get_point(path_k, 4) -> v_x,
-		      get_point(path_h, 4) -> v_x) &&
-	 ALMOST_EQUAL(get_point(path_k, 4) -> v_y,
-		      get_point(path_h, 4) -> v_y) &&
+	 path_k -> number_of_points == path_h -> number_of_points &&
+	 ALMOST_EQUAL(get_point(path_k, 0) -> point.x,
+		      get_point(path_h, 0) -> point.x) &&
+	 ALMOST_EQUAL(get_point(path_k, 0) -> point.y,
+		      get_point(path_h, 0) -> point.y) &&
+	 ALMOST_EQUAL(get_point(path_k, 0) -> point.u_x,
+		      get_point(path_h, 0) -> point.u_x) &&
+	 ALMOST_EQUAL(get_point(path_k, 0) -> point.u_y,
+		      get_point(path_h, 0) -> point.u_y) &&
+	 ALMOST_EQUAL(get_point(path_k, 0) -> point.v_x,
+		      get_point(path_h, 0) -> point.v_x) &&
+	 ALMOST_EQUAL(get_point(path_k, 0) -> point.v_y,
+		      get_point(path_h, 0) -> point.v_y) &&
+	 ALMOST_EQUAL(get_point(path_k, 1) -> point.x,
+		      get_point(path_h, 1) -> point.x) &&
+	 ALMOST_EQUAL(get_point(path_k, 1) -> point.y,
+		      get_point(path_h, 1) -> point.y) &&
+	 ALMOST_EQUAL(get_point(path_k, 1) -> point.u_x,
+		      get_point(path_h, 1) -> point.u_x) &&
+	 ALMOST_EQUAL(get_point(path_k, 1) -> point.u_y,
+		      get_point(path_h, 1) -> point.u_y) &&
+	 ALMOST_EQUAL(get_point(path_k, 1) -> point.v_x,
+		      get_point(path_h, 1) -> point.v_x) &&
+	 ALMOST_EQUAL(get_point(path_k, 1) -> point.v_y,
+		      get_point(path_h, 1) -> point.v_y) &&
+	 ALMOST_EQUAL(get_point(path_k, 2) -> point.x,
+		      get_point(path_h, 2) -> point.x) &&
+	 ALMOST_EQUAL(get_point(path_k, 2) -> point.y,
+		      get_point(path_h, 2) -> point.y) &&
+	 ALMOST_EQUAL(get_point(path_k, 2) -> point.u_x,
+		      get_point(path_h, 2) -> point.u_x) &&
+	 ALMOST_EQUAL(get_point(path_k, 2) -> point.u_y,
+		      get_point(path_h, 2) -> point.u_y) &&
+	 ALMOST_EQUAL(get_point(path_k, 2) -> point.v_x,
+		      get_point(path_h, 2) -> point.v_x) &&
+	 ALMOST_EQUAL(get_point(path_k, 2) -> point.v_y,
+		      get_point(path_h, 2) -> point.v_y) &&
+	 ALMOST_EQUAL(get_point(path_k, 3) -> point.x,
+		      get_point(path_h, 3) -> point.x) &&
+	 ALMOST_EQUAL(get_point(path_k, 3) -> point.y,
+		      get_point(path_h, 3) -> point.y) &&
+	 ALMOST_EQUAL(get_point(path_k, 3) -> point.u_x,
+		      get_point(path_h, 3) -> point.u_x) &&
+	 ALMOST_EQUAL(get_point(path_k, 3) -> point.u_y,
+		      get_point(path_h, 3) -> point.u_y) &&
+	 ALMOST_EQUAL(get_point(path_k, 3) -> point.v_x,
+		      get_point(path_h, 3) -> point.v_x) &&
+	 ALMOST_EQUAL(get_point(path_k, 3) -> point.v_y,
+		      get_point(path_h, 3) -> point.v_y) &&
+	 ALMOST_EQUAL(get_point(path_k, 4) -> point.x,
+		      get_point(path_h, 4) -> point.x) &&
+	 ALMOST_EQUAL(get_point(path_k, 4) -> point.y,
+		      get_point(path_h, 4) -> point.y) &&
+	 ALMOST_EQUAL(get_point(path_k, 4) -> point.u_x,
+		      get_point(path_h, 4) -> point.u_x) &&
+	 ALMOST_EQUAL(get_point(path_k, 4) -> point.u_y,
+		      get_point(path_h, 4) -> point.u_y) &&
+	 ALMOST_EQUAL(get_point(path_k, 4) -> point.v_x,
+		      get_point(path_h, 4) -> point.v_x) &&
+	 ALMOST_EQUAL(get_point(path_k, 4) -> point.v_y,
+		      get_point(path_h, 4) -> point.v_y) &&
 	 path_k -> cyclic == false);
   assert("Creating subpath smaller than initial path",
-	 path_l -> total_length == 3 &&
-	 ALMOST_EQUAL(get_point(path_l, 0) -> x, 0.35356) &&
-	 ALMOST_EQUAL(get_point(path_l, 0) -> y, 0.35356) &&
-	 ALMOST_EQUAL(get_point(path_l, 0) -> u_x, 0.2598) &&
-	 ALMOST_EQUAL(get_point(path_l, 0) -> u_y, 0.44733) &&
-	 ALMOST_EQUAL(get_point(path_l, 0) -> v_x, 0.13261) &&
-	 ALMOST_EQUAL(get_point(path_l, 0) -> v_y, 0.5) &&
-	 ALMOST_EQUAL(get_point(path_l, 1) -> x, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_l, 1) -> y, 0.5) &&
-	 ALMOST_EQUAL(get_point(path_l, 1) -> u_x, -0.13261) &&
-	 ALMOST_EQUAL(get_point(path_l, 1) -> u_y, 0.5) &&
-	 ALMOST_EQUAL(get_point(path_l, 1) -> v_x, -0.2598) &&
-	 ALMOST_EQUAL(get_point(path_l, 1) -> v_y, 0.44733) &&
-	 ALMOST_EQUAL(get_point(path_l, 2) -> x, -0.35356) &&
-	 ALMOST_EQUAL(get_point(path_l, 2) -> y, 0.35356) &&
-	 ALMOST_EQUAL(get_point(path_l, 2) -> u_x, -0.35356) &&
-	 ALMOST_EQUAL(get_point(path_l, 2) -> u_y, 0.35356) &&
-	 ALMOST_EQUAL(get_point(path_l, 2) -> v_x, -0.35356) &&
-	 ALMOST_EQUAL(get_point(path_l, 2) -> v_y, 0.35356) &&
+	 path_l -> number_of_points == 3 &&
+	 ALMOST_EQUAL(get_point(path_l, 0) -> point.x, 0.35356) &&
+	 ALMOST_EQUAL(get_point(path_l, 0) -> point.y, 0.35356) &&
+	 ALMOST_EQUAL(get_point(path_l, 0) -> point.u_x, 0.2598) &&
+	 ALMOST_EQUAL(get_point(path_l, 0) -> point.u_y, 0.44733) &&
+	 ALMOST_EQUAL(get_point(path_l, 0) -> point.v_x, 0.13261) &&
+	 ALMOST_EQUAL(get_point(path_l, 0) -> point.v_y, 0.5) &&
+	 ALMOST_EQUAL(get_point(path_l, 1) -> point.x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_l, 1) -> point.y, 0.5) &&
+	 ALMOST_EQUAL(get_point(path_l, 1) -> point.u_x, -0.13261) &&
+	 ALMOST_EQUAL(get_point(path_l, 1) -> point.u_y, 0.5) &&
+	 ALMOST_EQUAL(get_point(path_l, 1) -> point.v_x, -0.2598) &&
+	 ALMOST_EQUAL(get_point(path_l, 1) -> point.v_y, 0.44733) &&
+	 ALMOST_EQUAL(get_point(path_l, 2) -> point.x, -0.35356) &&
+	 ALMOST_EQUAL(get_point(path_l, 2) -> point.y, 0.35356) &&
+	 ALMOST_EQUAL(get_point(path_l, 2) -> point.u_x, -0.35356) &&
+	 ALMOST_EQUAL(get_point(path_l, 2) -> point.u_y, 0.35356) &&
+	 ALMOST_EQUAL(get_point(path_l, 2) -> point.v_x, -0.35356) &&
+	 ALMOST_EQUAL(get_point(path_l, 2) -> point.v_y, 0.35356) &&
 	 path_j -> cyclic == false);
   assert("Computing correctly the lenght of a path",
 	 numeric_n -> value == 8.0);
@@ -954,15 +957,15 @@ void test_path_expressions(void){
 	 ALMOST_EQUAL(pair_s -> x, 0.2598) &&
 	 ALMOST_EQUAL(pair_s -> y, 0.44733));
   assert("Applying transforms over paths",
-	 path_m -> total_length == 5 &&
-	 ALMOST_EQUAL(get_point(path_m, 0) -> x, 3.0) &&
-	 ALMOST_EQUAL(get_point(path_m, 0) -> y, 4.0) &&
-	 ALMOST_EQUAL(get_point(path_m, 1) -> x, 8.0) &&
-	 ALMOST_EQUAL(get_point(path_m, 1) -> y, 11.0) &&
-	 ALMOST_EQUAL(get_point(path_m, 2) -> x, 14.0) &&
-	 ALMOST_EQUAL(get_point(path_m, 2) -> y, 19.0) &&
-	 ALMOST_EQUAL(get_point(path_m, 3) -> x, 9.0) &&
-	 ALMOST_EQUAL(get_point(path_m, 3) -> y, 12.0) &&
+	 path_m -> number_of_points == 5 &&
+	 ALMOST_EQUAL(get_point(path_m, 0) -> point.x, 3.0) &&
+	 ALMOST_EQUAL(get_point(path_m, 0) -> point.y, 4.0) &&
+	 ALMOST_EQUAL(get_point(path_m, 1) -> point.x, 8.0) &&
+	 ALMOST_EQUAL(get_point(path_m, 1) -> point.y, 11.0) &&
+	 ALMOST_EQUAL(get_point(path_m, 2) -> point.x, 14.0) &&
+	 ALMOST_EQUAL(get_point(path_m, 2) -> point.y, 19.0) &&
+	 ALMOST_EQUAL(get_point(path_m, 3) -> point.x, 9.0) &&
+	 ALMOST_EQUAL(get_point(path_m, 3) -> point.y, 12.0) &&
 	 path_m -> cyclic == true);
   free_token_list(first);
   destroy_context(mf, cx);
@@ -1058,7 +1061,7 @@ void test_pen_expressions(void){
 	 ALMOST_EQUAL(pen_p4 -> gl_matrix[8], 1.0));
   assert("Creating straight and convex pen",
 	 pen_penrazor -> format != NULL &&
-	 pen_penrazor -> format -> total_length == 3 &&
+	 pen_penrazor -> format -> number_of_points == 3 &&
 	 (pen_penrazor -> flags & FLAG_STRAIGHT) &&
 	 (pen_penrazor -> flags & FLAG_CONVEX) &&
 	 ALMOST_EQUAL(pen_penrazor -> gl_matrix[0], 1.0) &&
@@ -1072,7 +1075,7 @@ void test_pen_expressions(void){
 	 ALMOST_EQUAL(pen_penrazor -> gl_matrix[8], 1.0));
   assert("Creating straight and concave pen",
 	 pen_p5 -> format != NULL &&
-	 pen_p5 -> format -> total_length == 6 &&
+	 pen_p5 -> format -> number_of_points == 6 &&
 	 (pen_p5 -> flags & FLAG_STRAIGHT) &&
 	 !(pen_p5 -> flags & FLAG_CONVEX) &&
 	 ALMOST_EQUAL(pen_p5 -> gl_matrix[0], 1.0) &&
@@ -1086,7 +1089,7 @@ void test_pen_expressions(void){
 	 ALMOST_EQUAL(pen_p5 -> gl_matrix[8], 1.0));
   assert("Creating curved and convex pen",
 	 pen_p6 -> format != NULL &&
-	 pen_p6 -> format -> total_length == 4 &&
+	 pen_p6 -> format -> number_of_points == 4 &&
 	 !(pen_p6 -> flags & FLAG_STRAIGHT) &&
 	 (pen_p6 -> flags & FLAG_CONVEX) &&
 	 ALMOST_EQUAL(pen_p6 -> gl_matrix[0], 1.0) &&
@@ -1100,7 +1103,7 @@ void test_pen_expressions(void){
 	 ALMOST_EQUAL(pen_p6 -> gl_matrix[8], 1.0));
   assert("Creating curved and concave pen",
 	 pen_p7 -> format != NULL &&
-	 pen_p7 -> format -> total_length == 7 &&
+	 pen_p7 -> format -> number_of_points == 7 &&
 	 !(pen_p7 -> flags & FLAG_STRAIGHT) &&
 	 !(pen_p7 -> flags & FLAG_CONVEX) &&
 	 ALMOST_EQUAL(pen_p7 -> gl_matrix[0], 1.0) &&
@@ -1199,14 +1202,14 @@ void test_pen_expressions(void){
 	 (pen_p8 -> flags & FLAG_STRAIGHT) &&
 	 (pen_p8 -> flags & FLAG_CONVEX) &&
 	 (pen_p8 -> flags & FLAG_SQUARE) &&
-	 ALMOST_EQUAL(path_p13 ->points[0].x, (1.0-sqrt(3.0))/4.0) &&
-	 ALMOST_EQUAL(path_p13 ->points[0].y, (-1.0-sqrt(3.0))/4.0) &&
-	 ALMOST_EQUAL(path_p13 ->points[1].x, (sqrt(3.0)+1.0)/4.0) &&
-	 ALMOST_EQUAL(path_p13 ->points[1].y, (1.0-sqrt(3.0))/4.0) &&
-	 ALMOST_EQUAL(path_p13 ->points[2].x, (sqrt(3.0)-1.0)/4.0) &&
-	 ALMOST_EQUAL(path_p13 ->points[2].y, (1.0+sqrt(3.0))/4.0) &&
-	 ALMOST_EQUAL(path_p13 ->points[3].x, (-sqrt(3.0)-1.0)/4.0) &&
-	 ALMOST_EQUAL(path_p13 ->points[3].y, (-1.0+sqrt(3.0))/4.0));
+	 ALMOST_EQUAL(path_p13 ->points[0].point.x, (1.0-sqrt(3.0))/4.0) &&
+	 ALMOST_EQUAL(path_p13 ->points[0].point.y, (-1.0-sqrt(3.0))/4.0) &&
+	 ALMOST_EQUAL(path_p13 ->points[1].point.x, (sqrt(3.0)+1.0)/4.0) &&
+	 ALMOST_EQUAL(path_p13 ->points[1].point.y, (1.0-sqrt(3.0))/4.0) &&
+	 ALMOST_EQUAL(path_p13 ->points[2].point.x, (sqrt(3.0)-1.0)/4.0) &&
+	 ALMOST_EQUAL(path_p13 ->points[2].point.y, (1.0+sqrt(3.0))/4.0) &&
+	 ALMOST_EQUAL(path_p13 ->points[3].point.x, (-sqrt(3.0)-1.0)/4.0) &&
+	 ALMOST_EQUAL(path_p13 ->points[3].point.y, (-1.0+sqrt(3.0))/4.0));
   assert("Pen transformation (Z-Scale)",
 	 pen_p8 -> format == NULL &&
 	 (pen_p8 -> flags & FLAG_STRAIGHT) &&
@@ -1220,108 +1223,108 @@ void test_pen_expressions(void){
 	 	      1.0 * pen_p8 -> gl_matrix[7]));
   assert("Extracting path from 'nullpen'",
 	 path_p9 -> length == 1 &&
-	 path_p9 -> total_length == 1 &&
-	 path_p9 -> points[0].x == 0.0 &&
-	 path_p9 -> points[0].y == 0.0 &&
-	 path_p9 -> points[0].u_x == 0.0 &&
-	 path_p9 -> points[0].u_y == 0.0 &&
-	 path_p9 -> points[0].v_x == 0.0 &&
-	 path_p9 -> points[0].v_y == 0.0 &&
+	 path_p9 -> number_of_points == 1 &&
+	 path_p9 -> points[0].point.x == 0.0 &&
+	 path_p9 -> points[0].point.y == 0.0 &&
+	 path_p9 -> points[0].point.u_x == 0.0 &&
+	 path_p9 -> points[0].point.u_y == 0.0 &&
+	 path_p9 -> points[0].point.v_x == 0.0 &&
+	 path_p9 -> points[0].point.v_y == 0.0 &&
 	 path_p9 -> cyclic == false);
   assert("Extracting path from 'pencircle'",
-	 path_p10 -> total_length == 9 &&
-	 ALMOST_EQUAL(get_point(path_p10, 0) -> x, 0.5) &&
-	 ALMOST_EQUAL(get_point(path_p10, 0) -> y, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_p10, 0) -> u_x, 0.5) &&
-	 ALMOST_EQUAL(get_point(path_p10, 0) -> u_y, 0.13261) &&
-	 ALMOST_EQUAL(get_point(path_p10, 0) -> v_x, 0.44733) &&
-	 ALMOST_EQUAL(get_point(path_p10, 0) -> v_y, 0.2598) &&
-	 ALMOST_EQUAL(get_point(path_p10, 1) -> x, 0.35356) &&
-	 ALMOST_EQUAL(get_point(path_p10, 1) -> y, 0.35356) &&
-	 ALMOST_EQUAL(get_point(path_p10, 1) -> u_x, 0.2598) &&
-	 ALMOST_EQUAL(get_point(path_p10, 1) -> u_y, 0.44733) &&
-	 ALMOST_EQUAL(get_point(path_p10, 1) -> v_x, 0.13261) &&
-	 ALMOST_EQUAL(get_point(path_p10, 1) -> v_y, 0.5) &&
-	 ALMOST_EQUAL(get_point(path_p10, 2) -> x, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_p10, 2) -> y, 0.5) &&
-	 ALMOST_EQUAL(get_point(path_p10, 2) -> u_x, -0.13261) &&
-	 ALMOST_EQUAL(get_point(path_p10, 2) -> u_y, 0.5) &&
-	 ALMOST_EQUAL(get_point(path_p10, 2) -> v_x, -0.2598) &&
-	 ALMOST_EQUAL(get_point(path_p10, 2) -> v_y, 0.44733) &&
-	 ALMOST_EQUAL(get_point(path_p10, 3) -> x, -0.35356) &&
-	 ALMOST_EQUAL(get_point(path_p10, 3) -> y, 0.35356) &&
-	 ALMOST_EQUAL(get_point(path_p10, 3) -> u_x, -0.44733) &&
-	 ALMOST_EQUAL(get_point(path_p10, 3) -> u_y, 0.2598) &&
-	 ALMOST_EQUAL(get_point(path_p10, 3) -> v_x, -0.5) &&
-	 ALMOST_EQUAL(get_point(path_p10, 3) -> v_y, 0.13261) &&
-	 ALMOST_EQUAL(get_point(path_p10, 4) -> x, -0.5) &&
-	 ALMOST_EQUAL(get_point(path_p10, 4) -> y, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_p10, 4) -> u_x, -0.5) &&
-	 ALMOST_EQUAL(get_point(path_p10, 4) -> u_y, -0.13261) &&
-	 ALMOST_EQUAL(get_point(path_p10, 4) -> v_x, -0.44733) &&
-	 ALMOST_EQUAL(get_point(path_p10, 4) -> v_y, -0.2598) &&
-	 ALMOST_EQUAL(get_point(path_p10, 5) -> x, -0.35356) &&
-	 ALMOST_EQUAL(get_point(path_p10, 5) -> y, -0.35356) &&
-	 ALMOST_EQUAL(get_point(path_p10, 5) -> u_x, -0.2598) &&
-	 ALMOST_EQUAL(get_point(path_p10, 5) -> u_y, -0.44733) &&
-	 ALMOST_EQUAL(get_point(path_p10, 5) -> v_x, -0.13261) &&
-	 ALMOST_EQUAL(get_point(path_p10, 5) -> v_y, -0.5) &&
-	 ALMOST_EQUAL(get_point(path_p10, 6) -> x, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_p10, 6) -> y, -0.5) &&
-	 ALMOST_EQUAL(get_point(path_p10, 6) -> u_x, 0.13261) &&
-	 ALMOST_EQUAL(get_point(path_p10, 6) -> u_y, -0.5) &&
-	 ALMOST_EQUAL(get_point(path_p10, 6) -> v_x, 0.2598) &&
-	 ALMOST_EQUAL(get_point(path_p10, 6) -> v_y, -0.44733) &&
-	 ALMOST_EQUAL(get_point(path_p10, 7) -> x, 0.35356) &&
-	 ALMOST_EQUAL(get_point(path_p10, 7) -> y, -0.35356) &&
-	 ALMOST_EQUAL(get_point(path_p10, 7) -> u_x, 0.44733) &&
-	 ALMOST_EQUAL(get_point(path_p10, 7) -> u_y, -0.2598) &&
-	 ALMOST_EQUAL(get_point(path_p10, 7) -> v_x, 0.5) &&
-	 ALMOST_EQUAL(get_point(path_p10, 7) -> v_y, -0.13261) &&
-	 ALMOST_EQUAL(get_point(path_p10, 8) -> x, 0.5) &&
-	 ALMOST_EQUAL(get_point(path_p10, 8) -> y, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_p10, 8) -> u_x, 0.5) &&
-	 ALMOST_EQUAL(get_point(path_p10, 8) -> u_y, 0.13261) &&
-	 ALMOST_EQUAL(get_point(path_p10, 8) -> v_x, 0.44733) &&
-	 ALMOST_EQUAL(get_point(path_p10, 8) -> v_y, 0.2598) &&
+	 path_p10 -> number_of_points == 9 &&
+	 ALMOST_EQUAL(get_point(path_p10, 0) -> point.x, 0.5) &&
+	 ALMOST_EQUAL(get_point(path_p10, 0) -> point.y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_p10, 0) -> point.u_x, 0.5) &&
+	 ALMOST_EQUAL(get_point(path_p10, 0) -> point.u_y, 0.13261) &&
+	 ALMOST_EQUAL(get_point(path_p10, 0) -> point.v_x, 0.44733) &&
+	 ALMOST_EQUAL(get_point(path_p10, 0) -> point.v_y, 0.2598) &&
+	 ALMOST_EQUAL(get_point(path_p10, 1) -> point.x, 0.35356) &&
+	 ALMOST_EQUAL(get_point(path_p10, 1) -> point.y, 0.35356) &&
+	 ALMOST_EQUAL(get_point(path_p10, 1) -> point.u_x, 0.2598) &&
+	 ALMOST_EQUAL(get_point(path_p10, 1) -> point.u_y, 0.44733) &&
+	 ALMOST_EQUAL(get_point(path_p10, 1) -> point.v_x, 0.13261) &&
+	 ALMOST_EQUAL(get_point(path_p10, 1) -> point.v_y, 0.5) &&
+	 ALMOST_EQUAL(get_point(path_p10, 2) -> point.x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_p10, 2) -> point.y, 0.5) &&
+	 ALMOST_EQUAL(get_point(path_p10, 2) -> point.u_x, -0.13261) &&
+	 ALMOST_EQUAL(get_point(path_p10, 2) -> point.u_y, 0.5) &&
+	 ALMOST_EQUAL(get_point(path_p10, 2) -> point.v_x, -0.2598) &&
+	 ALMOST_EQUAL(get_point(path_p10, 2) -> point.v_y, 0.44733) &&
+	 ALMOST_EQUAL(get_point(path_p10, 3) -> point.x, -0.35356) &&
+	 ALMOST_EQUAL(get_point(path_p10, 3) -> point.y, 0.35356) &&
+	 ALMOST_EQUAL(get_point(path_p10, 3) -> point.u_x, -0.44733) &&
+	 ALMOST_EQUAL(get_point(path_p10, 3) -> point.u_y, 0.2598) &&
+	 ALMOST_EQUAL(get_point(path_p10, 3) -> point.v_x, -0.5) &&
+	 ALMOST_EQUAL(get_point(path_p10, 3) -> point.v_y, 0.13261) &&
+	 ALMOST_EQUAL(get_point(path_p10, 4) -> point.x, -0.5) &&
+	 ALMOST_EQUAL(get_point(path_p10, 4) -> point.y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_p10, 4) -> point.u_x, -0.5) &&
+	 ALMOST_EQUAL(get_point(path_p10, 4) -> point.u_y, -0.13261) &&
+	 ALMOST_EQUAL(get_point(path_p10, 4) -> point.v_x, -0.44733) &&
+	 ALMOST_EQUAL(get_point(path_p10, 4) -> point.v_y, -0.2598) &&
+	 ALMOST_EQUAL(get_point(path_p10, 5) -> point.x, -0.35356) &&
+	 ALMOST_EQUAL(get_point(path_p10, 5) -> point.y, -0.35356) &&
+	 ALMOST_EQUAL(get_point(path_p10, 5) -> point.u_x, -0.2598) &&
+	 ALMOST_EQUAL(get_point(path_p10, 5) -> point.u_y, -0.44733) &&
+	 ALMOST_EQUAL(get_point(path_p10, 5) -> point.v_x, -0.13261) &&
+	 ALMOST_EQUAL(get_point(path_p10, 5) -> point.v_y, -0.5) &&
+	 ALMOST_EQUAL(get_point(path_p10, 6) -> point.x, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_p10, 6) -> point.y, -0.5) &&
+	 ALMOST_EQUAL(get_point(path_p10, 6) -> point.u_x, 0.13261) &&
+	 ALMOST_EQUAL(get_point(path_p10, 6) -> point.u_y, -0.5) &&
+	 ALMOST_EQUAL(get_point(path_p10, 6) -> point.v_x, 0.2598) &&
+	 ALMOST_EQUAL(get_point(path_p10, 6) -> point.v_y, -0.44733) &&
+	 ALMOST_EQUAL(get_point(path_p10, 7) -> point.x, 0.35356) &&
+	 ALMOST_EQUAL(get_point(path_p10, 7) -> point.y, -0.35356) &&
+	 ALMOST_EQUAL(get_point(path_p10, 7) -> point.u_x, 0.44733) &&
+	 ALMOST_EQUAL(get_point(path_p10, 7) -> point.u_y, -0.2598) &&
+	 ALMOST_EQUAL(get_point(path_p10, 7) -> point.v_x, 0.5) &&
+	 ALMOST_EQUAL(get_point(path_p10, 7) -> point.v_y, -0.13261) &&
+	 ALMOST_EQUAL(get_point(path_p10, 8) -> point.x, 0.5) &&
+	 ALMOST_EQUAL(get_point(path_p10, 8) -> point.y, 0.0) &&
+	 ALMOST_EQUAL(get_point(path_p10, 8) -> point.u_x, 0.5) &&
+	 ALMOST_EQUAL(get_point(path_p10, 8) -> point.u_y, 0.13261) &&
+	 ALMOST_EQUAL(get_point(path_p10, 8) -> point.v_x, 0.44733) &&
+	 ALMOST_EQUAL(get_point(path_p10, 8) -> point.v_y, 0.2598) &&
 	 path_p10 -> cyclic == true);
   assert("Extracting path from 'pensquare'",
-	 path_p11 -> total_length == 5 &&
-	 ALMOST_EQUAL(path_p11 ->points[0].x, -6.78659) &&
-	 ALMOST_EQUAL(path_p11 ->points[0].y, -2.11049) &&
-	 ALMOST_EQUAL(path_p11 ->points[1].x, -8.78473) &&
-	 ALMOST_EQUAL(path_p11 ->points[1].y, 0.58345) &&
-	 ALMOST_EQUAL(path_p11 ->points[2].x, -12.64308) &&
-	 ALMOST_EQUAL(path_p11 ->points[2].y, -1.72151) &&
-	 ALMOST_EQUAL(path_p11 ->points[3].x, -10.64494) &&
-	 ALMOST_EQUAL(path_p11 ->points[3].y, -4.41545) &&
+	 path_p11 -> number_of_points == 5 &&
+	 ALMOST_EQUAL(path_p11 ->points[0].point.x, -6.78659) &&
+	 ALMOST_EQUAL(path_p11 ->points[0].point.y, -2.11049) &&
+	 ALMOST_EQUAL(path_p11 ->points[1].point.x, -8.78473) &&
+	 ALMOST_EQUAL(path_p11 ->points[1].point.y, 0.58345) &&
+	 ALMOST_EQUAL(path_p11 ->points[2].point.x, -12.64308) &&
+	 ALMOST_EQUAL(path_p11 ->points[2].point.y, -1.72151) &&
+	 ALMOST_EQUAL(path_p11 ->points[3].point.x, -10.64494) &&
+	 ALMOST_EQUAL(path_p11 ->points[3].point.y, -4.41545) &&
 	 path_p11 -> cyclic == true);
   assert("Extracting path from custom pen",
-	 path_p12 -> total_length == 4 &&
-	 ALMOST_EQUAL(path_p12 ->points[0].x, 0.5) &&
-	 ALMOST_EQUAL(path_p12 ->points[0].y, 0.0) &&
-	 ALMOST_EQUAL(path_p12 ->points[0].u_x, 0.5) &&
-	 ALMOST_EQUAL(path_p12 ->points[0].u_y, 0.13261) &&
-	 ALMOST_EQUAL(path_p12 ->points[0].v_x, 0.44733) &&
-	 ALMOST_EQUAL(path_p12 ->points[0].v_y, 0.2598) &&
-	 ALMOST_EQUAL(path_p12 ->points[1].x, 0.35356) &&
-	 ALMOST_EQUAL(path_p12 ->points[1].y, 0.35356) &&
-	 ALMOST_EQUAL(path_p12 ->points[1].u_x, 0.2598) &&
-	 ALMOST_EQUAL(path_p12 ->points[1].u_y, 0.44733) &&
-	 ALMOST_EQUAL(path_p12 ->points[1].v_x, 0.13261) &&
-	 ALMOST_EQUAL(path_p12 ->points[1].v_y, 0.5) &&
-	 ALMOST_EQUAL(path_p12 ->points[2].x, 0.0) &&
-	 ALMOST_EQUAL(path_p12 ->points[2].y, 0.5) &&
-	 ALMOST_EQUAL(path_p12 ->points[2].u_x, -1.60944) &&
-	 ALMOST_EQUAL(path_p12 ->points[2].u_y, 0.5) &&
-	 ALMOST_EQUAL(path_p12 ->points[2].v_x, 0.5) &&
-	 ALMOST_EQUAL(path_p12 ->points[2].v_y, -1.60944) &&
-	 ALMOST_EQUAL(path_p12 ->points[3].x, 0.5) &&
-	 ALMOST_EQUAL(path_p12 ->points[3].y, 0.0) &&
-	 ALMOST_EQUAL(path_p12 ->points[3].u_x, 0.5) &&
-	 ALMOST_EQUAL(path_p12 ->points[3].u_y, 0.13261) &&
-	 ALMOST_EQUAL(path_p12 ->points[3].v_x, 0.44733) &&
-	 ALMOST_EQUAL(path_p12 ->points[3].v_y, 0.2598) &&
+	 path_p12 -> number_of_points == 4 &&
+	 ALMOST_EQUAL(path_p12 ->points[0].point.x, 0.5) &&
+	 ALMOST_EQUAL(path_p12 ->points[0].point.y, 0.0) &&
+	 ALMOST_EQUAL(path_p12 ->points[0].point.u_x, 0.5) &&
+	 ALMOST_EQUAL(path_p12 ->points[0].point.u_y, 0.13261) &&
+	 ALMOST_EQUAL(path_p12 ->points[0].point.v_x, 0.44733) &&
+	 ALMOST_EQUAL(path_p12 ->points[0].point.v_y, 0.2598) &&
+	 ALMOST_EQUAL(path_p12 ->points[1].point.x, 0.35356) &&
+	 ALMOST_EQUAL(path_p12 ->points[1].point.y, 0.35356) &&
+	 ALMOST_EQUAL(path_p12 ->points[1].point.u_x, 0.2598) &&
+	 ALMOST_EQUAL(path_p12 ->points[1].point.u_y, 0.44733) &&
+	 ALMOST_EQUAL(path_p12 ->points[1].point.v_x, 0.13261) &&
+	 ALMOST_EQUAL(path_p12 ->points[1].point.v_y, 0.5) &&
+	 ALMOST_EQUAL(path_p12 ->points[2].point.x, 0.0) &&
+	 ALMOST_EQUAL(path_p12 ->points[2].point.y, 0.5) &&
+	 ALMOST_EQUAL(path_p12 ->points[2].point.u_x, -1.60944) &&
+	 ALMOST_EQUAL(path_p12 ->points[2].point.u_y, 0.5) &&
+	 ALMOST_EQUAL(path_p12 ->points[2].point.v_x, 0.5) &&
+	 ALMOST_EQUAL(path_p12 ->points[2].point.v_y, -1.60944) &&
+	 ALMOST_EQUAL(path_p12 ->points[3].point.x, 0.5) &&
+	 ALMOST_EQUAL(path_p12 ->points[3].point.y, 0.0) &&
+	 ALMOST_EQUAL(path_p12 ->points[3].point.u_x, 0.5) &&
+	 ALMOST_EQUAL(path_p12 ->points[3].point.u_y, 0.13261) &&
+	 ALMOST_EQUAL(path_p12 ->points[3].point.v_x, 0.44733) &&
+	 ALMOST_EQUAL(path_p12 ->points[3].point.v_y, 0.2598) &&
 	 path_p12 -> cyclic == true);
   assert("Using transfoms with pens",
 	 pen_p14 -> format == NULL &&
@@ -1875,10 +1878,10 @@ void test_drawing_commands(void){
 	 abs(pair_pd1 -> y - 6.0) < 0.2 &&
 	 abs(pair_pd2 -> x - 6.0) < 0.2 &&
 	 abs(pair_pd2 -> y + 6.0) < 0.2	 
-	 //ALMOST_EQUAL(pair_pd1 -> x, -6.0) &&
-	 //ALMOST_EQUAL(pair_pd1 -> y, 6.0) &&
-	 //ALMOST_EQUAL(pair_pd2 -> x, 6.0) &&
-	 //ALMOST_EQUAL(pair_pd2 -> y, -6.0));
+	 //ALMOST_EQUAL(pair_pd1 -> point.x, -6.0) &&
+	 //ALMOST_EQUAL(pair_pd1 -> point.y, 6.0) &&
+	 //ALMOST_EQUAL(pair_pd2 -> point.x, 6.0) &&
+	 //ALMOST_EQUAL(pair_pd2 -> point.y, -6.0));
 	 );
   assert("Drawing dot with custom curved pen",
 	 picture_e -> width == 12 && picture_e -> height == 12 &&
@@ -1901,11 +1904,11 @@ void test_drawing_commands(void){
 	 abs(pair_pe1 -> x + 5.92623739298447238162743669702386846) < 0.2 &&
 	 abs(pair_pe1 -> y - 5.926255757660079919904343789205625362) < 0.2 &&
 	 abs(pair_pe2 -> x - 5.926237392984472381627436697023868466) < 0.2 &&
-	 abs(pair_pe2-> y + 5.9262557576600799199043437892056253) < 0.2
-	 //ALMOST_EQUAL(pair_pe1 -> x, -5.92623739298447238162743669702386846) &&
-	 //ALMOST_EQUAL(pair_pe1 -> y, 5.926255757660079919904343789205625362) &&
-	 //ALMOST_EQUAL(pair_pe2 -> x, 5.926237392984472381627436697023868466) &&
-	 //ALMOST_EQUAL(pair_pe2 -> y, -5.9262557576600799199043437892056253));
+	 abs(pair_pe2 -> y + 5.9262557576600799199043437892056253) < 0.2
+	 //ALMOST_EQUAL(pair_pe1 -> point.x, -5.92623739298447238162743669702386846) &&
+	 //ALMOST_EQUAL(pair_pe1 -> point.y, 5.926255757660079919904343789205625362) &&
+	 //ALMOST_EQUAL(pair_pe2 -> point.x, 5.926237392984472381627436697023868466) &&
+	 //ALMOST_EQUAL(pair_pe2 -> point.y, -5.9262557576600799199043437892056253));
 	 );
   assert("Drawing a square with custom polygonal pen",
 	 picture_f -> width == 6 && picture_f -> height == 6 &&

@@ -446,8 +446,10 @@ beginchar("1", (0.265+0.04*(weight-1)+0.035*italic+0.02*italic*(weight-1))*size*
   erase (0,0);
 endchar;
 
-beginchar("2", 0, 0, 0);
+beginchar("2", (0.482+0.032*(weight-1)+0.112*italic-0.005*italic*(weight-1))*size*pt,
+    0.68*size*pt, 0);
 endchar;
+
 beginchar("3", 0, 0, 0);
 endchar;
 beginchar("4", 0, 0, 0);
