@@ -89,79 +89,81 @@
 
 2.1. Código de Álgebra Linear \indice{6}
 
-2.2. Mutexes e Seções Críticas \indice{9}
+2.1.1. Resolvendo Sistemas de Equações Lineares \indice{9}
 
-3. Inicialização e Finalização \indice{10}
+2.2. Mutexes e Seções Críticas \indice{11}
 
-4. Analisador Léxico \indice{11}
+3. Inicialização e Finalização \indice{12}
 
-4.1. Tipos de Tokens \indice{11}
+4. Analisador Léxico \indice{12}
 
-4.2. A Análise Léxica \indice{14}
+4.1. Tipos de Tokens \indice{12}
 
-5. Programas WEAVEFONT \indice{22}
+4.2. A Análise Léxica \indice{16}
 
-5.1. Executando Programas \indice{22}
+5. Programas WEAVEFONT \indice{24}
 
-5.2. Lidando com Erros \indice{25}
+5.1. Executando Programas \indice{24}
 
-5.3. Separando Lista de Instruções em Instruções Individuais \indice{28}
+5.2. Lidando com Erros \indice{27}
 
-6. Uma Instrução Composta: O Bloco Composto \indice{29}
+5.3. Separando Lista de Instruções em Instruções Individuais \indice{30}
 
-6.1. Suportando Instruções Compostas \indice{29}
+6. Uma Instrução Composta: O Bloco Composto \indice{31}
 
-6.2. A Instrução \monoespaco{begingroup}$\ldots$\monoespaco{endgroup}\indice{34}
+6.1. Suportando Instruções Compostas \indice{31}
 
-7. Declaração de Variáveis \indice{35}
+6.2. A Instrução \monoespaco{begingroup}$\ldots$\monoespaco{endgroup}\indice{36}
 
-7.1. Variáveis Numéricas \indice{41}
+7. Declaração de Variáveis \indice{37}
 
-7.2. Variáveis de Pares \indice{43}
+7.1. Variáveis Numéricas \indice{43}
 
-7.3. Variáveis de Transformação \indice{43}
+7.2. Variáveis de Pares \indice{45}
 
-7.4. Variáveis de Caminhos \indice{45}
+7.3. Variáveis de Transformação \indice{45}
 
-7.5. Variáveis de Caneta \indice{47}
+7.4. Variáveis de Caminhos \indice{47}
 
-7.6. Variáveis de Imagens \indice{50}
+7.5. Variáveis de Caneta \indice{49}
 
-7.7. Variáveis Booleanas \indice{52}
+7.6. Variáveis de Imagens \indice{52}
 
-8. Atribuições \indice{52}
+7.7. Variáveis Booleanas \indice{54}
 
-8.1. Atribuições e Expressões Numéricas \indice{56}
+8. Atribuições \indice{54}
 
-8.1.1. Soma e Subtração: Normal e Pitagórica \indice{56}
+8.1. Atribuições e Expressões Numéricas \indice{58}
 
-8.1.2. Multiplicação e Divisão \indice{61}
+8.1.1. Soma e Subtração: Normal e Pitagórica \indice{58}
 
-8.1.3. Módulo, Seno, Cosseno, Exponenciais, Piso e Aleatórios Uniformes \indice{63}
+8.1.2. Multiplicação e Divisão \indice{63}
 
-8.1.4. Números Isolados e Valores Aleatórios Normais \indice{69}
+8.1.3. Módulo, Seno, Cosseno, Exponenciais, Piso e Aleatórios Uniformes \indice{65}
 
-8.2. Atribuições e Expressões de Pares \indice{73}
+8.1.4. Números Isolados e Valores Aleatórios Normais \indice{71}
 
-8.2.1. Soma e Subtração \indice{74}
+8.2. Atribuições e Expressões de Pares \indice{75}
 
-8.2.2. Transformações, Multiplicação e Divisão Escalar \indice{75}
+8.2.1. Soma e Subtração \indice{76}
 
-8.2.3. Valores Intermediários de Pares, Literais e Variáveis \indice{79}
+8.2.2. Transformações, Multiplicação e Divisão Escalar \indice{77}
 
-8.2.4. Pares em Expressões Numéricas \indice{84}
+8.2.3. Valores Intermediários de Pares, Literais e Variáveis \indice{81}
 
-8.3. Atribuições e Expressões de Transformação \indice{86}
+8.2.4. Pares em Expressões Numéricas \indice{86}
 
-8.3.1. Transformações sobre Transformadores \indice{86}
+8.3. Atribuições e Expressões de Transformação \indice{88}
 
-8.3.2 Expressões Primárias de Transformação: Literais e Variáveis \indice{90}
+8.3.1. Transformações sobre Transformadores \indice{88}
 
-8.3.3. Transformações em Expressões Numéricas \indice{93}
+8.3.2 Expressões Primárias de Transformação: Literais e Variáveis \indice{92}
 
-8.3.4. Transformações em Expressões de Pares \indice{94}
+8.3.3. Transformações em Expressões Numéricas \indice{95}
 
-8.4. Atribuições e Expressões de Caminhos \indice{94}
+8.3.4. Transformações em Expressões de Pares \indice{96}
+
+8.4. Atribuições e Expressões de Caminhos \indice{96}
 
 8.4.1. Junção de Caminhos \indice{XX}
 
@@ -686,6 +688,185 @@ Realizar esta multiplicação por outra matriz é feito com essa macro:
 @
 \fimcodigo
 
+\subsubsecao{2.1.1. Resolvendo Sistemas de Equações Lineares}
+
+Resolver sistemas de equações lineares é o problema central da álgebra
+linear. São equações em que as incógnitas estão sempre sendo
+multiplicadas por constantes numéricas e somadas (sem haver duas
+incógnitas multiplicadas entre si). Por exemplo:
+
+$$
+x+2y+3z = 6
+$$
+$$
+2x+5y+2z=4
+$$
+$$
+6x-3y+z=2
+$$
+
+Podemos representar o sistema de equações acima na forma matricial,
+associando a primeira coluna a $x$, a segunda a $y$ e a terceira a $z$:
+
+$$
+\matrix{1}{2}{3}{2}{5}{2}{6}{-3}{1}x=\left[{{6 \atop 4}\atop
+      {\scriptstyle 2}}\right]
+$$
+
+Resolver o sistema é encontrar uma solução válida para $x$. No caso:
+      $X=\left[{{0 \atop 0}\atop {\scriptstyle 2}}\right]$
+
+Uma função capaz de resolver este sistema pode ser a abaixo, que
+recebe um número de dimensões $n$, um vetor já alocado com os $n^2$
+elementos de uma matriz, um vetor já alocado com $n$ elementos do lado
+direito da equação, e um próximo vetor com $n$ valores da solução, que
+serão preenchidos pela função:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>=
+void solve_linear_system(int n, double *m, double *b, double *x);
+@
+\fimcodigo
+
+Antes de mostrar como resolver o sistema, é útil definir algumas novas
+macros para nos ajudar. Vamos assumir que toda matriz, independente do
+tamanho está alocada em um único vetor contínuo que concatena cada uma
+de suas linhas. Será muito comum que tenhamos que trocar a ordem das
+linhas de uma matriz para resolver o sistema de equações. Trocar
+linhas da matriz $M$, que representa o lado esquerdo de um sistema de
+equações, também significa trocar as mesmas linhas de $b$, a matriz
+representando o lado direito do sistema de equações.
+
+A macro abaixo mostra o que acontece quando, em um sistema de $n$
+linhas, trocamos na matriz $M$ e em $b$ as linhas $i$ e $j$:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#define EXCHANGE_ROWS(n, M, b, i, j) {\
+  if(i != j){\
+   int _k;\
+   double _tmp;\
+   _tmp = b[i];\
+   b[i] = b[j];\
+   b[j] = _tmp;\
+   for(_k = 0; _k < n; _k++){\
+       _tmp = m[i*n+_k];\
+       m[i*n+_k] = m[j*n+_k];\
+       m[j*n+_k] = _tmp;}}}
+@
+\fimcodigo
+
+Note que trocar as linhas não muda o resultado de um sistema de
+equações. Por exemplo, as três equações abaixo tem a mesma solução
+($x=0$, $y=0$, $z=2$) do sistema de equações do começo da Subseção
+2.1.1:
+
+$$
+6x-3y+z=2
+$$
+$$
+x+2y+3z = 6
+$$
+$$
+2x+5y+2z=4
+$$
+
+
+Outra operação relevante é, dado um sistema com $n$ linhas, com a
+matriz $M$ e a matriz $b$, devemos combinar as linhas $i$ e $j$,
+subtraindo da linha $i$ o conteúdo da linha $j$ multiplicado por $q$:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#define SUB_MUL_LINES(n, m, b, i, j, q) {\
+  int _k;\
+  b[i] -= (q * b[j]);\
+  for(_k = 0; _k < n; _k++){\
+      m[i*n+_k] -= (q * m[j*n+_k]);}}
+@
+\fimcodigo
+
+Realizar esta operação tampouco muda o resultado do sistema de
+equações. Por exemplo, no sistema logo acima, podemos subtrair a
+segunda linha pela primeira multiplicada por $1/6$ e a terceira pela
+primeira multiplicada por $1/3$. O resultado seria:
+
+$$
+6x-3y+z=2
+$$
+$$
+5/2y+17/6z = 17/3
+$$
+$$
+6y+5/3z=10/3
+$$
+
+Embora o resultado não tenha mudado, conseguimos simplificar o sistema,
+deixando as duas últimas equações com apenas duas incógnitas. Com mais
+uma operação, é possível deixar a última equação com apenas uma
+incógnita e à partir daí a solução se torna trivial.
+
+O que queremos então é realizar as operações das duas macros acima
+sucessivas vezes até obter uma matriz triangular com todos os
+elementos abaixo da diagonal principal nulos. Depois, obter a solução
+se torna fácil: na última linha só há e podemos calcular diretamente o
+resultado. Sabendo o valor da última incógnita, resta apenas uma
+incógnita desconhecida na penúltima linha. E assim continuamos até
+chegar à primeira linha e não restar mais incógnitas desconhecidas.
+
+Para construir a matriz triangular, temos uma iteração onde
+percorremos uma linha de cada vez. Na iteração $i$, nosso objetivo é
+tornar nulo todos os elementos da coluna $i$ que estejam abaixo da
+linha $i$. Para isso, escolhemos a linha atual ou abaixo dela que tem
+o maior valor absoluto na coluna $i$ e trocamos a posição dela com a
+linha atual. Isso não é estritamente necessário, mas escolher o maior
+valor possível minimiza os erros da operação. E então à partir disso
+escolhemos valores adequados para transformar a matriz e resolvê-la:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>=
+void solve_linear_system(int n, double *m, double *b, double *x){
+  int i, j;
+  for(i = 0; i < n; i ++){ // Para cada linha
+    // Acha maior pivô possível na coluna atual e troca de posição com ele:
+    int max_line = i;
+    double max = abs(m[i * n + i]);
+    for(j = i + 1; j < n; j ++){
+      if(abs(m[j*n+i]) > max){
+        max = abs(m[j*n+i]);
+        max_line = j;
+      }
+    }
+    EXCHANGE_ROWS(n, m, b, i, max_line);
+    // Torna zero as colunas do pivô nas linhas abaixo:
+    for(j = i + 1; j < n; j ++){
+      double multiplier = m[j * n + i]/m[i * n + i];
+      SUB_MUL_LINES(n, m, b, j, i, multiplier);
+    }
+  }
+  // Gerando a solução à partir da matriz triangular:
+  for(i = n - 1; i >= 0; i --){
+    x[i] = 0;
+    for(j = n - 1; j > i; j --)
+      x[i] += x[j] * m[i*n + j];
+    x[i] = (b[i] - x[i]) / m[i*n + i];
+  }
+}
+@
+\fimcodigo
+
+Note que não preservamos o estado das matrizes passadas como argumento
+para a função. E que não fazemos qualquer checagem de erro. É
+responsabilidade de quem chamar esta função alocar vetores de tamanho
+correto e só passar sistemas que tenham uma solução (ou uma divisão
+por zero irá ocorrer e matar o programa).
+
+Note that we do not preserve the state of the matrices passed as an
+argument for the function. And we don't do any error checking. AND
+responsibility of whoever calls this function to allocate vectors of
+size correct and only pass systems that have a solution (or a division
+by zero will occur and kill the program).
+
 \subsecao{2.2. Mutexes e Seções Críticas}
 
 Um mutex é uma estrutura de dados abstrata usada para controlar acesso
@@ -1003,7 +1184,7 @@ Para desalocar a memória ocupada por uma lista de tokens e apagá-los,
 pode-se usar a seguinte função:
 
 \iniciocodigo
-@<Funções Auxiliares Locais (metafont.c)@>=
+@<Funções Auxiliares Locais (metafont.c)@>+=
 void free_token_list(void *token_list){
   if(permanent_free != NULL && token_list != NULL){
     struct generic_token *p, *p_next;
@@ -3722,7 +3903,6 @@ if(atleast1)
 \fimcodigo
 
 A declaração da função que corrige a tensão e que usamos acima:
-
 
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=

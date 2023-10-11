@@ -61,6 +61,14 @@ uint64_t my_rand(void){
   return 5;
 }
 
+void test_linar_algebra(void){
+  double m[9] = {1, 2, 3, 2, 5, 2, 6, -3, 1};
+  double x[3] = {0, 0, 0};
+  double b[3] = {6, 4, 2};
+  solve_linear_system(3, m, b, x);
+  assert("Solving linear system", x[0] == 0.0 && x[1] == 0.0 && x[2] == 2.0);
+}
+
 void test_empty_programs(void){
   struct generic_token *first, *last;
   struct metafont *mf;
@@ -1983,6 +1991,7 @@ int main(int argc, char **argv){
     exit(1);
   }
   test_lexer();
+  test_linar_algebra();
   test_empty_programs();
   test_compound_statements();
   test_variables();

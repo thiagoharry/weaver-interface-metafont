@@ -75,80 +75,82 @@ k\input tex/epsf.tex
 
 2.1. Linear Algebra Code \indice{6}
 
-2.2. Mutexes and Critical Sections \indice{9}
+2.1.1. Solving Linear System Equations \indice{9}
 
-3. Initialization and Finalization \indice{10}
+2.2. Mutexes and Critical Sections \indice{11}
 
-4. Lexer \indice{11}
+3. Initialization and Finalization \indice{12}
 
-4.1. Token Types \indice{11}
+4. Lexer \indice{13}
 
-4.2. Lexical Analysis \indice{13}
+4.1. Token Types \indice{13}
 
-5. WEAVEFONT Programs \indice{22}
+4.2. Lexical Analysis \indice{15}
 
-5.1. Running Programs \indice{22}
+5. WEAVEFONT Programs \indice{24}
 
-5.2. Handling Errors \indice{24}
+5.1. Running Programs \indice{24}
 
-5.3. Splitting List of Statements in Individual Statements \indice{27}
+5.2. Handling Errors \indice{26}
 
-6. A Compound Statement: The Compound Block \indice{29}
+5.3. Splitting List of Statements in Individual Statements \indice{29}
 
-6.1. Supporting Compound Statements \indice{29}
+6. A Compound Statement: The Compound Block \indice{31}
 
-6.2. The Statement \monoespaco{begingroup}$\ldots$\monoespaco{endgroup} \indice{34}
+6.1. Supporting Compound Statements \indice{31}
 
-7. Variable Declarations \indice{35}
+6.2. The Statement \monoespaco{begingroup}$\ldots$\monoespaco{endgroup} \indice{36}
 
-7.1. Numeric Variables \indice{41}
+7. Variable Declarations \indice{37}
 
-7.2. Pair Variables \indice{43}
+7.1. Numeric Variables \indice{42}
 
-7.3. Transform Variables \indice{43}
+7.2. Pair Variables \indice{45}
 
-7.4. Path Variables \indice{44}
+7.3. Transform Variables \indice{45}
 
-7.5. Pen Variables \indice{46}
+7.4. Path Variables \indice{46}
 
-7.6. Picture Variables \indice{50}
+7.5. Pen Variables \indice{48}
 
-7.7. Boolean Variables \indice{52}
+7.6. Picture Variables \indice{52}
 
-8. Assignments \indice{52}
+7.7. Boolean Variables \indice{54}
 
-8.1. Numeric Assignments and Expressions \indice{56}
+8. Assignments \indice{56}
 
-8.1.1. Sum and Subtraction: Normal and Pythagorean \indice{56}
+8.1. Numeric Assignments and Expressions \indice{58}
 
-8.1.2. Multiplication and Division \indice{60}
+8.1.1. Sum and Subtraction: Normal and Pythagorean \indice{58}
+
+8.1.2. Multiplication and Division \indice{62}
 
 8.1.3. Modulus, Sine, Cosine, Exponentials, Floor and
-  Random Uniform Values \indice{63}
+  Random Uniform Values \indice{65}
 
-8.1.4. Isolated Numbers and Random Normal Values \indice{69}
+8.1.4. Isolated Numbers and Random Normal Values \indice{71}
 
-8.2. Pair Assignments and Expressions \indice{73}
+8.2. Pair Assignments and Expressions \indice{75}
 
-8.2.1. Sum and Subtraction \indice{73}
+8.2.1. Sum and Subtraction \indice{75}
 
-8.2.2. Transformers and Scalar Multiplication and Division \indice{75}
+8.2.2. Transformers and Scalar Multiplication and Division \indice{77}
 
-8.2.3. Pair Intermediary Values, Literals and Variables \indice{80}
+8.2.3. Pair Intermediary Values, Literals and Variables \indice{82}
 
-8.2.4. Pairs in Numeric Expressions \indice{84}
+8.2.4. Pairs in Numeric Expressions \indice{86}
 
-8.3. Transform Assignments and Expressions \indice{86}
+8.3. Transform Assignments and Expressions \indice{88}
 
-8.3.1. Transforming Transformers \indice{87}
+8.3.1. Transforming Transformers \indice{89}
 
-8.3.2 Transform Tertiary Expressions: Literals and Variables \indice{90}
+8.3.2 Transform Tertiary Expressions: Literals and Variables \indice{92}
 
-8.3.3. Transforms in Numeric Expressions \indice{93}
+8.3.3. Transforms in Numeric Expressions \indice{95}
 
-8.3.4. Transforms in Pair Expressions \indice{94}
+8.3.4. Transforms in Pair Expressions \indice{96}
 
-8.4. Path Assignments and Expressions \indice{95}
+8.4. Path Assignments and Expressions \indice{97}
 
 8.4.1. Joining Paths \indice{XX}
 
@@ -655,6 +657,175 @@ Performing this operation in another matrix can be done using:
 @
 \fimcodigo
 
+\subsubsecao{2.1.1. Solving Linear System Equations}
+
+Solving systems of linear equations is the central problem in linear
+algebra. These are equations in which the unknowns are always
+multiplied by numerical constants and added together (we never will
+have two unknowns multiplied together). For example:
+
+$$
+x+2y+3z = 6
+$$
+$$
+2x+5y+2z=4
+$$
+$$
+6x-3y+z=2
+$$
+
+We can represent the above system of equations in matrix form,
+associating the first column with $x$, the second with $y$ and the
+third with $z$:
+
+$$
+\matrix{1}{2}{3}{2}{5}{2}{6}{-3}{1}x=\left[{{6 \atop 4}\atop
+      {\scriptstyle 2}}\right]
+$$
+
+Solving the system means finding a valid value for $x$. In the above
+      example: $x=\left[{{0 \atop 0}\atop {\scriptstyle 2}}\right]$
+
+A function capable of solving this system could be the one below,
+which receives a number of dimensions $n$, a vector already allocated
+with the $n^2$ elements of a matrix, an already allocated vector with
+$n$ elements on the side right side of the equation, and a next vector
+with $n$ values ​​of the solution, which will be filled by the function:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>=
+void solve_linear_system(int n, double *m, double *b, double *x);
+@
+\fimcodigo
+
+Before showing how to solve the system, it is useful to define some
+new macros to help us. Let's assume that every matrix, regardless of
+size is allocated in a single continuous vector that concatenates each
+of its lines. It will be very common for us to have to change the
+order of the lines a matrix to solve the system of equations. Swap
+lines in matrix $M$, which represent the left side of a system of
+equations also means swapping the same rows of $b$, the matrix
+representing the right side.
+
+The macro below shows what happens when, in a system with $n$ lines,
+we swap in the matrix $M$ and in $b$ the lines $i$ and $j$:
+
+\iniciocodigo
+@<Local Macros (metafont.c)@>+=
+#define EXCHANGE_ROWS(n, M, b, i, j) {\
+  if(i != j){\
+   int _k;\
+   double _tmp;\
+   _tmp = b[i];\
+   b[i] = b[j];\
+   b[j] = _tmp;\
+   for(_k = 0; _k < n; _k++){\
+       _tmp = m[i*n+_k];\
+       m[i*n+_k] = m[j*n+_k];\
+       m[j*n+_k] = _tmp;}}}
+@
+\fimcodigo
+
+Note that changing the lines does not change the result of a system.
+equations. For example, the three equations below have the same
+solution ($x=0$, $y=0$, $z=2$) of the system of equations at the
+beginning of the Subsection 2.1.1:
+
+$$
+6x-3y+z=2
+$$
+$$
+x+2y+3z = 6
+$$
+$$
+2x+5y+2z=4
+$$
+
+Another relevant operation is, given a system with $n$ lines, with the
+matrix $M$ and the matrix $b$, we must combine the lines $i$ and $j$,
+subtracting from line $i$ the contents of line $j$ multiplied by $q$:
+
+\iniciocodigo
+@<Local Macros (metafont.c)@>+=
+#define SUB_MUL_LINES(n, m, b, i, j, q) {\
+  int _k;\
+  b[i] -= (q * b[j]);\
+  for(_k = 0; _k < n; _k++){\
+      m[i*n+_k] -= (q * m[j*n+_k]);}}
+@
+\fimcodigo
+
+Performing this operation also does not change the result of the
+equations. For example, in our previous example, we can subtract the
+second line by the first multiplied by $1/6$ and the third by first
+multiplied by $1/3$. The result would be:
+
+$$
+6x-3y+z=2
+$$
+$$
+5/2y+17/6z = 17/3
+$$
+$$
+6y+5/3z=10/3
+$$
+
+Although the result did not change, we were able to simplify the
+system, leaving the last two equations with only two unknowns. With
+one more operation, it would be possible to leave the last equation
+with just one unknown and from then on the solution becomes trivial.
+
+What we want then is to perform the operations of the two previous
+macros successive times until obtaining a triangular matrix with all
+elements below the main diagonal null. Then computing the solution
+becomes straightforward: in the last line where we have just one
+unknown, we compute directly the result. Then, knowing its value,
+there remains only one unknown in the penultimate line. And so we
+continue until we reach first line and no more unknown unknowns
+remain.
+
+To build the triangular matrix, we have an iteration where we go
+through one line at a time. In iteration $i$, our goal is make all
+elements in column $i$ that are below the line $i$ null. To do this,
+we choose the current line or below it that has the largest absolute
+value in column $i$ and swap its position with the current line. This
+is not strictly necessary, but choosing the largest possible value
+minimizes operation errors. And then from that we choose suitable
+values ​​to transform the matrix and solve it:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>=
+void solve_linear_system(int n, double *m, double *b, double *x){
+  int i, j;
+  for(i = 0; i < n; i ++){ // Para cada linha
+    // Acha maior pivô possível na coluna atual e troca de posição com ele:
+    int max_line = i;
+    double max = abs(m[i * n + i]);
+    for(j = i + 1; j < n; j ++){
+      if(abs(m[j*n+i]) > max){
+        max = abs(m[j*n+i]);
+        max_line = j;
+      }
+    }
+    EXCHANGE_ROWS(n, m, b, i, max_line);
+    // Torna zero as colunas do pivô nas linhas abaixo:
+    for(j = i + 1; j < n; j ++){
+      double multiplier = m[j * n + i]/m[i * n + i];
+      SUB_MUL_LINES(n, m, b, j, i, multiplier);
+    }
+  }
+  // Gerando a solução à partir da matriz triangular:
+  for(i = n - 1; i >= 0; i --){
+    x[i] = 0;
+    for(j = n - 1; j > i; j --)
+      x[i] += x[j] * m[i*n + j];
+    x[i] = (b[i] - x[i]) / m[i*n + i];
+  }
+}
+@
+\fimcodigo
+
+
 \subsecao{2.2. Mutexes and Critical Sections}
 
 A mutex is a data sctructure that controls the access for multiple
@@ -968,7 +1139,7 @@ To deallocate the memory occupied by a token list, we can use the
 following function:
 
 \iniciocodigo
-@<Auxiliary Local Functions (metafont.c)@>=
+@<Auxiliary Local Functions (metafont.c)@>+=
 void free_token_list(void *token_list){
   if(permanent_free != NULL && token_list != NULL){
     struct generic_token *p, *p_next;
@@ -2006,7 +2177,7 @@ all statements are delimited by semicolons.
 The function that will split and identify individual statemetns is:
 
 \iniciocodigo
-@<Local Function Declaration (metafont.c)@>=
+@<Local Function Declaration (metafont.c)@>+=
 bool eval_list_of_statements(struct metafont *mf, struct context *cx,
                             struct generic_token *begin_list,
                             struct generic_token *end_list);
