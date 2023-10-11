@@ -3379,7 +3379,7 @@ struct path_points{
       float x, y; // Ponto de extremidade
       float dir1_x, dir1_y, dir2_x, dir2_y; // Especificadores de direção
       float tension1, tension2;
-      bool at_least1, at_least2;
+      bool atleast1, atleast2;
     } prov;
   };
 };
@@ -3577,6 +3577,286 @@ void recursive_aux_copy(struct path_points **dst, struct path_variable *origin){
 @
 \fimcodigo
 
+\subsubsecao{7.4.2. Tensão e Especificadores de Direção}
+
+Vimos que um ponto que faz parte de um caminho pode estar em um
+formato provisório, além de seu formato final e do seu formato de
+ponteiro para subcaminhos. Quando isso ocorre, ele possui uma
+quantidade bem grande de variávels. Em especial, ele possui dois
+valores numéricos representando sua tensão e possui dois pares
+representando os dois próximos especificadores de direção.
+
+O primeiro especificador de direção deve ser considerado como um vetor
+contendo o ângulo de virada da trajetória da curva no primeiro ponto
+de extremidade e o segundo é o mesmo para o próximo ponto de
+extremidade. O ângulo de virada pode ser visto como o ângulo das
+``rodas'' de um veículo naquele ponto, caso o veículo estivesse
+fazendo a trajetória da curva. Podemos representar tais informações no
+código abaixo representando o trecho de um caminho:
+
+\alinhaverbatim
+{w0} z1 {w1} .. tension t1 and t2 {w2} z2 {w3} 
+\alinhanormal
+
+Note que se $w_0\neq w_1$ ou $w2 \neq w_2$, então haverá uma quebra na
+curva no respectivo ponto de extremidade, haverá uma ``ponta'', um
+ponto não-derivável.
+
+Já a tensão deve representar o quão ``solta'' ou ``presa'' está uma
+curva. Uma curva com tensão maior terá um perímetro menor e tenderá a
+se aproximar de uma reta à medida que a tensão aumenta.
+
+Tendo tais informações, como converter o ponto da curva do formato
+provisório para o formato final? Usando como exemplo o segmento de
+curva acima, isso é feito com ajuda das fórmulas abaixo:
+
+$$
+\theta = arg(w_1/(z_2-z_1))\,\,\,\phi = arg((z_2-z_1)/w_2)
+$$
+
+Para calcular a função $arg$ acima, vamos precisar do cabeçalho:
+
+\iniciocodigo
+@<Cabeçalhos Locais (metafont.c)@>+=
+#include <complex.h>
+@
+\fimcodigo
+
+Os pontos de controle $u$ e $v$ são obtidos então pelas fórmulas:
+
+$$
+u = z_{n} + e^{i\theta}(z_{n+1}-z_n)f(\theta, \phi)/\alpha
+$$
+
+$$
+v = z_{n+1} - e^{-i\phi}(z_{n+1}-z_n)f(\phi, \theta)/\beta
+$$
+
+Com a função $f$ definida como:
+
+$$
+f(\theta, \phi) = {{2+\sqrt{2}(\sin\theta-{{1}\over{16}}\sin\phi)(\sin\phi-{{1}\over{16}}\sin\theta)(\cos\theta-\cos\phi)}\over{3(1+{1\over 2}(\sqrt 5 - 1)\cos\theta+{1\over 2}(3-\sqrt 5)\cos\phi)}}
+$$
+
+Podemos então declarar a função que faz a conversão e também a função
+que computa $f$ abaixo:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+void convert_to_final(struct path_variable *p);
+double compute_f(double theta, double phi);
+@
+\fimcodigo
+
+A função $f$:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+double compute_f(double theta, double phi){
+  double n = 2 + sqrt(2) * (sin(theta) - 0.0625 * sin(phi)) *
+             (sin(phi) - 0.0625 * sin(theta)) * (cos(theta) - cos(phi));
+  double d = 3 * (1 + 0.5 * (sqrt(5) - 1) * cos(theta) + 0.5 * (3 - sqrt(5)) *
+                  cos(phi));
+  return n/d;
+}
+@
+\fimcodigo
+
+Se assumirmos que um caminho já passou pela normalização que removeu
+sua recursão, podemos facilmente transformar todos os seus pontos de
+formato provisório para o final usando a função:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+void convert_to_final(struct path_variable *p){
+  int i;
+  for(i = 0; i < p -> length; i ++){
+    if(p -> points[i].format == PROVISIONAL_FORMAT){
+      bool atleast0 = p -> points[i].prov.atleast1;
+      bool atleast1 = p -> points[i].prov.atleast1;
+      double complex u, v;
+      struct path_points *p0 = &(p -> points[i]), *p1 = &(p -> points[i+1]);
+      double w0_x = p0 -> prov.dir1_x, w0_y = p0 -> prov.dir1_y;
+      double w1_x = p0 -> prov.dir2_x, w1_y = p0 -> prov.dir2_y;
+      double complex z0 = p0 -> prov.x + p0 -> prov.y * I;
+      double complex z1 = p1 -> prov.x + p1 -> prov.y * I;
+      double the = carg((w0_x + w0_y * I) / (z1 - z0));
+      double phi = carg((z1 - z0)/(w1_x + w1_y * I));
+      u = z0 + (cexp(the * I) * (z1 - z0) * compute_f(the, phi)) /
+        p -> points[i].prov.tension1;
+      v = z1 - (cexp(-phi * I) * (z1 - z0) * compute_f(phi, the)) /
+        p -> points[i].prov.tension2;
+      p -> points[i].format = FINAL_FORMAT;
+      p -> points[i].point.u_x = creal(u);
+      p -> points[i].point.u_y = cimag(u);
+      p -> points[i].point.v_x = creal(v);
+      p -> points[i].point.v_y = cimag(v);
+      @<Ajuste de Tensão@>
+    }
+  }
+}
+@
+\fimcodigo
+
+Uma última complicação que resta na conversão é ajustar a tensão. Se a
+variável booleana \monoespaco{atleast0} estiver como verdadeira, isso
+significa que a primeira tensão que tínhamos era um valor mínimo. Mas
+devemos aumentá-la se necessário, para o menor valor tal que o
+primeiro ponto de controle fique dentro de um triângulo delimitado
+pelos pontos de extremidade e do ponto em que as retas direcionadas
+pelos especificadores de direção se cruzam:
+
+\iniciocodigo
+@<Ajuste de Tensão@>=
+if(atleast0)
+  correct_tension(p0 -> point.x, p0 -> point.y,
+                  p1 -> point.x, p1 -> point.y,
+                  w0_x, w0_y, w1_x, w1_y,
+                  &(p -> points[i].point.u_x), &(p -> points[i].point.u_y));
+if(atleast1)
+  correct_tension(p0 -> point.x, p0 -> point.y,
+                  p1 -> point.x, p1 -> point.y,
+                  w0_x, w0_y, w1_x, w1_y,
+                  &(p -> points[i].point.v_x), &(p -> points[i].point.v_y));
+@
+\fimcodigo
+
+A declaração da função que corrige a tensão e que usamos acima:
+
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+void correct_tension(double p0_x, double p0_y, double p1_x, double p1_y,
+                     double d0_x, double d0_y, double d1_x, double d1_y,
+                     float *control_x, float *control_y);
+@
+\fimcodigo
+
+E a implementação da função:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+void correct_tension(double p0_x, double p0_y, double p1_x, double p1_y,
+                     double d0_x, double d0_y, double d1_x, double d1_y,
+                     float *control_x, float *control_y){
+  double internal_angle0, internal_angle1, internal_angle2;
+  double triangle_angle;
+  double p2_x, p2_y;
+  internal_angle0 = get_angle(p0_x, p0_y, p1_x, p1_y, p0_x + d0_x, p0_y + d0_y);
+  internal_angle1 = get_angle(p1_x, p1_y, p0_x, p0_y, p1_x + d1_x, p1_y + d1_y);
+  internal_angle2 = M_PI - internal_angle0 - internal_angle1;
+  if(internal_angle0 + internal_angle1 >= M_PI - 0.00002)
+    return; // // Não é um triângulo válido
+  { // Descobre o terceiro vértice da coordenada
+    // Primeiro compute lado do triângulo que vai de p0 ao vértice conhecido
+    double known_side = hypot((p1_x - p0_x) * (p1_x - p0_x),
+                              (p1_y - p0_y) * (p1_y - p0_y));
+    double triangle_side = known_side * sin(internal_angle0) /
+                           sin(internal_angle2);
+    // Conhecendo o lado e o ângulo, computamos as coordenadas
+    triangle_angle = get_angle(p0_x, p0_y, p1_x, p1_y, p0_x + 1.0, p0_y);
+    p2_x = p0_x + triangle_side * cos(triangle_angle + internal_angle0);
+    p2_y = p0_y + triangle_side * sin(triangle_angle + internal_angle0);
+  }
+  {
+    @<Checa se Ponto Está Dentro do Triângulo@>
+    @<Se Não Estiver, Ajusta Tensão para Ficar@>
+  }
+}
+@
+\fimcodigo
+
+Como checar se um ponto está dentro de um triângulo? Há várias formas,
+a que usaremos consiste em medir a área com sinal dos três novos
+triângulos formados pelo ponto e dois vértices do triângulo. A ``área
+com sinal'' é a área do triângulo, só que ela tem valor positivo ou
+negativo dependendo se passamos os vértices no sentido horário ou
+anti-horário. Em seguida, apenas verificamos se todas as áreas tem o
+mesmo sinal (positivo ou negativo). Se tiver, então o ponto certamente
+está fora. Caso contrário, o ponto está dentro do triângulo:
+
+\iniciocodigo
+@<Checa se Ponto Está Dentro do Triângulo@>=
+bool s1, s2, s3; // O sinal das áreas
+s1 = ((*control_x - p1_x) * (p0_y - p1_y) -
+      (p0_x - p1_x) * (*control_y - p1_y)) < 0;
+s2 = ((*control_x - p2_x) * (p1_y - p2_y) -
+      (p1_x - p2_x) * (*control_y - p2_y)) < 0;
+s3 = ((*control_x - p0_x) * (p2_y - p0_y) -
+      (p2_x - p0_x) * (*control_y - p0_y)) < 0;
+if(s1 == s2 && s2 == s3)
+  return;
+@
+\fimcodigo
+
+Uma vantagem deste método é que dependendo de qual área com sinal tem
+um sinal diferente das outras, isso determina qual dos lados do
+triângulo é mais próximo do ponto. Então, se ainda estivermos na
+função, checamos qual é o lado mais próximo, obtemos sua equação de
+reta e calculamos o ponto mais próximo na reta. Se o ponto estiver no
+lado do triângulo, este é o novo ponto do ponto de controle. Se não, o
+ponto de controle se torna a extremidade do triângulo mais próxima do
+ponto.
+
+\iniciocodigo
+@<Se Não Estiver, Ajusta Tensão para Ficar@>=
+{
+  double x0, y0, x1, y1;
+  if(s1 != s2 && s1 != s3){
+    x0 = p0_x; y0 = p0_y;
+    x1 = p1_x; y1 = p1_y;
+  }
+  else if(s2 != s1 && s2 != s3){
+    x0 = p1_x; y0 = p1_y;
+    x1 = p2_x; y1 = p2_y;
+  }
+  else{
+    x0 = p2_x; y0 = p2_y;
+    x1 = p0_x; y1 = p0_y;
+  }
+  if(x1 < x0){ // x1 deve ser maior ou igual a x0
+    double tmp;
+    tmp = x1 ; x1 = x0; x0 = tmp;
+    tmp = y1; y1 = y0; y0 = tmp;
+  }
+  if(x0 == x1){ // Reta vertical (equação da reta daria divisão por zero)
+    *control_x = x0;
+    if(*control_y > y0 && *control_y > y1){
+      if(y0 > y1)
+        *control_y = y0;
+      else
+        *control_y = y1;
+    }
+    else if(*control_y < y0 && *control_y < y1){
+      if(y0 < y1)
+        *control_y = y0;
+      else
+        *control_y = y1;
+    }
+  }
+  else if(y0 == y1) // Reta horizontal
+    *control_y = y0;
+  else{ // Usar equação da reta
+    // m0 x + b0 = y é a reta que contém o lado do triângulo
+    double m0 = (y1 - y0) / (x1 - x0);
+    double b0 = y1 - m0 * x1;
+    // m1 x + b1 = y é a perpendicular ao lado do triângulo e passa pelo ponto
+    double m1 = - m0;
+    double b1 = *control_y - m1 * *control_x;
+    *control_x = (b1 - b0) / (m0 - m1);
+    *control_y = m0 * *control_x + b0;
+  }
+  if(*control_x > x1){
+    *control_x = x1;
+    *control_y = y1;
+  }
+  else if(*control_x < x0){
+    *control_x = x0;
+    *control_y = y0;
+  }
+}
+@
+\fimcodigo
 
 \subsecao{7.5. Variáveis de Caneta}
 
@@ -8533,23 +8813,7 @@ $$
 
 Primeiro vamos implementar a função $f$ como uma função auxiliar:
 
-\iniciocodigo
-@<Declaração de Função Local (metafont.c)@>+=
-double compute_f(double theta, double phi);
-@
-\fimcodigo
-
-\iniciocodigo
-@<Funções Auxiliares Locais (metafont.c)@>+=
-double compute_f(double theta, double phi){
-  double n = 2 + sqrt(2) * (sin(theta) - 0.0625 * sin(phi)) *
-             (sin(phi) - 0.0625 * sin(theta)) * (cos(theta) - cos(phi));
-  double d = 3 * (1 + 0.5 * (sqrt(5.0) - 1) * cos(theta) + 0.5 * (3 - sqrt(5)) *
-                  cos(phi));
-  return n/d;
-}
-@
-\fimcodigo
+%%%%%% REMOVIDO
 
 Agora podemos calcular os pontos de controle caso ainda não tenhamos
 eles. Como devemos tratar os pontos como números complexos, vamos
@@ -8633,47 +8897,7 @@ pontos de controle estão dentro do triângulo. E somente se não
 estiver, fazemos o ajuste:
 
 
-\iniciocodigo
-@<Declaração de Função Local (metafont.c)@>+=
-void correct_tension(double p0_x, double p0_y, double p1_x, double p1_y,
-                     double d0_x, double d0_y, double d1_x, double d1_y,
-                     float *control_x, float *control_y);
-@
-\fimcodigo
-
-\iniciocodigo
-@<Funções Auxiliares Locais (metafont.c)@>+=
-void correct_tension(double p0_x, double p0_y, double p1_x, double p1_y,
-                     double d0_x, double d0_y, double d1_x, double d1_y,
-                     float *control_x, float *control_y){
-  double internal_angle0, internal_angle1, internal_angle2;
-  double triangle_angle;
-  double p2_x, p2_y;
-  internal_angle0 = get_angle(p0_x, p0_y, p1_x, p1_y, p0_x + d0_x, p0_y + d0_y);
-  internal_angle1 = get_angle(p1_x, p1_y, p0_x, p0_y, p1_x + d1_x, p1_y + d1_y);
-  internal_angle2 = M_PI - internal_angle0 - internal_angle1;
-  if(internal_angle0 + internal_angle1 >= M_PI - 0.00002)
-    return; // Não é triângulo válido
-  { // Descobrir coordenada do terceiro vértice:
-    // Primeiro calculamos o lado do triângulo que vai de p0 ao vértice
-    // desconhecido
-    double known_side = hypot((p1_x - p0_x) * (p1_x - p0_x),
-                              (p1_y - p0_y) * (p1_y - p0_y));
-    double triangle_side = known_side * sin(internal_angle0) /
-                           sin(internal_angle2);
-    // Conhecendo o tamanho do lado do triângulo, basta combinar com o
-    // ângulo e chegamos ao vértice desconhecido:
-    triangle_angle = get_angle(p0_x, p0_y, p1_x, p1_y, p0_x + 1.0, p0_y);
-    p2_x = p0_x + triangle_side * cos(triangle_angle + internal_angle0);
-    p2_y = p0_y + triangle_side * sin(triangle_angle + internal_angle0);
-  }
-  {
-    @<Checa se Ponto Está Dentro do Triângulo@>
-    @<Se Não Estiver, Ajusta Tensão para Ficar@>
-  }
-}
-@
-\fimcodigo
+% REMOVIDO
 
 Como checar se um ponto está dentro de um triângulo? Há várias formas,
 a que usaremos consiste em medir a área com sinal dos três novos
@@ -8684,19 +8908,8 @@ anti-horário. Em seguida, apenas verificamos se todas as áreas tem o
 mesmo sinal (positivo ou negativo). Se tiver, então o ponto certamente
 está fora. Caso contrário, o ponto está dentro do triângulo:
 
-\iniciocodigo
-@<Checa se Ponto Está Dentro do Triângulo@>=
-bool s1, s2, s3; // O sinal das áreas
-s1 = ((*control_x - p1_x) * (p0_y - p1_y) -
-      (p0_x - p1_x) * (*control_y - p1_y)) < 0;
-s2 = ((*control_x - p2_x) * (p1_y - p2_y) -
-      (p1_x - p2_x) * (*control_y - p2_y)) < 0;
-s3 = ((*control_x - p0_x) * (p2_y - p0_y) -
-      (p2_x - p0_x) * (*control_y - p0_y)) < 0;
-if(s1 == s2 && s2 == s3)
-  return;
-@
-\fimcodigo
+% REMOVIDO
+
 
 Uma vantagem deste método é que dependendo de qual área com sinal tem
 um sinal diferente das outras, isso determina qual dos lados do

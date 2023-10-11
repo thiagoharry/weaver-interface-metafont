@@ -3313,7 +3313,7 @@ struct path_points{
       float x, y; // Ponto de extremidade
       float dir1_x, dir1_y, dir2_x, dir2_y; // Especificadores de direção
       float tension1, tension2;
-      bool at_least1, at_least2;
+      bool atleast1, atleast2;
     } prov;
   };
 };
@@ -3502,6 +3502,285 @@ void recursive_aux_copy(struct path_points **dst, struct path_variable *origin){
     index  ++;
   }
   return;
+}
+@
+\fimcodigo
+
+\subsubsecao{7.4.2. Tension and Direction Specifiers}
+
+We saw that a point that is part of a path can be on a provisional
+format, in addition to its final format and its pointer format. When
+this occurs, it has a very large number of variables. In particular,
+it has two numerical values ​​representing its tension and has two pairs
+representing the next two direction specifiers.
+
+The first direction specifier must be considered as a vector
+containing the turning angle of the curve trajectory at the first
+extremity point and the second is the same for the next endpoint. The
+turning angle can be seen as the angle of the ``wheels'' of a vehicle
+at that point, if the vehicle was making the trajectory of the
+curve. We may represent such information in code below representing a
+section of a path:
+
+\alinhaverbatim
+{w0} p1 {w1} .. tension t1 and t2 {w2} p2 {w3} 
+\alinhanormal
+
+Note that if $w_0\neq w_1$ or $w2 \neq w_2$, then there will be a
+break in curve at its end point, there will be a ``tip'', a
+non-derivable part in the curve.
+
+Tension should represent how ``loose'' or ``tight'' is a curve. A
+curve with greater tension will have a smaller perimeter and will tend
+to approaches a straight line as tension increases.
+
+Having such information, how to convert the curve point from the
+provisional format to the final format? Using the segment of curve
+above, this is done with the help of the formulas below:
+
+$$
+\theta = arg(w_1/(z_2-z_1))\,\,\,\phi = arg((z_2-z_1)/w_2)
+$$
+
+To compute function $arg$ above, we will need the header:
+
+\iniciocodigo
+@<Local Headers (metafont.c)@>+=
+#include <complex.h>
+@
+\fimcodigo
+
+The control points $u$ and $v$ are obtained with formulas:
+
+$$
+u = z_{n} + e^{i\theta}(z_{n+1}-z_n)f(\theta, \phi)/\alpha
+$$
+
+$$
+v = z_{n+1} - e^{-i\phi}(z_{n+1}-z_n)f(\phi, \theta)/\beta
+$$
+
+With function $f$ defined as:
+
+$$
+f(\theta, \phi) = {{2+\sqrt{2}(\sin\theta-{{1}\over{16}}\sin\phi)(\sin\phi-{{1}\over{16}}\sin\theta)(\cos\theta-\cos\phi)}\over{3(1+{1\over 2}(\sqrt 5 - 1)\cos\theta+{1\over 2}(3-\sqrt 5)\cos\phi)}}
+$$
+
+We can now declare the function to perform the conversion with the
+function that computes $f$:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+void convert_to_final(struct path_variable *p);
+double compute_f(double theta, double phi);
+@
+\fimcodigo
+
+First we sow the code to compute $f$:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+double compute_f(double theta, double phi){
+  double n = 2 + sqrt(2) * (sin(theta) - 0.0625 * sin(phi)) *
+             (sin(phi) - 0.0625 * sin(theta)) * (cos(theta) - cos(phi));
+  double d = 3 * (1 + 0.5 * (sqrt(5) - 1) * cos(theta) + 0.5 * (3 - sqrt(5)) *
+                  cos(phi));
+  return n/d;
+}
+@
+\fimcodigo
+
+If we assume that the path was already normalized to remove the
+recursive definitions,we can easily iterate over the points converting
+all them that are in the provisional format:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+void convert_to_final(struct path_variable *p){
+  int i;
+  for(i = 0; i < p -> length; i ++){
+    if(p -> points[i].format == PROVISIONAL_FORMAT){
+      bool atleast0 = p -> points[i].prov.atleast1;
+      bool atleast1 = p -> points[i].prov.atleast1;
+      double complex u, v;
+      struct path_points *p0 = &(p -> points[i]), *p1 = &(p -> points[i+1]);
+      double w0_x = p0 -> prov.dir1_x, w0_y = p0 -> prov.dir1_y;
+      double w1_x = p0 -> prov.dir2_x, w1_y = p0 -> prov.dir2_y;
+      double complex z0 = p0 -> prov.x + p0 -> prov.y * I;
+      double complex z1 = p1 -> prov.x + p1 -> prov.y * I;
+      double the = carg((w0_x + w0_y * I) / (z1 - z0));
+      double phi = carg((z1 - z0)/(w1_x + w1_y * I));
+      u = z0 + (cexp(the * I) * (z1 - z0) * compute_f(the, phi)) /
+        p -> points[i].prov.tension1;
+      v = z1 - (cexp(-phi * I) * (z1 - z0) * compute_f(phi, the)) /
+        p -> points[i].prov.tension2;
+      p -> points[i].format = FINAL_FORMAT;
+      p -> points[i].point.u_x = creal(u);
+      p -> points[i].point.u_y = cimag(u);
+      p -> points[i].point.v_x = creal(v);
+      p -> points[i].point.v_y = cimag(v);
+      @<Adjust tension@>
+    }
+  }
+}
+@
+\fimcodigo
+
+One last remaining complication in the conversion is adjusting the
+tension. If the boolean variable \monoespaco{atleast0} is true, this
+means that the tension voltage we had was a minimum value. We must
+increase it if necessary, to the lowest value such that the first
+control point falls within a bounded triangle by the extremity points
+and the point at which the straight lines directed by the direction
+specifiers intersect:
+
+\iniciocodigo
+@<Adjust tension@>=
+if(atleast0)
+  correct_tension(p0 -> point.x, p0 -> point.y,
+                  p1 -> point.x, p1 -> point.y,
+                  w0_x, w0_y, w1_x, w1_y,
+                  &(p -> points[i].point.u_x), &(p -> points[i].point.u_y));
+if(atleast1)
+  correct_tension(p0 -> point.x, p0 -> point.y,
+                  p1 -> point.x, p1 -> point.y,
+                  w0_x, w0_y, w1_x, w1_y,
+                  &(p -> points[i].point.v_x), &(p -> points[i].point.v_y));
+@
+\fimcodigo
+
+We declare now the function that adjust the tension used above:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+void correct_tension(double p0_x, double p0_y, double p1_x, double p1_y,
+                     double d0_x, double d0_y, double d1_x, double d1_y,
+                     float *control_x, float *control_y);
+@
+\fimcodigo
+
+And the function implementation:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+void correct_tension(double p0_x, double p0_y, double p1_x, double p1_y,
+                     double d0_x, double d0_y, double d1_x, double d1_y,
+                     float *control_x, float *control_y){
+  double internal_angle0, internal_angle1, internal_angle2;
+  double triangle_angle;
+  double p2_x, p2_y;
+  internal_angle0 = get_angle(p0_x, p0_y, p1_x, p1_y, p0_x + d0_x, p0_y + d0_y);
+  internal_angle1 = get_angle(p1_x, p1_y, p0_x, p0_y, p1_x + d1_x, p1_y + d1_y);
+  internal_angle2 = M_PI - internal_angle0 - internal_angle1;
+  if(internal_angle0 + internal_angle1 >= M_PI - 0.00002)
+    return; // Not a valid triangle
+  { // Discover the third vertex coordinate:
+    // First compute the triangle side that goes from p0 to the unknown vertex
+    double known_side = hypot((p1_x - p0_x) * (p1_x - p0_x),
+                              (p1_y - p0_y) * (p1_y - p0_y));
+    double triangle_side = known_side * sin(internal_angle0) /
+                           sin(internal_angle2);
+    // Knowing the triangle side and the angle, we compute the coordinates:
+    triangle_angle = get_angle(p0_x, p0_y, p1_x, p1_y, p0_x + 1.0, p0_y);
+    p2_x = p0_x + triangle_side * cos(triangle_angle + internal_angle0);
+    p2_y = p0_y + triangle_side * sin(triangle_angle + internal_angle0);
+  }
+  {
+    @<Check if the point is inside the triangle@>
+    @<If Not, Adjust the Tension@>
+  }
+}
+@
+\fimcodigo
+
+How do we check that a point is inside a triangle? There are several
+ways, what we will use is a technique that computes the signed area of
+three triangles composed by the point and two of the vertex points
+from the triangle, whose vertices we will pass always in the same
+clockwise or counter-clockwise order. The signed area of a triangle is
+its area, but the result is positive or negative, depending if we
+passed the vertices in clockwise or counter-clockwise order. If all
+the signed areas are positive, or if all them are negative, then the
+point is inside the triangle. If not, the point is outside:
+
+\iniciocodigo
+@<Check if the point is inside the triangle@>=
+bool s1, s2, s3; // O sinal das áreas
+s1 = ((*control_x - p1_x) * (p0_y - p1_y) -
+      (p0_x - p1_x) * (*control_y - p1_y)) < 0;
+s2 = ((*control_x - p2_x) * (p1_y - p2_y) -
+      (p1_x - p2_x) * (*control_y - p2_y)) < 0;
+s3 = ((*control_x - p0_x) * (p2_y - p0_y) -
+      (p2_x - p0_x) * (*control_y - p0_y)) < 0;
+if(s1 == s2 && s2 == s3)
+  return;
+@
+\fimcodigo
+
+An advantage of the above method is that the signed area that have a
+different sign than others represents the side which is near the
+target point. Therefore, if we did not exit the function, we can check
+the closest side, get its line equation and compute the nearest point
+in the line. If the point is in the triangle side, this is the new
+point or our control point. Otherwise, we choose the nearest vertex to
+the point.
+
+\iniciocodigo
+@<If Not, Adjust the Tension@>=
+{
+  double x0, y0, x1, y1;
+  if(s1 != s2 && s1 != s3){
+    x0 = p0_x; y0 = p0_y;
+    x1 = p1_x; y1 = p1_y;
+  }
+  else if(s2 != s1 && s2 != s3){
+    x0 = p1_x; y0 = p1_y;
+    x1 = p2_x; y1 = p2_y;
+  }
+  else{
+    x0 = p2_x; y0 = p2_y;
+    x1 = p0_x; y1 = p0_y;
+  }
+  if(x1 < x0){ // x1 must be >= x0 (assuming this the logic becames simpler)
+    double tmp;
+    tmp = x1; x1 = x0; x0 = tmp;
+    tmp = y1; y1 = y0; y0 = tmp;
+  }
+  if(x0 == x1){ // Vertical line (do not use line equation, or we divide by zero)
+    *control_x = x0;
+    if(*control_y > y0 && *control_y > y1){
+      if(y0 > y1)
+        *control_y = y0;
+      else
+        *control_y = y1;
+    }
+    else if(*control_y < y0 && *control_y < y1){
+      if(y0 < y1)
+        *control_y = y0;
+      else
+        *control_y = y1;
+    }
+  }
+  else if(y0 == y1) // Horizontal line
+    *control_y = y0;
+  else{ // Use line equation
+    // m0 x + b0 = y is the line that contains the triangle side
+    double m0 = (y1 - y0) / (x1 - x0);
+    double b0 = y1 - m0 * x1;
+    // m1 x + b1 = y is the perpendicular line that crosses the point
+    double m1 = - m0;
+    double b1 = *control_y - m1 * *control_x;
+    *control_x = (b1 - b0) / (m0 - m1);
+    *control_y = m0 * *control_x + b0;
+  }
+  if(*control_x > x1){
+    *control_x = x1;
+    *control_y = y1;
+  }
+  else if(*control_x < x0){
+    *control_x = x0;
+    *control_y = y0;
+  }
 }
 @
 \fimcodigo
@@ -7971,6 +8250,8 @@ point to its right, we use the code:
 
 \iniciocodigo
 @<Path Expression: Determine Curve Shape@>+=
+z1_point -> prov.atleast1 = atleast0;
+z1_point -> prov.atleast2 = atleast1;
 if(isnan(w0_x) && isnan(w0_y)){
   w0_x = prev_w_x;
   w0_y = prev_w_y;
@@ -8385,23 +8666,7 @@ $$
 
 First we will define it as an auxiliary function:
 
-\iniciocodigo
-@<Local Function Declaration (metafont.c)@>+=
-double compute_f(double theta, double phi);
-@
-\fimcodigo
-
-\iniciocodigo
-@<Auxiliary Local Functions (metafont.c)@>+=
-double compute_f(double theta, double phi){
-  double n = 2 + sqrt(2) * (sin(theta) - 0.0625 * sin(phi)) *
-             (sin(phi) - 0.0625 * sin(theta)) * (cos(theta) - cos(phi));
-  double d = 3 * (1 + 0.5 * (sqrt(5) - 1) * cos(theta) + 0.5 * (3 - sqrt(5)) *
-                  cos(phi));
-  return n/d;
-}
-@
-\fimcodigo
+% REMOVED
 
 Now we can compute the control points if we already do not know
 them. As we should regard the points as complex numbers, we will need
@@ -8430,7 +8695,6 @@ if(isnan(u_x) || isnan(u_y) || isnan(v_x) ||  isnan(v_y)){
   u_y = cimag(u);
   v_x = creal(v);
   v_y = cimag(v);
-  @<Adjust tension in case of 'atleast'@>
 }
 @
 \fimcodigo
@@ -8475,45 +8739,7 @@ coordinate. First we measure all the internal angles, then we get the
 coordinates of the third vertex usinf the Law of Sines (the two other
 vertices are known). The function is:
 
-\iniciocodigo
-@<Local Function Declaration (metafont.c)@>+=
-void correct_tension(double p0_x, double p0_y, double p1_x, double p1_y,
-                     double d0_x, double d0_y, double d1_x, double d1_y,
-                     float *control_x, float *control_y);
-@
-\fimcodigo
-
-\iniciocodigo
-@<Auxiliary Local Functions (metafont.c)@>+=
-void correct_tension(double p0_x, double p0_y, double p1_x, double p1_y,
-                     double d0_x, double d0_y, double d1_x, double d1_y,
-                     float *control_x, float *control_y){
-  double internal_angle0, internal_angle1, internal_angle2;
-  double triangle_angle;
-  double p2_x, p2_y;
-  internal_angle0 = get_angle(p0_x, p0_y, p1_x, p1_y, p0_x + d0_x, p0_y + d0_y);
-  internal_angle1 = get_angle(p1_x, p1_y, p0_x, p0_y, p1_x + d1_x, p1_y + d1_y);
-  internal_angle2 = M_PI - internal_angle0 - internal_angle1;
-  if(internal_angle0 + internal_angle1 >= M_PI - 0.00002)
-    return; // Not a valid triangle
-  { // Discover the third vertex coordinate:
-    // First compute the triangle side that goes from p0 to the unknown vertex
-    double known_side = hypot((p1_x - p0_x) * (p1_x - p0_x),
-                              (p1_y - p0_y) * (p1_y - p0_y));
-    double triangle_side = known_side * sin(internal_angle0) /
-                           sin(internal_angle2);
-    // Knowing the triangle side and the angle, we compute the coordinates:
-    triangle_angle = get_angle(p0_x, p0_y, p1_x, p1_y, p0_x + 1.0, p0_y);
-    p2_x = p0_x + triangle_side * cos(triangle_angle + internal_angle0);
-    p2_y = p0_y + triangle_side * sin(triangle_angle + internal_angle0);
-  }
-  {
-    @<Check if the point is inside the triangle@>
-    @<If Not, Adjust the Tension@>
-  }
-}
-@
-\fimcodigo
+% REMOVED
 
 How do we check that a point is inside a triangle? There are several
 ways, what we will use is a technique that computes the signed area of
@@ -8525,19 +8751,7 @@ passed the vertices in clockwise or counter-clockwise order. If all
 the signed areas are positive, or if all them are negative, then the
 point is inside the triangle. If not, the point is outside:
 
-\iniciocodigo
-@<Check if the point is inside the triangle@>=
-bool s1, s2, s3; // O sinal das áreas
-s1 = ((*control_x - p1_x) * (p0_y - p1_y) -
-      (p0_x - p1_x) * (*control_y - p1_y)) < 0;
-s2 = ((*control_x - p2_x) * (p1_y - p2_y) -
-      (p1_x - p2_x) * (*control_y - p2_y)) < 0;
-s3 = ((*control_x - p0_x) * (p2_y - p0_y) -
-      (p2_x - p0_x) * (*control_y - p0_y)) < 0;
-if(s1 == s2 && s2 == s3)
-  return;
-@
-\fimcodigo
+% REMOVED
 
 An advantage of the above method is that the signed area that have a
 different sign than others represents the side which is near the
@@ -8611,18 +8825,7 @@ This ends our function to adjust control points if we are adealing
 with the ``\monoespaco{atleast}'' keyword. Now we can just use this
 function if we are dealing with this case:
 
-\iniciocodigo
-@<Adjust tension in case of 'atleast'@>=
-if(atleast0)
-  correct_tension(z1_point -> point.x, z1_point -> point.y,
-                  z2_point -> point.x, z2_point -> point.y,
-                  w0_x, w0_y, w1_x, w1_y, &u_x, &u_y);
-if(atleast1)
-  correct_tension(z1_point -> point.x, z1_point -> point.y,
-                  z2_point -> point.x, z2_point -> point.y,
-                  w0_x, w0_y, w1_x, w1_y, &v_x, &v_y);
-@
-\fimcodigo
+% REMOVED
 
 And with this we get the control points and we can update its value in
 the path variable that we are building. If we are in the last
@@ -10051,7 +10254,7 @@ bool assign_pen_variable(struct metafont *mf,
   target -> type = TYPE_T_PEN;
   target -> next = next;
   if(! (source -> flags & (FLAG_CIRCULAR | FLAG_SQUARE | FLAG_NULL)))
-    if(!recursive_copy_points(mf, cx, alloc, &(target -> format),
+    if(!recursive_copy_points(mf, NULL, alloc, &(target -> format),
                               source -> format, true))
       return false;
   target -> gl_vbo = 0;
