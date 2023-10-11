@@ -3442,11 +3442,13 @@ header of the auxiliary and recursive function that it will call:
 
 \iniciocodigo
 @<Local Function Declaration (metafont.c)@>+=
-void recursive_copy_points(void *(*alloc)(size_t),
-                          struct path_variable **target,
-                          struct path_variable *source,
-                          bool alloc_target); // Should we alloc target?
-void recursive_aux_copy(struct path_points **dst, struct path_variable *origin);
+bool recursive_copy_points(struct metafont *mf, struct context *cx,
+                           void *(*alloc)(size_t),
+                           struct path_variable **target,
+                           struct path_variable *source,
+                           bool alloc_target); // Should we alloc target?
+void recursive_aux_copy(struct path_points **dst,
+                        struct path_variable *origin);
 @
 \fimcodigo
 
@@ -3456,13 +3458,19 @@ variables in the target and copy recursively:
 
 \iniciocodigo
 @<Auxiliary Local Functions (metafont.c)@>+=
-void recursive_copy_points(void *(*alloc)(size_t),
-                          struct path_variable **target,
-                          struct path_variable *source,
+bool recursive_copy_points(struct metafont *mf, struct context *cx,
+                           void *(*alloc)(size_t),
+                           struct path_variable **target,
+                           struct path_variable *source,
                           bool alloc_target){
   struct path_points *p;
-  if(alloc_target)
+  if(alloc_target){
     *target = (struct path_variable *) alloc(sizeof(struct path_variable));
+    if(*target == NULL){
+      RAISE_ERROR_NO_MEMORY(mf, cx, 0);
+      return false;
+    }
+  }
   (*target) -> cyclic = source -> cyclic;
   (*target) -> length = source -> number_of_points;
   (*target) -> number_of_points = source -> number_of_points;
@@ -3471,6 +3479,7 @@ void recursive_copy_points(void *(*alloc)(size_t),
                                 (*target) -> number_of_points);
   p = (*target) -> points;
   recursive_aux_copy(&p, source);
+  return true;
 }
 @
 \fimcodigo
@@ -6895,8 +6904,9 @@ else if(type == TYPE_T_PATH){
     return false;
   var = (struct symbolic_token *) begin;
   for(i = 0; i < number_of_variables; i ++){
-    assign_path_variable(mf, (struct path_variable *) var -> var,
-                         &result);
+    if(!assign_path_variable(mf, (struct path_variable *) var -> var,
+                             &result))
+      return false;
     var = (struct symbolic_token *) (var -> next);
     var = (struct symbolic_token *) (var -> next);
   }
@@ -6910,7 +6920,7 @@ The declaration for the assignment function:
 
 \iniciocodigo
 @<Local Function Declaration (metafont.c)@>+=
-void assign_path_variable(struct metafont *mf,
+bool assign_path_variable(struct metafont *mf,
                           struct path_variable *target,
                           struct path_variable *source);
 @
@@ -6920,7 +6930,7 @@ And its implementation:
 
 \iniciocodigo
 @<Auxiliary Local Functions (metafont.c)@>+=
-void assign_path_variable(struct metafont *mf,
+bool assign_path_variable(struct metafont *mf,
                           struct path_variable *target,
                           struct path_variable *source){
   void *(*alloc)(size_t);
@@ -6935,7 +6945,7 @@ void assign_path_variable(struct metafont *mf,
   }
   if(target -> length != -1 && disalloc != NULL)
     path_recursive_free(disalloc, target, false);
-  recursive_copy_points(alloc, &target, source, false);
+  return recursive_copy_points(mf, NULL, alloc, &target, source, false);
 }
 @
 \fimcodigo
@@ -7364,9 +7374,10 @@ if(begin_z1 == begin_expression){
   }
   else{
     result -> points[0].format = SUBPATH_FORMAT;
-    recursive_copy_points(temporary_alloc, (struct path_variable **)
+    if(!recursive_copy_points(mf, cx, temporary_alloc, (struct path_variable **)
                                            &(result -> points[0].subpath), &z1,
-                                           true);
+                                           true))
+      return false;
     result -> number_of_points += ((struct path_variable *)
                                 result -> points[0].subpath) -> number_of_points;
   }
@@ -7407,10 +7418,11 @@ else{
   }
   else{
     result -> points[result -> length].format = SUBPATH_FORMAT;
-    recursive_copy_points(temporary_alloc,
+    if(!recursive_copy_points(mf, cx, temporary_alloc,
                          (struct path_variable **)
                          &(result -> points[result -> length].subpath), &z2,
-                         true);
+                         true))
+      return false;
     result -> number_of_points +=
         ((struct path_variable *)
             result -> points[result -> length].subpath) -> number_of_points;
@@ -9676,11 +9688,9 @@ the result points and copy the variable content to the result:
     result -> points[0].point.v_y = ((struct pair_variable *) content) -> y;
     return true;
   }
-  else if(((struct path_variable *) content) -> type == TYPE_T_PATH){
-    recursive_copy_points(temporary_alloc, &result,
-                          (struct path_variable *) content, false);
-    return true;
-  }
+  else if(((struct path_variable *) content) -> type == TYPE_T_PATH)
+    return recursive_copy_points(mf, cx, temporary_alloc, &result,
+                                (struct path_variable *) content, false);
   else{
 #if defined(W_DEBUG_METAFONT)
     fprintf(stderr, "METAFONT: Error: %s:%d: Variable is not pair nor path!\n",
@@ -9991,8 +10001,9 @@ else if(type == TYPE_T_PEN){
     return false;
   var = (struct symbolic_token *) begin;
   for(i = 0; i < number_of_variables; i ++){
-    assign_pen_variable(mf, (struct pen_variable *) var -> var,
-                         &result);
+    if(!assign_pen_variable(mf, (struct pen_variable *) var -> var,
+                           &result))
+      return false;
     var = (struct symbolic_token *) (var -> next);
     var = (struct symbolic_token *) (var -> next);
   }
@@ -10008,9 +10019,9 @@ The declaration for the function that makes the assignment:
 
 \iniciocodigo
 @<Local Function Declaration (metafont.c)@>+=
-void assign_pen_variable(struct metafont *mf,
-                        struct pen_variable *target,
-                        struct pen_variable *source);
+bool assign_pen_variable(struct metafont *mf,
+                         struct pen_variable *target,
+                         struct pen_variable *source);
 @
 \fimcodigo
 
@@ -10018,9 +10029,9 @@ And its implementation:
 
 \iniciocodigo
 @<Auxiliary Local Functions (metafont.c)@>+=
-void assign_pen_variable(struct metafont *mf,
-                          struct pen_variable *target,
-                          struct pen_variable *source){
+bool assign_pen_variable(struct metafont *mf,
+                         struct pen_variable *target,
+                         struct pen_variable *source){
   void *(*alloc)(size_t);
   void (*disalloc)(void *);
   struct variable *next = target -> next;
@@ -10040,7 +10051,9 @@ void assign_pen_variable(struct metafont *mf,
   target -> type = TYPE_T_PEN;
   target -> next = next;
   if(! (source -> flags & (FLAG_CIRCULAR | FLAG_SQUARE | FLAG_NULL)))
-    recursive_copy_points(alloc, &(target -> format), source -> format, true);
+    if(!recursive_copy_points(mf, cx, alloc, &(target -> format),
+                              source -> format, true))
+      return false;
   target -> gl_vbo = 0;
   target -> indices = 0;
   target -> referenced = NULL;
@@ -10048,6 +10061,7 @@ void assign_pen_variable(struct metafont *mf,
   // the pen, as will be described in Section 10:
   if(target == &(mf -> internal_pen_variables[INTERNAL_PEN_CURRENTPEN]))
     triangulate_pen(mf, target, target -> gl_matrix);
+  return true;
 }
 @
 \fimcodigo
@@ -10455,8 +10469,9 @@ if(content -> referenced != NULL)
   to_copy = content -> referenced;
 memcpy(result, to_copy, sizeof(struct pen_variable));
 if(to_copy -> format != NULL)
-  recursive_copy_points(temporary_alloc, &(result -> format),
-                        to_copy -> format, true);
+  if(!recursive_copy_points(mf, cx, temporary_alloc, &(result -> format),
+                            to_copy -> format, true))
+    return false;
 if(to_copy != content)
   MATRIX_MULTIPLICATION(result -> gl_matrix, content -> gl_matrix);
 return true;
@@ -10826,7 +10841,8 @@ deallocate the temporary pen evaluation:
 
 \iniciocodigo
 @<'makepath': Formato Personalizado@>=
-recursive_copy_points(temporary_alloc, &result, tmp.format, false);
+if(!recursive_copy_points(mf, cx, temporary_alloc, &result, tmp.format, false))
+  return false;
 if(temporary_free != NULL){
   temporary_free(tmp.format -> points);
   temporary_free(tmp.format);
