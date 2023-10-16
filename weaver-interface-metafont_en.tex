@@ -3399,8 +3399,9 @@ point where the first curbe begins. To store the path contents, we may
 need to allocate additional structures. Basically a path variable
 store most of it data in a ``point'' array, where each point in the
 array is a literal point of the curve with additional data, or is a
-pointer to several points that compose a subpath. The variable that
-stores a path is:
+pointer to several points that compose a subpath. Some of these points
+may have some missing information that we need to fill before trying
+to use the path. The variable that stores a path is:
 
 \iniciocodigo
 @<Local Data Structures (metafont.c)@>+=
@@ -3409,7 +3410,7 @@ struct path_variable{
   void *next;
   bool permanent; // Which allocation was used: permanent or temporary
   bool cyclic;
-  int length, number_of_points;
+  int length, number_of_points, number_of_missing_directions;
   struct path_points *points;
 };
 @
@@ -3481,8 +3482,8 @@ struct path_points{
     struct path_variable *subpath;
     // Provisional format: other info besides the control points
     struct{
-      float x, y; // Ponto de extremidade
-      float dir1_x, dir1_y, dir2_x, dir2_y; // Especificadores de direção
+      float x, y; // Extremity point
+      float dir1_x, dir1_y, dir2_x, dir2_y; // Direction specifier
       float tension1, tension2;
       bool atleast1, atleast2;
     } prov;
@@ -3619,13 +3620,16 @@ bool recursive_copy_points(struct metafont *mf, struct context *cx,
                            struct path_variable *source,
                            bool alloc_target); // Should we alloc target?
 void recursive_aux_copy(struct path_points **dst,
-                        struct path_variable *origin);
+                        struct path_variable *origin, int *missing_directions);
 @
 \fimcodigo
 
 The function will use the allocation function given as argument, which
-could be the permanent or temporary. Then it initialize the relevant
-variables in the target and copy recursively:
+could be the permanent or temporary. Then it initializes the relevant
+variables in the target and copy recursively. This is also the moment
+where we can check if there is missing information in the path
+points. We will fill for the first time the
+variable \monoespaco{number\_of\_missing\_directions}:
 
 \iniciocodigo
 @<Auxiliary Local Functions (metafont.c)@>+=
@@ -3645,11 +3649,12 @@ bool recursive_copy_points(struct metafont *mf, struct context *cx,
   (*target) -> cyclic = source -> cyclic;
   (*target) -> length = source -> number_of_points;
   (*target) -> number_of_points = source -> number_of_points;
+  (*target) -> number_of_missing_directions = 0;
   (*target) -> points = (struct path_points *)
                           alloc(sizeof(struct path_points) *
                                 (*target) -> number_of_points);
   p = (*target) -> points;
-  recursive_aux_copy(&p, source);
+  recursive_aux_copy(&p, source, &((*target) -> number_of_missing_directions));
   return true;
 }
 @
@@ -3659,17 +3664,25 @@ The recursive function that copy each point:
 
 \iniciocodigo
 @<Auxiliary Local Functions (metafont.c)@>+=
-void recursive_aux_copy(struct path_points **dst, struct path_variable *origin){
+void recursive_aux_copy(struct path_points **dst, struct path_variable *origin,
+                        int *missing_directions){
   int index = 0;
   while(index <= origin -> length - 1){
     if(origin -> points[index].format != SUBPATH_FORMAT &&
        !isnan(origin -> points[index].point.x)){
       memcpy(*dst, &(origin -> points[index]),  sizeof(struct path_points));
       (*dst) ++;
+      if(origin -> points[index].format == PROVISIONAL_FORMAT){
+        if(isnan(origin -> points[index].prov.dir1_x))
+          (*missing_directions) ++;
+        if(isnan(origin -> points[index].prov.dir2_x))
+          (*missing_directions) ++;
+      }
     }
     else if(origin -> points[index].format == SUBPATH_FORMAT)
       recursive_aux_copy(dst, (struct path_variable *)
-                              (origin -> points[index].subpath));
+                              (origin -> points[index].subpath),
+                         missing_directions);
     index  ++;
   }
   return;
@@ -3712,6 +3725,12 @@ above, this is done with the help of the formulas below:
 $$
 \theta = arg(w_1/(z_2-z_1))\,\,\,\phi = arg((z_2-z_1)/w_2)
 $$
+
+It is not the direction vectors, but the angle computed above that is
+actually used to compute the control points from the final format of
+the point. The difference between the first format provisional and the
+second is that the second has already calculated these angles $\theta$
+and $\phi$ and stored the results, discarding the direction vectors.
 
 To compute function $arg$ above, we will need the header:
 
@@ -3769,7 +3788,7 @@ all them that are in the provisional format:
 @<Auxiliary Local Functions (metafont.c)@>+=
 void convert_to_final(struct path_variable *p){
   int i;
-  for(i = 0; i < p -> length; i ++){
+  for(i = 0; i < p -> length - 1; i ++){
     if(p -> points[i].format == PROVISIONAL_FORMAT){
       bool atleast0 = p -> points[i].prov.atleast1;
       bool atleast1 = p -> points[i].prov.atleast1;
@@ -3779,11 +3798,11 @@ void convert_to_final(struct path_variable *p){
       double w1_x = p0 -> prov.dir2_x, w1_y = p0 -> prov.dir2_y;
       double complex z0 = p0 -> prov.x + p0 -> prov.y * I;
       double complex z1 = p1 -> prov.x + p1 -> prov.y * I;
-      double the = carg((w0_x + w0_y * I) / (z1 - z0));
+      double theta = carg((w0_x + w0_y * I) / (z1 - z0));
       double phi = carg((z1 - z0)/(w1_x + w1_y * I));
-      u = z0 + (cexp(the * I) * (z1 - z0) * compute_f(the, phi)) /
+      u = z0 + (cexp(theta * I) * (z1 - z0) * compute_f(theta, phi)) /
         p -> points[i].prov.tension1;
-      v = z1 - (cexp(-phi * I) * (z1 - z0) * compute_f(phi, the)) /
+      v = z1 - (cexp(-phi * I) * (z1 - z0) * compute_f(phi, theta)) /
         p -> points[i].prov.tension2;
       p -> points[i].format = FINAL_FORMAT;
       p -> points[i].point.u_x = creal(u);
@@ -3955,6 +3974,625 @@ the point.
 }
 @
 \fimcodigo
+
+\subsubsecao{7.4.3. Deducing Direction Specifiers}
+
+When we interpret a path from some expression or piece of code, and
+after we remove the recursion, it will always come with its points
+either in the final format, or in the first provisional format. If it
+is in the first provisional format, it will always come with the
+tension and \monoespaco{atleast} variables correctly filled
+out. However, it may come without one of the direction specifiers or
+even without both. Because of this, all path variables store in
+variable \monoespaco{number\_of\_missing\_directions} how many
+direction specifiers are missing.
+
+There can be two cases: we can have direction specifiers where the
+first value is NaN (Not-a-NUmber) and the second is a number, or both
+can be NaN. If both do not have a numeric value, the direction
+specifier is missing and unknown. If only the second is a number, then
+it represents the ``curl'' of the curve. The higher the value, the
+more points end act ``curling'' the curve, as if it were a string
+curling in a pulley. A larger part of the curve approaches a straight
+line, with the sudden change of direction being reduced to a smaller
+area. Anyway, in both cases the specifier is missing, but the rules to
+compute it changes.
+
+To fill in the missing specifiers, we must
+divide it into different segments. Every path with missing points
+has one or more segments in which there is a direction specifier
+or a ``curl'' only in the end region of the segment:
+
+$z_0\{w_0\}\,..\, $tension$\, a_0\, $and$\, b_0\, ..\, z_1\, ..\,
+<etc.>\, z_{n-1}\, ..\, $tension$\, a_{n-1}\, $and$\,
+b_{n-1} \{w_n\}z_{n}$
+
+This is the function code that fills in the missing specifiers. Notie
+that what it does is first check if we have a case in which virtually
+all specifiers are missing. In this case, our segment is the whole
+path. Otherwise, it iterates over each segment until there are no more
+missing specifiers:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+bool find_missing_directions(struct metafont *mf, struct context *cx,
+                             struct path_variable *p);
+@
+\fimcodigo
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+bool find_missing_directions(struct metafont *mf, struct context *cx,
+                             struct path_variable *p){
+  if(p -> number_of_missing_directions == 0 || p -> length < 2)
+    return true;
+  if(p -> cyclic && p -> number_of_missing_directions == (2 * p -> length))
+    return fill_cyclic_missing_directions(mf, cx, p, 0, p -> length);
+  if(!(p -> cyclic) && p -> number_of_missing_directions == (2 * p -> length))
+    return fill_missing_directions(mf, cx, p, 0, p -> length);
+  else{
+    int begin_segment = 0, end_segment = 0;
+    while(p -> number_of_missing_directions > 0){
+      while(p -> points[begin_segment].format != PROVISIONAL_FORMAT ||
+            isnan(p -> points[begin_segment].prov.dir1_y) ||
+            !isnan(p -> points[begin_segment].prov.dir1_x))
+        begin_segment = (begin_segment + 1) % p -> length;
+      end_segment = begin_segment;
+      while(isnan(p -> points[end_segment].prov.dir2_x))
+        end_segment = (end_segment + 1) % p -> length;
+      if(!fill_missing_directions(mf, cx, p, begin_segment, end_segment))
+        return false;
+    }
+    return true;
+  }
+}
+@
+\fimcodigo
+
+The missing values ​​are obtained solving systems of linear
+equations. Each point that lies at the extremity of the segment will
+contribute with 1 unknown and 1 equation to the system. All the other
+points will contribute with 3 unknowns and 3 equations. If the segment
+is an entire cyclic path, there are no points in the extremities and
+all points contributes with 3 unknowns and 3 equations. This means
+that on non-cyclic paths of $n$ points, there are $3(n-2)+2$ unknowns,
+while in cyclic paths of $n$ points we will have $3n$ unknowns.
+
+The unknowns will be $\theta_0$ for the first point of non-cyclic
+segment, $\phi_{n-1}$ for the last point, and for the other points
+with index $i$, we have the unknowns $\theta_i$, $\psi_i$ and
+$\phi_i$. The order of each unknown in the system of equations is:
+$(\theta_0, \theta_1, \psi_1, \phi_1, \ldots, \theta_{n-2}, \psi_{n-2}, \phi_{n-2}, \phi_{n-1})$
+.
+
+When we are placing a new equation in a matrix $M$, which stores the
+left side of a linear system, the unknowns referenced by each equation
+will be the current one and previous $\theta$, the current one and the
+next $\phi$ and also the current $\psi$. No other unknowns will be
+referenced. Each line in matriz $M$ will have at most 5 non-null
+elements.
+
+But what is the position of these five elements in the matrix $M$?
+Let's declare five variables to keep track of such indices:
+
+\iniciocodigo
+@<Variable Declaration for Unknowns (Non-Cyclic)@>=
+int previous_theta, current_theta, current_psi, current_phi, next_phi,
+    number_of_equations;
+previous_theta = -1;
+current_theta = 0;
+current_psi = current_phi = -1;
+next_phi = 3;
+number_of_equations = 0;
+@
+\fimcodigo
+
+The initialized values ​​above already work in the non-cyclical
+scenario when we are in the first point and we want to enter the first
+equation. Remember that the position of the unknowns in each column of
+$M$ is given in the order:
+$(\theta_0, \theta_1, \psi_, \phi_1, \ldots)$. So when we are in point
+0, there is no previous $\theta$ and no current $\psi$ or $\phi$. The
+positions for current $\theta_0$ and $\phi_1$ (which is the next
+$\phi$) are correct.
+
+In the cyclic case, for all points we always will have a current
+$\theta$, $\psi$ and $\phi$. Therefore, we initialize the indices as:
+
+\iniciocodigo
+@<Variable Declaration for Unknowns (Cyclic)@>=
+int previous_theta, current_theta, current_psi, current_phi, next_phi,
+    number_of_equations;
+previous_theta = -1;
+current_theta = 0;
+current_psi = 1;
+current_phi = 2;
+next_phi = 5;
+number_of_equations = 0;
+@
+\fimcodigo
+
+If our system has ``\monospace{size}'' elements, then the following
+code snippet changes the position of these values to the next
+equation, but without changing the current point. This occurs when we
+are neither in the first nor in the last point. In this case, our
+current point will include three different equations, without changing
+the referenced unknowns. In this case , we just need to move to the
+next line of the matrix $M$.
+
+\iniciocodigo
+@<Next Equation, Same Point@>=
+{
+  previous_theta += size;
+  current_theta += size;
+  current_psi += size;
+  current_phi += size;
+  next_phi += size;
+  number_of_equations ++;
+}
+@
+\fimcodigo
+
+But when we move from one point to another, we do not want to just
+move to the next equation, but we also need to update the unknowns
+that will no longer be the same:
+
+\iniciocodigo
+@<Next Equation, Next Point@>=
+{
+  previous_theta = current_theta + size;
+  current_phi = next_phi + size;
+  current_theta += (size + 3);
+  current_psi += (size + 3);
+  next_phi += (size + 3);
+  number_of_equations ++;
+}
+@
+\fimcodigo
+
+Notice that we do not need to treat as a special case when we go from
+first point and equation to the next point. In such cases, the current
+$\psi_0$, which does not exist, is already initialized as having an
+index -1. When we jump to the next variable (from $\psi_{n}$ to
+$\psi_{n+1}$), in most cases we just increment 3 to access the next
+unknown. So, when we go to the second point, the value is adjusted
+correctly to index 2, which is actually the position of $\psi_1$ in
+the vector of unknowns $x$.
+
+Taking into account what was presented about the system of equations
+to be solved in each case, for a non-cyclical segment, the function
+that fills the missing directions is:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+bool fill_missing_directions(struct metafont *mf, struct context *cx,
+                             struct path_variable *p, int begin, int end);
+@
+\fimcodigo
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+bool fill_missing_directions(struct metafont *mf, struct context *cx,
+                             struct path_variable *p, int begin, int end){
+  double *M, *x, *b;
+  struct path_points *p0 = NULL, *p1 = &(p -> points[(begin) % p -> length]),
+                     *p2 = &(p -> points[(begin+1) % p -> length]);
+  double complex z0 = NAN, z1 = p1 -> prov.x + p1 -> prov.y * I,
+                 z2 = p2 -> prov.x + p2 -> prov.y * I;
+  int i, size;
+  int number_of_points = (end-begin+2);
+  if(number_of_points < 0)
+    number_of_points *= -1;
+  size = 3 * ((number_of_points) - 2) + 2; // Size of linear system
+  @<Variable Declaration for Unknowns (Non-Cyclic)@>
+  @<Check for degenerate case@>
+  // Allocating linear system:
+  M = (double *) temporary_alloc(size * size * sizeof(double));
+  x = (double *) temporary_alloc(size * sizeof(double));
+  b = (double *) temporary_alloc(size * sizeof(double));
+  if(M == NULL || x == NULL || b == NULL){
+    RAISE_ERROR_NO_MEMORY(mf, cx, 0);
+    if(M != NULL && temporary_free != NULL) temporary_free(M);
+    if(x != NULL && temporary_free != NULL) temporary_free(x);
+    if(b != NULL && temporary_free != NULL) temporary_free(b);
+    return false;
+  }
+  memset(M, 0, size * size * sizeof(double));
+  // Iterating over points and adding equations to the system:
+  @<Equation: First Point@>
+  for(i = 1; i < (begin - end + 1); p ++){
+    p0 = p1; p1 = p2;
+    p2 = &(p -> points[(begin+i+1) % p -> length]);
+    z0 = z1; z1 = z2;
+    z2 = p2 -> prov.x + p2 -> prov.y * I;
+    @<Equation: General Case@>
+  }
+  @<Equation: Last Point@>
+  solve_linear_system(size, M, b, x);
+  @<Fill specifier: first point@>
+  {
+    int theta;
+    for(i = 1, theta = 1; i < number_of_points - 1; i ++, theta += 3){
+      // Fill missing direction in p->points[i] using x[theta] value
+      @<Fill specifier: inner point@>
+    }
+  }
+  @<Fill specifier: last point@>
+  if(temporary_free != NULL){
+    temporary_free(M);
+    temporary_free(x);
+    temporary_free(b);
+  }
+  return true;
+}
+@
+\fimcodigo
+
+The function that fills the missing directions for some entire cyclic
+path is quite similar. It just must take into account that all points
+on the path have directions to be discovered and will also use a
+different formula to calculate the size for the system of linear
+equations, since there will be three unknowns per point:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+bool fill_cyclic_missing_directions(struct metafont *mf, struct context *cx,
+                                    struct path_variable *p, int begin,
+                                    int end);
+@
+\fimcodigo
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+bool fill_cyclic_missing_directions(struct metafont *mf, struct context *cx,
+                                    struct path_variable *p, int begin,
+                                    int end){
+  double *M, *x, *b;
+  struct path_points *p0 = &(p -> points[(begin - 2) % p -> length]),
+                     *p1 = &(p -> points[(begin - 1) % p -> length]),
+                     *p2 = &(p -> points[(begin) % p -> length]);
+  double complex z0 = p0 -> prov.x + p0 -> prov.y * I,
+                 z1 = p1 -> prov.x + p1 -> prov.y * I,
+                 z2 = p2 -> prov.x + p2 -> prov.y * I;
+  int i, size = 3 * (p -> length); // Size for the linear system
+  @<Variable Declaration for Unknowns (Non-Cyclic)@>
+  // Allocating system of linear equations:
+  M = (double *) temporary_alloc(size * size * sizeof(double));
+  x = (double *) temporary_alloc(size * sizeof(double));
+  b = (double *) temporary_alloc(size * sizeof(double));
+  if(M == NULL || x == NULL || b == NULL){
+    RAISE_ERROR_NO_MEMORY(mf, cx, 0);
+    if(M != NULL && temporary_free != NULL) temporary_free(M);
+    if(x != NULL && temporary_free != NULL) temporary_free(x);
+    if(b != NULL && temporary_free != NULL) temporary_free(b);
+    return false;
+  }
+  memset(M, 0, size * size * sizeof(double));
+  // Iterating over all points to add equations:
+  for(i = 0; i < (begin - end + 1); p ++){
+    p0 = p1; p1 = p2;
+    p2 = &(p -> points[(begin+i+1)]);
+    z0 = z1; z1 = z2;
+    z2 = p1 -> prov.x + p1 -> prov.y * I;
+    @<Equation: General Case@>
+  }
+  solve_linear_system(size, M, b, x);
+  {
+    int theta;
+    for(i = 0, theta = 0; i < p -> length; i ++, theta +=3){
+      // Fill missing direction in p->points[i] using x[theta] value
+      @<Fill specifier: inner point@>
+    }
+  }
+  if(temporary_free != NULL){
+    temporary_free(M);
+    temporary_free(x);
+    temporary_free(b);
+  }
+  return true;
+}
+@
+\fimcodigo
+
+Let's see now which equations we must insert in each case. Let's go to
+the first point of a non-cyclical segment. By the rules of how path
+expressions are interpreted, that first segment point, which we can
+call $z_0$ and which is succeeded by $z_1$ (here we treat both as
+complex numbers), either already has a known direction specifier
+(which we call $w_0$) or it has a ``curl'' value associated, which we
+call it $\gamma$.
+
+If it already has a direction specifier, its value of $\theta_0$ is
+already known and given by the equation:
+
+$$
+\theta_0 = arg(w_0/(z_1-z_0))
+$$
+
+
+Instead it has just a $\gamma$, then we will later discover $\theta_0$
+with the help of the following equation that we add to the system:
+
+$$
+k_0\theta_0+k_1\phi_1=0
+$$
+
+With constants $k_0$ and $k_1$ depending on the tensions $t_1$ and
+$t_2$ stored in the initial point:
+
+$$
+k_0=t_1^2(t''_0^{-1}-3)-\gamma t_2^2t_1^{-1}
+$$
+$$
+k_1=t_1^2t_2^{-1}-\gamma t_2^2(t_1^{-1}-3)
+$$
+
+The code that adds the equations on both cases is:
+
+\iniciocodigo
+@<Equation: First Point@>=
+if(!isnan(p1 -> prov.dir1_x)){ // Known w0
+  double w1_x = p1 -> prov.dir1_x, w1_y = p1 -> prov.dir1_y;
+  M[current_theta] = 1.0;
+  b[number_of_equations] = carg((w1_x + w1_y * I) / (z2 - z1));
+}
+else{ // Known gamma
+  double gamma = p1 -> prov.dir1_y;
+  double t1 = p1 -> prov.tension1;
+  double t2 = p1 -> prov.tension2;
+  M[current_theta] = t1*t1*(1/t2 - 3.0) - gamma * t2 * t2 * (1/t1);
+  M[next_phi] = t1*t1*(1/t2) - gamma * t2 * t2 * (1/t1 - 3.0);
+  b[number_of_equations] = 0.0;
+}
+@<Next Equation, Next Point@>
+@
+\fimcodigo
+
+In the case of the last point, we will also have either a known
+direction $w_n$ or a known ``curl'' with value $\gamma_n$.
+
+If $w_n$ is known, we already know the value for $\phi_n$:
+
+$$
+\phi_n = arg((z_n - z_{n-1})/w_n)
+$$
+
+Otherwise, if we know $\gamma_n$, then the value of $\phi_n$ will be
+discovered later using equation:
+
+$$
+k_0\theta_{n-1}+k_1\phi_{n}=0
+$$
+
+With the constants $k_0$ anf $k_1$ depending on tennsions $t_1$ and
+$t_2$ stored in the previous point:
+
+$$
+k_0=t_2^2t_1^{-1}-\gamma t_1^2(t_2^{-1}-3)
+$$
+$$
+k_1=t_2^2(t_1^{-1}-3)-\gamma t_1^2t_2^{-1}
+$$
+
+The code to add the equation in both cases is seen below:
+
+\iniciocodigo
+@<Equation: Last Point@>=
+if(!isnan(p1 -> prov.dir2_x)){ // Known w_n 
+  double w1_x = p1 -> prov.dir2_x, w1_y = p1 -> prov.dir2_y;
+  M[current_phi] = 1.0;
+  b[number_of_equations] = carg((z2 - z1)/(w1_x + w1_y * I));
+}
+else{ // Known gamma
+  double gamma = p1 -> prov.dir2_y;
+  double t1 = p1 -> prov.tension1;
+  double t2 = p1 -> prov.tension2;
+  M[previous_theta] = t2*t2*(1/t1) - gamma * t1 * t1 * (1/t2 - 3.0);
+  M[current_phi] = t2*t2*(1/t1 - 3.0) - gamma * t1 * t1 * (1/t2);
+  b[number_of_equations] = 0.0;
+}
+@
+\fimcodigo
+
+Finally, we will see the three equations that will be generated for
+the inner points, which are all points in a cyclical segment, or all
+points in a non-cyclical segment which are not the first nor the last
+point.
+
+Given point $z_ $ preceded by $z_{n-1}$ and followed by $z_{n+1}$,
+we have:
+
+$$
+\psi_n = arg((z_{n+1}-z_n)/(z_n-z_{n-1}))
+$$
+$$
+\theta_n + \psi_n + \phi_n = 0
+$$
+$$
+k_0\theta_{k-1} + k_1\theta_k + k_2\phi_n + k_3\phi_{n+1} = 0
+$$
+
+If we use the following segment as example:
+
+$$
+z_0\; ..\; tension\; t_0\; and\; t_1\; ..\; z_1\; ..\; tension\; t_2\; and\; t_3
+\; .. z_2
+$$
+
+The constants $k_0$, $k_1$, $k_2$ and $k_3$ for point $z_1$ are given
+by:
+
+$$
+k_0 = t_1^2\|z_1-z_0\|^{-1}t_0^{-1}
+$$
+$$
+k_1 = - t_2^2\|z_2-z_1\|^{-1}(t_3^{-1}-3)
+$$
+$$
+k_2 = t_1^2\|z_1-z_0\|^{-1}(t_0^{-1} - 3)
+$$
+$$
+k_3 = - t_2^2\|z_2-z_1\|^{-1}(t_3^{-1})
+$$
+
+The code that adds all three equations is:
+
+\iniciocodigo
+@<Equation: General Case@>=
+M[current_psi] = 1.0;
+b[number_of_equations] = carg((z2 - z1)/(z1 - z0));
+@<Next Equation, Same Point@>
+M[current_theta] = M[current_psi] = M[current_phi] = 1.0;
+b[number_of_equations] = 0.0;
+@<Next Equation, Same Point@>
+{
+  double t0 = p0 -> prov.tension1, t1 = p0 -> prov.tension2,
+         t2 = p1 -> prov.tension1, t3 = p1 -> prov.tension2;
+  M[previous_theta] = t1 * t1 * (1.0/cabs(z1 - z0)) * (1.0/t0);
+  M[current_theta] = - t2 * t2 * (1.0/cabs(z2 - z1)) * (1.0/t3 - 3.0);
+  M[current_phi] = t1 * t1 * (1.0/cabs(z1 - z0)) * (1.0/t0 - 3.0);
+  M[next_phi] = - t2 * t2 * (1.0/cabs(z2 - z1)) * (1.0/t3);
+  b[number_of_equations] = 0.0;
+  @<Next Equation, Next Point@>
+}
+@
+\fimcodigo
+
+But what exactly do these equations represent and where did they come
+from? We basically use the same rules and equations than the language
+METAFONT. This gives us compatibility with curves produced by that
+language. The methods and the equations were developed by John Hobby
+and published in [HOBBY, 1986]. What do these rules mean is that the
+path is invariant under translation, rotation and change of
+scale. Furthermore, the formula was developed so that any change at a
+local point has decreasing influence on the following points (the
+impact of changes drops exponentially) and to minimize spikes and
+sudden changes in direction of the curve.
+
+The equation that determines the shape of the curve always has a
+solution, provided all tensions are greater than $3/4$ and the
+​​``curl'' values are always non-negative. These restrictions on values
+​​will be reinforced when we interpret of path expressions. If a value
+outside these limits is found, an error will be generated.
+
+There is, however, one last degenerate case that we can find, where
+the equation has no solution. It occurs when a segment has only two
+points, both have a ``curl'' instead of a direction specifier and the
+multiplication of their ``curl'' values will be equal to 1 (which
+implies that both are equal to 1). Because of this, at the beginning
+of the function that finds missing direction specifiers, we will check
+if we are dealing with a degenerate case. If so, we treat the segment
+as a straight line between the first point and the second:
+
+\iniciocodigo
+@<Check for degenerate case@>=
+if(begin == end && isnan(p1 -> prov.dir1_x) && isnan(p1 -> prov.dir2_x) &&
+   p1 -> prov.dir1_y * p1 -> prov.dir2_y == 1.0){
+  p1 -> format = FINAL_FORMAT;
+  p1 -> point.u_x = p1 -> point.x + (1.0/3) * (p2 -> point.x - p1 -> point.x);
+  p1 -> point.v_x = p1 -> point.x + (2.0/3) * (p2 -> point.x - p1 -> point.x);
+  p1 -> point.u_y = p1 -> point.y + (1.0/3) * (p2 -> point.y - p1 -> point.y);
+  p1 -> point.v_y = p1 -> point.y + (2.0/3) * (p2 -> point.y - p1 -> point.y);
+  p -> number_of_missing_directions -= 2;
+  return true;
+}
+@
+\fimcodigo
+
+Now let's start filling in the missing values ​​for direction
+specifiers, assuming we have already solved the linear equations. In
+the case of the first point of a non-cyclic segment, the equations
+gave us the value $\theta_0$ associated with it. If we already had a
+direction specifier, we do not need to do anything. Otherwise, the
+$w_0$ specifier is defined as:
+
+$$
+\theta_0 = arg(w_0/(z_1-z_0))
+$$
+
+And this is the code that fills the first direction specifier if
+needed:
+
+\iniciocodigo
+@<Fill specifier: first point@>=
+if(isnan(p -> points[begin].prov.dir1_x)){
+  double complex dir;
+  z0 = p -> points[begin].prov.x + p -> points[begin].prov.y * I;
+  z1 = p -> points[(begin+1) % p -> length].prov.x +
+       p -> points[(begin+1) % p -> length].prov.y * I;
+  dir = cos(x[0]) + sin(x[0]) * I;
+  dir *= (z1 - z0);
+  p -> points[begin].prov.dir1_x = creal(dir);
+  p -> points[begin].prov.dir1_y = cimag(dir);
+  p -> number_of_missing_directions --;
+}
+@
+\fimcodigo
+
+In the case of the last point, solving the system of equations
+revealed to us $\phi_{n}$. If it already had a direction specifier, we
+do not need to do anything. Otherwise, we may deduct your $w_n$
+specifier with the formula:
+
+$$
+\phi_n = arg((z_n-z_{n-1})/w_n)
+$$
+
+The code that do this, if needed is:
+
+\iniciocodigo
+@<Fill specifier: last point@>=
+if(isnan(p -> points[end].prov.dir2_x)){
+  double complex dir;
+  z1 = p -> points[end].prov.x + p -> points[end].prov.y * I;
+  z2 = p -> points[(end+1) % p -> length].prov.x +
+       p -> points[(end+1) % p -> length].prov.y * I;
+  dir = cos(x[size - 1]) + sin(x[size - 1]) * I;
+  dir /= (z2 - z1);
+  dir = 1.0 / dir;
+  p -> points[end].prov.dir2_x = creal(dir);
+  p -> points[end].prov.dir2_y = cimag(dir);
+  p -> number_of_missing_directions --;
+}
+@
+\fimcodigo
+
+As for all other points with index $k$, we have both $\theta_k$ as
+$\phi_k$; and we could use either one to discover $w_k$. But the
+iteration that goes through all the points to fill missing direction
+specifiers sets values for \monoespaco{i} corresponding to the number
+of the point that we are visiting in the iteration and
+a \monoespaco{theta} index with the position in solution vector $x$
+with current point $\theta$. Because of this, we chose to use the
+$\theta_k$ formula:
+
+$$
+\theta_k = arg(w_k/(z_{k+1}-z_k))
+$$
+
+The internal points will have 2 direction specifiers to be
+written. One in the right side (stored in the visited point) and
+another in the left side (stored in the previous point). We fill both
+using the code below:
+
+\iniciocodigo
+@<Fill specifier: inner point@>=
+{
+  double complex dir;
+  z0 = p -> points[i].prov.x + p -> points[i].prov.y * I;
+  z1 = p -> points[(i+1) % p -> length].prov.x +
+       p -> points[(i+1) % p -> length].prov.y * I;
+  dir = cos(x[theta]) + sin(x[theta]) * I;
+  dir *= (z1 - z0);
+  p -> points[i].prov.dir1_x = creal(dir);
+  p -> points[i].prov.dir1_y = cimag(dir);
+  p -> points[(i-1) % p -> length].prov.dir1_x = creal(dir);
+  p -> points[(i-1) % p -> length].prov.dir1_y = cimag(dir);
+  p -> number_of_missing_directions -= 2;
+}
+@
+\fimcodigo
+
 
 
 \subsecao{7.5. Pen Variables}
@@ -16451,7 +17089,6 @@ bool _Wrender_glyph(struct metafont *mf, char *glyph,
 @
 \fimcodigo
 
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -16460,8 +17097,12 @@ bool _Wrender_glyph(struct metafont *mf, char *glyph,
 \referencia{Knuth, D. E. (1984) ``Literate Programming'', The Computer
   Journal, Volume 27, Issue 2, Pages 97--111.}
 
+\referencia{Hobby, J. D. (1986), ``Smooth, easy to compute interpolating
+ splines'', Discrete \& computational geometry, 1(2), 123-140}
+
 \referencia{Knuth, D. E. (1989) ``The METAFONT book'', Addison-Wesley
  Longsman Publishing Co., Inc}
+
 
 
 \fim

@@ -3474,8 +3474,9 @@ começa. Para armazenar o conteúdo de um caminho, precisamos alocar
 estruturas adicionais. Basicamente uma variável de caminho tem um
 array de ``pontos'', com cada ponto sendo um ponto da curva com
 informações adicionais relacionadas à ele, ou então sendo um ponteiro
-para um subcaminho com vários outros pontos. A variável que armazena
-isso é:
+para um subcaminho com vários outros pontos. Alguns destes pontos
+podem estar ainda com informações incompletas que precisam ser
+preenchidas. A variável que armazena isso é:
 
 \iniciocodigo
 @<Estrutura de Dados Locais (metafont.c)@>+=
@@ -3484,8 +3485,8 @@ struct path_variable{
   void *next;
   bool permanent; // Which allocation was used: permanent or temporary
   bool cyclic;
-  int length, number_of_points;
-  struct path_points *points; // Array with 'length' elements.
+  int length, number_of_points, number_of_missing_directions;
+  struct path_points *points; // Array com 'length' elementos.
 };
 @
 \fimcodigo
@@ -3700,13 +3701,16 @@ bool recursive_copy_points(struct metafont *mf, struct context *cx,
                            struct path_variable *source,
                            bool alloc_target); // Precisa alocar destino?
 void recursive_aux_copy(struct path_points **dst,
-                        struct path_variable *origin);
+                        struct path_variable *origin, int *missing_directions);
 @
 \fimcodigo
 
 A função usa a função de alocação indicada, que pode ser a permanente
 ou temporária. Em seguida, preenche as variáveis relevantes no destino
-e começa a copiar recursivamente.
+e começa a copiar recursivamente. Este também é o momento em que
+aproveitamos a iteração para checar se há informações pendentes que
+precisam ser preenchidas no caminho. Mais especificamente a
+variável \monoespaco{number\_of\_missing\_directions}:
 
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
@@ -3726,11 +3730,12 @@ bool recursive_copy_points(struct metafont *mf, struct context *cx,
   (*target) -> cyclic = source -> cyclic;
   (*target) -> length = source -> number_of_points;
   (*target) -> number_of_points = source -> number_of_points;
+  (*target) -> number_of_missing_directions = 0;
   (*target) -> points = (struct path_points *)
                           alloc(sizeof(struct path_points) *
                                 (*target) -> number_of_points);
   p = (*target) -> points;
-  recursive_aux_copy(&p, source);
+  recursive_aux_copy(&p, source, &((*target) -> number_of_missing_directions));
   return true;
 }
 @
@@ -3740,17 +3745,25 @@ Já a função recursiva que efetivamente copia os pontos:
 
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
-void recursive_aux_copy(struct path_points **dst, struct path_variable *origin){
+void recursive_aux_copy(struct path_points **dst, struct path_variable *origin,
+                        int *missing_directions){
   int index = 0;
   while(index <= origin -> length - 1){
     if(origin -> points[index].format != SUBPATH_FORMAT &&
        !isnan(origin -> points[index].point.x)){
       memcpy(*dst, &(origin -> points[index]),  sizeof(struct path_points));
       (*dst) ++;
+      if(origin -> points[index].format == PROVISIONAL_FORMAT){
+        if(isnan(origin -> points[index].prov.dir1_x))
+          (*missing_directions) ++;
+        if(isnan(origin -> points[index].prov.dir2_x))
+          (*missing_directions) ++;
+      }
     }
     else if(origin -> points[index].format == SUBPATH_FORMAT)
       recursive_aux_copy(dst, (struct path_variable *)
-                              (origin -> points[index].subpath));
+                              (origin -> points[index].subpath),
+                         missing_directions);
     index  ++;
   }
   return;
@@ -3794,6 +3807,13 @@ curva acima, isso é feito com ajuda das fórmulas abaixo:
 $$
 \theta = arg(w_1/(z_2-z_1))\,\,\,\phi = arg((z_2-z_1)/w_2)
 $$
+
+Não é o vetor de direção em si, mas o ângulo computado acima de tais
+vetores que é efetivamente usado para computar os pontos de controle
+do formato final de um ponto. A diferença entre o primeiero formato
+provisório e o segundo é que o segundo já calculou esses ângulos
+$\theta$ e $\phi$ e armazenou os resultados, descartando os vetores de
+direção.
 
 Para calcular a função $arg$ acima, vamos precisar do cabeçalho:
 
@@ -3851,7 +3871,7 @@ formato provisório para o final usando a função:
 @<Funções Auxiliares Locais (metafont.c)@>+=
 void convert_to_final(struct path_variable *p){
   int i;
-  for(i = 0; i < p -> length; i ++){
+  for(i = 0; i < p -> length - 1; i ++){
     if(p -> points[i].format == PROVISIONAL_FORMAT){
       bool atleast0 = p -> points[i].prov.atleast1;
       bool atleast1 = p -> points[i].prov.atleast1;
@@ -3861,11 +3881,11 @@ void convert_to_final(struct path_variable *p){
       double w1_x = p0 -> prov.dir2_x, w1_y = p0 -> prov.dir2_y;
       double complex z0 = p0 -> prov.x + p0 -> prov.y * I;
       double complex z1 = p1 -> prov.x + p1 -> prov.y * I;
-      double the = carg((w0_x + w0_y * I) / (z1 - z0));
+      double theta = carg((w0_x + w0_y * I) / (z1 - z0));
       double phi = carg((z1 - z0)/(w1_x + w1_y * I));
-      u = z0 + (cexp(the * I) * (z1 - z0) * compute_f(the, phi)) /
+      u = z0 + (cexp(theta * I) * (z1 - z0) * compute_f(theta, phi)) /
         p -> points[i].prov.tension1;
-      v = z1 - (cexp(-phi * I) * (z1 - z0) * compute_f(phi, the)) /
+      v = z1 - (cexp(-phi * I) * (z1 - z0) * compute_f(phi, theta)) /
         p -> points[i].prov.tension2;
       p -> points[i].format = FINAL_FORMAT;
       p -> points[i].point.u_x = creal(u);
@@ -4037,6 +4057,636 @@ ponto.
 }
 @
 \fimcodigo
+
+\subsubsecao{7.4.3. Deduzindo Especificadores de Direção}
+
+Quando interpretamos um caminho de uma expressão ou trecho de código,
+e após remover a recursão dele, ele sempre virá com seus pontos ou no
+formato final, ou no formato provisório. Caso esteja no primeiro
+formato provisório, ele sempre virá com as variáveis de tensão
+e \monoespaco{atleast} corretamente preenchidas. Entretanto, ele pode
+vir sem um dos especificadores de direção ou mesmo sem ambos. Por isso
+cada variável de caminho armazena
+em \monoespaco{number\_of\_missing\_directions} quantos
+especificadores de direção faltam.
+
+Podem haver dois casos: podemos ter especificadores de direção em que
+o primeiro valor é NaN (Not-a-NUmber) e o segundo é um número, ou
+ambos podem ser NaN. Se ambos não tiverem valor numérico, o
+especificador de direção está ausente e é desconhecido. Se só o
+segundo for um número, então ele representa a ``enrolamento''
+(``curl'') da curva. Quanto maior o valor, mais os pontos de
+extremidade agem ``enrolando'' a curva, como se ela fôsse uma corda
+sendo enrolada em uma roldana. Uma parte maior da curva vai se
+aproximando de uma reta, com a mudança brusca de direção sendo
+reduzida a uma área menor. De qualquer forma, ambos os casos são
+tratados como faltando um especificador, só a regra de como calcular
+eles muda.
+
+Para preencher os especificadores faltantes de um caminho, devemos
+dividir ele em diferentes segmentos. Cada caminho com pontos faltantes
+possui um ou mais segmentos em que existe um especificador de direção
+ou ``curl'' apenas na região de extremidade do segmento:
+
+$z_0\{w_0\}\,..\, $tension$\, a_0\, $and$\, b_0\, ..\, z_1\, ..\,
+<etc.>\, z_{n-1}\, ..\, $tension$\, a_{n-1}\, $and$\,
+b_{n-1} \{w_n\}z_{n}$
+
+Este é o código da função que preenche os especificadores
+faltantes. Note que o que ela faz é primeiro checar se temos um caso
+em que praticamente todos os especificadores estão faltando. Neste
+caso, o nosso segmento é o caminho todo. Caso contrário, ela itera
+sobre cada segmento até que não hajam mais especificadores faltando:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+bool find_missing_directions(struct metafont *mf, struct context *cx,
+                             struct path_variable *p);
+@
+\fimcodigo
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+bool find_missing_directions(struct metafont *mf, struct context *cx,
+                             struct path_variable *p){
+  if(p -> number_of_missing_directions == 0 || p -> length < 2)
+    return true;
+  if(p -> cyclic && p -> number_of_missing_directions == (2 * p -> length))
+    return fill_cyclic_missing_directions(mf, cx, p, 0, p -> length);
+  if(!(p -> cyclic) && p -> number_of_missing_directions == (2 * p -> length))
+    return fill_missing_directions(mf, cx, p, 0, p -> length);
+  else{
+    int begin_segment = 0, end_segment = 0;
+    while(p -> number_of_missing_directions > 0){
+      while(p -> points[begin_segment].format != PROVISIONAL_FORMAT ||
+            isnan(p -> points[begin_segment].prov.dir1_y) ||
+            !isnan(p -> points[begin_segment].prov.dir1_x))
+        begin_segment = (begin_segment + 1) % p -> length;
+      end_segment = begin_segment;
+      while(isnan(p -> points[end_segment].prov.dir2_x))
+        end_segment = (end_segment + 1) % p -> length;
+      if(!fill_missing_directions(mf, cx, p, begin_segment, end_segment))
+        return false;
+    }
+    return true;
+  }
+}
+@
+\fimcodigo
+
+Os valores desconhecidos são obtidos resolvendo sistemas de equações
+lineares. Cada ponto que fica nas extremidades finais de um segmento
+constribuirá com 1 incógnita e uma equação para o sistema. Todos os
+outros pontos contribuirão com 3 incógnitas e 3 equações. Se o
+segmento é um caminho cíclico inteiro, então não há pontos nas
+extremidades e cada ponto contribui com 3 incógnitas e 3
+equações. Isso significa que em caminhos não-cíclicos de $n$ pontos,
+há $3(n-2)+2$ incógnitas, enquanto em caminhos cíclicos de $n$ pontos
+teremos $3n$ incógnitas.
+
+As incógnitas acrestentadas serão $\theta_0$ para o primeiro ponto de
+segmento não-cíclico, $\phi_{n-1}$ para o último ponto de segmento
+não-cíclico, e para os demais pontos de índice $i$, temos as
+incógnitas $\theta_i$, $\psi_i$ e $\phi_i$. A ordem de cada incógnita
+no sistema de equações é:
+$(\theta_0, \theta_1, \psi_1, \phi_1, \ldots, \theta_{n-2}, \psi_{n-2}, \phi_{n-2}, \phi_{n-1})$.
+
+Quando estivermos preenchendo os valores de uma nova equação do
+sistema de equações em uma matriz $M$, que representa o lado esquerdo
+de um sistema de equações linear, as incógnitas que cada equação pode
+representar serão o $\theta$ atual e anterior, o $\psi$ atual, o
+$\phi$ atual e o próximo. Nenhuma outra incógnita será
+referenciada. Desta forma, cada linha da matriz $M$ terá no máximo
+cinco elementos não-nulos.
+
+Mas qual a posição destes cinco elementos na matriz $M$? Vamos declarar
+cinco variáveis para manter o controle de tais índices:
+
+\iniciocodigo
+@<Declaração de Variáveis de Incógnitas (Não-Cíclico)@>=
+int previous_theta, current_theta, current_psi, current_phi, next_phi,
+    number_of_equations;
+previous_theta = -1;
+current_theta = 0;
+current_psi = current_phi = -1;
+next_phi = 3;
+number_of_equations = 0;
+@
+\fimcodigo
+
+Os valores inicializados acima já funcionam no caso não-cíclico quando
+estamos no primeiro ponto e queremos inserir a primeira
+equação. Lembre-se que a posição das incógnitas em cada coluna de $M$
+é dada pela ordem:
+$(\theta_0, \theta_1, \psi_, \phi_1, \ldots)$. Então quando estamos no
+ponto 0, não existe $\theta$ anterior e nem $\psi$ ou $\phi$
+atuais. Já a posição do atual $\theta_0$ e $\phi_1$ (que é o próximo
+$\phi$) estão corretas.
+
+Já no caso cíclico, em todos os pontos, sempre teremos definidos os
+valores de $\theta$, $\psi$ e $\phi$. Portanto, inicicalizamos da
+seguinte forma:
+
+\iniciocodigo
+@<Declaração de Variáveis de Incógnitas (Cíclico)@>=
+int previous_theta, current_theta, current_psi, current_phi, next_phi,
+    number_of_equations;
+previous_theta = -1;
+current_theta = 0;
+current_psi = 1;
+current_phi = 2;
+next_phi = 5;
+number_of_equations = 0;
+@
+\fimcodigo
+
+
+Se o nosso sistema de equações tem ``\monoespaco{size}'' elementos,
+então o seguinte trecho de código abaixo muda a posição destes valores
+para a próxima equação, mas sem mudar o ponto atual. Isso ocorre
+quando não estamos nem na primeira e nem na última equação, quando um
+mesmo ponto pode incluir até três equações. Neste caso as incógnitas
+referenciadas são as mesmas, só precisamos passar para a próxima linha
+da matriz $M$.
+
+\iniciocodigo
+@<Próxima Equação, Mesmo Ponto@>=
+{
+  previous_theta += size;
+  current_theta += size;
+  current_psi += size;
+  current_phi += size;
+  next_phi += size;
+  number_of_equations ++;
+}
+@
+\fimcodigo
+
+Já quando passamos de um ponto pra outro, não só queremos passar para
+a próxima equação, mas também precisamos atualizar as incógnitas que
+não serão mais as mesmas:
+
+\iniciocodigo
+@<Próxima Equação, Próximo Ponto@>=
+{
+  previous_theta = current_theta + size;
+  current_phi = next_phi + size;
+  current_theta += (size + 3);
+  current_psi += (size + 3);
+  next_phi += (size + 3);
+  number_of_equations ++;
+}
+@
+\fimcodigo
+
+Note que não precisamos tratar como caso especial quando passamos do
+primeiro ponto e equação para o próximo ponto. Em tais casos, o
+$\psi_0$, que não existe, está já inicializado como tendo índice
+-1. Pular para a próxima variável (de $\psi_{n}$ para $\psi_{n+1}$)
+funcionasempre incrementando em 3 a posição. Então, ao passar para
+fora do primeiro ponto, o valor já fica ajustado corretamente como o
+índice 2, que realmente é a posição de $\psi_1$ no vetor de incógnitas
+$x$.
+
+Levando em conta o que foi apresentado sobre o sistema de equações a
+ser resolvido em cada caso, no caso de segmento não-cíclico, a função
+que preenche as direções faltantes é:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+bool fill_missing_directions(struct metafont *mf, struct context *cx,
+                             struct path_variable *p, int begin, int end);
+@
+\fimcodigo
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+bool fill_missing_directions(struct metafont *mf, struct context *cx,
+                             struct path_variable *p, int begin, int end){
+  double *M, *x, *b;
+  struct path_points *p0 = NULL, *p1 = &(p -> points[(begin) % p -> length]),
+                     *p2 = &(p -> points[(begin+1) % p -> length]);
+  double complex z0 = NAN, z1 = p1 -> prov.x + p1 -> prov.y * I,
+                 z2 = p1 -> prov.x + p2 -> prov.y * I;
+  int i, size;
+  @<Declaração de Variáveis de Incógnitas (Não-Cíclico)@>
+  @<Checa caso degenerado@>
+  int number_of_points = (end-begin+2);
+  if(number_of_points < 0)
+    number_of_points *= -1;
+  size = 3 * ((number_of_points) - 2) + 2; // Tamanho do sistema de equações
+  // Alocação do sistema:
+  M = (double *) temporary_alloc(size * size * sizeof(double));
+  x = (double *) temporary_alloc(size * sizeof(double));
+  b = (double *) temporary_alloc(size * sizeof(double));
+  if(M == NULL || x == NULL || b == NULL){
+    RAISE_ERROR_NO_MEMORY(mf, cx, 0);
+    if(M != NULL && temporary_free != NULL) temporary_free(M);
+    if(x != NULL && temporary_free != NULL) temporary_free(x);
+    if(b != NULL && temporary_free != NULL) temporary_free(b);
+    return false;
+  }
+  memset(M, 0, size * size * sizeof(double));
+  // Iterando sobre cada ponto adicionando sistema de equações:
+  @<Equação: Ponto Inicial@>
+  for(i = 1; i < (begin - end + 1); p ++){
+    p0 = p1; p1 = p2;
+    p2 = &(p -> points[(begin+i+1) % p -> length]);
+    z0 = z1; z1 = z2;
+    z2 = p2 -> prov.x + p2 -> prov.y * I;
+    @<Equação: Caso Geral@>
+  }
+  @<Equação: Último Ponto@>
+  solve_linear_system(size, M, b, x);
+  @<Preenche especificador: primeiro ponto@>
+  {
+    int theta;
+    for(theta = 1, i = 1; i < number_of_points - 1; i ++, theta += 3){
+      // Acha direção em p->points[i] usando valor de x[theta]
+      @<Preenche especificador: ponto interno@>
+    }
+  }
+  @<Preenche especificador: último ponto@>
+  if(temporary_free != NULL){
+    temporary_free(M);
+    temporary_free(x);
+    temporary_free(b);
+  }
+  return true;
+}
+@
+\fimcodigo
+
+Já a função que preenche as direções faltantes no caso do caminho
+cíclico inteiro não ter direções é bastante similar. Ela apenas deve
+levar em conta que todos os pontos do caminho tem direções a serem
+descobertas e também irá usar uma fórmula diferente para calcular o
+tamanho do sistema de equações lineares, já que haverão três
+incógnitas por ponto:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+bool fill_cyclic_missing_directions(struct metafont *mf, struct context *cx,
+                                    struct path_variable *p, int begin,
+                                    int end);
+@
+\fimcodigo
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+bool fill_cyclic_missing_directions(struct metafont *mf, struct context *cx,
+                                    struct path_variable *p, int begin,
+                                    int end){
+  double *M, *x, *b;
+  struct path_points *p0 = &(p -> points[(begin - 2) % p -> length]),
+                     *p1 = &(p -> points[(begin - 1) % p -> length]),
+                     *p2 = &(p -> points[(begin) % p -> length]);
+  double complex z0 = p0 -> prov.x + p0 -> prov.y * I,
+                 z1 = p1 -> prov.x + p1 -> prov.y * I,
+                 z2 = p2 -> prov.x + p2 -> prov.y * I;
+  int i, size = 3 * (p -> length); // Tamanho do sistema de equações
+  @<Declaração de Variáveis de Incógnitas (Cíclico)@>
+  // Alocação do sistema:
+  M = (double *) temporary_alloc(size * size * sizeof(double));
+  x = (double *) temporary_alloc(size * sizeof(double));
+  b = (double *) temporary_alloc(size * sizeof(double));
+  if(M == NULL || x == NULL || b == NULL){
+    RAISE_ERROR_NO_MEMORY(mf, cx, 0);
+    if(M != NULL && temporary_free != NULL) temporary_free(M);
+    if(x != NULL && temporary_free != NULL) temporary_free(x);
+    if(b != NULL && temporary_free != NULL) temporary_free(b);
+    return false;
+  }
+  memset(M, 0, size * size * sizeof(double));
+  // Iterando sobre cada ponto adicionando sistema de equações:
+  for(i = 0; i < p -> length; p ++){
+    p0 = p1; p1 = p2;
+    p2 = &(p -> points[(begin+i+1)]);
+    z0 = z1; z1 = z2;
+    z2 = p1 -> prov.x + p1 -> prov.y * I;
+    @<Equação: Caso Geral@>
+  }
+  solve_linear_system(size, M, b, x);
+  {
+    int theta;
+    for(theta = 0, i = 0; i < p -> length; i ++, theta += 3){
+      // Acha direção em p->points[i] usando valor de x[theta]
+      @<Preenche especificador: ponto interno@>
+    }
+  }
+  if(temporary_free != NULL){
+    temporary_free(M);
+    temporary_free(x);
+    temporary_free(b);
+  }
+  return true;
+}
+@
+\fimcodigo
+
+Vamos ver agora quais são as equações que devemos inserir em cada
+caso. Vamos ao primeiro ponto de um segmento não-cíclico. Pelas regras
+de como expressões de caminho são interpretadas, temos que esse
+primeiro ponto de segmento, que podemos chamar de $z_0$ e que é
+sucedido por $z_1$ (aqui tratamos ambos como números complexos), ou já
+tem um especificador de direção conhecido (o qual chamamos de $w_0$)
+ou então ele possui um valor de ``curl'' associado a ele, o qual
+chamamos de $\gamma$.
+
+Se ele já tem um especificador de direção, o valor de $\theta_0$ dele
+já é conhecido e dado pela equação:
+
+$$
+\theta_0 = arg(w_0/(z_1-z_0))
+$$
+
+Se ao invés disso ele tiver apenas um valor de $\gamma$, então
+descobriremos depois $\theta_0$ com ajuda da seguinte equação que
+adicionamos ao sistema:
+
+$$
+k_0\theta_0+k_1\phi_1=0
+$$
+
+Com as constantes $k_0$ e $k_1$ dependendo das tensões $t_1$ e
+$t_2$ do ponto inicial:
+
+$$
+k_0=t_1^2(t_2^{-1}-3)-\gamma t_2^2t_1^{-1}
+$$
+$$
+k_1=t_1^2t_2^{-1}-\gamma t_2^2(t_1^{-1}-3)
+$$
+
+O código para adicionar equação em ambos os casos segue abaixo:
+
+\iniciocodigo
+@<Equação: Ponto Inicial@>=
+if(!isnan(p1 -> prov.dir1_x)){ // w0 conhecido
+  double w1_x = p1 -> prov.dir1_x, w1_y = p1 -> prov.dir1_y;
+  M[current_theta] = 1.0;
+  b[number_of_equations] = carg((w1_x + w1_y * I) / (z2 - z1));
+}
+else{ // gamma conhecido
+  double gamma = p1 -> prov.dir1_y;
+  double t1 = p1 -> prov.tension1;
+  double t2 = p1 -> prov.tension2;
+  M[current_theta] = t1*t1*(1/t2 - 3.0) - gamma * t2 * t2 * (1/t1);
+  M[next_phi] = t1*t1*(1/t2) - gamma * t2 * t2 * (1/t1 - 3.0);
+  b[number_of_equations] = 0.0;
+}
+@<Próxima Equação, Próximo Ponto@>
+@
+\fimcodigo
+
+No caso do ponto final, nós também teremos ou um especificador de
+direção $w_n$ conhecido ou teremos um valor de ``curl'' conhecido com
+o valor $\gamma_n$.
+
+Se a direção $w_n$ for conhecida, nós já sabemos o falor de $\phi_n$
+pela fórmula:
+
+$$
+\phi_n = arg((z_n - z_{n-1})/w_n)
+$$
+
+Já se tivermos apenas um valor de $\gamma_n$ conhecido, então o valor
+de $\phi_n$ será descoberto depois com ajuda da equação:
+
+$$
+k_0\theta_{n-1}+k_1\phi_{n}=0
+$$
+
+Usando as constantes abaixo, que dependem da tensão $t_1$ e $t_2$
+presente no ponto anterior:
+
+$$
+k_0=t_2^2t_1^{-1}-\gamma t_1^2(t_2^{-1}-3)
+$$
+$$
+k_1=t_2^2(t_1^{-1}-3)-\gamma t_1^2t_2^{-1}
+$$
+
+O código para adicionar equação em ambos os casos segue abaixo.
+
+\iniciocodigo
+@<Equação: Último Ponto@>=
+if(!isnan(p1 -> prov.dir2_x)){ // w_n conhecido
+  double w1_x = p1 -> prov.dir2_x, w1_y = p1 -> prov.dir2_y;
+  M[current_phi] = 1.0;
+  b[number_of_equations] = carg((z2 - z1)/(w1_x + w1_y * I));
+}
+else{ // gamma conhecido
+  double gamma = p1 -> prov.dir2_y;
+  double t1 = p1 -> prov.tension1;
+  double t2 = p1 -> prov.tension2;
+  M[previous_theta] = t2*t2*(1/t1) - gamma * t1 * t1 * (1/t2 - 3.0);
+  M[current_phi] = t2*t2*(1/t1 - 3.0) - gamma * t1 * t1 * (1/t2);
+  b[number_of_equations] = 0.0;
+}
+@
+\fimcodigo
+
+Por fim, vamos às três equações que são geradas para os pontos
+interiores, que são todos os pontos de um segmento cíclico ou todos os
+pontos de um segmento não-cíclico que não são o primeiro nem o último.
+
+Dado o ponto $z_n$ precedido por $z_{n-1}$ e sucedido por $z_{n+1}$,
+temos:
+
+$$
+\psi_n = arg((z_{n+1}-z_n)/(z_n-z_{n-1}))
+$$
+$$
+\theta_n + \psi_n + \phi_n = 0
+$$
+$$
+k_0\theta_{k-1} + k_1\theta_k + k_2\phi_n + k_3\phi_{n+1} = 0
+$$
+
+Assumindo o trecho de segmento:
+
+$$
+z_0\; ..\; tension\; t_0\; and\; t_1\; ..\; z_1\; ..\; tension\; t_2\; and\; t_3
+\; .. z_2
+$$
+
+As constantes $k_0$, $k_1$, $k_2$ e $k_3$ para o ponto $z_1$ são dadas por:
+
+$$
+k_0 = t_1^2\|z_1-z_0\|^{-1}t_0^{-1}
+$$
+$$
+k_1 = - t_2^2\|z_2-z_1\|^{-1}(t_3^{-1}-3)
+$$
+$$
+k_2 = t_1^2\|z_1-z_0\|^{-1}(t_0^{-1} - 3)
+$$
+$$
+k_3 = - t_2^2\|z_2-z_1\|^{-1}(t_3^{-1})
+$$
+
+O código que armazena as três equações segue abaixo:
+
+\iniciocodigo
+@<Equação: Caso Geral@>=
+M[current_psi] = 1.0;
+b[number_of_equations] = carg((z2 - z1)/(z1 - z0));
+@<Próxima Equação, Mesmo Ponto@>
+M[current_theta] = M[current_psi] = M[current_phi] = 1.0;
+b[number_of_equations] = 0.0;
+@<Próxima Equação, Mesmo Ponto@>
+{
+  double t0 = p0 -> prov.tension1, t1 = p0 -> prov.tension2,
+         t2 = p1 -> prov.tension1, t3 = p1 -> prov.tension2;
+  M[previous_theta] = t1 * t1 * (1.0/cabs(z1 - z0)) * (1.0/t0);
+  M[current_theta] = - t2 * t2 * (1.0/cabs(z2 - z1)) * (1.0/t3 - 3.0);
+  M[current_phi] = t1 * t1 * (1.0/cabs(z1 - z0)) * (1.0/t0 - 3.0);
+  M[next_phi] = - t2 * t2 * (1.0/cabs(z2 - z1)) * (1.0/t3);
+  b[number_of_equations] = 0.0;
+  @<Próxima Equação, Próximo Ponto@>
+}
+@
+\fimcodigo
+
+Mas o quê exatamente estas equações representam e de onde elas vieram?
+Basicamente usamos as mesmas regras e equações que a linguagem
+METAFONT usa para gerar suas curvas. Isso nos dá compatibilidade com a
+linguagem. O método usado e as equações foram desenvolvidas por John
+Hobby e publicadas em [HOBBY, 1986]. O que as regras
+significam é que o caminho tem o seu formato invariante diante de
+translação, rotação e mudança de escala. Além disso, a fórmula foi
+desenvolvida para que qualquer mudança em um ponto local tenha
+influência cada vez menor nos pontos seguintes (o impacto de mudanças
+cai exponencialmente) e para minimizar pontas e mudanças bruscas de
+direção na curva.
+
+A equação que determina o formato da curva sempre tem solução desde
+que todas as tensões sejam maiores que $3/4$ e os valores do
+``enrolamento'' sejam sempre positivos ou nulos. Estas restrições de
+valores serão reforçadas na interpretação de expressões de caminho. Se
+encontrarmos um valor fora destes limites, iremos gerar um erro.
+
+Existe, contudo, um último caso degenerado que podemos encontrar, em
+que a equação não tem solução. Ele ocorre quando tempos um segmento de
+apenas dois pontos, ambos possuem um ``enrolamento'' ao invés de um
+especificador de direção e a multiplicação de seus valores de
+``enrolamento'' será igual a 1 (o que implica que ambos são iguais a
+1). Por causa disso, no começo da função que preenche especificadores
+de direção, checaremos logo no começo se estamos em um caso
+degenerado. Se for o caso, tratamos o segmento como uma reta entre o
+primeiro ponto e o segundo:
+
+\iniciocodigo
+@<Checa caso degenerado@>=
+if(begin == end && isnan(p1 -> prov.dir1_x) && isnan(p1 -> prov.dir2_x) &&
+   p1 -> prov.dir1_y * p1 -> prov.dir2_y == 1.0){
+  p1 -> format = FINAL_FORMAT;
+  p1 -> point.u_x = p1 -> point.x + (1.0/3) * (p2 -> point.x - p1 -> point.x);
+  p1 -> point.v_x = p1 -> point.x + (2.0/3) * (p2 -> point.x - p1 -> point.x);
+  p1 -> point.u_y = p1 -> point.y + (1.0/3) * (p2 -> point.y - p1 -> point.y);
+  p1 -> point.v_y = p1 -> point.y + (2.0/3) * (p2 -> point.y - p1 -> point.y);
+  p -> number_of_missing_directions -= 2;
+  return true;
+}
+@
+\fimcodigo
+
+Agora vamos começar a preencher os valores desconhecidos dos
+especificadores de direção, assumindo que já resolvemos o sistema de
+equações linear. No caso do primeiro ponto de um segmento não-cíclico,
+as equações nos revelaram o valor $\theta_0$ associado a ele. Se ele
+já tinha um especificador de direção, não precisamos fazer nada. Se
+ele não tinha, o especificador $w_0$ é definido como:
+
+$$
+\theta_0 = arg(w_0/(z_1-z_0))
+$$
+
+E este é o código que coloca o primeiro especificador de direção se
+precisar:
+
+\iniciocodigo
+@<Preenche especificador: primeiro ponto@>=
+if(isnan(p -> points[begin].prov.dir1_x)){
+  double complex dir;
+  z0 = p -> points[begin].prov.x + p -> points[begin].prov.y * I;
+  z1 = p -> points[(begin+1) % p -> length].prov.x +
+       p -> points[(begin+1) % p -> length].prov.y * I;
+  dir = cos(x[0]) + sin(x[0]) * I;
+  dir *= (z1 - z0);
+  p -> points[begin].prov.dir1_x = creal(dir);
+  p -> points[begin].prov.dir1_y = cimag(dir);
+  p -> number_of_missing_directions --;
+}
+@
+\fimcodigo
+
+Já no caso do último ponto, resolver o sistema de equações nos revelou
+$\phi_{n}$. Se ele já possuía um especificador de direção, não é
+necessário fazer nada. Caso contrário, podemos deduzir seu
+especificador $w_n$ com a fórmula:
+
+$$
+\phi_n = arg((z_n-z_{n-1})/w_n)
+$$
+
+O código que faz isso, se necessário, segue abaixo:
+
+\iniciocodigo
+@<Preenche especificador: último ponto@>=
+if(isnan(p -> points[end].prov.dir2_x)){
+  double complex dir;
+  z1 = p -> points[end].prov.x + p -> points[end].prov.y * I;
+  z2 = p -> points[(end+1) % p -> length].prov.x +
+       p -> points[(end+1) % p -> length].prov.y * I;
+  dir = cos(x[size - 1]) + sin(x[size - 1]) * I;
+  dir /= (z2 - z1);
+  dir = 1.0 / dir;
+  p -> points[end].prov.dir2_x = creal(dir);
+  p -> points[end].prov.dir2_y = cimag(dir);
+  p -> number_of_missing_directions --;
+}
+@
+\fimcodigo
+
+Já para todos os demais pontos de índice $k$, nós temos tanto um
+$\theta_k$ como um $\phi_k$ e podemos usar tanto uma como a outra
+fórmula que o mesmo resultado é obtido. Mas a iteração que percorre os
+pontos para preencher os resultados itera sobre cada um dos valores
+existentes ajustando um índice \monoespaco{i} correspondendo ao número
+do ponto que estamos visitando e um índice \monoespaco{theta} com o
+valor do índice no vetor solução $x$ que possui o $\theta$ associado
+ao ponto atual. Por causa disso, escolhemos usar a fórmula de
+$\theta_k$:
+
+$$
+\theta_k = arg(w_k/(z_{k+1}-z_k))
+$$
+
+Para os pontos internos, cada ponto possui na verdade dois
+especificadores de direção: um do lado direito (armazenado nele mesmo)
+e outro do lado esquerdo (armazenado no ponto anterior). Preenchemos
+ambos os valores com o código abaixo:
+
+\iniciocodigo
+@<Preenche especificador: ponto interno@>=
+{
+  double complex dir;
+  z0 = p -> points[i].prov.x + p -> points[i].prov.y * I;
+  z1 = p -> points[(i+1) % p -> length].prov.x +
+       p -> points[(i+1) % p -> length].prov.y * I;
+  dir = cos(x[theta]) + sin(x[theta]) * I;
+  dir *= (z1 - z0);
+  p -> points[i].prov.dir1_x = creal(dir);
+  p -> points[i].prov.dir1_y = cimag(dir);
+  p -> points[(i-1) % p -> length].prov.dir1_x = creal(dir);
+  p -> points[(i-1) % p -> length].prov.dir1_y = cimag(dir);
+  p -> number_of_missing_directions -= 2;
+}
+@
+\fimcodigo
+
 
 \subsecao{7.5. Variáveis de Caneta}
 
@@ -16696,8 +17346,12 @@ bool _Wrender_glyph(struct metafont *mf, char *glyph,
 \referencia{Knuth, D. E. (1984) ``Literate Programming'', The Computer
   Journal, Volume 27, Edição 2, Páginas 97--111.}
 
+\referencia{Hobby, J. D. (1986), ``Smooth, easy to compute interpolating
+ splines'', Discrete \& computational geometry, 1(2), 123-140}
+
 \referencia{Knuth, D. E. (1989) ``The METAFONT book'', Addison-Wesley
  Longsman Publishing Co., Inc}
+
 
 \fim
 
