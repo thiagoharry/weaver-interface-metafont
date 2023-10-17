@@ -109,48 +109,56 @@ k\input tex/epsf.tex
 
 7.3. Transform Variables \indice{45}
 
-7.4. Path Variables \indice{46}
+7.4. Path Variables \indice{47}
 
-7.5. Pen Variables \indice{48}
+7.4.1. Removing Recursion from Path Variables \indice{49}
 
-7.6. Picture Variables \indice{52}
+7.4.2. Tension and Direction Specifiers \indice{51}
 
-7.7. Boolean Variables \indice{54}
+7.4.3. Deducing Direction Specifiers \indice{55}
 
-8. Assignments \indice{56}
+7.4.4. Normalizing Paths \indice{64}
 
-8.1. Numeric Assignments and Expressions \indice{58}
+7.5. Pen Variables \indice{66}
 
-8.1.1. Sum and Subtraction: Normal and Pythagorean \indice{58}
+7.6. Picture Variables \indice{XX}
 
-8.1.2. Multiplication and Division \indice{62}
+7.7. Boolean Variables \indice{XX}
+
+8. Assignments \indice{XX}
+
+8.1. Numeric Assignments and Expressions \indice{XX}
+
+8.1.1. Sum and Subtraction: Normal and Pythagorean \indice{XX}
+
+8.1.2. Multiplication and Division \indice{XX}
 
 8.1.3. Modulus, Sine, Cosine, Exponentials, Floor and
-  Random Uniform Values \indice{65}
+  Random Uniform Values \indice{XX}
 
-8.1.4. Isolated Numbers and Random Normal Values \indice{71}
+8.1.4. Isolated Numbers and Random Normal Values \indice{XX}
 
-8.2. Pair Assignments and Expressions \indice{75}
+8.2. Pair Assignments and Expressions \indice{XX}
 
-8.2.1. Sum and Subtraction \indice{75}
+8.2.1. Sum and Subtraction \indice{XX}
 
-8.2.2. Transformers and Scalar Multiplication and Division \indice{77}
+8.2.2. Transformers and Scalar Multiplication and Division \indice{XX}
 
-8.2.3. Pair Intermediary Values, Literals and Variables \indice{82}
+8.2.3. Pair Intermediary Values, Literals and Variables \indice{XX}
 
-8.2.4. Pairs in Numeric Expressions \indice{86}
+8.2.4. Pairs in Numeric Expressions \indice{XX}
 
-8.3. Transform Assignments and Expressions \indice{88}
+8.3. Transform Assignments and Expressions \indice{XX}
 
-8.3.1. Transforming Transformers \indice{89}
+8.3.1. Transforming Transformers \indice{XX}
 
-8.3.2 Transform Tertiary Expressions: Literals and Variables \indice{92}
+8.3.2 Transform Tertiary Expressions: Literals and Variables \indice{XX}
 
-8.3.3. Transforms in Numeric Expressions \indice{95}
+8.3.3. Transforms in Numeric Expressions \indice{XX}
 
-8.3.4. Transforms in Pair Expressions \indice{96}
+8.3.4. Transforms in Pair Expressions \indice{XX}
 
-8.4. Path Assignments and Expressions \indice{97}
+8.4. Path Assignments and Expressions \indice{XX}
 
 8.4.1. Joining Paths \indice{XX}
 
@@ -3653,6 +3661,10 @@ bool recursive_copy_points(struct metafont *mf, struct context *cx,
   (*target) -> points = (struct path_points *)
                           alloc(sizeof(struct path_points) *
                                 (*target) -> number_of_points);
+  if((*target) -> points == NULL){
+    RAISE_ERROR_NO_MEMORY(mf, cx, 0);
+    return false;
+  }
   p = (*target) -> points;
   recursive_aux_copy(&p, source, &((*target) -> number_of_missing_directions));
   return true;
@@ -4112,7 +4124,7 @@ number_of_equations = 0;
 @
 \fimcodigo
 
-If our system has ``\monospace{size}'' elements, then the following
+If our system has ``\monoespaco{size}'' elements, then the following
 code snippet changes the position of these values to the next
 equation, but without changing the current point. This occurs when we
 are neither in the first nor in the last point. In this case, our
@@ -4321,7 +4333,7 @@ With constants $k_0$ and $k_1$ depending on the tensions $t_1$ and
 $t_2$ stored in the initial point:
 
 $$
-k_0=t_1^2(t''_0^{-1}-3)-\gamma t_2^2t_1^{-1}
+k_0=t_1^2(t_2^{-1}-3)-\gamma t_2^2t_1^{-1}
 $$
 $$
 k_1=t_1^2t_2^{-1}-\gamma t_2^2(t_1^{-1}-3)
@@ -4399,7 +4411,7 @@ the inner points, which are all points in a cyclical segment, or all
 points in a non-cyclical segment which are not the first nor the last
 point.
 
-Given point $z_ $ preceded by $z_{n-1}$ and followed by $z_{n+1}$,
+Given point $z_n$ preceded by $z_{n-1}$ and followed by $z_{n+1}$,
 we have:
 
 $$
@@ -4592,6 +4604,135 @@ using the code below:
 }
 @
 \fimcodigo
+
+\subsubsecao{7.4.4. Normalizing Paths}
+
+Now that we defined a function that removes path recursion
+(\monoespaco{recursive\_copy\_points}, seen in Subsection 7.4.1),
+another to ensure that all points will have direction specifiers
+(\monoespaco{find\_missing\_directions}, seen in Subsection 7.4.3) and
+a third one that converts all points of a path from provisional format
+to final format (\monoespaco{convert\_to\_final}, seen in Subsection
+7.4.2), we can combine all these functions in order to normalize a
+path, leaving it in its final format: the format in which it can
+be rendered.
+
+Doing this involves calling each of these functions in order. However,
+there is one last complication that we must address involving cyclic
+paths.
+
+We could represent a cyclical path in two ways: assuming that the last
+point is equal the first one, or assuming that there is a path between
+the last point and the first one. In the first case, the cyclic path
+below would store 4 points: $(0, 0)$, $(0, 3)$, $(4, 0)$ and $(0, 0)$,
+with the last one being equal the first. In the second case, we would
+store just the three points and assume the last one point is connected
+to the first one, since the path is marked as cyclic.
+
+\alinhaverbatim
+(0, 0) .. (0, 3) .. (4, 0) .. cycle;
+\alinhanormal
+
+Apparently representing just three points is more elegant: we do not
+waste memory with an additional point and, as seen in the code from
+previous subsection, we can iterate over cyclic paths, starting at any
+point so that the code below would pass exactly once in each point:
+
+\alinhaverbatim
+for(i = 0; i < path -> length; i ++)
+  struct path_point *p = &(path -> points[(begin + i) % path -> length]);
+\alinhanormal
+
+Notice how in the code above, it doesn't matter what the value is
+for \monoespaco{begin}, we visit each point exactly once. But only if
+we work with the assumption that we are not repeating the first point
+at the end of the cyclic path. In code from Subsection 7.4.3, we used
+a loop like this to traverse a path segment, and the code works even
+when the end of the segment is stored before the beginning, which can
+happen in segments inside cyclic paths.
+
+However, there are two cases in which there is an advantage in storing
+explicitly a copy of the first point at the end position. First, the
+drawing function could deal with cyclic and non-cyclic segments usaing
+the same code. In both cases, it draws by passing the pen in each
+point until reaching the last one. Second, and most importantly,
+consider the code below that concatenates two paths:
+
+\alinhaverbatim
+p = ((-3, -3) -- (0, 0)) & ((0, 0) .. (0, 3) .. (4, 0) .. cycle);
+\alinhanormal
+
+Concatenation destroys the cyclic nature of the path. If we do not
+explicitly store a point $(0, 0)$ at the end of the second path, then
+we will need to create and place an additional point when the path
+stops being cyclical. To do this, we may potentially need to
+reallocate the array where the points are stored in the second path.
+
+To avoid increasing the complexity of concatenation and drawing, we
+will choose to explicitly represent a copy of the first point at the
+end of a cyclic path. But for cases where it is better not having this
+copy, we can then perform the operations:
+
+1) Decrement variable \monoespaco{length} in the path.
+
+2) Perform the operations assuming that a copy of the first point is
+not placed at the end.
+
+3) Increment variable \monoespaco{length} and copy to the last
+position a copy of the first point.
+
+This way, the code from the previous Subsection will work and we can
+get almost the best of both worlds. Just having to make the above
+conversion. For example, given the function that normalizes a path
+leaving it in its final format:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+bool normalize_path(struct metafont *mf, struct context *cx,
+                    struct path_variable *path);
+@
+\fimcodigo
+
+We can implement it this way:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+bool normalize_path(struct metafont *mf, struct context *cx,
+                    struct path_variable *path){
+  struct path_variable *new;
+  void *(*alloc)(size_t);
+  void (*disalloc)(void *);
+  if(path -> permanent){
+    alloc = permanent_alloc;
+    disalloc = permanent_free;
+  }
+  else{
+    alloc = temporary_alloc;
+    disalloc = temporary_free;
+  }
+  if(!recursive_copy_points(mf, cx, alloc, &new, path, true))
+    return false;
+  if(disalloc != NULL)
+    disalloc(path -> points);
+  memcpy(path, new, sizeof(struct path_variable));
+  disalloc(new);
+  if(path -> number_of_missing_directions > 0){
+    if(path -> cyclic)
+      path -> length --;
+    if(!find_missing_directions(mf, cx, path))
+      return false;
+    if(path -> cyclic){
+      path -> length ++;
+      memcpy(&(path -> points[path -> length - 1]), &(path -> points[0]),
+             sizeof(struct path_points));
+    }
+  }
+  convert_to_final(path);
+  return true;
+}
+@
+\fimcodigo
+
 
 
 

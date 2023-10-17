@@ -125,45 +125,53 @@
 
 7.4. Variáveis de Caminhos \indice{47}
 
-7.5. Variáveis de Caneta \indice{49}
+7.4.1. Removendo Recursão de Variáveis de Caminho \indice{50}
 
-7.6. Variáveis de Imagens \indice{52}
+7.4.2. Tensão e Especificadores de Direção \indice{51}
 
-7.7. Variáveis Booleanas \indice{54}
+7.4.3. Deduzindo Especificadores de Direção \indice{56}
 
-8. Atribuições \indice{54}
+7.4.4. Normalização de Caminhos \indice{64}
 
-8.1. Atribuições e Expressões Numéricas \indice{58}
+7.5. Variáveis de Caneta \indice{66}
 
-8.1.1. Soma e Subtração: Normal e Pitagórica \indice{58}
+7.6. Variáveis de Imagens \indice{XX}
 
-8.1.2. Multiplicação e Divisão \indice{63}
+7.7. Variáveis Booleanas \indice{XX}
 
-8.1.3. Módulo, Seno, Cosseno, Exponenciais, Piso e Aleatórios Uniformes \indice{65}
+8. Atribuições \indice{XX}
 
-8.1.4. Números Isolados e Valores Aleatórios Normais \indice{71}
+8.1. Atribuições e Expressões Numéricas \indice{XX}
 
-8.2. Atribuições e Expressões de Pares \indice{75}
+8.1.1. Soma e Subtração: Normal e Pitagórica \indice{XX}
 
-8.2.1. Soma e Subtração \indice{76}
+8.1.2. Multiplicação e Divisão \indice{XX}
 
-8.2.2. Transformações, Multiplicação e Divisão Escalar \indice{77}
+8.1.3. Módulo, Seno, Cosseno, Exponenciais, Piso e Aleatórios Uniformes \indice{XX}
 
-8.2.3. Valores Intermediários de Pares, Literais e Variáveis \indice{81}
+8.1.4. Números Isolados e Valores Aleatórios Normais \indice{XX}
 
-8.2.4. Pares em Expressões Numéricas \indice{86}
+8.2. Atribuições e Expressões de Pares \indice{XX}
 
-8.3. Atribuições e Expressões de Transformação \indice{88}
+8.2.1. Soma e Subtração \indice{XX}
 
-8.3.1. Transformações sobre Transformadores \indice{88}
+8.2.2. Transformações, Multiplicação e Divisão Escalar \indice{XX}
 
-8.3.2 Expressões Primárias de Transformação: Literais e Variáveis \indice{92}
+8.2.3. Valores Intermediários de Pares, Literais e Variáveis \indice{XX}
 
-8.3.3. Transformações em Expressões Numéricas \indice{95}
+8.2.4. Pares em Expressões Numéricas \indice{XX}
 
-8.3.4. Transformações em Expressões de Pares \indice{96}
+8.3. Atribuições e Expressões de Transformação \indice{XX}
 
-8.4. Atribuições e Expressões de Caminhos \indice{96}
+8.3.1. Transformações sobre Transformadores \indice{XX}
+
+8.3.2 Expressões Primárias de Transformação: Literais e Variáveis \indice{XX}
+
+8.3.3. Transformações em Expressões Numéricas \indice{XX}
+
+8.3.4. Transformações em Expressões de Pares \indice{XX}
+
+8.4. Atribuições e Expressões de Caminhos \indice{XX}
 
 8.4.1. Junção de Caminhos \indice{XX}
 
@@ -3734,6 +3742,10 @@ bool recursive_copy_points(struct metafont *mf, struct context *cx,
   (*target) -> points = (struct path_points *)
                           alloc(sizeof(struct path_points) *
                                 (*target) -> number_of_points);
+  if((*target) -> points == NULL){
+    RAISE_ERROR_NO_MEMORY(mf, cx, 0);
+    return false;
+  }
   p = (*target) -> points;
   recursive_aux_copy(&p, source, &((*target) -> number_of_missing_directions));
   return true;
@@ -4683,6 +4695,140 @@ ambos os valores com o código abaixo:
   p -> points[(i-1) % p -> length].prov.dir1_x = creal(dir);
   p -> points[(i-1) % p -> length].prov.dir1_y = cimag(dir);
   p -> number_of_missing_directions -= 2;
+}
+@
+\fimcodigo
+
+\subsubsecao{7.4.4. Normalização de Caminhos}
+
+Agora que definimos uma função que remove a recursão de caminhos
+(\monoespaco{recursive\_copy\_points}, vista na Subseção 7.4.1), outra
+para garantir que todos os pontos terão especificadores de direção
+(\monoespaco{find\_missing\_directions}, vista na Subseção 7.4.3) e
+uma outra que converte todos os pontos de um caminho do formato
+provisório para o final (\monoespaco{convert\_to\_final}, visto na
+Subseção 7.4.2), é hora de combinar todas estas funções de modo a
+normalizar um caminho, deixando ele em seu formato final: o formato no
+qual ele já pode ser renderizado.
+
+Fazer isso envolve chamar cada uma destas funções na ordem
+certa. Entretanto, existe uma última complicação que devemos tratar
+para caminhos cíclicos.
+
+Poderíamos representar um caminho cíclico de duas formas: assumindo
+que é um caminho onde o primeiro e último ponto sempre são iguais ou
+assumindo que há uma ligação adicional entre o último e o primeiro
+ponto. No primeiro caso, o caminho cíclico abaixo armazenaria os
+pontos $(0, 0)$, $(0, 3)$, $(4, 0)$ e $(0, 0)$ totalizando quatro
+pontos, sendo que o último é igual ao primeiro. No segundo caso,
+armazenaríamos apenas os três pontos e presumiríamos que o último
+ponto está ligado ao primeiro, já que o caminho estaria marcado como
+cíclico.
+
+\alinhaverbatim
+(0, 0) .. (0, 3) .. (4, 0) .. cycle;
+\alinhanormal
+
+Aparentemente, representar apenas três pontos é mais elegante: não
+desperdiçamos memória com um ponto adicional e como visto no código da
+subseção anterior, podemos iterar sobre caminhos cíclicos, começando à
+partir de qualquer ponto que códigos como o abaixo passariam
+exatamente uma vez por cada ponto:
+
+\alinhaverbatim
+for(i = 0; i < path -> length; i ++)
+  struct path_point *p = &(path -> points[(begin + i) % path -> length]);
+\alinhanormal
+
+Observe como no código acima, não importa qual o valor
+de \monoespaco{begin}, nós visitamos cada ponto uma só vez. Mas apenas
+se trabalharmos com o pressuposto de que não estamos repetindo o
+primeiro ponto uma vez adicional no fim do caminho cíclico. No código
+da Subseção 7.4.3, usamos um laço deste tipo para percorrer um
+segmento de caminho, e o código funciona mesmo quando o final do
+segmento de caminho cíclico está armazenado antes do começo.
+
+Entretanto, há dois casos em que há vantagem em armazenar
+explicitamente uma cópia do primeiro ponto no fim de um caminho
+cíclico. Primeiro, que e fizermos isso, a função que desenha o caminho
+usando uma caneta não precisa tratar de maneira diferente caminhos
+cíclicos e não-cíclicos. Nos dois casos, ela vai desenhando passando
+por cada ponto até chegar ao último. Segundo, e mais importante,
+considere o código abaixo que concatena dois caminhos:
+
+\alinhaverbatim
+p = ((-3, -3) -- (0, 0)) & ((0, 0) .. (0, 3) .. (4, 0) .. cycle);
+\alinhanormal
+
+A concatenação destrói a natureza cíclica do caminho. Se nós não
+armazenamos explicitamente um ponto $(0, 0)$ no fim do segundo caminho
+concatenado, como o resultado da operação deixa de ser cíclico,
+teremos que inserir um ponto $(0, 0)$ adicional no fim do caminho
+resultante. Para isso, potencialmente podemos ter que realocar o vetor
+em que os pontos são armazenados no segundo caminho.
+
+Para evitar aumentar a complexidade do código de concatenação e de
+desenho, optaremos então por representar explicitamente uma cópia do
+primeiro ponto no fim de um caminho cíclico. Mas para os casos em que
+é melhor não ter esta cópia, podemos então realizar as operações:
+
+1) Decremente a variável \monoespaco{length} do caminho.
+
+2) Realize as operações assumindo que uma cópia do primeiro ponto não
+é colocada no fim.
+
+3) Incremente novamente a variável \monoespaco{length} e copie para a
+última posição o primeiro ponto.
+
+Desta forma, o código da Subseção anterior funcionará e conseguimos
+ficar com quase o melhor dos dois mundos. Apenas tendo que fazer a
+conversão acima em algumas partes. Por exemplo, dada a função que
+normaliza um caminho deixando-o em seu formato final:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+bool normalize_path(struct metafont *mf, struct context *cx,
+                    struct path_variable *path);
+@
+\fimcodigo
+
+Ela pode ser implementada da seguinte forma:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+bool normalize_path(struct metafont *mf, struct context *cx,
+                    struct path_variable *path){
+  struct path_variable *new;
+  void *(*alloc)(size_t);
+  void (*disalloc)(void *);
+  if(path -> permanent){
+    alloc = permanent_alloc;
+    disalloc = permanent_free;
+  }
+  else{
+    alloc = temporary_alloc;
+    disalloc = temporary_free;
+  }
+  if(!recursive_copy_points(mf, cx, alloc, &new, path, true))
+    return false;
+  if(disalloc != NULL)
+    disalloc(path -> points);
+  // Path se torna idêntico ao que era, mas sem recursão:
+  memcpy(path, new, sizeof(struct path_variable));
+  disalloc(new);
+  if(path -> number_of_missing_directions > 0){
+    if(path -> cyclic)
+      path -> length --;
+    if(!find_missing_directions(mf, cx, path))
+      return false;
+    if(path -> cyclic){
+      path -> length ++;
+      memcpy(&(path -> points[path -> length - 1]), &(path -> points[0]),
+             sizeof(struct path_points));
+    }
+  }
+  convert_to_final(path);
+  return true;
 }
 @
 \fimcodigo
