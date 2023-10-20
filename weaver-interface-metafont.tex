@@ -8280,15 +8280,29 @@ usamos o código abaixo:
 else if(type == TYPE_T_PATH){
   int i;
   struct path_variable result;
+  void *(*alloc)(size_t);
+  void (*disalloc)(void *);
   if(!eval_path_expression(mf, cx, begin_expression, *end, &result))
     return false;
-  var = (struct symbolic_token *) begin;
+  var = (struct symbolic_token *) begin; // 'var' começa na variável atribuída
   for(i = 0; i < number_of_variables; i ++){
-    if(!assign_path_variable(mf, (struct path_variable *) var -> var,
-                             &result))
+    struct path_variable *dst = (struct path_variable *) var -> var;
+    if(dst -> permanent){ // Como alocar e desalocar
+      alloc = permanent_alloc;
+      disalloc = permanent_free;
+    }
+    else{
+      alloc = temporary_alloc;
+      disalloc = temporary_free;
+    }
+    // Se o destino não está vazio, desaloca ele:
+    if(dst -> length != -1 && disalloc != NULL)
+      path_recursive_free(disalloc, dst, false);
+    // Copia a origem para destino
+    if(!recursive_copy_points(mf, NULL, alloc, &dst, &result, false))
       return false;
-    var = (struct symbolic_token *) (var -> next);
-    var = (struct symbolic_token *) (var -> next);
+    var = (struct symbolic_token *) (var -> next); // 'var' aponta para '='
+    var = (struct symbolic_token *) (var -> next); // 'var' é próxima variável
   }
   if(temporary_free != NULL)
     path_recursive_free(temporary_free, &result, false);
@@ -8296,56 +8310,8 @@ else if(type == TYPE_T_PATH){
 @
 \fimcodigo
 
-A declaração da função faz a atribuição:
-
-\iniciocodigo
-@<Declaração de Função Local (metafont.c)@>+=
-bool assign_path_variable(struct metafont *mf,
-                          struct path_variable *target,
-                          struct path_variable *source);
-@
-\fimcodigo
-
-E a sua implementação:
-
-\iniciocodigo
-@<Funções Auxiliares Locais (metafont.c)@>+=
-bool assign_path_variable(struct metafont *mf,
-                          struct path_variable *target,
-                          struct path_variable *source){
-  void *(*alloc)(size_t);
-  void (*disalloc)(void *);
-  if(target -> permanent){
-    disalloc = permanent_free;
-    alloc = permanent_alloc;
-  }
-  else{
-    disalloc = temporary_free;
-    alloc = temporary_alloc;
-  }
-  if(target -> length != -1 && disalloc != NULL)
-    path_recursive_free(disalloc, target, false);
-  return recursive_copy_points(mf, NULL, alloc, &target, source, false);
-}
-@
-\fimcodigo
-
-Copiar um caminho recursivamente significa alocar espaço para o novo
-caminho a ser copiado e copiar seus dados. Ao copiar seus pontos,
-devemos também checar se há outros subcaminhos que devem ser copiados
-recursivamente. Para fazer isso, usamos a seguinte função auxiliar:
-
-
-Essa função faz a alocação se necessário, obtém ponteiros necessários
-e em seguida chama a função que efetivamente percorre recursivamente a
-origem enquanto copia para o destino os pontos da origem:
-
-
-A função que efetivamente percorre os pontos recursivamente e copia:
-
-
-
-Vejamos agora a expressões que existem para expressões de caminhos:
+Veremos agora na próxima Subseção as regras gramaticais para as
+expressões de caminhos:
 
 \subsubsecao{8.4.1. Junção de Caminhos}
 
@@ -8365,7 +8331,8 @@ A gramática para a expressão de caminhos começa com:
                controls <Par Primário> and <Par Primário>
 <Especificação de Direção> -> Vazio |
                               { <Expressão de Par } |
-                              { <Expressão Numérica> , <Expressão Numérica> }
+                              { <Expressão Numérica> , <Expressão Numérica> } |
+                              { curl <Expressão Numérica> }
 <Sub-expressão de Caminho> -> <Expressão de Caminho> |
                               <Sub-expressão de Caminho><Junção de Caminho>
                               <Terciário de Caminho>
@@ -8383,7 +8350,6 @@ TYPE_AND,            // O token simbólico 'and'
 TYPE_ATLEAST,        // O token simbólico 'atleast'
 TYPE_CONTROLS,       // O token simbólico 'controls'
 TYPE_CURL,           // O token simbólico 'curl'
-                     // (ainda não suportado)
 TYPE_STRAIGHT_JOIN,  // O token simbólico '--'
 @
 \fimcodigo
@@ -8412,10 +8378,11 @@ int count_path_joins(struct generic_token *begin, struct generic_token *end);
 @
 \fimcodigo
 
-A função funciona contando o número de ``\&'', ``--'' e também contando os
-``..'' quando eles aparecem sozinhos ou quando eles aparecem pela
-segunda vez dentro de uma junção que especifica pontos de controle ou
-tensão:
+A função funciona contando o número de ``\&'', ``--'' e também
+contando os ``..'' quando eles aparecem sozinhos ou quando eles
+aparecem pela segunda vez dentro de uma junção que especifica pontos
+de controle ou tensão. As junções dentro de sub-expressões dentro de
+parênteses e delimitadores não são contadas:
 
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
@@ -8447,65 +8414,96 @@ int count_path_joins(struct generic_token *begin, struct generic_token *end){
 @
 \fimcodigo
 
-Agora podemos começar a tratar as expressões:
+Contar o número de junções será importante para que saibamos a
+quantidade de pontos que devemos alocar inicialmente para um caminho.
+De posse de como obter tal informação, podemos começar a tratar as
+expressões. A variável que avalia expressão de caminho tem como
+cabeçalho:
 
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
 bool eval_path_expression(struct metafont *mf, struct context *cx,
-                          struct generic_token *begin_expression,
-                          struct generic_token *end_expression,
+                          struct generic_token *begin,
+                          struct generic_token *end,
                           struct path_variable *result);
 @
 \fimcodigo
 
-
-Saber o número de junções é o primeiro passo para saber o tamanho da
-variável de caminho que estamos gerando e saber como alocar espaço
-para ela. O número de elementos (pontos e sub-caminhos) de uma
-variável de caminho é sempre igual ao número de junções mais um:
+O número de pontos de um caminho é inicialmente o número de junções
+mais um:
 
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
 bool eval_path_expression(struct metafont *mf, struct context *cx,
-                          struct generic_token *begin_expression,
-                          struct generic_token *end_expression,
+                          struct generic_token *begin,
+                          struct generic_token *end,
                           struct path_variable *result){
   int expected_length;
-  int number_of_joins = count_path_joins(begin_expression, end_expression);
+  int number_of_joins = count_path_joins(begin, end);
   expected_length = number_of_joins + 1;
   @<Expressão de Caminho: Quando Não Há Junção@>
   @<Expressão de Caminho: Alocar Variável de Caminho@>
   @<Expressão de Caminho: Itera sobre Junções@>
-  return true;
+  // Caminhos são retornados normalizados, como visto na Subseção 7.4.4:
+  return normalize_path(mf, cx, result); 
 }
 @
 \fimcodigo
 
 E se o número de junções for zero? Neste caso, podemos estar diante de
-uma expressão de par, ou de uma expressão terciária de caminho. De
-qualquer forma, pode haver um ou mais especificador de direção depois
-da expressão, o qual precisa ser ignorado. Podemos checar se temos
-especificadores de direção checando se o último token é um
-``$\}$''. Se for o caso, mudamos a posição do fim da expressão para
-imediatamente antes do primeiro especificador de direção:
+uma expressão de par como abaixo:
+
+\alinhaverbatim
+path p;
+p = (2, 3);
+\alinhanormal
+
+Ou de uma expressão terciária de caminho onde as junções estão dentro
+de parênteses ou outros delimitadores como em:
+
+\alinhaverbatim
+path p;
+p = ((2, 3)..(1, 2));
+\alinhanormal
+
+De qualquer forma, pode haver um ou mais especificador de direção
+depois da expressão, o qual precisa ser ignorado. No primeiro caso
+porque especificadores de direção não tem efeito algum sobre pontos
+isolados. No segundo porque a sub-expressão seria normalizada e já
+viria com todos os pontos de controle ao terminarmos de avaliar os
+parênteses. Então o especificador de direção novamente não teria
+efeito.
+
+Podemos checar se temos especificadores de direção checando se o
+último token é um ``$\}$''. Se for o caso, mudamos a posição do fim da
+expressão para imediatamente antes do primeiro especificador de
+direção, e consideramos somente esta parte como a que deve ser
+avaliada. Entretanto, temos que fazer uma validação para garantir que
+o especificador adicional está de acordo com a gramática:
 
 \iniciocodigo
 @<Expressão de Caminho: Quando Não Há Junção@>=
 if(number_of_joins == 0){
-  if(end_expression -> type == TYPE_CLOSE_BRACES){
-    struct generic_token *p = begin_expression;
+  if(end -> type == TYPE_CLOSE_BRACES){
+    float dir_x, dir_y;
+    struct generic_token *p = begin;
     DECLARE_NESTING_CONTROL();
-    while(p != end_expression){
+    while(p != end){
       COUNT_NESTING(p);
       if(IS_NOT_NESTED() &&
-         ((struct generic_token *) p -> next) -> type == TYPE_OPEN_BRACES)
+         p -> next -> type == TYPE_OPEN_BRACES)
         break;
-      p = (struct generic_token *) p -> next;
+      p = p -> next;
     }
-    end_expression = p;
+    RAISE_ERROR_AND_EXIT_IF_WRONG_NESTING(mf, cx, OPTIONAL(begin -> line));
+    // O especificador é ignorado, mas precisa ser validado:
+    if(!eval_direction_specifier(mf, cx, p -> next, end, &dir_x, &dir_y))
+      return false;
+    end = p;
   }
-  return eval_path_tertiary(mf, cx, begin_expression, end_expression,
-                            result);
+  if(!eval_path_tertiary(mf, cx, begin, end, result))
+    return false;
+  return normalize_path(mf, cx, result);
 }
 @
 \fimcodigo
@@ -8521,15 +8519,11 @@ result -> points = (struct path_points *)
                      temporary_alloc(sizeof(struct path_points) *
                      expected_length);
 if(result -> points == NULL){
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s:%d: No enough memory!\n" , mf -> file,
-          begin_expression -> line);
-#endif
-    return false;
+  RAISE_ERROR_NO_MEMORY(mf, cx, OPTIONAL(begin -> line));
+  return false;
 }
 result -> length = 0; // Inicialização
 result -> number_of_points = 0;
-result -> points[0].format = UNINITIALIZED_FORMAT;
 result -> cyclic = false;
 @
 \fimcodigo
@@ -8543,7 +8537,8 @@ $$
 
 Então vamos usar variáveis para indicar o começo e o fim de cada parte
 à medida que iteramos. Vamos criar um laço onde iremos iterar sobre
-cada uma das junções no formato acima para interpretá-las:
+cada uma das junções no formato acima para interpretá-las e vamos
+marcar o token de começo e de fim de cada parte:
 
 \iniciocodigo
 @<Expressão de Caminho: Itera sobre Junções@>=
@@ -8553,9 +8548,10 @@ cada uma das junções no formato acima para interpretá-las:
   struct generic_token * begin_j, *end_j;
   struct path_points *z1_point = NULL, *z2_point = NULL;
   @<Expressão de Caminho: Declaração de Variáveis Adicionais@>
-  begin_z1 = begin_expression;
+  begin_z1 = begin;
   end_z1 = begin_z1;
-  while(begin_z1 != end_expression || result -> length < expected_length){
+  @<Expressão de Caminho: Prepara Valor Inicial de z1@>
+  while(begin_z1 != end || result -> length < expected_length){
     @<Expressão de Caminho: Separa Tokens da Junção@>
     @<Expressão de Caminho: Interpreta Extremidades da Junção@>
     @<Expressão de Caminho: Interpreta Direção se Existir@>
@@ -8564,8 +8560,7 @@ cada uma das junções no formato acima para interpretá-las:
     @<Expressão de Caminho: Fim de Cada Iteração@>
     begin_z1 = begin_z2;
     end_z1 = end_z2;
-  }
-  
+  }  
 }
 @
 \fimcodigo
@@ -8573,23 +8568,25 @@ cada uma das junções no formato acima para interpretá-las:
 Para delimitar o primeiro elemento $z_1$, na primeira vez quando ainda
 estamos no começo da expressão, basta avançarmos os tokens até
 acharmos o primeiro ``{'', ``..'', ``\-\-'' ou ``\&'' fora de qualquer
-parênteses ou colchetes. Nas demais vezes, o primeiro elemento $z_1$
-já começa uma nova iteração delimitado como indicado no código acima.
+parênteses ou colchetes. Nas demais vezes, o elemento $z_1$ deve
+começar como sendo igual àquilo que era o elemento $z_2$ na iteração
+anterior, o que já é garantido pelo código acima.
 
 \iniciocodigo
-@<Expressão de Caminho: Separa Tokens da Junção@>=
-if(begin_z1 == begin_expression){
+@<Expressão de Caminho: Prepara Valor Inicial de z1@>=
+{
   DECLARE_NESTING_CONTROL();
   int next_type;
-  while(end_z1 != end_expression){
+  while(end_z1 != end){
     COUNT_NESTING(end_z1);
-    next_type = ((struct generic_token *) end_z1 -> next) -> type;
+    next_type = end_z1 -> next -> type;
     if(IS_NOT_NESTED() &&
        (next_type == TYPE_OPEN_BRACES || next_type == TYPE_JOIN ||
         next_type == TYPE_AMPERSAND || next_type == TYPE_STRAIGHT_JOIN))
       break;
     end_z1 = (struct generic_token *) end_z1 -> next;
   }
+  RAISE_ERROR_AND_EXIT_IF_WRONG_NESTING(mf, cx, OPTIONAL(begin -> line));
 }
 @
 \fimcodigo
@@ -8603,31 +8600,32 @@ especificador de direção. Se for, então delimitamos ele até acharmos o
 próximo ``$\}$'':
 
 \iniciocodigo
-@<Expressão de Caminho: Separa Tokens da Junção@>+=
-if(end_z1 == end_expression)
+@<Expressão de Caminho: Separa Tokens da Junção@>=
+if(end_z1 == end)
   return true;
-begin_d = (struct generic_token *) end_z1 -> next;
-if(begin_d -> type != TYPE_OPEN_BRACES){
+begin_d = end_z1 -> next;
+if(begin_d -> type != TYPE_OPEN_BRACES){ // Nenhum especificador
   begin_d = NULL;
   end_d = NULL;
 }
 else{
   DECLARE_NESTING_CONTROL();
-  end_d = begin_d;
-  while(end_d  != end_expression){
-    COUNT_NESTING(end_d);
-    if(IS_NOT_NESTED() &&
-       ((struct generic_token *) end_d) -> type == TYPE_CLOSE_BRACES)
-      break;
-    end_d = (struct generic_token *) end_d -> next;
-  }
-  if(begin_d == end_d){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s:%d: Unclosed brace '{'.\n",
-            mf -> file, begin_d -> line);
-#endif
+  if(begin_d == end){
+    RAISE_ERROR_UNCLOSED_DELIMITER(mf, cx, OPTIONAL(begin_d -> line), '{');
     return false;
   }
+  end_d = begin_d -> next;
+  while(end_d != end){
+    if(IS_NOT_NESTED() && end_d -> type == TYPE_CLOSE_BRACES)
+      break;
+    COUNT_NESTING(end_d);
+    end_d = end_d -> next;
+  }
+  if(end_d -> type != TYPE_CLOSE_BRACES){
+    RAISE_ERROR_UNCLOSED_DELIMITER(mf, cx, OPTIONAL(begin_d -> line), '{');
+    return false;
+  }
+  RAISE_ERROR_AND_EXIT_IF_WRONG_NESTING(mf, cx, OPTIONAL(begin_d -> line));
 }
 @
 \fimcodigo
@@ -8642,33 +8640,36 @@ negativo, a junção é somente um token ``..''.
 \iniciocodigo
 @<Expressão de Caminho: Separa Tokens da Junção@>+=
 if(end_d == NULL)
-  begin_j = (struct generic_token *) end_z1 -> next;
-else{
-  if(end_d == end_expression)
-    return true;
-  begin_j = (struct generic_token *) end_d -> next;
+  begin_j = end_z1 -> next; // Começa depois de z1
+else
+  begin_j = end_d -> next; // Ou depois de especificador de direção
+end_j = begin_j; // Começamos assumindo que é só um token
+if(begin_j == end){ // Mas é preciso ter algo depois dele
+  RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(begin -> line), TYPE_T_PATH);
+  return false;
 }
-end_j = begin_j;
-if(begin_j -> type == TYPE_JOIN){
-  struct generic_token *next_token;
-  next_token = (struct generic_token *) begin_j -> next;
-  if(next_token -> type == TYPE_CONTROLS || next_token -> type == TYPE_TENSION){
-    DECLARE_NESTING_CONTROL();
-    end_j = next_token;
-    while(end_j != end_expression){
-      COUNT_NESTING(end_j);
-      if(IS_NOT_NESTED() && end_j -> type == TYPE_JOIN)
-        break;
-      end_j = (struct generic_token *) end_j -> next;
-    }
+if(begin_j -> type == TYPE_JOIN && // Testando se é mais de um token
+   (begin_j -> next -> type == TYPE_CONTROLS ||
+    begin_j -> next -> type == TYPE_TENSION)){
+  DECLARE_NESTING_CONTROL();
+  end_j = end_j -> next;
+  while(end_j != end){ // Se for, o final é no próximo '..'
+    COUNT_NESTING(end_j);
+    if(IS_NOT_NESTED() && end_j -> type == TYPE_JOIN)
+      break;
+    end_j = end_j -> next;
   }
+  if(end_j == end){
+    RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(begin_j -> line),
+                                   TYPE_T_PATH);
+    return false;
+  }
+  RAISE_ERROR_AND_EXIT_IF_WRONG_NESTING(mf, cx, OPTIONAL(begin -> line));
 }
-else if(begin_j -> type != TYPE_AMPERSAND &&
+else if(begin_j -> type != TYPE_JOIN && begin_j -> type != TYPE_AMPERSAND &&
         begin_j -> type != TYPE_STRAIGHT_JOIN){
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognized path expression.\n",
-          mf -> file, begin_j -> line);
-#endif
+  RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(begin_j -> line),
+                                 TYPE_T_PATH);
   return false;
 }
 @
@@ -8679,7 +8680,7 @@ termos um token ``$\{$'' após a junção:
 
 \iniciocodigo
 @<Expressão de Caminho: Separa Tokens da Junção@>+=
-if(end_j == end_expression){
+if(end_j == end){
 #if defined(W_DEBUG_METAFONT)
   fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognized path expression.\n",
           mf -> file, end_j -> line);
@@ -8694,7 +8695,7 @@ if(begin_e -> type != TYPE_OPEN_BRACES){
 else{
   DECLARE_NESTING_CONTROL();
   end_e = begin_e;
-  while(end_e  != end_expression){
+  while(end_e  != end){
     COUNT_NESTING(end_e);
     if(IS_NOT_NESTED() &&
        ((struct generic_token *) end_e) ->  type == TYPE_CLOSE_BRACES)
@@ -8725,12 +8726,12 @@ chaves, ou pelo começo da próxima junção:
   if(end_e == NULL)
     begin_z2 = (struct generic_token *) end_j -> next;
   else{
-    if(end_e == end_expression)
+    if(end_e == end)
       return true;
     begin_z2 = (struct generic_token *) end_e -> next;
   }
   end_z2 = begin_z2;
-  while(end_z2 != end_expression){
+  while(end_z2 != end){
     COUNT_NESTING(end_z2);
     next_type = ((struct generic_token *) end_z2 -> next) -> type;
     if(IS_NOT_NESTED() &&
@@ -8752,7 +8753,7 @@ demais casos ela já foi obtida na iteração anterior:
 
 \iniciocodigo
 @<Expressão de Caminho: Interpreta Extremidades da Junção@>=
-if(begin_z1 == begin_expression){
+if(begin_z1 == begin){
   bool ret;
   struct path_variable z1;
   ret = eval_path_tertiary(mf, cx, begin_z1, end_z1, &z1);
@@ -8945,8 +8946,8 @@ begin_a = (struct generic_token *) begin -> next;
 end_a = begin_a;
 while(end_a -> next != end){
   COUNT_NESTING(end_a);
-  if(IS_NOT_NESTED() && end_a -> type == TYPE_COMMA){
-    begin_b = (struct generic_token *) end_a -> next;
+  if(IS_NOT_NESTED() && end_a -> next -> type == TYPE_COMMA){
+    begin_b = (struct generic_token *) end_a -> next -> next;
     break;
   }
   end_a = (struct generic_token *) end_a -> next;
@@ -9351,7 +9352,7 @@ especificador anterior nestes casos. Nos demais, nós só os apagamos:
 
 \iniciocodigo
 @<Expressão de Caminho: Fim de Cada Iteração@>=
-if((begin_z1 == begin_expression && end_expression -> type != TYPE_CYCLE) ||
+if((begin_z1 == begin && end -> type != TYPE_CYCLE) ||
    (begin_j == end_j && begin_j -> type == TYPE_AMPERSAND) ||
    (begin_j == end_j && begin_j -> type == TYPE_STRAIGHT_JOIN) ||
    (begin_e != NULL && end_e != NULL)){
@@ -9384,14 +9385,14 @@ existir um especificador explícito à direita do segundo ponto:
 \iniciocodigo
 @<Expressão de Caminho: Decide Forma da Curva@>+=
 if(isnan(w1_x) && isnan(w1_y)){
-  if(end_z2 -> next != NULL && end_z2 != end_expression &&
+  if(end_z2 -> next != NULL && end_z2 != end &&
      ((struct generic_token *) (end_z2 -> next)) -> type ==
      TYPE_OPEN_BRACES){
     struct generic_token *next0, *next1;
     DECLARE_NESTING_CONTROL();
     next0 = (struct generic_token *) end_z2 -> next;
     next1 = next0;
-    while(next1 != end_expression){
+    while(next1 != end){
       COUNT_NESTING(next1);
       if(IS_NOT_NESTED() && next1 -> type == TYPE_CLOSE_BRACES)
         break;
@@ -9443,7 +9444,7 @@ armazenamos seu conteúdo:
 
 \iniciocodigo
 @<Expressão de Caminho: Decide Forma da Curva@>+=
-if(begin_z1 == begin_expression && end_expression -> type == TYPE_CYCLE &&
+if(begin_z1 == begin && end -> type == TYPE_CYCLE &&
    begin_d != NULL && end_d != NULL){
   first_w_x = w0_x;
   first_w_y = w0_y;
@@ -9475,13 +9476,13 @@ copiá-lo se não existir um especificador explícito.
 
 \iniciocodigo
 @<Expressão de Caminho: Decide Forma da Curva@>+=
-if(begin_z1 == begin_expression && end_expression -> type == TYPE_CYCLE &&
+if(begin_z1 == begin && end -> type == TYPE_CYCLE &&
    begin_d == NULL && isnan(w0_x) && isnan(u_x)){
   struct generic_token *begin_last_spec = NULL, *end_last_spec = NULL,
                        *last_join = NULL, *second_last_join = NULL, *p;
   DECLARE_NESTING_CONTROL();
   p = end_z1 -> next;
-  while(p != end_expression){
+  while(p != end){
     if(IS_NOT_NESTED()){
       if(p -> type == TYPE_OPEN_BRACES){
         begin_last_spec = p;
@@ -9589,11 +9590,11 @@ pontos, o interpretamos e usamos seu valor pelas regras acima:
 \iniciocodigo
 @<Expressão de Caminho: Decide Forma da Curva@>+=
 if(begin_e == NULL && end_e == NULL &&  isnan(w1_x) &&
-   end_z2 != end_expression){
+   end_z2 != end){
   DECLARE_NESTING_CONTROL();
   struct generic_token *begin_point, *end_point;
   begin_point = (struct generic_token *) end_z2 -> next;
-  while(begin_point != end_expression){
+  while(begin_point != end){
     COUNT_NESTING(begin_point);
     if(IS_NOT_NESTED() && (begin_point -> type == TYPE_JOIN ||
                           begin_point -> type == TYPE_AMPERSAND ||
@@ -9601,14 +9602,14 @@ if(begin_e == NULL && end_e == NULL &&  isnan(w1_x) &&
       break;
     begin_point = (struct generic_token *) begin_point -> next;
   }
-  if(begin_point != end_expression &&
+  if(begin_point != end &&
      begin_point -> type != TYPE_AMPERSAND &&
      begin_point -> type != TYPE_STRAIGHT_JOIN){
     begin_point = (struct generic_token *) begin_point -> next;
-    if(begin_point != end_expression && begin_point -> type == TYPE_CONTROLS){
+    if(begin_point != end && begin_point -> type == TYPE_CONTROLS){
       begin_point = (struct generic_token *) begin_point -> next;
       end_point = begin_point;
-      while(end_point != end_expression){
+      while(end_point != end){
         struct generic_token *next = (struct generic_token *) end_point -> next;
         COUNT_NESTING(end_point);
         if(IS_NOT_NESTED() && next != NULL &&
@@ -9616,7 +9617,7 @@ if(begin_e == NULL && end_e == NULL &&  isnan(w1_x) &&
           break;
         end_point = (struct generic_token *) end_point -> next;
       }
-      if(end_point != end_expression){
+      if(end_point != end){
         struct pair_variable var;
         if(!eval_pair_primary(mf, cx, begin_point, end_point, &var))
           return false;
@@ -9652,7 +9653,7 @@ E inicializamos a variável se for o caso na primeira iteração:
 
 \iniciocodigo
 @<Expressão de Caminho: Decide Forma da Curva@>+=
-if(begin_z1 == begin_expression && end_expression -> type == TYPE_CYCLE &&
+if(begin_z1 == begin && end -> type == TYPE_CYCLE &&
    begin_j != end_j &&
    ((struct generic_token *) (begin_j -> next)) -> type == TYPE_CONTROLS){
   first_point_x = u_x;
@@ -9696,7 +9697,7 @@ if(last_join != NULL && last_join -> type == TYPE_JOIN){
     struct generic_token *p_end;
     p = (struct generic_token *) p -> next;
     p_end = p;
-    while(p_end != end_expression){
+    while(p_end != end){
       struct generic_token *next = (struct generic_token *) p_end -> next;
       COUNT_NESTING(p_end);
       if(IS_NOT_NESTED()){
@@ -9707,7 +9708,7 @@ if(last_join != NULL && last_join -> type == TYPE_JOIN){
       }
       p_end = next;
     }
-    if(p_end != end_expression){
+    if(p_end != end){
       struct pair_variable var;
       if(!eval_pair_primary(mf, cx, p, p_end, &var))
         return false;

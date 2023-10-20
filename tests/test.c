@@ -360,11 +360,11 @@ void test_path_expressions(void){
   struct metafont *mf;
   struct context *cx;
   bool ret;
-  struct named_variable *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9,
+  struct named_variable *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9, *p10,
     *quartercircle, *halfcircle, *fullcircle, *unitsquare, *a, *b, *c,
     *d, *e, *f, *g, *h, *i, *j, *k, *l, *n, *q, *r, *s, *m;
   struct path_variable *path_p1, *path_p2, *path_p3, *path_p4, *path_p5,
-    *path_p6, *path_p7, *path_p8, *path_p9, *quartercircle_path,
+    *path_p6, *path_p7, *path_p8, *path_p9, *path_p10, *quartercircle_path,
     *halfcircle_path, *fullcircle_path, *unitsquare_path, *path_a,
     *path_b, *path_c, *path_d, *path_e, *path_f, *path_g, *path_h,
     *path_i, *path_j, *path_k, *path_l, *path_m;
@@ -374,6 +374,8 @@ void test_path_expressions(void){
   cx = init_context(mf);
   lexer(mf,  "tests/path_expressions.mf", &first, &last);
   ret = eval_program(mf, cx, first, last);
+  if(!ret)
+    _Wprint_metafont_error(mf);
   assert("Interpreting program with primary path expressions", ret);
   p1 = (struct named_variable *) mf -> named_variables;
   p2 = p1 -> next;
@@ -384,7 +386,8 @@ void test_path_expressions(void){
   p7 = p6 -> next;
   p8 = p7 -> next;
   p9 = p8 -> next;
-  quartercircle = p9 -> next;
+  p10 = p9 -> next;
+  quartercircle = p10 -> next;
   halfcircle = quartercircle -> next;
   fullcircle = halfcircle -> next;
   unitsquare = fullcircle -> next;
@@ -414,6 +417,7 @@ void test_path_expressions(void){
   path_p7 = (struct path_variable *) p7 -> var;
   path_p8 = (struct path_variable *) p8 -> var;
   path_p9 = (struct path_variable *) p9 -> var;
+  path_p10 = (struct path_variable *) p10 -> var;
   quartercircle_path = (struct path_variable *) quartercircle -> var;
   halfcircle_path = (struct path_variable *) halfcircle -> var;
   fullcircle_path = (struct path_variable *) fullcircle -> var;
@@ -529,12 +533,33 @@ void test_path_expressions(void){
   assert("Simple join with single control point between two path variables",
 	 path_p9 -> cyclic == false && path_p9 -> length == 2 &&
 	 path_p9 -> number_of_points == 2 &&
-	 path_p9 -> points[0].point.x == 1.0 && path_p9 -> points[0].point.y == 5.0 &&
-	 path_p9 -> points[0].point.u_x == 1.0 && path_p9 -> points[0].point.u_y == 3.0 &&
-	 path_p9 -> points[0].point.v_x == 1.0 && path_p9 -> points[0].point.v_y == 3.0 &&
-	 path_p9 -> points[1].point.x == 1.0 && path_p9 -> points[1].point.y == 1.0 &&
-	 path_p9 -> points[1].point.u_x == 1.0 && path_p9 -> points[1].point.u_y == 1.0 &&
-	 path_p9 -> points[1].point.v_x == 1.0 && path_p9 -> points[1].point.v_y == 1.0);
+	 path_p9 -> points[0].point.x == 1.0 &&
+	 path_p9 -> points[0].point.y == 5.0 &&
+	 path_p9 -> points[0].point.u_x == 1.0 &&
+	 path_p9 -> points[0].point.u_y == 3.0 &&
+	 path_p9 -> points[0].point.v_x == 1.0 &&
+	 path_p9 -> points[0].point.v_y == 3.0 &&
+	 path_p9 -> points[1].point.x == 1.0 &&
+	 path_p9 -> points[1].point.y == 1.0 &&
+	 path_p9 -> points[1].point.u_x == 1.0 &&
+	 path_p9 -> points[1].point.u_y == 1.0 &&
+	 path_p9 -> points[1].point.v_x == 1.0 &&
+	 path_p9 -> points[1].point.v_y == 1.0);
+    assert("Direction specifiers are read",
+	 path_p10 -> cyclic == false && path_p10 -> length == 2 &&
+	 path_p10 -> number_of_points == 2 &&
+	 path_p10 -> points[0].point.x == 1.0 &&
+	 path_p10 -> points[0].point.y == 5.0 &&
+	 path_p10 -> points[0].point.u_x == 1.0 &&
+	 path_p10 -> points[0].point.u_y == 3.0 &&
+	 path_p10 -> points[0].point.v_x == 1.0 &&
+	 path_p10 -> points[0].point.v_y == 3.0 &&
+	 path_p10 -> points[1].point.x == 1.0 &&
+	 path_p10 -> points[1].point.y == 1.0 &&
+	 path_p10 -> points[1].point.u_x == 1.0 &&
+	 path_p10 -> points[1].point.u_y == 1.0 &&
+	 path_p10 -> points[1].point.v_x == 1.0 &&
+	 path_p10 -> points[1].point.v_y == 1.0);
   assert("Simple join with double control points between two path variables",
 	 quartercircle_path -> cyclic == false &&
 	 quartercircle_path -> length == 3 &&
