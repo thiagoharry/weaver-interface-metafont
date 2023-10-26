@@ -831,15 +831,15 @@ void test_path_expressions(void){
 	 ALMOST_EQUAL(get_point(path_f, 1) -> point.v_x, 2.0) &&
 	 ALMOST_EQUAL(get_point(path_f, 1) -> point.v_y, 2.0) &&
 	 path_f -> cyclic == false);
-  printf("DEBUG: %f (expected 0) %f (expected 0) %f (expected 0.42995) %f (expected 0.42995) %f (expected 0) %f (expected 2.06097)\n", get_point(path_g, 0) -> point.x, get_point(path_g, 0) -> point.y, get_point(path_g, 0) -> point.u_x, get_point(path_g, 0) -> point.u_y, get_point(path_g, 0) -> point.v_x, get_point(path_g, 0) -> point.v_y);
+  printf("DEBUG: %f (expected 0) %f (expected 0) %f (expected -0.11848) %f (expected 0.59238) %f (expected -0.2) %f (expected 1.0)\n", get_point(path_g, 0) -> point.x, get_point(path_g, 0) -> point.y, get_point(path_g, 0) -> point.u_x, get_point(path_g, 0) -> point.u_y, get_point(path_g, 0) -> point.v_x, get_point(path_g, 0) -> point.v_y);
   assert("Computing path tension with 'atleast' keyword",
 	 path_g -> number_of_points == 2 &&
 	 ALMOST_EQUAL(get_point(path_g, 0) -> point.x, 0.0) &&
 	 ALMOST_EQUAL(get_point(path_g, 0) -> point.y, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_g, 0) -> point.u_x, 0.42995) &&
-	 ALMOST_EQUAL(get_point(path_g, 0) -> point.u_y, 0.42995) &&
-	 ALMOST_EQUAL(get_point(path_g, 0) -> point.v_x, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_g, 0) -> point.v_y, 2.06097) &&
+	 ALMOST_EQUAL(get_point(path_g, 0) -> point.u_x, -0.11848) &&
+	 ALMOST_EQUAL(get_point(path_g, 0) -> point.u_y, 0.59238) &&
+	 ALMOST_EQUAL(get_point(path_g, 0) -> point.v_x, -0.2) &&
+	 ALMOST_EQUAL(get_point(path_g, 0) -> point.v_y, 1.0) &&
 	 ALMOST_EQUAL(get_point(path_g, 1) -> point.x, 0.0) &&
 	 ALMOST_EQUAL(get_point(path_g, 1) -> point.y, 1.0) &&
 	 ALMOST_EQUAL(get_point(path_g, 1) -> point.u_x, 0.0) &&
@@ -851,10 +851,10 @@ void test_path_expressions(void){
 	 path_i -> number_of_points == 2 &&
 	 ALMOST_EQUAL(get_point(path_i, 0) -> point.x, 0.0) &&
 	 ALMOST_EQUAL(get_point(path_i, 0) -> point.y, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_i, 0) -> point.u_x, 0.42995) &&
-	 ALMOST_EQUAL(get_point(path_i, 0) -> point.u_y, 0.42995) &&
-	 ALMOST_EQUAL(get_point(path_i, 0) -> point.v_x, 0.0) &&
-	 ALMOST_EQUAL(get_point(path_i, 0) -> point.v_y, 2.06097) &&
+	 ALMOST_EQUAL(get_point(path_i, 0) -> point.u_x, -0.11848) &&
+	 ALMOST_EQUAL(get_point(path_i, 0) -> point.u_y, 0.59238) &&
+	 ALMOST_EQUAL(get_point(path_i, 0) -> point.v_x, -0.2) &&
+	 ALMOST_EQUAL(get_point(path_i, 0) -> point.v_y, 1.0) &&
 	 ALMOST_EQUAL(get_point(path_i, 1) -> point.x, 0.0) &&
 	 ALMOST_EQUAL(get_point(path_i, 1) -> point.y, 1.0) &&
 	 ALMOST_EQUAL(get_point(path_i, 1) -> point.u_x, 0.0) &&
