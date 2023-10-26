@@ -27,7 +27,7 @@ quartercircle =
   (0.35356, 0.35356)
   .. controls (0.2598, 0.44733) and (0.13261, 0.5) ..
   (0, 0.5);
-halfcircle = quartercircle & quartercircle rotated 90;
+halfcircle = quartercircle & quartercircle rotated 90; %  DEBUG: ERROR
 fullcircle = halfcircle & halfcircle rotated 180 & cycle;
 unitsquare = (0, 0)--(1, 0)--(1, 1)--(0, 1)--cycle;
 a = (0, 0){(1, 0)} .. {(0, 1)} (10, 10);

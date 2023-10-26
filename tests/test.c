@@ -600,7 +600,7 @@ void test_path_expressions(void){
 	 ALMOST_EQUAL(get_point(halfcircle_path, 2) -> point.x, 0.0) &&
 	 ALMOST_EQUAL(get_point(halfcircle_path, 2) -> point.y, 0.5) &&
 	 ALMOST_EQUAL(get_point(halfcircle_path, 2) -> point.u_x, -0.13261) &&
-	 ALMOST_EQUAL(get_point(halfcircle_path, 2) -> point.u_y, 0.5) &&
+	   ALMOST_EQUAL(get_point(halfcircle_path, 2) -> point.u_y, 0.5) &&
 	 ALMOST_EQUAL(get_point(halfcircle_path, 2) -> point.v_x, -0.2598) &&
 	 ALMOST_EQUAL(get_point(halfcircle_path, 2) -> point.v_y, 0.44733) &&
 	 ALMOST_EQUAL(get_point(halfcircle_path, 3) -> point.x, -0.35356) &&
@@ -743,7 +743,7 @@ void test_path_expressions(void){
 	 ALMOST_EQUAL(get_point(path_b, 3) -> point.x, 0.0) &&
 	 ALMOST_EQUAL(get_point(path_b, 3) -> point.y, 0.0) &&
 	 ALMOST_EQUAL(get_point(path_b, 3) -> point.u_x, 1.10457) &&
-	 ALMOST_EQUAL(get_point(path_b, 3) -> point.u_y, 0.0) &&
+	   ALMOST_EQUAL(get_point(path_b, 3) -> point.u_y, 0.0) &&
 	 ALMOST_EQUAL(get_point(path_b, 3) -> point.v_x, 2.0) &&
 	 ALMOST_EQUAL(get_point(path_b, 3) -> point.v_y, 0.89543) &&
 	 path_b -> cyclic == true);
@@ -831,6 +831,7 @@ void test_path_expressions(void){
 	 ALMOST_EQUAL(get_point(path_f, 1) -> point.v_x, 2.0) &&
 	 ALMOST_EQUAL(get_point(path_f, 1) -> point.v_y, 2.0) &&
 	 path_f -> cyclic == false);
+  printf("DEBUG: %f (expected 0) %f (expected 0) %f (expected 0.42995) %f (expected 0.42995) %f (expected 0) %f (expected 2.06097)\n", get_point(path_g, 0) -> point.x, get_point(path_g, 0) -> point.y, get_point(path_g, 0) -> point.u_x, get_point(path_g, 0) -> point.u_y, get_point(path_g, 0) -> point.v_x, get_point(path_g, 0) -> point.v_y);
   assert("Computing path tension with 'atleast' keyword",
 	 path_g -> number_of_points == 2 &&
 	 ALMOST_EQUAL(get_point(path_g, 0) -> point.x, 0.0) &&
