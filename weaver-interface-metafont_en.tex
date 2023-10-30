@@ -3656,6 +3656,7 @@ bool recursive_copy_points(struct metafont *mf, struct context *cx,
     }
   }
   (*target) -> cyclic = source -> cyclic;
+  (*target) -> permanent = (alloc == permanent_alloc);
   (*target) -> length = source -> number_of_points;
   (*target) -> number_of_points = source -> number_of_points;
   (*target) -> number_of_missing_directions = 0;
@@ -3819,7 +3820,7 @@ void convert_to_final(struct path_variable *p){
   for(i = 0; i < p -> length - 1; i ++){
     if(p -> points[i].format == PROVISIONAL_FORMAT){
       bool atleast0 = p -> points[i].prov.atleast1;
-      bool atleast1 = p -> points[i].prov.atleast1;
+      bool atleast1 = p -> points[i].prov.atleast2;
       double complex u, v;
       struct path_points *p0 = &(p -> points[i]), *p1 = &(p -> points[i+1]);
       double w0_x = p0 -> prov.dir1_x, w0_y = p0 -> prov.dir1_y;
@@ -4087,10 +4088,10 @@ bool find_missing_directions(struct metafont *mf, struct context *cx,
                              struct path_variable *p){
   if(p -> number_of_missing_directions == 0 || p -> length < 2)
     return true;
-  if(p -> cyclic && p -> number_of_missing_directions == (2 * p -> length))
+  if(p -> cyclic && p -> number_of_missing_directions <= (2 * p -> length))
     return fill_cyclic_missing_directions(mf, cx, p, 0, p -> length);
-  if(!(p -> cyclic) && p -> number_of_missing_directions == (2 * p -> length))
-    return fill_missing_directions(mf, cx, p, 0, p -> length);
+  if(!(p -> cyclic) && p -> number_of_missing_directions <= (2 * p -> length - 2))
+    return fill_missing_directions(mf, cx, p, 0, p -> length - 2);
   else{
     int begin_segment = 0, end_segment = 0;
     while(p -> number_of_missing_directions > 0){
@@ -4124,7 +4125,7 @@ segment, $\phi_{n-1}$ for the last point, and for the other points
 with index $i$, we have the unknowns $\theta_i$, $\psi_i$ and
 $\phi_i$. The order of each unknown in the system of equations is:
 $(\theta_0, \theta_1, \psi_1, \phi_1, \ldots, \theta_{n-2}, \psi_{n-2}, \phi_{n-2}, \phi_{n-1})$
-.
+if we have more than two points in our system. When we have just two points, the order is simply $(\theta_0, \phi_1)$.
 
 When we are placing a new equation in a matrix $M$, which stores the
 left side of a linear system, the unknowns referenced by each equation
@@ -4143,7 +4144,10 @@ int previous_theta, current_theta, current_psi, current_phi, next_phi,
 previous_theta = -1;
 current_theta = 0;
 current_psi = current_phi = -1;
-next_phi = 3;
+if(begin == end)
+  next_phi = 1;
+else
+  next_phi = 3;
 number_of_equations = 0;
 @
 \fimcodigo
@@ -4537,18 +4541,16 @@ solution, provided all tensions are greater than $3/4$ and the
 outside these limits is found, an error will be generated.
 
 There is, however, one last degenerate case that we can find, where
-the equation has no solution. It occurs when a segment has only two
-points, both have a ``curl'' instead of a direction specifier and the
-multiplication of their ``curl'' values will be equal to 1 (which
-implies that both are equal to 1). Because of this, at the beginning
-of the function that finds missing direction specifiers, we will check
-if we are dealing with a degenerate case. If so, we treat the segment
-as a straight line between the first point and the second:
+the equation may have no solution. It occurs when a segment has only
+two points and both have a ``curl'' instead of a direction
+specifier. In this case, it either would produce a system of linear
+equations with no solution, or it produces equations where the
+solution is a straight line. Because of this, we always will assume
+that this case produces a straight line:
 
 \iniciocodigo
 @<Check for degenerate case@>=
-if(begin == end && isnan(p1 -> prov.dir1_x) && isnan(p1 -> prov.dir2_x) &&
-   p1 -> prov.dir1_y * p1 -> prov.dir2_y == 1.0){
+if(begin == end && isnan(p1 -> prov.dir1_x) && isnan(p1 -> prov.dir2_x)){
   p1 -> format = FINAL_FORMAT;
   p1 -> point.u_x = p1 -> point.x + (1.0/3) * (p2 -> point.x - p1 -> point.x);
   p1 -> point.v_x = p1 -> point.x + (2.0/3) * (p2 -> point.x - p1 -> point.x);
@@ -8389,6 +8391,7 @@ if(number_of_joins == 0){
       return false;    
     end = p;
   }
+  result -> permanent = false;
   if(!eval_path_tertiary(mf, cx, begin, end, result))
     return false;
   return normalize_path(mf, cx, result);
@@ -8410,6 +8413,7 @@ if(result -> points == NULL){
   return false;
 }
 result -> length = 0; // Initialization
+result -> permanent = false;
 result -> number_of_points = 0;
 result -> cyclic = false;
 @
@@ -8636,6 +8640,8 @@ being interpreted.
     result -> points[0].prov.y = z1.points[0].prov.y;
     result -> points[0].prov.dir1_x = result -> points[0].prov.dir1_y = NAN;
     result -> points[0].prov.dir2_x = result -> points[0].prov.dir2_y = NAN;
+    result -> points[0].prov.atleast1 = false;
+    result -> points[0].prov.atleast2 = false;
     result -> number_of_points ++;
   } else{ // If z1 is a subpath:
     result -> points[0].format = SUBPATH_FORMAT;
@@ -8691,7 +8697,9 @@ else{
     result -> points[result -> length].prov.dir1_x = NAN;
     result -> points[result -> length].prov.dir1_y = NAN;
     result -> points[result -> length].prov.dir2_x = NAN;
-    result -> points[result -> length].prov.dir2_y = NAN;    
+    result -> points[result -> length].prov.dir2_y = NAN;
+    result -> points[result -> length].prov.atleast1 = false;
+    result -> points[result -> length].prov.atleast2 = false;
     result -> number_of_points ++;
   }
   else{ // z2 is subpath:

@@ -362,12 +362,12 @@ void test_path_expressions(void){
   bool ret;
   struct named_variable *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9, *p10,
     *quartercircle, *halfcircle, *fullcircle, *unitsquare, *a, *b, *c,
-    *d, *e, *f, *g, *h, *i, *j, *k, *l, *n, *q, *r, *s, *m;
+    *d, *e, *f, *g, *h, *i, *j, *k, *l, *n, *q, *r, *s, *m, *m1, *m2, *m3;
   struct path_variable *path_p1, *path_p2, *path_p3, *path_p4, *path_p5,
     *path_p6, *path_p7, *path_p8, *path_p9, *path_p10, *quartercircle_path,
     *halfcircle_path, *fullcircle_path, *unitsquare_path, *path_a,
     *path_b, *path_c, *path_d, *path_e, *path_f, *path_g, *path_h,
-    *path_i, *path_j, *path_k, *path_l, *path_m;
+    *path_i, *path_j, *path_k, *path_l, *path_m, *path_m1, *path_m2, *path_m3;
   struct numeric_variable *numeric_n;
   struct pair_variable *pair_q, *pair_r, *pair_s;
   mf = init_metafont("tests/path_expressions.mf");
@@ -408,6 +408,9 @@ void test_path_expressions(void){
   r = q -> next;
   s = r -> next;
   m = s -> next;
+  m1 = m -> next;
+  m2 = m1 -> next;
+  m3 = m2 -> next;
   path_p1 = (struct path_variable *) p1 -> var;
   path_p2 = (struct path_variable *) p2 -> var;
   path_p3 = (struct path_variable *) p3 -> var;
@@ -435,6 +438,9 @@ void test_path_expressions(void){
   path_k = (struct path_variable *) k -> var;
   path_l = (struct path_variable *) l -> var;
   path_m = (struct path_variable *) m -> var;
+  path_m1 = (struct path_variable *) m1 -> var;
+  path_m2 = (struct path_variable *) m2 -> var;
+  path_m3 = (struct path_variable *) m3 -> var;
   numeric_n = (struct numeric_variable *) n -> var;
   pair_q = (struct pair_variable *) q -> var;
   pair_r = (struct pair_variable *) r -> var;
@@ -831,7 +837,6 @@ void test_path_expressions(void){
 	 ALMOST_EQUAL(get_point(path_f, 1) -> point.v_x, 2.0) &&
 	 ALMOST_EQUAL(get_point(path_f, 1) -> point.v_y, 2.0) &&
 	 path_f -> cyclic == false);
-  printf("DEBUG: %f (expected 0) %f (expected 0) %f (expected -0.11848) %f (expected 0.59238) %f (expected -0.2) %f (expected 1.0)\n", get_point(path_g, 0) -> point.x, get_point(path_g, 0) -> point.y, get_point(path_g, 0) -> point.u_x, get_point(path_g, 0) -> point.u_y, get_point(path_g, 0) -> point.v_x, get_point(path_g, 0) -> point.v_y);
   assert("Computing path tension with 'atleast' keyword",
 	 path_g -> number_of_points == 2 &&
 	 ALMOST_EQUAL(get_point(path_g, 0) -> point.x, 0.0) &&
@@ -1001,6 +1006,44 @@ void test_path_expressions(void){
 	 ALMOST_EQUAL(get_point(path_m, 3) -> point.x, 9.0) &&
 	 ALMOST_EQUAL(get_point(path_m, 3) -> point.y, 12.0) &&
 	 path_m -> cyclic == true);
+  assert("Testing implicit curl in z0..z1",
+	 path_m1 -> number_of_points == 2 &&
+	 path_m1 -> cyclic == false &&
+	 path_m1 -> points[0].point.x == 0.0 &&
+	 path_m1 -> points[0].point.y == 0.0 &&
+	 path_m1 -> points[0].point.u_x == 1.0 &&
+	 path_m1 -> points[0].point.u_y == 1.0 &&
+	 path_m1 -> points[0].point.v_x == 2.0 &&
+	 path_m1 -> points[0].point.v_y == 2.0 &&
+	 path_m1 -> points[1].point.x == 3.0 &&
+	 path_m1 -> points[1].point.y == 3.0);
+  printf("(%f %f).. %f %f and %f %f .. (%f %f)\n",
+	 path_m2 -> points[0].point.x, path_m2 -> points[0].point.y,
+	 path_m2 -> points[0].point.u_x, path_m2 -> points[0].point.u_y,
+	 path_m2 -> points[0].point.v_x, path_m2 -> points[0].point.v_y,
+	 path_m2 -> points[1].point.x, path_m2 -> points[1].point.y);
+  assert("Testing explicit curl in z0{curl a}..{curl b}z1",
+	 path_m2 -> number_of_points == 2 &&
+	 path_m2 -> cyclic == false &&
+	 path_m2 -> points[0].point.x == 0.0 &&
+	 path_m2 -> points[0].point.y == 0.0 &&
+	 path_m2 -> points[0].point.u_x == 1.0 &&
+	 path_m2 -> points[0].point.u_y == 1.0 &&
+	 path_m2 -> points[0].point.v_x == 2.0 &&
+	 path_m2 -> points[0].point.v_y == 2.0 &&
+	 path_m2 -> points[1].point.x == 3.0 &&
+	 path_m2 -> points[1].point.y == 3.0);
+  assert("Testing direction specifier and curl in z0{dir}..{curl b}z1",
+	 path_m3 -> number_of_points == 2 &&
+	 path_m3 -> cyclic == false &&
+	 path_m3 -> points[0].point.x == 0.0 &&
+	 path_m3 -> points[0].point.y == 0.0 &&
+	 ALMOST_EQUAL(path_m3 -> points[0].point.u_x, 1.73692) &&
+	 ALMOST_EQUAL(path_m3 -> points[0].point.u_y, 0.0) &&
+	 ALMOST_EQUAL(path_m3 -> points[0].point.v_x, 3.1858) &&
+	 ALMOST_EQUAL(path_m3 -> points[0].point.v_y, 1.3509) &&
+	 path_m3 -> points[1].point.x == 3.0 &&
+	 path_m3 -> points[1].point.y == 3.0);
   free_token_list(first);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);

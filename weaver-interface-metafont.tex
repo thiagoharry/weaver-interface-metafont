@@ -3736,6 +3736,7 @@ bool recursive_copy_points(struct metafont *mf, struct context *cx,
     }
   }
   (*target) -> cyclic = source -> cyclic;
+  (*target) -> permanent = (alloc == permanent_alloc);
   (*target) -> length = source -> number_of_points;
   (*target) -> number_of_points = source -> number_of_points;
   (*target) -> number_of_missing_directions = 0;
@@ -3777,10 +3778,8 @@ void recursive_aux_copy(struct path_points **dst, struct path_variable *origin,
           origin -> points[index].prov.dir2_x = NAN;
           origin -> points[index].prov.dir2_y = NAN;
         }
-        if(isnan(origin -> points[index].prov.dir1_x)){
+        if(isnan(origin -> points[index].prov.dir1_x))
           (*missing_directions) ++;
-          printf("MISSING 1 em %f %f\n", origin -> points[index].prov.x, origin -> points[index].prov.y);
-          }
         if(isnan(origin -> points[index].prov.dir2_x))
           (*missing_directions) ++;
       }
@@ -3899,7 +3898,7 @@ void convert_to_final(struct path_variable *p){
   for(i = 0; i < p -> length - 1; i ++){
     if(p -> points[i].format == PROVISIONAL_FORMAT){
       bool atleast0 = p -> points[i].prov.atleast1;
-      bool atleast1 = p -> points[i].prov.atleast1;
+      bool atleast1 = p -> points[i].prov.atleast2;
       double complex u, v;
       struct path_points *p0 = &(p -> points[i]), *p1 = &(p -> points[i+1]);
       double w0_x = p0 -> prov.dir1_x, w0_y = p0 -> prov.dir1_y;
@@ -4170,10 +4169,10 @@ bool find_missing_directions(struct metafont *mf, struct context *cx,
                              struct path_variable *p){
   if(p -> number_of_missing_directions == 0 || p -> length < 2)
     return true;
-  if(p -> cyclic && p -> number_of_missing_directions == (2 * p -> length))
+  if(p -> cyclic && p -> number_of_missing_directions <= (2 * p -> length))
     return fill_cyclic_missing_directions(mf, cx, p, 0, p -> length);
-  if(!(p -> cyclic) && p -> number_of_missing_directions == (2 * p -> length))
-    return fill_missing_directions(mf, cx, p, 0, p -> length);
+  if(!(p -> cyclic) && p -> number_of_missing_directions <= (2 * p -> length - 2))
+    return fill_missing_directions(mf, cx, p, 0, p -> length - 2);
   else{
     int begin_segment = 0, end_segment = 0;
     while(p -> number_of_missing_directions > 0){
@@ -4208,7 +4207,9 @@ segmento não-cíclico, $\phi_{n-1}$ para o último ponto de segmento
 não-cíclico, e para os demais pontos de índice $i$, temos as
 incógnitas $\theta_i$, $\psi_i$ e $\phi_i$. A ordem de cada incógnita
 no sistema de equações é:
-$(\theta_0, \theta_1, \psi_1, \phi_1, \ldots, \theta_{n-2}, \psi_{n-2}, \phi_{n-2}, \phi_{n-1})$.
+$(\theta_0, \theta_1, \psi_1, \phi_1, \ldots, \theta_{n-2}, \psi_{n-2}, \phi_{n-2}, \phi_{n-1})$
+quando temos mais de dois pontos. Quando temos apenas dois pontos, a
+ordem é simplesmente $(\theta_0, \phi_1)$.
 
 Quando estivermos preenchendo os valores de uma nova equação do
 sistema de equações em uma matriz $M$, que representa o lado esquerdo
@@ -4228,7 +4229,10 @@ int previous_theta, current_theta, current_psi, current_phi, next_phi,
 previous_theta = -1;
 current_theta = 0;
 current_psi = current_phi = -1;
-next_phi = 3;
+if(begin == end)
+  next_phi = 1;
+else
+  next_phi = 3;
 number_of_equations = 0;
 @
 \fimcodigo
@@ -4326,7 +4330,7 @@ bool fill_missing_directions(struct metafont *mf, struct context *cx,
   struct path_points *p0 = NULL, *p1 = &(p -> points[(begin) % p -> length]),
                      *p2 = &(p -> points[(begin+1) % p -> length]);
   double complex z0 = NAN, z1 = p1 -> prov.x + p1 -> prov.y * I,
-                 z2 = p1 -> prov.x + p2 -> prov.y * I;
+                 z2 = p2 -> prov.x + p2 -> prov.y * I;
   int i, size;
   @<Declaração de Variáveis de Incógnitas (Não-Cíclico)@>
   @<Checa caso degenerado@>
@@ -4539,6 +4543,8 @@ else{ // gamma conhecido
   double gamma = p1 -> prov.dir2_y;
   double t1 = p1 -> prov.tension1;
   double t2 = p1 -> prov.tension2;
+  printf("current phi: %d\n", current_phi);
+  printf("M: %d %d\n", previous_theta, current_phi);
   M[previous_theta] = t2*t2*(1/t1) - gamma * t1 * t1 * (1/t2 - 3.0);
   M[current_phi] = t2*t2*(1/t1 - 3.0) - gamma * t1 * t1 * (1/t2);
   b[number_of_equations] = 0.0;
@@ -4627,19 +4633,16 @@ valores serão reforçadas na interpretação de expressões de caminho. Se
 encontrarmos um valor fora destes limites, iremos gerar um erro.
 
 Existe, contudo, um último caso degenerado que podemos encontrar, em
-que a equação não tem solução. Ele ocorre quando tempos um segmento de
-apenas dois pontos, ambos possuem um ``enrolamento'' ao invés de um
-especificador de direção e a multiplicação de seus valores de
-``enrolamento'' será igual a 1 (o que implica que ambos são iguais a
-1). Por causa disso, no começo da função que preenche especificadores
-de direção, checaremos logo no começo se estamos em um caso
-degenerado. Se for o caso, tratamos o segmento como uma reta entre o
-primeiro ponto e o segundo:
+que a equação pode não ter solução. Ele ocorre quando tempos um
+segmento de apenas dois pontos e ambos possuem um ``enrolamento'' ao
+invés de um especificador de direção. Há dois casos possíveis neste
+cenário: eles geram um sistema de equações sem solução ou eles geram
+um sistema onde a solução é uma linha reta. Por causa disso, vamos
+assumir que sempre temos uma linha reta em tais casos:
 
 \iniciocodigo
 @<Checa caso degenerado@>=
-if(begin == end && isnan(p1 -> prov.dir1_x) && isnan(p1 -> prov.dir2_x) &&
-   p1 -> prov.dir1_y * p1 -> prov.dir2_y == 1.0){
+if(begin == end && isnan(p1 -> prov.dir1_x) && isnan(p1 -> prov.dir2_x)){
   p1 -> format = FINAL_FORMAT;
   p1 -> point.u_x = p1 -> point.x + (1.0/3) * (p2 -> point.x - p1 -> point.x);
   p1 -> point.v_x = p1 -> point.x + (2.0/3) * (p2 -> point.x - p1 -> point.x);
@@ -8548,6 +8551,7 @@ if(number_of_joins == 0){
       return false;
     end = p;
   }
+  result -> permanent = false;
   if(!eval_path_tertiary(mf, cx, begin, end, result))
     return false;
   return normalize_path(mf, cx, result);
@@ -8570,6 +8574,7 @@ if(result -> points == NULL){
   return false;
 }
 result -> length = 0; // Inicialização
+result -> permanent = false;
 result -> number_of_points = 0;
 result -> cyclic = false;
 @
@@ -8798,6 +8803,8 @@ interpretando.
     result -> points[0].prov.y = z1.points[0].prov.y;
     result -> points[0].prov.dir1_x = result -> points[0].prov.dir1_y = NAN;
     result -> points[0].prov.dir2_x = result -> points[0].prov.dir2_y = NAN;
+    result -> points[0].prov.atleast1 = false;
+    result -> points[0].prov.atleast2 = false;
     result -> number_of_points ++;
   } else{ // Se z1 é um subcaminho:
     result -> points[0].format = SUBPATH_FORMAT;
@@ -8854,6 +8861,8 @@ else{
     result -> points[result -> length].prov.dir1_y = NAN;
     result -> points[result -> length].prov.dir2_x = NAN;
     result -> points[result -> length].prov.dir2_y = NAN;
+    result -> points[result -> length].prov.atleast1 = false;
+    result -> points[result -> length].prov.atleast2 = false;
     result -> number_of_points ++;
   }
   else{ // z2 é um sub-caminho:
