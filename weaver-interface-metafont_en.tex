@@ -3699,7 +3699,6 @@ void recursive_aux_copy(struct path_points **dst, struct path_variable *origin,
           origin -> points[index].prov.dir2_y = NAN;
         }
         if(isnan(origin -> points[index].prov.dir1_x)){
-          printf("MISSING DIR in %d\n", index);
           (*missing_directions) ++;
         }
         if(isnan(origin -> points[index].prov.dir2_x)){
@@ -4088,8 +4087,8 @@ bool find_missing_directions(struct metafont *mf, struct context *cx,
                              struct path_variable *p){
   if(p -> number_of_missing_directions == 0 || p -> length < 2)
     return true;
-  if(p -> cyclic && p -> number_of_missing_directions <= (2 * p -> length))
-    return fill_cyclic_missing_directions(mf, cx, p, 0, p -> length);
+  if(p -> cyclic && p -> number_of_missing_directions >= (2 * p -> length))
+    return fill_cyclic_missing_directions(mf, cx, p, 0, p -> length - 1);
   if(!(p -> cyclic) && p -> number_of_missing_directions <= (2 * p -> length - 2))
     return fill_missing_directions(mf, cx, p, 0, p -> length - 2);
   else{
@@ -4168,7 +4167,7 @@ $\theta$, $\psi$ and $\phi$. Therefore, we initialize the indices as:
 @<Variable Declaration for Unknowns (Cyclic)@>=
 int previous_theta, current_theta, current_psi, current_phi, next_phi,
     number_of_equations;
-previous_theta = -1;
+previous_theta = size - 3;
 current_theta = 0;
 current_psi = 1;
 current_phi = 2;
@@ -4209,7 +4208,7 @@ that will no longer be the same:
   current_phi = next_phi + size;
   current_theta += (size + 3);
   current_psi += (size + 3);
-  next_phi += (size + 3);
+  next_phi = number_of_equations * size + ((next_phi + 3) % size) + size;
   number_of_equations ++;
 }
 @
@@ -4265,7 +4264,7 @@ bool fill_missing_directions(struct metafont *mf, struct context *cx,
   memset(M, 0, size * size * sizeof(double));
   // Iterating over points and adding equations to the system:
   @<Equation: First Point@>
-  for(i = 1; i < (begin - end + 1); p ++){
+  for(i = 1; i < (begin - end + 1); i ++){
     p0 = p1; p1 = p2;
     p2 = &(p -> points[(begin+i+1) % p -> length]);
     z0 = z1; z1 = z2;
@@ -4313,14 +4312,14 @@ bool fill_cyclic_missing_directions(struct metafont *mf, struct context *cx,
                                     struct path_variable *p, int begin,
                                     int end){
   double *M, *x, *b;
-  struct path_points *p0 = &(p -> points[(begin - 2) % p -> length]),
-                     *p1 = &(p -> points[(begin - 1) % p -> length]),
-                     *p2 = &(p -> points[(begin) % p -> length]);
+  struct path_points *p0 = NULL,
+                     *p1 = &(p -> points[end]),
+                     *p2 = &(p -> points[begin]);
   double complex z0 = p0 -> prov.x + p0 -> prov.y * I,
                  z1 = p1 -> prov.x + p1 -> prov.y * I,
                  z2 = p2 -> prov.x + p2 -> prov.y * I;
-  int i, size = 3 * (p -> length); // Size for the linear system
-  @<Variable Declaration for Unknowns (Non-Cyclic)@>
+  int i, size = 3 * (p -> length); // System of equations size
+  @<Variable Declaration for Unknowns (Cyclic)@>
   // Allocating system of linear equations:
   M = (double *) temporary_alloc(size * size * sizeof(double));
   x = (double *) temporary_alloc(size * sizeof(double));
@@ -4334,17 +4333,17 @@ bool fill_cyclic_missing_directions(struct metafont *mf, struct context *cx,
   }
   memset(M, 0, size * size * sizeof(double));
   // Iterating over all points to add equations:
-  for(i = 0; i < (begin - end + 1); p ++){
+  for(i = 0; i < p -> length; i ++){
     p0 = p1; p1 = p2;
-    p2 = &(p -> points[(begin+i+1)]);
+    p2 = &(p -> points[(begin+i+1) % p -> length]);
     z0 = z1; z1 = z2;
-    z2 = p1 -> prov.x + p1 -> prov.y * I;
+    z2 = p2 -> prov.x + p2 -> prov.y * I;
     @<Equation: General Case@>
   }
   solve_linear_system(size, M, b, x);
   {
     int theta;
-    for(i = 0, theta = 0; i < p -> length; i ++, theta +=3){
+    for(theta = 0, i = 0; i < p -> length; i ++, theta += 3){
       // Fill missing direction in p->points[i] using x[theta] value
       @<Fill specifier: inner point@>
     }
@@ -4355,7 +4354,7 @@ bool fill_cyclic_missing_directions(struct metafont *mf, struct context *cx,
     temporary_free(b);
   }
   return true;
-}
+} 
 @
 \fimcodigo
 
@@ -4506,6 +4505,8 @@ The code that adds all three equations is:
 @<Equation: General Case@>=
 M[current_psi] = 1.0;
 b[number_of_equations] = carg((z2 - z1)/(z1 - z0));
+if(b[number_of_equations] == -M_PI)
+  b[number_of_equations] *= -1.0;
 @<Next Equation, Same Point@>
 M[current_theta] = M[current_psi] = M[current_phi] = 1.0;
 b[number_of_equations] = 0.0;
@@ -4642,16 +4643,24 @@ using the code below:
 @<Fill specifier: inner point@>=
 {
   double complex dir;
-  z0 = p -> points[i].prov.x + p -> points[i].prov.y * I;
-  z1 = p -> points[(i+1) % p -> length].prov.x +
-       p -> points[(i+1) % p -> length].prov.y * I;
+  z0 = p -> points[begin + i].prov.x + p -> points[begin + i].prov.y * I;
+  z1 = p -> points[(begin + i + 1) % p -> length].prov.x +
+       p -> points[(begin + i + 1) % p -> length].prov.y * I;
   dir = cos(x[theta]) + sin(x[theta]) * I;
   dir *= (z1 - z0);
   p -> points[i].prov.dir1_x = creal(dir);
   p -> points[i].prov.dir1_y = cimag(dir);
-  p -> points[(i-1) % p -> length].prov.dir1_x = creal(dir);
-  p -> points[(i-1) % p -> length].prov.dir1_y = cimag(dir);
-  p -> number_of_missing_directions -= 2;
+  p -> number_of_missing_directions --;
+  if(begin + i - 1 >= 0){
+    p -> points[begin + i - 1].prov.dir2_x = creal(dir);
+    p -> points[begin + i - 1].prov.dir2_y = cimag(dir);
+    p -> number_of_missing_directions --;
+  }
+  else if(p -> cyclic){
+    p -> points[end].prov.dir2_x = creal(dir);
+    p -> points[end].prov.dir2_y = cimag(dir);
+    p -> number_of_missing_directions --;
+  }
 }
 @
 \fimcodigo
@@ -4768,8 +4777,13 @@ bool normalize_path(struct metafont *mf, struct context *cx,
   memcpy(path, new, sizeof(struct path_variable));
   disalloc(new);
   if(path -> number_of_missing_directions > 0){
-    if(path -> cyclic)
+    if(path -> cyclic){
       path -> length --;
+      if(isnan(path -> points[path -> length - 1].prov.dir1_x))
+        path -> number_of_missing_directions --;
+      if(isnan(path -> points[path -> length - 1].prov.dir2_x))
+        path -> number_of_missing_directions --;
+    }
     if(!find_missing_directions(mf, cx, path))
       return false;
     if(path -> cyclic){
@@ -8640,6 +8654,8 @@ being interpreted.
     result -> points[0].prov.y = z1.points[0].prov.y;
     result -> points[0].prov.dir1_x = result -> points[0].prov.dir1_y = NAN;
     result -> points[0].prov.dir2_x = result -> points[0].prov.dir2_y = NAN;
+    result -> points[0].prov.tension1 = 1.0;
+    result -> points[0].prov.tension2 = 1.0;
     result -> points[0].prov.atleast1 = false;
     result -> points[0].prov.atleast2 = false;
     result -> number_of_points ++;
@@ -8698,6 +8714,8 @@ else{
     result -> points[result -> length].prov.dir1_y = NAN;
     result -> points[result -> length].prov.dir2_x = NAN;
     result -> points[result -> length].prov.dir2_y = NAN;
+    result -> points[result -> length].prov.tension1 = 1.0;
+    result -> points[result -> length].prov.tension2 = 1.0;
     result -> points[result -> length].prov.atleast1 = false;
     result -> points[result -> length].prov.atleast2 = false;
     result -> number_of_points ++;

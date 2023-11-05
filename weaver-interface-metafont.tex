@@ -4169,8 +4169,8 @@ bool find_missing_directions(struct metafont *mf, struct context *cx,
                              struct path_variable *p){
   if(p -> number_of_missing_directions == 0 || p -> length < 2)
     return true;
-  if(p -> cyclic && p -> number_of_missing_directions <= (2 * p -> length))
-    return fill_cyclic_missing_directions(mf, cx, p, 0, p -> length);
+  if(p -> cyclic && p -> number_of_missing_directions >= (2 * p -> length))
+    return fill_cyclic_missing_directions(mf, cx, p, 0, p -> length - 1);
   if(!(p -> cyclic) && p -> number_of_missing_directions <= (2 * p -> length - 2))
     return fill_missing_directions(mf, cx, p, 0, p -> length - 2);
   else{
@@ -4254,7 +4254,7 @@ seguinte forma:
 @<Declaração de Variáveis de Incógnitas (Cíclico)@>=
 int previous_theta, current_theta, current_psi, current_phi, next_phi,
     number_of_equations;
-previous_theta = -1;
+previous_theta = size - 3;
 current_theta = 0;
 current_psi = 1;
 current_phi = 2;
@@ -4296,7 +4296,7 @@ não serão mais as mesmas:
   current_phi = next_phi + size;
   current_theta += (size + 3);
   current_psi += (size + 3);
-  next_phi += (size + 3);
+  next_phi = number_of_equations * size + ((next_phi + 3) % size) + size;
   number_of_equations ++;
 }
 @
@@ -4352,7 +4352,7 @@ bool fill_missing_directions(struct metafont *mf, struct context *cx,
   memset(M, 0, size * size * sizeof(double));
   // Iterando sobre cada ponto adicionando sistema de equações:
   @<Equação: Ponto Inicial@>
-  for(i = 1; i < (begin - end + 1); p ++){
+  for(i = 1; i < (begin - end + 1); i ++){
     p0 = p1; p1 = p2;
     p2 = &(p -> points[(begin+i+1) % p -> length]);
     z0 = z1; z1 = z2;
@@ -4401,9 +4401,9 @@ bool fill_cyclic_missing_directions(struct metafont *mf, struct context *cx,
                                     struct path_variable *p, int begin,
                                     int end){
   double *M, *x, *b;
-  struct path_points *p0 = &(p -> points[(begin - 2) % p -> length]),
-                     *p1 = &(p -> points[(begin - 1) % p -> length]),
-                     *p2 = &(p -> points[(begin) % p -> length]);
+  struct path_points *p0 = NULL,
+                     *p1 = &(p -> points[end]),
+                     *p2 = &(p -> points[begin]);
   double complex z0 = p0 -> prov.x + p0 -> prov.y * I,
                  z1 = p1 -> prov.x + p1 -> prov.y * I,
                  z2 = p2 -> prov.x + p2 -> prov.y * I;
@@ -4422,13 +4422,20 @@ bool fill_cyclic_missing_directions(struct metafont *mf, struct context *cx,
   }
   memset(M, 0, size * size * sizeof(double));
   // Iterando sobre cada ponto adicionando sistema de equações:
-  for(i = 0; i < p -> length; p ++){
+  for(i = 0; i < p -> length; i ++){
     p0 = p1; p1 = p2;
-    p2 = &(p -> points[(begin+i+1)]);
+    p2 = &(p -> points[(begin+i+1) % p -> length]);
     z0 = z1; z1 = z2;
-    z2 = p1 -> prov.x + p1 -> prov.y * I;
+    z2 = p2 -> prov.x + p2 -> prov.y * I;
     @<Equação: Caso Geral@>
   }
+  printf("M: %f %f %f %f %f %f\n", M[0], M[1], M[2], M[3], M[4], M[5]);
+  printf(" : %f %f %f %f %f %f\n", M[6], M[7], M[8], M[9], M[10], M[11]);
+  printf(" : %f %f %f %f %f %f\n", M[12], M[13], M[14], M[15], M[16], M[17]);
+  printf(" : %f %f %f %f %f %f\n", M[18], M[19], M[20], M[21], M[22], M[23]);
+  printf(" : %f %f %f %f %f %f\n", M[24], M[25], M[26], M[27], M[28], M[29]);
+  printf(" : %f %f %f %f %f %f\n", M[30], M[31], M[32], M[33], M[34], M[35]);
+  printf("b: [%f %f %f %f %f %f]\n", b[0], b[1], b[2], b[3], b[4], b[5]);
   solve_linear_system(size, M, b, x);
   {
     int theta;
@@ -4543,8 +4550,6 @@ else{ // gamma conhecido
   double gamma = p1 -> prov.dir2_y;
   double t1 = p1 -> prov.tension1;
   double t2 = p1 -> prov.tension2;
-  printf("current phi: %d\n", current_phi);
-  printf("M: %d %d\n", previous_theta, current_phi);
   M[previous_theta] = t2*t2*(1/t1) - gamma * t1 * t1 * (1/t2 - 3.0);
   M[current_phi] = t2*t2*(1/t1 - 3.0) - gamma * t1 * t1 * (1/t2);
   b[number_of_equations] = 0.0;
@@ -4597,6 +4602,8 @@ O código que armazena as três equações segue abaixo:
 @<Equação: Caso Geral@>=
 M[current_psi] = 1.0;
 b[number_of_equations] = carg((z2 - z1)/(z1 - z0));
+if(b[number_of_equations] == -M_PI)
+  b[number_of_equations] *= -1.0;
 @<Próxima Equação, Mesmo Ponto@>
 M[current_theta] = M[current_psi] = M[current_phi] = 1.0;
 b[number_of_equations] = 0.0;
@@ -4735,16 +4742,25 @@ ambos os valores com o código abaixo:
 @<Preenche especificador: ponto interno@>=
 {
   double complex dir;
-  z0 = p -> points[i].prov.x + p -> points[i].prov.y * I;
-  z1 = p -> points[(i+1) % p -> length].prov.x +
-       p -> points[(i+1) % p -> length].prov.y * I;
+  z0 = p -> points[begin + i].prov.x + p -> points[begin + i].prov.y * I;
+  z1 = p -> points[(begin + i + 1) % p -> length].prov.x +
+       p -> points[(begin + i + 1) % p -> length].prov.y * I;
+  printf("theta: %f\n", x[theta]);
   dir = cos(x[theta]) + sin(x[theta]) * I;
   dir *= (z1 - z0);
   p -> points[i].prov.dir1_x = creal(dir);
   p -> points[i].prov.dir1_y = cimag(dir);
-  p -> points[(i-1) % p -> length].prov.dir1_x = creal(dir);
-  p -> points[(i-1) % p -> length].prov.dir1_y = cimag(dir);
-  p -> number_of_missing_directions -= 2;
+  p -> number_of_missing_directions --;
+  if(begin + i - 1 >= 0){
+    p -> points[begin + i - 1].prov.dir2_x = creal(dir);
+    p -> points[begin + i - 1].prov.dir2_y = cimag(dir);
+    p -> number_of_missing_directions --;
+  }
+  else if(p -> cyclic){
+    p -> points[end].prov.dir2_x = creal(dir);
+    p -> points[end].prov.dir2_y = cimag(dir);
+    p -> number_of_missing_directions --;
+  }
 }
 @
 \fimcodigo
@@ -4867,8 +4883,13 @@ bool normalize_path(struct metafont *mf, struct context *cx,
   memcpy(path, new, sizeof(struct path_variable));
   disalloc(new);
   if(path -> number_of_missing_directions > 0){
-    if(path -> cyclic)
+    if(path -> cyclic){
+      if(isnan(path -> points[path -> length - 1].prov.dir1_x))
+        path -> number_of_missing_directions --;
+      if(isnan(path -> points[path -> length - 1].prov.dir2_x))
+        path -> number_of_missing_directions --;
       path -> length --;
+    }
     if(!find_missing_directions(mf, cx, path))
       return false;
     if(path -> cyclic){
@@ -8803,6 +8824,8 @@ interpretando.
     result -> points[0].prov.y = z1.points[0].prov.y;
     result -> points[0].prov.dir1_x = result -> points[0].prov.dir1_y = NAN;
     result -> points[0].prov.dir2_x = result -> points[0].prov.dir2_y = NAN;
+    result -> points[0].prov.tension1 = 1.0;
+    result -> points[0].prov.tension2 = 1.0;
     result -> points[0].prov.atleast1 = false;
     result -> points[0].prov.atleast2 = false;
     result -> number_of_points ++;
@@ -8861,6 +8884,8 @@ else{
     result -> points[result -> length].prov.dir1_y = NAN;
     result -> points[result -> length].prov.dir2_x = NAN;
     result -> points[result -> length].prov.dir2_y = NAN;
+    result -> points[result -> length].prov.tension1 = 1.0;
+    result -> points[result -> length].prov.tension2 = 1.0;
     result -> points[result -> length].prov.atleast1 = false;
     result -> points[result -> length].prov.atleast2 = false;
     result -> number_of_points ++;
@@ -13775,7 +13800,6 @@ bool eval_boolean_primary(struct metafont *mf, struct context *cx,
                 "boolean expression. Did you miss a ';'?\n",
                 mf -> file, begin_expression -> line);
 #endif
-        printf("DEBUG: %d %d\n", begin_expression -> type, end_expression -> type);
         return false;
       }
       result -> value = 1;
@@ -13788,10 +13812,6 @@ bool eval_boolean_primary(struct metafont *mf, struct context *cx,
                 "boolean expression. Did you miss a ';'?\n",
                 mf -> file, begin_expression -> line);
 #endif
-        printf("DEBUG: %d %d %d\n", begin_expression -> type,
-               ((struct generic_token *) begin_expression -> next) -> type,
-               end_expression -> type);
-        printf("DEBUG: %p %p\n", begin_expression, end_expression);
         return false;
       }
       result -> value = 0;

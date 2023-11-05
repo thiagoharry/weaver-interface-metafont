@@ -362,12 +362,14 @@ void test_path_expressions(void){
   bool ret;
   struct named_variable *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9, *p10,
     *quartercircle, *halfcircle, *fullcircle, *unitsquare, *a, *b, *c,
-    *d, *e, *f, *g, *h, *i, *j, *k, *l, *n, *q, *r, *s, *m, *m1, *m2, *m3;
+    *d, *e, *f, *g, *h, *i, *j, *k, *l, *n, *q, *r, *s, *m, *m1, *m2, *m3, *m4,
+    *m5, *m6;
   struct path_variable *path_p1, *path_p2, *path_p3, *path_p4, *path_p5,
     *path_p6, *path_p7, *path_p8, *path_p9, *path_p10, *quartercircle_path,
     *halfcircle_path, *fullcircle_path, *unitsquare_path, *path_a,
     *path_b, *path_c, *path_d, *path_e, *path_f, *path_g, *path_h,
-    *path_i, *path_j, *path_k, *path_l, *path_m, *path_m1, *path_m2, *path_m3;
+    *path_i, *path_j, *path_k, *path_l, *path_m, *path_m1, *path_m2, *path_m3,
+    *path_m4, *path_m5, *path_m6;
   struct numeric_variable *numeric_n;
   struct pair_variable *pair_q, *pair_r, *pair_s;
   mf = init_metafont("tests/path_expressions.mf");
@@ -411,6 +413,9 @@ void test_path_expressions(void){
   m1 = m -> next;
   m2 = m1 -> next;
   m3 = m2 -> next;
+  m4 = m3 -> next;
+  m5 = m4 -> next;
+  m6 = m5 -> next;
   path_p1 = (struct path_variable *) p1 -> var;
   path_p2 = (struct path_variable *) p2 -> var;
   path_p3 = (struct path_variable *) p3 -> var;
@@ -441,6 +446,9 @@ void test_path_expressions(void){
   path_m1 = (struct path_variable *) m1 -> var;
   path_m2 = (struct path_variable *) m2 -> var;
   path_m3 = (struct path_variable *) m3 -> var;
+  path_m4 = (struct path_variable *) m4 -> var;
+  path_m5 = (struct path_variable *) m5 -> var;
+  path_m6 = (struct path_variable *) m6 -> var;
   numeric_n = (struct numeric_variable *) n -> var;
   pair_q = (struct pair_variable *) q -> var;
   pair_r = (struct pair_variable *) r -> var;
@@ -1017,11 +1025,6 @@ void test_path_expressions(void){
 	 path_m1 -> points[0].point.v_y == 2.0 &&
 	 path_m1 -> points[1].point.x == 3.0 &&
 	 path_m1 -> points[1].point.y == 3.0);
-  printf("(%f %f).. %f %f and %f %f .. (%f %f)\n",
-	 path_m2 -> points[0].point.x, path_m2 -> points[0].point.y,
-	 path_m2 -> points[0].point.u_x, path_m2 -> points[0].point.u_y,
-	 path_m2 -> points[0].point.v_x, path_m2 -> points[0].point.v_y,
-	 path_m2 -> points[1].point.x, path_m2 -> points[1].point.y);
   assert("Testing explicit curl in z0{curl a}..{curl b}z1",
 	 path_m2 -> number_of_points == 2 &&
 	 path_m2 -> cyclic == false &&
@@ -1044,6 +1047,55 @@ void test_path_expressions(void){
 	 ALMOST_EQUAL(path_m3 -> points[0].point.v_y, 1.3509) &&
 	 path_m3 -> points[1].point.x == 3.0 &&
 	 path_m3 -> points[1].point.y == 3.0);
+  assert("Testing direction specifier and curl in z0{curl a}..{dir}z1",
+	 path_m4 -> number_of_points == 2 &&
+	 path_m4 -> cyclic == false &&
+	 path_m4 -> points[0].point.x == 0.0 &&
+	 path_m4 -> points[0].point.y == 0.0 &&
+	 ALMOST_EQUAL(path_m4 -> points[0].point.u_x, -0.1858) &&
+	 ALMOST_EQUAL(path_m4 -> points[0].point.u_y, 1.6491) &&
+	 ALMOST_EQUAL(path_m4 -> points[0].point.v_x, 1.26308) &&
+	 ALMOST_EQUAL(path_m4 -> points[0].point.v_y, 3.0) &&
+	 path_m4 -> points[1].point.x == 3.0 &&
+	 path_m4 -> points[1].point.y == 3.0);
+  assert("Testing direction specifiers in z0{dir1}..{dir2}z1",
+	 path_m5 -> number_of_points == 2 &&
+	 path_m5 -> cyclic == false &&
+	 path_m5 -> points[0].point.x == 0.0 &&
+	 path_m5 -> points[0].point.y == 0.0 &&
+	 ALMOST_EQUAL(path_m5 -> points[0].point.u_x, 1.65686) &&
+	 ALMOST_EQUAL(path_m5 -> points[0].point.u_y, 0.0) &&
+	 ALMOST_EQUAL(path_m5 -> points[0].point.v_x, 3.0) &&
+	 ALMOST_EQUAL(path_m5 -> points[0].point.v_y, 1.34314) &&
+	 path_m5 -> points[1].point.x == 3.0 &&
+	 path_m5 -> points[1].point.y == 3.0);
+  printf("DEBUG: (0,0)..[%f %f]&[%f %f]..(3,3)..[%f %f]..[%f %f]..cycle\n",
+	 path_m6 -> points[0].point.u_x, path_m6 -> points[0].point.u_y,
+	 path_m6 -> points[0].point.v_x, path_m6 -> points[0].point.v_y,
+	 path_m6 -> points[1].point.u_x, path_m6 -> points[1].point.u_y,
+	 path_m6 -> points[1].point.v_x, path_m6 -> points[1].point.v_y);
+  assert("Testing cyclic path (0,0)..(3,3)..cycle",
+	 path_m6 -> length == 3 &&
+	 path_m6 -> cyclic == true &&
+	 path_m6 -> points[0].point.x == 0.0 &&
+	 path_m6 -> points[0].point.y == 0.0 &&
+	 ALMOST_EQUAL(path_m6 -> points[0].point.u_x, 2.0) &&
+	 ALMOST_EQUAL(path_m6 -> points[0].point.u_y, -2.0) &&
+	 ALMOST_EQUAL(path_m6 -> points[0].point.v_x, 5.0) &&
+	 ALMOST_EQUAL(path_m6 -> points[0].point.v_y, 1.0) &&
+	 path_m6 -> points[1].point.x == 3.0 &&
+	 path_m6 -> points[1].point.y == 3.0 &&
+	 ALMOST_EQUAL(path_m6 -> points[1].point.u_x, 1.0) &&
+	 ALMOST_EQUAL(path_m6 -> points[1].point.u_y, 5.0) &&
+	 ALMOST_EQUAL(path_m6 -> points[1].point.v_x, -2.0) &&
+	 ALMOST_EQUAL(path_m6 -> points[1].point.v_y, 2.0) &&
+	 path_m6 -> points[2].point.x == 0.0 &&
+	 path_m6 -> points[2].point.y == 0.0 &&
+	 ALMOST_EQUAL(path_m6 -> points[2].point.u_x, 2.0) &&
+	 ALMOST_EQUAL(path_m6 -> points[2].point.u_y, -2.0) &&
+	 ALMOST_EQUAL(path_m6 -> points[2].point.v_x, 5.0) &&
+	 ALMOST_EQUAL(path_m6 -> points[2].point.v_y, 1.0)
+	 );
   free_token_list(first);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
