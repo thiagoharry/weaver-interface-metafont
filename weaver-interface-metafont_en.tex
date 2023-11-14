@@ -4243,7 +4243,7 @@ bool fill_missing_directions(struct metafont *mf, struct context *cx,
                      *p2 = &(p -> points[(begin+1) % p -> length]);
   double complex z0 = NAN, z1 = p1 -> prov.x + p1 -> prov.y * I,
                  z2 = p2 -> prov.x + p2 -> prov.y * I;
-  int i, size;
+  int i = 1, size;
   int number_of_points = (end-begin+2);
   if(number_of_points < 0)
     number_of_points *= -1;
@@ -4264,12 +4264,14 @@ bool fill_missing_directions(struct metafont *mf, struct context *cx,
   memset(M, 0, size * size * sizeof(double));
   // Iterating over points and adding equations to the system:
   @<Equation: First Point@>
-  for(i = 1; i < (begin - end + 1); i ++){
-    p0 = p1; p1 = p2;
-    p2 = &(p -> points[(begin+i+1) % p -> length]);
-    z0 = z1; z1 = z2;
-    z2 = p2 -> prov.x + p2 -> prov.y * I;
-    @<Equation: General Case@>
+  if(begin != end){
+    for(i = 1; (begin + i - 1) % p -> length != end; i ++){
+      p0 = p1; p1 = p2;
+      p2 = &(p -> points[(begin+i+1) % p -> length]);
+      z0 = z1; z1 = z2;
+      z2 = p2 -> prov.x + p2 -> prov.y * I;
+      @<Equation: General Case@>
+    }
   }
   @<Equation: Last Point@>
   solve_linear_system(size, M, b, x);
@@ -4397,18 +4399,33 @@ The code that adds the equations on both cases is:
 @<Equation: First Point@>=
 if(!isnan(p1 -> prov.dir1_x)){ // Known w0
   double w1_x = p1 -> prov.dir1_x, w1_y = p1 -> prov.dir1_y;
-  M[current_theta] = 1.0;
-  b[number_of_equations] = carg((w1_x + w1_y * I) / (z2 - z1));
+  M[0] = 1.0; // \theta_0 is the first unknown
+  b[0] = carg((w1_x + w1_y * I) / (z2 - z1));
 }
 else{ // Known gamma
   double gamma = p1 -> prov.dir1_y;
   double t1 = p1 -> prov.tension1;
   double t2 = p1 -> prov.tension2;
-  M[current_theta] = t1*t1*(1/t2 - 3.0) - gamma * t2 * t2 * (1/t1);
-  M[next_phi] = t1*t1*(1/t2) - gamma * t2 * t2 * (1/t1 - 3.0);
-  b[number_of_equations] = 0.0;
+  int phi1;
+  if(begin == end)
+    phi1 = 1;
+  else
+    phi1 = 3;
+  M[0] = t1*t1*(1/t2 - 3.0) - gamma * t2 * t2 * (1/t1);
+  M[phi1] = t1*t1*(1/t2) - gamma * t2 * t2 * (1/t1 - 3.0);
+  b[0] = 0.0;
 }
-@<Next Equation, Next Point@>
+{
+  previous_theta = size;
+  current_theta = size + 1;
+  current_psi = size + 2;
+  current_phi = size + 3;
+  if(number_of_points > 3)
+    next_phi = size + 6;
+  else
+    next_phi = size + 4;
+  number_of_equations ++;
+}
 @
 \fimcodigo
 
@@ -4442,18 +4459,27 @@ The code to add the equation in both cases is seen below:
 
 \iniciocodigo
 @<Equation: Last Point@>=
+p1 = &(p -> points[(end) % p -> length]);
+p2 = &(p -> points[(end+1) % p -> length]);
+z1 = p1 -> prov.x + p1 -> prov.y * I;
+z2 = p2 -> prov.x + p2 -> prov.y * I;
 if(!isnan(p1 -> prov.dir2_x)){ // Known w_n 
   double w1_x = p1 -> prov.dir2_x, w1_y = p1 -> prov.dir2_y;
-  M[current_phi] = 1.0;
-  b[number_of_equations] = carg((z2 - z1)/(w1_x + w1_y * I));
+  M[size * size - 1] = 1.0;
+  b[size - 1] = carg((z2 - z1)/(w1_x + w1_y * I));
 }
 else{ // Known gamma
   double gamma = p1 -> prov.dir2_y;
   double t1 = p1 -> prov.tension1;
   double t2 = p1 -> prov.tension2;
-  M[previous_theta] = t2*t2*(1/t1) - gamma * t1 * t1 * (1/t2 - 3.0);
-  M[current_phi] = t2*t2*(1/t1 - 3.0) - gamma * t1 * t1 * (1/t2);
-  b[number_of_equations] = 0.0;
+  int last_theta;
+  if(begin == end)
+    last_theta = 2;
+  else
+    last_theta = size * size - 4;
+  M[last_theta] = t2*t2*(1/t1) - gamma * t1 * t1 * (1/t2 - 3.0);
+  M[size * size - 1] = t2*t2*(1/t1 - 3.0) - gamma * t1 * t1 * (1/t2);
+  b[size - 1] = 0.0;
 }
 @
 \fimcodigo

@@ -363,13 +363,13 @@ void test_path_expressions(void){
   struct named_variable *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9, *p10,
     *quartercircle, *halfcircle, *fullcircle, *unitsquare, *a, *b, *c,
     *d, *e, *f, *g, *h, *i, *j, *k, *l, *n, *q, *r, *s, *m, *m1, *m2, *m3, *m4,
-    *m5, *m6;
+    *m5, *m6, *m7;
   struct path_variable *path_p1, *path_p2, *path_p3, *path_p4, *path_p5,
     *path_p6, *path_p7, *path_p8, *path_p9, *path_p10, *quartercircle_path,
     *halfcircle_path, *fullcircle_path, *unitsquare_path, *path_a,
     *path_b, *path_c, *path_d, *path_e, *path_f, *path_g, *path_h,
     *path_i, *path_j, *path_k, *path_l, *path_m, *path_m1, *path_m2, *path_m3,
-    *path_m4, *path_m5, *path_m6;
+    *path_m4, *path_m5, *path_m6, *path_m7;
   struct numeric_variable *numeric_n;
   struct pair_variable *pair_q, *pair_r, *pair_s;
   mf = init_metafont("tests/path_expressions.mf");
@@ -416,6 +416,7 @@ void test_path_expressions(void){
   m4 = m3 -> next;
   m5 = m4 -> next;
   m6 = m5 -> next;
+  m7 = m6 -> next;
   path_p1 = (struct path_variable *) p1 -> var;
   path_p2 = (struct path_variable *) p2 -> var;
   path_p3 = (struct path_variable *) p3 -> var;
@@ -449,6 +450,7 @@ void test_path_expressions(void){
   path_m4 = (struct path_variable *) m4 -> var;
   path_m5 = (struct path_variable *) m5 -> var;
   path_m6 = (struct path_variable *) m6 -> var;
+  path_m7 = (struct path_variable *) m7 -> var;
   numeric_n = (struct numeric_variable *) n -> var;
   pair_q = (struct pair_variable *) q -> var;
   pair_r = (struct pair_variable *) r -> var;
@@ -1094,8 +1096,31 @@ void test_path_expressions(void){
 	 ALMOST_EQUAL(path_m6 -> points[2].point.u_x, 2.0) &&
 	 ALMOST_EQUAL(path_m6 -> points[2].point.u_y, -2.0) &&
 	 ALMOST_EQUAL(path_m6 -> points[2].point.v_x, 5.0) &&
-	 ALMOST_EQUAL(path_m6 -> points[2].point.v_y, 1.0)
-	 );
+	 ALMOST_EQUAL(path_m6 -> points[2].point.v_y, 1.0));
+  printf("DEBUG: (0,0)..controls(%f,%f)and(%f,%f)..(3,3)..controls(%f,%f)and(%f,%f)..(4,3)\n", path_m7 -> points[0].point.u_x, path_m7 -> points[0].point.u_y,
+	 path_m7 -> points[0].point.v_x, path_m7 -> points[0].point.v_y,
+	 path_m7 -> points[1].point.u_x, path_m7 -> points[1].point.u_y,
+	 path_m7 -> points[1].point.v_x, path_m7 -> points[1].point.v_y);
+  assert("Testing non-cyclicl path (0,0)..(3,3)..{0,1}(4,3)",
+	 path_m7 -> length == 3 && path_m7 -> cyclic == false &&
+	 path_m7 -> points[0].point.x == 0.0 &&
+	 path_m7 -> points[0].point.y == 0.0 &&
+	 ALMOST_EQUAL(path_m7 -> points[0].point.u_x, -1.41043) &&
+	 ALMOST_EQUAL(path_m7 -> points[0].point.u_y, 1.9765) &&
+	 ALMOST_EQUAL(path_m7 -> points[0].point.v_x, 1.0235) &&
+	 ALMOST_EQUAL(path_m7 -> points[0].point.v_y, 4.41043) &&
+	 path_m7 -> points[1].point.x == 3.0 &&
+	 path_m7 -> points[1].point.y == 3.0 &&
+	 ALMOST_EQUAL(path_m7 -> points[1].point.u_x, 3.46484) &&
+	 ALMOST_EQUAL(path_m7 -> points[1].point.u_y, 2.66829) &&
+	 ALMOST_EQUAL(path_m7 -> points[1].point.v_x, 4.0) &&
+	 ALMOST_EQUAL(path_m7 -> points[1].point.v_y, 2.63768) &&
+	 path_m7 -> points[2].point.x == 4.0 &&
+	 path_m7 -> points[2].point.y == 3.0 &&
+	 ALMOST_EQUAL(path_m7 -> points[2].point.u_x, 4.0) &&
+	 ALMOST_EQUAL(path_m7 -> points[2].point.u_y, 3.0) &&
+	 ALMOST_EQUAL(path_m7 -> points[2].point.v_x, 4.0) &&
+	 ALMOST_EQUAL(path_m7 -> points[2].point.v_y, 3.0));
   free_token_list(first);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
