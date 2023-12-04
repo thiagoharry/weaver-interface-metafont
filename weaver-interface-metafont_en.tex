@@ -3629,7 +3629,8 @@ bool recursive_copy_points(struct metafont *mf, struct context *cx,
                            struct path_variable *source,
                            bool alloc_target); // Should we alloc target?
 void recursive_aux_copy(struct path_points **dst,
-                        struct path_variable *origin, int *missing_directions);
+                        struct path_variable *origin, int *missing_directions,
+                        struct path_points **previous_point);
 @
 \fimcodigo
 
@@ -3647,7 +3648,7 @@ bool recursive_copy_points(struct metafont *mf, struct context *cx,
                            struct path_variable **target,
                            struct path_variable *source,
                           bool alloc_target){
-  struct path_points *p;
+  struct path_points *p, *previous_point = NULL;
   if(alloc_target){
     *target = (struct path_variable *) alloc(sizeof(struct path_variable));
     if(*target == NULL){
@@ -3668,7 +3669,8 @@ bool recursive_copy_points(struct metafont *mf, struct context *cx,
     return false;
   }
   p = (*target) -> points;
-  recursive_aux_copy(&p, source, &((*target) -> number_of_missing_directions));
+  recursive_aux_copy(&p, source, &((*target) -> number_of_missing_directions),
+                     &previous_point);
   return true;
 }
 @
@@ -3679,38 +3681,53 @@ The recursive function that copy each point:
 \iniciocodigo
 @<Auxiliary Local Functions (metafont.c)@>+=
 void recursive_aux_copy(struct path_points **dst, struct path_variable *origin,
-                        int *missing_directions){
+                        int *missing_directions,
+                        struct path_points **previous_point){
   int index = 0;
   while(index <= origin -> length - 1){
     if(origin -> points[index].format != SUBPATH_FORMAT &&
        !isnan(origin -> points[index].point.x)){
       memcpy(*dst, &(origin -> points[index]),  sizeof(struct path_points));
-      (*dst) ++;
-      if(origin -> points[index].format == PROVISIONAL_FORMAT){
-        // Take the opportunity to remove invalid direction specifiers:
-        if(origin -> points[index].prov.dir1_x == 0.0 &&
-           origin -> points[index].prov.dir1_y == 0.0){
-          origin -> points[index].prov.dir1_x = NAN;
-          origin -> points[index].prov.dir1_y = NAN;
-        }
-        if(origin -> points[index].prov.dir2_x == 0.0 &&
-           origin -> points[index].prov.dir2_y == 0.0){
-          origin -> points[index].prov.dir2_x = NAN;
-          origin -> points[index].prov.dir2_y = NAN;
-        }
-        if(isnan(origin -> points[index].prov.dir1_x)){
-          (*missing_directions) ++;
-        }
-        if(isnan(origin -> points[index].prov.dir2_x)){
-                  printf("MISSING DIR in %d\n", index);
-          (*missing_directions) ++;
-          }
+      // If we have two successive equal points, there is no missing direction
+      // specifiers between them:
+      if(*previous_point != NULL &&
+         (*previous_point) -> format == PROVISIONAL_FORMAT &&
+         (*previous_point) -> prov.x == (*dst) -> prov.x &&
+         (*previous_point) -> prov.y == (*dst) -> prov.y){
+        if(isnan((*previous_point) -> prov.dir1_x))
+          (*missing_directions) --;
+        if(isnan((*previous_point) -> prov.dir2_x))
+          (*missing_directions) --;
+        (*previous_point) -> format = FINAL_FORMAT;
+        (*previous_point) -> point.u_x = (*previous_point) -> point.x;
+        (*previous_point) -> point.v_x = (*previous_point) -> point.x;
+        (*previous_point) -> point.u_y = (*previous_point) -> point.y;
+        (*previous_point) -> point.v_y = (*previous_point) -> point.y;
       }
+      if((*dst) -> format == PROVISIONAL_FORMAT){
+        // Aproveitamos para remover especificadores de direção inválidos:
+        if((*dst) -> prov.dir1_x == 0.0 &&
+           (*dst) -> prov.dir1_y == 0.0){
+           (*dst) -> prov.dir1_x = NAN;
+           (*dst) -> prov.dir1_y = NAN;
+        }
+        if((*dst) -> prov.dir2_x == 0.0 &&
+           (*dst) -> prov.dir2_y == 0.0){
+          (*dst) -> prov.dir2_x = NAN;
+          (*dst) -> prov.dir2_y = NAN;
+        }
+        if(isnan((*dst) -> prov.dir1_x))
+          (*missing_directions) ++;
+        if(isnan((*dst) -> prov.dir2_x))
+          (*missing_directions) ++;
+      }
+      *previous_point = *dst;
+      (*dst) ++;
     }
     else if(origin -> points[index].format == SUBPATH_FORMAT)
       recursive_aux_copy(dst, (struct path_variable *)
                               (origin -> points[index].subpath),
-                         missing_directions);
+                         missing_directions, previous_point);
     index  ++;
   }
   return;
