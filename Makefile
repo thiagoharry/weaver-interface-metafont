@@ -23,5 +23,7 @@ test_web:
 test_web_en:
 	ctangle weaver-interface-metafont_en.tex
 	emcc $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -DW_FORCE_LANDSCAPE -s ASYNCIFY=1 -Wall -O2 tests/test.c tests/window.c src/interface.c  -o docs/test_interface.html
+disassemble:
+	$(CC) -g -c -o metafont.o src/metafont.c
 clean:
 	rm -f *~ *.core *.scn *.dvi *.idx *.log 

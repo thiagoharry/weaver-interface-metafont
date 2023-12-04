@@ -4296,7 +4296,14 @@ não serão mais as mesmas:
   current_phi = next_phi + size;
   current_theta += (size + 3);
   current_psi += (size + 3);
-  next_phi = number_of_equations * size + ((next_phi + 3) % size) + size;
+  if(p -> cyclic)
+    next_phi = number_of_equations * size + ((next_phi + 3) % size) + size;
+  else{
+    if(next_phi % size == size - 2)
+      next_phi += (size + 1);
+    else
+      next_phi += (size + 3);
+  }
   number_of_equations ++;
 }
 @
@@ -4362,14 +4369,6 @@ bool fill_missing_directions(struct metafont *mf, struct context *cx,
     }
   }
   @<Equação: Último Ponto@>
-  if(!(p -> cyclic) && p -> length == 3){
-    printf("M: %f %f %f %f %f\n", M[0], M[1], M[2], M[3], M[4]);
-    printf(" : %f %f %f %f %f\n", M[5], M[6], M[7], M[8], M[9]);
-    printf(" : %f %f %f %f %f\n", M[10], M[11], M[12], M[13], M[14]);
-    printf(" : %f %f %f %f %f\n", M[15], M[16], M[17], M[18], M[19]);
-    printf(" : %f %f %f %f %f\n", M[20], M[21], M[22], M[23], M[24]);
-    printf("b: %f %f %f %f %f\n", b[0], b[1], b[2], b[3], b[4]);
-  }
   solve_linear_system(size, M, b, x);
   @<Preenche especificador: primeiro ponto@>
   {

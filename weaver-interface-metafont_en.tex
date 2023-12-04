@@ -4208,7 +4208,14 @@ that will no longer be the same:
   current_phi = next_phi + size;
   current_theta += (size + 3);
   current_psi += (size + 3);
-  next_phi = number_of_equations * size + ((next_phi + 3) % size) + size;
+  if(p -> cyclic)
+    next_phi = number_of_equations * size + ((next_phi + 3) % size) + size;
+  else{
+    if(next_phi % size == size - 2)
+      next_phi += (size + 1);
+    else
+      next_phi += (size + 3);
+  }
   number_of_equations ++;
 }
 @
