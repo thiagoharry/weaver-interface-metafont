@@ -4106,17 +4106,19 @@ bool find_missing_directions(struct metafont *mf, struct context *cx,
     return true;
   if(p -> cyclic && p -> number_of_missing_directions >= (2 * p -> length))
     return fill_cyclic_missing_directions(mf, cx, p, 0, p -> length - 1);
-  if(!(p -> cyclic) && p -> number_of_missing_directions <= (2 * p -> length - 2))
+  if(!(p -> cyclic) &&
+     p -> number_of_missing_directions >= (2 * (p -> length - 1) - 1))
     return fill_missing_directions(mf, cx, p, 0, p -> length - 2);
   else{
     int begin_segment = 0, end_segment = 0;
     while(p -> number_of_missing_directions > 0){
       while(p -> points[begin_segment].format != PROVISIONAL_FORMAT ||
             isnan(p -> points[begin_segment].prov.dir1_y) ||
-            !isnan(p -> points[begin_segment].prov.dir1_x))
+            (!isnan(p -> points[begin_segment].prov.dir1_x) &&
+             !isnan(p -> points[begin_segment].prov.dir2_x)))
         begin_segment = (begin_segment + 1) % p -> length;
       end_segment = begin_segment;
-      while(isnan(p -> points[end_segment].prov.dir2_x))
+      while(isnan(p -> points[end_segment].prov.dir2_y))
         end_segment = (end_segment + 1) % p -> length;
       if(!fill_missing_directions(mf, cx, p, begin_segment, end_segment))
         return false;
@@ -4834,8 +4836,10 @@ bool normalize_path(struct metafont *mf, struct context *cx,
       if(isnan(path -> points[path -> length - 1].prov.dir2_x))
         path -> number_of_missing_directions --;
     }
-    if(!find_missing_directions(mf, cx, path))
+    if(!find_missing_directions(mf, cx, path)){
+      printf("DONE\n");
       return false;
+    }
     if(path -> cyclic){
       path -> length ++;
       memcpy(&(path -> points[path -> length - 1]), &(path -> points[0]),
@@ -8502,6 +8506,7 @@ and end token for each part:
   struct generic_token *begin_d = NULL, *end_d = NULL, *begin_e, *end_e;
   struct generic_token * begin_j, *end_j;
   struct path_points *z0_point = NULL, *z1_point = NULL, *z2_point = NULL;
+  struct path_variable *z1_parent;
   begin_z1 = begin;
   end_z1 = begin_z1;
   @<Path Expression: Initial Value for z1@>
@@ -8817,9 +8822,12 @@ extremity points, we have to walk through the subpath:
 @<Path Expression: Interpret Join Extremities@>+=
 // z0 is the previous point, z1 is the current one and z2 is the next one
 z1_point = &(result -> points[result -> length - 2]);
+z1_parent = result;
+z0_point = NULL;
 while(z1_point -> format == SUBPATH_FORMAT){
   struct path_variable *p = (struct path_variable *) z1_point -> subpath;
   z1_point = &(p -> points[p -> length - 1]);
+  z1_parent = p;
   if(p -> length  != 1 && z1_point -> format != SUBPATH_FORMAT)
     z0_point = &(p -> points[p -> length - 2]);
 }
@@ -9139,6 +9147,10 @@ if(begin_j == end_j && begin_j -> type == TYPE_AMPERSAND){
   }
   // This will overwrite the first extremity point
   result -> number_of_points --;
+  if(z1_parent != result){
+    z1_parent -> length --;
+    z1_parent -> number_of_points --;
+  }
   z1_point -> point.x = NAN;
   z1_point -> point.y = NAN;
 }

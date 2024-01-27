@@ -4191,17 +4191,19 @@ bool find_missing_directions(struct metafont *mf, struct context *cx,
     return true;
   if(p -> cyclic && p -> number_of_missing_directions >= (2 * p -> length))
     return fill_cyclic_missing_directions(mf, cx, p, 0, p -> length - 1);
-  if(!(p -> cyclic) && p -> number_of_missing_directions <= (2 * p -> length - 2))
+  if(!(p -> cyclic) &&
+     p -> number_of_missing_directions >= (2 * (p -> length - 1) - 1))
     return fill_missing_directions(mf, cx, p, 0, p -> length - 2);
   else{
     int begin_segment = 0, end_segment = 0;
     while(p -> number_of_missing_directions > 0){
       while(p -> points[begin_segment].format != PROVISIONAL_FORMAT ||
             isnan(p -> points[begin_segment].prov.dir1_y) ||
-            !isnan(p -> points[begin_segment].prov.dir1_x))
+            (!isnan(p -> points[begin_segment].prov.dir1_x) &&
+             !isnan(p -> points[begin_segment].prov.dir2_x)))
         begin_segment = (begin_segment + 1) % p -> length;
       end_segment = begin_segment;
-      while(isnan(p -> points[end_segment].prov.dir2_x))
+      while(isnan(p -> points[end_segment].prov.dir2_y))
         end_segment = (end_segment + 1) % p -> length;
       if(!fill_missing_directions(mf, cx, p, begin_segment, end_segment))
         return false;
@@ -8677,6 +8679,7 @@ marcar o token de começo e de fim de cada parte:
     begin_z1 = begin_z2;
     end_z1 = end_z2;
   }
+
   @<Expressão de Caminho: Após Ler as Junções@>
 }
 @
@@ -8984,6 +8987,7 @@ percorrer o sub-caminho:
 // z0 é o ponto anterior, z1 é o atual e z2 é o próximo
 z1_point = &(result -> points[result -> length - 2]);
 z1_parent = result;
+z0_point = NULL;
 while(z1_point -> format == SUBPATH_FORMAT){
   struct path_variable *p = (struct path_variable *) z1_point -> subpath;
   z1_point = &(p -> points[p -> length - 1]);
