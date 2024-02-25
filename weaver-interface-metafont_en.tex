@@ -4700,8 +4700,8 @@ using the code below:
        p -> points[(begin + i + 1) % p -> length].prov.y * I;
   dir = cos(x[theta]) + sin(x[theta]) * I;
   dir *= (z1 - z0);
-  p -> points[i].prov.dir1_x = creal(dir);
-  p -> points[i].prov.dir1_y = cimag(dir);
+  p -> points[begin + i].prov.dir1_x = creal(dir);
+  p -> points[begin + i].prov.dir1_y = cimag(dir);
   p -> number_of_missing_directions --;
   if(begin + i - 1 >= 0){
     p -> points[begin + i - 1].prov.dir2_x = creal(dir);

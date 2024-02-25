@@ -1172,20 +1172,35 @@ void test_path_expressions(void){
 	 ALMOST_EQUAL(path_m9 -> points[3].point.v_x, 0.0) &&
 	 ALMOST_EQUAL(path_m9 -> points[3].point.v_y, 1.0)
 	 );
+  // Unfortunately, the following test is failing and we still donot
+  // understand why. The values for m10 are correct, except for the
+  // first pair of control points. 
+  printf("DEBUG:    (4,3)..{%f %f}{%f %f}..(2,3)..{%f %f}{%f %f}..(3,3)..{%f %f}{%f %f}..(4, 2)..{%f %f}{%f %f}..(5, 1)..{%f %f}{%f %f}..(6, 7)\nEXPECTED: (4,3)..{11.22821 -0.42822}{-5.22821 -0.42822}..(2,3)..{2.60104 3.28506}{3.59143 3.29572} ..(3,3)..{1 2}{3 4}..(4, 2)..{4.21738 1.56526}{4.55501 1.19505}..(5, 1)..{9.92201 -1.15744}{11.35567 7.44449}..(6, 7)\n",
+	 path_m10 -> points[0].point.u_x, path_m10 -> points[0].point.u_y,
+	 path_m10 -> points[0].point.v_x, path_m10 -> points[0].point.v_y,
+	 path_m10 -> points[1].point.u_x, path_m10 -> points[1].point.u_y,
+	 path_m10 -> points[1].point.v_x, path_m10 -> points[1].point.v_y,
+	 path_m10 -> points[2].point.u_x, path_m10 -> points[2].point.u_y,
+	 path_m10 -> points[2].point.v_x, path_m10 -> points[2].point.v_y,
+	 path_m10 -> points[3].point.u_x, path_m10 -> points[3].point.u_y,
+	 path_m10 -> points[3].point.v_x, path_m10 -> points[3].point.v_y,
+	 path_m10 -> points[4].point.u_x, path_m10 -> points[4].point.u_y,
+	 path_m10 -> points[4].point.v_x, path_m10 -> points[4].point.v_y
+	 );
   assert("Testing path with two segments with missing directions",
 	 path_m10 -> length == 6 && path_m10 -> cyclic == false &&
 	 path_m10 -> points[0].point.x == 4.0 &&
 	 path_m10 -> points[0].point.y == 3.0 &&
-	 //ALMOST_EQUAL(path_m10 -> points[0].point.u_x, 11.22821) &&
-	 //ALMOST_EQUAL(path_m10 -> points[0].point.u_y, -0.42822) &&
-	 //ALMOST_EQUAL(path_m10 -> points[0].point.v_x, -5.22821) &&
-	 //ALMOST_EQUAL(path_m10 -> points[0].point.v_y, -0.42822) &&
+	 ALMOST_EQUAL(path_m10 -> points[0].point.u_x, 11.22821) &&
+	 ALMOST_EQUAL(path_m10 -> points[0].point.u_y, -0.42822) &&
+	 ALMOST_EQUAL(path_m10 -> points[0].point.v_x, -5.22821) &&
+	 ALMOST_EQUAL(path_m10 -> points[0].point.v_y, -0.42822) &&
 	 path_m10 -> points[1].point.x == 2.0 &&
 	 path_m10 -> points[1].point.y == 3.0 &&
-	 //ALMOST_EQUAL(path_m10 -> points[1].point.u_x, 2.60104) &&
-	 //ALMOST_EQUAL(path_m10 -> points[1].point.u_y, 3.28506) &&
-	 //ALMOST_EQUAL(path_m10 -> points[1].point.v_x, 3.59143) &&
-	 //ALMOST_EQUAL(path_m10 -> points[1].point.v_y, 3.29572) &&
+	 ALMOST_EQUAL(path_m10 -> points[1].point.u_x, 2.60104) &&
+	 ALMOST_EQUAL(path_m10 -> points[1].point.u_y, 3.28506) &&
+	 ALMOST_EQUAL(path_m10 -> points[1].point.v_x, 3.59143) &&
+	 ALMOST_EQUAL(path_m10 -> points[1].point.v_y, 3.29572) &&
 	 path_m10 -> points[2].point.x == 3.0 &&
 	 path_m10 -> points[2].point.y == 3.0 &&
 	 ALMOST_EQUAL(path_m10 -> points[2].point.u_x, 1.0) &&
@@ -1194,16 +1209,16 @@ void test_path_expressions(void){
 	 ALMOST_EQUAL(path_m10 -> points[2].point.v_y, 4.0) &&
 	 path_m10 -> points[3].point.x == 4.0 &&
 	 path_m10 -> points[3].point.y == 2.0 &&
-	 //ALMOST_EQUAL(path_m10 -> points[3].point.u_x, 4.21738) &&
-	 //ALMOST_EQUAL(path_m10 -> points[3].point.u_y, 1.56526) &&
-	 //ALMOST_EQUAL(path_m10 -> points[3].point.v_x, 4.55501) &&
-	 //ALMOST_EQUAL(path_m10 -> points[3].point.v_y, 1.19505) &&
+	 ALMOST_EQUAL(path_m10 -> points[3].point.u_x, 4.21738) &&
+	 ALMOST_EQUAL(path_m10 -> points[3].point.u_y, 1.56526) &&
+	 ALMOST_EQUAL(path_m10 -> points[3].point.v_x, 4.55501) &&
+	 ALMOST_EQUAL(path_m10 -> points[3].point.v_y, 1.19505) &&
 	 path_m10 -> points[4].point.x == 5.0 &&
 	 path_m10 -> points[4].point.y == 1.0 &&
-	 //ALMOST_EQUAL(path_m10 -> points[4].point.u_x, 9.92201) &&
-	 //ALMOST_EQUAL(path_m10 -> points[4].point.u_y, -1.15744) &&
-	 //ALMOST_EQUAL(path_m10 -> points[4].point.v_x, 11.35567) &&
-	 //ALMOST_EQUAL(path_m10 -> points[4].point.v_y, 7.44449) &&
+	 ALMOST_EQUAL(path_m10 -> points[4].point.u_x, 9.92201) &&
+	 ALMOST_EQUAL(path_m10 -> points[4].point.u_y, -1.15744) &&
+	 ALMOST_EQUAL(path_m10 -> points[4].point.v_x, 11.35567) &&
+	 ALMOST_EQUAL(path_m10 -> points[4].point.v_y, 7.44449) &&
 	 path_m10 -> points[5].point.x == 6.0 &&
 	 path_m10 -> points[5].point.y == 7.0
 	 );
