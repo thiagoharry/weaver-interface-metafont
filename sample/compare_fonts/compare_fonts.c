@@ -9,7 +9,7 @@
 #include "metafont.h"
 #include "interface.h"
 
-// In 96 dp1: 300 pt = 400 px
+// In 96 dpi: 300 pt = 400 px
 
 #define MIN_SIZE 300
 #define MAX_SIZE 300

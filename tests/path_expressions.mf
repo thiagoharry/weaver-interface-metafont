@@ -63,5 +63,8 @@ m9 = (4, 3) .. (3, 3) .. tension 2 and 3 .. (1, 1) .. {1, 0}(0, 1);
 % BUG: First pair of control points in first segment do not match.
 m10 = (4, 3) .. (2, 3) .. (3, 3) .. controls (1, 2) and (3, 4) ..
   (4, 2) .. (5, 1) .. (6, 7);
-%m11 = (4, 3) .. (2, 3) .. (3, 3) .. controls (1, 2) and (3, 4) ..
-%  (4, 2) .. (5, 1) .. (6, 7) .. cycle;
+% BUG: Control points do not match, error line 4382 NO MEMORY
+% Ao tentar alocar matrizes em fill_missing_directions, tivemos
+% size == -4! Arrumado, mas há mais erros adiante
+m11 = (4, 3) .. (2, 4) .. (3, 3) .. controls (1, 2) and (3, 4) ..
+  (4, 2) .. (5, 1) .. (6, 7) .. cycle;

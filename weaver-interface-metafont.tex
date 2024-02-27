@@ -2053,8 +2053,6 @@ void _Wprint_metafont_error(struct metafont *mf){
   // Primeiro tentamos gerar uma string com o número de linha onde teve erro.
   // Assim é como podemos calcular o tamanho desta string:
   int str_size = 128;
-  //(int)(((int)ceil(log10((double) (mf -> errno_line)))+1));
-  //          printf("AQUIII %d\n", (int) log10((double) (mf -> errno_line)));
   line_number = (char *) temporary_alloc(str_size);
   // Mas se não temos um número de linha, só deixamos a string vazia:
   if(mf -> errno_line == 0)
@@ -4367,12 +4365,13 @@ bool fill_missing_directions(struct metafont *mf, struct context *cx,
                      *p2 = &(p -> points[(begin+1) % p -> length]);
   double complex z0 = NAN, z1 = p1 -> prov.x + p1 -> prov.y * I,
                  z2 = p2 -> prov.x + p2 -> prov.y * I;
-  int i = 1, size;
+  int i = 1, size, number_of_points;
   @<Declaração de Variáveis de Incógnitas (Não-Cíclico)@>
   @<Checa caso degenerado@>
-  int number_of_points = (end-begin+2);
-  if(number_of_points < 0)
-    number_of_points *= -1;
+  if(end >= begin)
+    number_of_points = (end-begin+2);
+  else
+    number_of_points = p -> length - (begin - end) + 2;
   size = 3 * ((number_of_points) - 2) + 2; // Tamanho do sistema de equações
   // Alocação do sistema:
   M = (double *) temporary_alloc(size * size * sizeof(double));
@@ -4797,17 +4796,18 @@ ambos os valores com o código abaixo:
 @<Preenche especificador: ponto interno@>=
 {
   double complex dir;
-  z0 = p -> points[begin + i].prov.x + p -> points[begin + i].prov.y * I;
+  z0 = p -> points[(begin + i) % p -> length].prov.x +
+       p -> points[(begin + i) % p -> length].prov.y * I;
   z1 = p -> points[(begin + i + 1) % p -> length].prov.x +
        p -> points[(begin + i + 1) % p -> length].prov.y * I;
   dir = cos(x[theta]) + sin(x[theta]) * I;
   dir *= (z1 - z0);
-  p -> points[begin + i].prov.dir1_x = creal(dir);
-  p -> points[begin + i].prov.dir1_y = cimag(dir);
+  p -> points[(begin + i) % p -> length].prov.dir1_x = creal(dir);
+  p -> points[(begin + i) % p -> length].prov.dir1_y = cimag(dir);
   p -> number_of_missing_directions --;
   if(begin + i - 1 >= 0){
-    p -> points[begin + i - 1].prov.dir2_x = creal(dir);
-    p -> points[begin + i - 1].prov.dir2_y = cimag(dir);
+    p -> points[(begin + i - 1) % p -> length].prov.dir2_x = creal(dir);
+    p -> points[(begin + i - 1) % p -> length].prov.dir2_y = cimag(dir);
     p -> number_of_missing_directions --;
   }
   else if(p -> cyclic){

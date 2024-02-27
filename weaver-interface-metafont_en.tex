@@ -4269,10 +4269,11 @@ bool fill_missing_directions(struct metafont *mf, struct context *cx,
                      *p2 = &(p -> points[(begin+1) % p -> length]);
   double complex z0 = NAN, z1 = p1 -> prov.x + p1 -> prov.y * I,
                  z2 = p2 -> prov.x + p2 -> prov.y * I;
-  int i = 1, size;
-  int number_of_points = (end-begin+2);
-  if(number_of_points < 0)
-    number_of_points *= -1;
+  int i = 1, size, number_of_points;
+  if(end >= begin)
+    number_of_points = (end-begin+2);
+  else
+    number_of_points = p -> length - (begin - end) + 2;
   size = 3 * ((number_of_points) - 2) + 2; // Size of linear system
   @<Variable Declaration for Unknowns (Non-Cyclic)@>
   @<Check for degenerate case@>
@@ -4695,17 +4696,18 @@ using the code below:
 @<Fill specifier: inner point@>=
 {
   double complex dir;
-  z0 = p -> points[begin + i].prov.x + p -> points[begin + i].prov.y * I;
+  z0 = p -> points[(begin + i) % p -> length].prov.x +
+       p -> points[(begin + i) % p -> length].prov.y * I;
   z1 = p -> points[(begin + i + 1) % p -> length].prov.x +
        p -> points[(begin + i + 1) % p -> length].prov.y * I;
   dir = cos(x[theta]) + sin(x[theta]) * I;
   dir *= (z1 - z0);
-  p -> points[begin + i].prov.dir1_x = creal(dir);
-  p -> points[begin + i].prov.dir1_y = cimag(dir);
+  p -> points[(begin + i) % p -> length].prov.dir1_x = creal(dir);
+  p -> points[(begin + i) % p -> length].prov.dir1_y = cimag(dir);
   p -> number_of_missing_directions --;
   if(begin + i - 1 >= 0){
-    p -> points[begin + i - 1].prov.dir2_x = creal(dir);
-    p -> points[begin + i - 1].prov.dir2_y = cimag(dir);
+    p -> points[(begin + i - 1) % p -> length].prov.dir2_x = creal(dir);
+    p -> points[(begin + i - 1) % p -> length].prov.dir2_y = cimag(dir);
     p -> number_of_missing_directions --;
   }
   else if(p -> cyclic){
