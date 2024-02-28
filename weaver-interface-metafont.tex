@@ -9176,18 +9176,22 @@ explícito é colocado, existem algumas regras que nos permitem deduzir
 valores implícitos para eles.
 
 Primeiro que quando temos uma junção de concatenação (\monoespaco{\&})
-ou de linha reta (\monoespaco{-{}-}), o especificador de direção no
-segmento atual é irrelevante. No primeiro caso, porque duas
-extremidades concatenadas terão o mesmo ponto e por isso não há
-direção alguma entre eles. No segundo caso, o segmento será armazenado
-diretamente no formato final como uma linha reta sem precisar de
-especificadores de direção. Contudo, devemos colocar
-um \monoespaco{curl 1} implícito antes e depois dos pontos em tais
-casos. Basicamente transformamos as expressões abaixo:
+,de linha reta (\monoespaco{-{}-}), ou quando temos dois pontos
+idênticos em sequência, o especificador de direção no segmento atual é
+irrelevante. No primeiro caso, porque duas extremidades concatenadas
+terão o mesmo ponto e por isso não há direção alguma entre eles. No
+segundo caso, o segmento será armazenado diretamente no formato final
+como uma linha reta sem precisar de especificadores de direção. No
+terceiro caso, simplesmente temos um ponto redundante sendo escrito
+mais de uma vez em sequência e não existe nenhum espaço intermediário
+entre eles. Contudo, devemos colocar um \monoespaco{curl 1} implícito
+antes e depois dos pontos em tais casos. Basicamente transformamos as
+expressões abaixo:
 
 \alinhaverbatim
 z0 .. z1 & z2 .. z3
 z0 .. z1 -- z2 .. z3
+z0 .. z1 .. z1 .. z3
 \alinhanormal
 
 no código:
@@ -9195,14 +9199,17 @@ no código:
 \alinhaverbatim
 z0 .. {curl 1}z1 & z2{curl 1} .. z3
 z0 .. {curl 1}z1 -- z2{curl 1} .. z3
+z0 .. {curl 1}z1 .. z1{curl 1} .. z3
 \alinhanormal
 
 e isso é feito pelo código abaixo:
 
 \iniciocodigo
 @<Expressão de Caminho: Interpreta Direção se Existir@>+=
-if(begin_j == end_j && (begin_j -> type == TYPE_AMPERSAND ||
-                        begin_j -> type == TYPE_STRAIGHT_JOIN)){
+if((begin_j == end_j && (begin_j -> type == TYPE_AMPERSAND ||
+                        begin_j -> type == TYPE_STRAIGHT_JOIN)) ||
+   (z1_point -> prov.x == z2_point -> prov.x &&
+    z1_point -> prov.y == z2_point -> prov.y)){
   if(z0_point != NULL && z0_point -> format == PROVISIONAL_FORMAT &&
      isnan(z0_point -> prov.dir2_y)){
     z0_point -> prov.dir2_x = NAN;

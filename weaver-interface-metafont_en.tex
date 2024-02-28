@@ -9005,14 +9005,17 @@ resulting path all direction specifiers explicitly written in the path
 expression.  However, when no specifier explicit is placed, there are
 some rules that allow us to deduce implicit values ​​for them.
 
-Firstly, when we have a concatenation (\monoespaco{\&}) or straight
-line (\monoespaco{--}), the direction specifier is irrelevant in that
-segment. In the first case, the endpoints being concatenated are
-equal, therefore there is no direction between them. In the second
-case, the segment will be directly stored in the final format as a
-straight line, without needing a direction specifier.  However, we
-must place an implicit \monoespaco{curl 1} before and after the points
-being joined. Basically we transform the expressions below:
+Firstly, when we have a concatenation (\monoespaco{\&}), a straight
+line (\monoespaco{--}) or two identical points in succession, the
+direction specifier is irrelevant in that segment. In the first case,
+the endpoints being concatenated are equal, therefore there is no
+direction between them. In the second case, the segment will be
+directly stored in the final format as a straight line, without
+needing a direction specifier.  In the third case, we have a redundant
+point being repeated twice and there is no space between two copies of
+the same point. However, we must place an implicit \monoespaco{curl 1}
+before and after the points being joined. Basically we transform the
+expressions below:
 
 \alinhaverbatim
 z0 .. z1 & z2 .. z3
@@ -9030,8 +9033,10 @@ And this is done by the code below:
 
 \iniciocodigo
 @<Path Expression: Interpret Direction Specifiers@>+=
-if(begin_j == end_j && (begin_j -> type == TYPE_AMPERSAND ||
-                        begin_j -> type == TYPE_STRAIGHT_JOIN)){
+if((begin_j == end_j && (begin_j -> type == TYPE_AMPERSAND ||
+                        begin_j -> type == TYPE_STRAIGHT_JOIN)) ||
+   (z1_point -> prov.x == z2_point -> prov.x &&
+    z1_point -> prov.y == z2_point -> prov.y)){
   if(z0_point != NULL && z0_point -> format == PROVISIONAL_FORMAT &&
      isnan(z0_point -> prov.dir2_y)){
     z0_point -> prov.dir2_x = NAN;

@@ -7,7 +7,7 @@ path unitsquare;
 path a, b, c, d, e, f, g, h, i, j, k, l;
 numeric n;
 pair q, r, s;
-path m, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11;
+path m, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12;
 
 p1 = (1, 5);
 p2 = p1;
@@ -68,3 +68,4 @@ m10 = (4, 3) .. (2, 3) .. (3, 3) .. controls (1, 2) and (3, 4) ..
 % size == -4! Arrumado, mas há mais erros adiante
 m11 = (4, 3) .. (2, 4) .. (3, 3) .. controls (1, 2) and (3, 4) ..
   (4, 2) .. (5, 1) .. (6, 7) .. cycle;
+m12 = (0, 0) .. (1, 1) .. (1, 1) .. (1, 1) .. (2, 0);
