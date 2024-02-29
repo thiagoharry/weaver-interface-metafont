@@ -2913,8 +2913,8 @@ else if(begin -> type >= TYPE_T_BOOLEAN && begin -> type <= TYPE_T_NUMERIC){
   struct symbolic_token *variable = (struct symbolic_token *) (begin -> next);
   do{
     if(variable -> type != TYPE_SYMBOLIC){
-      RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL(variable -> line),
-                                 TYPE_SYMBOLIC, variable -> type);
+      RAISE_ERROR_INVALID_NAME(mf, cx, OPTIONAL(variable -> line),
+                               variable -> type);
       return false;
     }
     @<Insert Declared Variable@>
@@ -2938,6 +2938,42 @@ else if(begin -> type >= TYPE_T_BOOLEAN && begin -> type <= TYPE_T_NUMERIC){
   } while(variable != NULL);
   return true;
 }
+@
+\fimcodigo
+
+If the user tries to give an invalid name for the variable (a reserved
+keyword), the following error is raised:
+
+\iniciocodigo
+@<Types of Error@>+=
+ERROR_INVALID_NAME,
+@
+\fimcodigo
+
+Wen we raise this error, we store what kind of token we found instead
+of a symbolic token:
+
+\iniciocodigo
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_INVALID_NAME(mf, cx, line, token_type) {\
+  if(!mf -> errno){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INVALID_NAME);\
+    mf -> errno_int = token_type;}}
+@
+\fimcodigo
+
+And if the user asks what went wrong, we print an error message:
+
+\iniciocodigo
+@<Print Error Message@>+=
+case ERROR_INVALID_NAME:
+  fprintf(stderr, "%s:%s You cannot name a variable with a reserved "
+          "word or with non-symbolic tokens. Found '%s' as variable "
+          "name.", mf -> file, line_number,
+          ((mf -> errno_int < 8)?
+          (token_names_not_in_list_of_keywords[mf -> errno_int]):
+          (list_of_keywords[mf -> errno_int - 8])));
+  break;
 @
 \fimcodigo
 
@@ -9047,7 +9083,14 @@ if((begin_j == end_j && (begin_j -> type == TYPE_AMPERSAND ||
     z2_point -> prov.dir1_x = NAN;
     z2_point -> prov.dir1_y = 1.0;
   }
-
+  // If z1 == z2, we also place explicit control points if they do not exit:
+  if(z1_point -> prov.x == z2_point -> prov.x &&
+     z1_point -> prov.y == z2_point -> prov.y &&
+     z1_point -> format == PROVISIONAL_FORMAT){
+    z1_point -> format = FINAL_FORMAT;
+    z1_point -> point.u_x = z1_point -> point.v_x = z1_point -> point.x;
+    z1_point -> point.u_y = z1_point -> point.v_y = z1_point -> point.y;
+  }
 }
 @
 \fimcodigo
