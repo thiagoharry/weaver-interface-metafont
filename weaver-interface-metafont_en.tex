@@ -10699,18 +10699,14 @@ if(begin -> type == TYPE_POINT ||
     }
     end_num = end_num -> next;
   }
-  if(of == NULL){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s:%d: Missing 'of' in 'point' expression\n",
-            mf -> file, begin -> line);
-#endif
+  if(of == NULL){ // We did not find an 'of' before end of expression:
+    RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL(begin -> line),
+                               TYPE_SEMICOLON, TYPE_OF);
     return false;
   }
-  if(of -> next == NULL || of == end){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s:%d: Missing path expression in "
-            "'point' expression\n", mf -> file, begin -> line);
-#endif
+  if(of -> next == NULL || of == end){ // Expression ends after 'of':
+    RAISE_ERROR_UNEXPECTED_TOKEN(mf, cx, OPTIONAL(begin -> line),
+                                TYPE_SEMICOLON);
     return false;
   }
   begin_path = of -> next;
