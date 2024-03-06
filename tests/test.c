@@ -1301,6 +1301,8 @@ void test_pen_expressions(void){
   cx = init_context(mf);
   lexer(mf,  "tests/pen_expressions.mf", &first, &last);
   ret = eval_program(mf, cx, first, last);
+  if(!ret)
+    _Wprint_metafont_error(mf);
   p1 = (struct named_variable *) mf -> named_variables;
   p2 = p1 -> next;
   p3 = p2 -> next;

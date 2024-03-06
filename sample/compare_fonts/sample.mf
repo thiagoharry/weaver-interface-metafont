@@ -529,18 +529,18 @@ beginchar("4", (0.54+0.03*(weight-1)+0.03*italic+0.017*italic*(weight-1))*size*p
 endchar;
 beginchar("5", (0.47+0.055*(weight-1)+0.07*italic-0.023*italic*(weight-1))*size*pt, 0.668*size*pt, 0);
   pair p1, p2, p3, p4, p5, p6, p7, p8;
-  pickup pensquare yscaled ((0.119+0.063*(weight-1))*h) xscaled ((0.113+0.066*(weight-1))*h);
-  p1 = bot lft(0.946*w, h);
-  p2 = bot rt (0.126*h, h);
-  p3 = bot rt (0.039*w, 0.5*h);
+  pickup pensquare slanted (0.25*italic-0.02*italic*(weight-1)) yscaled ((0.119+0.063*(weight-1))*h) xscaled ((0.113+0.066*(weight-1))*h);
+  p1 = bot lft((0.946+0.054*italic)*w, h);
+  p2 = bot rt ((0.126-0.048*(weight-1)+0.055*italic)*h, h);
+  p3 = bot rt ((0.039-0.039*(weight-1)+0.021*italic-0.025*italic*(weight-1))*w, (0.5-0.05*(weight-1)-0.05*italic+0.05*italic*(weight-1))*h);
   draw p1--p2--p3;
   pickup pensquare yscaled ((0.119+0.063*(weight-1))*h) xscaled w;
   erase p3;
-  pickup pencircle scaled ((0.133+0.039*(weight-1))*h);
+  pickup pencircle yscaled ((0.133+0.039*(weight-1)-0.01*italic)*h) xscaled ((0.133+0.096*(weight-1)-0.01*italic-0.05*italic*(weight-1))*h);
   p4 = top (xpart p3 + 0.02*w, ypart p3);
-  p5 = bot (0.529*w, 0.679*h);
-  p6 = lft (w, 0.341*h);
-  p7 = top (0.493*w, 0);
+  p5 = bot ((0.529-0.016*italic)*w, 0.679*h);
+  p6 = lft ((1-0.112*italic)*w, 0.341*h);
+  p7 = top ((0.493-0.071*italic)*w, 0);
   p8 = rt (0, 0.24*h);
   draw p4..{1, 0}p5..{0, -1}p6..{-1, 0}p7..p8;
   % Erasing:
@@ -553,12 +553,38 @@ beginchar("5", (0.47+0.055*(weight-1)+0.07*italic-0.023*italic*(weight-1))*size*
   (0, 0.5);
   semicircle = semicircle & semicircle rotated 90 -- (0.5, 0) & cycle;
   eraser = makepen(semicircle);
-  pickup eraser scaled ((0.18+0.05*(weight-1))*h) rotated -196;
+  pickup eraser scaled ((0.18+0.07*(weight-1))*h) rotated (-196-3*(weight-1));
   erase p4;
-  pickup eraser scaled ((0.18+(0.05*(weight-1)))*h) rotated 16;
+  pickup eraser scaled ((0.18+(0.07*(weight-1)))*h) rotated 16;
   erase p8;
 endchar;
-beginchar("6", 0, 0, 0);
+beginchar("6", (0.483+0.05*(weight-1)+0.03*italic-0.017*italic*(weight-1))*size*pt, 0.68*size*pt, 0);
+  pair p1, p2, p3, p4, p5, p6, p7;
+  path circ;
+  pickup pencircle xscaled (0.126*h) yscaled (0.101*h);
+  p1 = (0.849*w, 0.827*h);
+  p2 = bot (0.546*w, h);
+  p3 = rt (0, 0.465*h);
+  p4 = rt (0.015*w, 0.332*h);
+  p5 = (0.508*w, 0);
+  draw p1..{-1, 0}p2..{0, -1}p3..(xpart p4, ypart p4 - 0.05*h);
+  pickup pencircle xscaled (0.13*h) yscaled (0.1*h);
+  p6 = lft (w, 0.332*h);
+  p7 = bot (0.55*w, 0.66*h);
+  circ = p4 .. {1, 0}top p5..{0, 1}p6..{-1, 0}p7..cycle;
+  draw circ;
+  % Erasing:
+  path semicircle;
+  pen eraser;
+  semicircle =   (0.5, 0)
+  .. controls (0.5, 0.13261) and (0.44733, 0.2598) ..
+  (0.35356, 0.35356)
+  .. controls (0.2598, 0.44733) and (0.13261, 0.5) ..
+  (0, 0.5);
+  semicircle = semicircle & semicircle rotated 90 -- (0.5, 0) & cycle;
+  eraser = makepen(semicircle);
+  pickup eraser xscaled ((0.13)*h) yscaled (0.11*h) rotated 197;
+  erase p1;
 endchar;
 beginchar("7", 0, 0, 0);
 endchar;

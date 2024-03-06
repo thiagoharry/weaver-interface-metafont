@@ -11004,7 +11004,7 @@ bool assign_pen_variable(struct metafont *mf,
   target -> indices = 0;
   target -> referenced = NULL;
   // Se estamos atribuindo para 'currentpen', devemos retriangular a caneta.
-  // Conforme descrito na Seção 10.
+  // Conforme descreveremos na Seção 10.
   if(target == &(mf -> internal_pen_variables[INTERNAL_PEN_CURRENTPEN]))
     triangulate_pen(mf, target, target -> gl_matrix);
   return true;
@@ -11028,8 +11028,8 @@ algumas linhas para detectar erros comuns):
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
 bool eval_pen_expression(struct metafont *mf, struct context *cx,
-                        struct generic_token *begin_expression,
-                        struct generic_token *end_token_list,
+                        struct generic_token *begin,
+                        struct generic_token *end,
                         struct pen_variable *result);
 @
 \fimcodigo
@@ -11037,21 +11037,17 @@ bool eval_pen_expression(struct metafont *mf, struct context *cx,
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
 bool eval_pen_expression(struct metafont *mf, struct context *cx,
-                        struct generic_token *begin_expression,
-                        struct generic_token *end_token_list,
+                        struct generic_token *begin,
+                        struct generic_token *end,
                         struct pen_variable *result){
-  if(begin_expression -> type != TYPE_SYMBOLIC &&
-     begin_expression -> type != TYPE_NULLPEN &&
-     begin_expression -> type != TYPE_OPEN_PARENTHESIS &&
-     begin_expression -> type != TYPE_PENCIRCLE &&
-     begin_expression -> type != TYPE_MAKEPEN){
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognized pen expression.\n",
-          mf -> file, begin_expression -> line);
-#endif
+  if(begin -> type != TYPE_SYMBOLIC && begin -> type != TYPE_NULLPEN &&
+     begin -> type != TYPE_OPEN_PARENTHESIS &&
+     begin -> type != TYPE_PENCIRCLE && begin -> type != TYPE_MAKEPEN){
+    RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(begin -> line),
+                                   TYPE_T_PEN);
     return false;
   }
-  return eval_pen_secondary(mf, cx, begin_expression, end_token_list, result);
+  return eval_pen_secondary(mf, cx, begin, end, result);
 }
 @
 \fimcodigo
@@ -11085,8 +11081,8 @@ A declaração da função que avaliará expressões secundárias de caneta
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
 bool eval_pen_secondary(struct metafont *mf, struct context *cx,
-                        struct generic_token *begin_expression,
-                        struct generic_token *end_token_list,
+                        struct generic_token *begin,
+                        struct generic_token *end,
                         struct pen_variable *result);
 @
 \fimcodigo
@@ -11100,13 +11096,13 @@ realizamos a transformação adequada:
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
 bool eval_pen_secondary(struct metafont *mf, struct context *cx,
-                        struct generic_token *begin_expression,
-                        struct generic_token *end_expression,
+                        struct generic_token *begin,
+                        struct generic_token *end,
                         struct pen_variable *pen){
   DECLARE_NESTING_CONTROL();
   struct generic_token *p, *prev = NULL, *last_transformer = NULL,
-                       *before_last_transformer = begin_expression;
-  p = begin_expression;
+                       *before_last_transformer = begin;
+  p = begin;
   do{
     COUNT_NESTING(p);
     if(IS_NOT_NESTED() && (p -> type == TYPE_ROTATED ||
@@ -11118,15 +11114,15 @@ bool eval_pen_secondary(struct metafont *mf, struct context *cx,
       before_last_transformer = prev;
     }
     prev = p;
-    if(p != end_expression)
+    if(p != end)
       p = (struct generic_token *) p -> next;
     else
       p = NULL;
   }while(p != NULL);
   if(last_transformer == NULL)
-    return eval_pen_primary(mf, cx, begin_expression, end_expression, pen);
+    return eval_pen_primary(mf, cx, begin, end, pen);
   else{
-    if(!eval_pen_secondary(mf, cx, begin_expression, before_last_transformer, pen))
+    if(!eval_pen_secondary(mf, cx, begin, before_last_transformer, pen))
       return false;
     if(last_transformer -> type == TYPE_ROTATED){
       @<Secundário de Caneta: Rotação@>
@@ -11152,10 +11148,8 @@ bool eval_pen_secondary(struct metafont *mf, struct context *cx,
     else if(last_transformer -> type == TYPE_TRANSFORMED){
       @<Secundário de Caneta: Transformação Genérica@>
     }
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognized pen transformer\n",
-            mf -> file, begin_expression -> line);
-#endif
+    RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(begin -> line),
+                                   TYPE_T_PEN);
     return false;
   }
 }
@@ -11172,7 +11166,7 @@ transformação da caneta:
 @<Secundário de Caneta: Rotação@>=
 struct numeric_variable r;
 double rotation;
-if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &r))
+if(!eval_numeric_primary(mf, cx, last_transformer -> next, end, &r))
   return false;
 rotation = 0.017453292519943295 * r.value;
 TRANSFORM_ROTATE(pen -> gl_matrix, rotation);
@@ -11186,7 +11180,7 @@ sobre a matriz da caneta:
 \iniciocodigo
 @<Secundário de Caneta: Escala@>=
 struct numeric_variable a;
-if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &a))
+if(!eval_numeric_primary(mf, cx, last_transformer -> next, end, &a))
   return false;
 TRANSFORM_SCALE(pen -> gl_matrix, a.value);
 // Canetas curvas devem ser retrianguladas se aumentam de tamanho:
@@ -11205,7 +11199,7 @@ vertical é tratada abaixo:
 \iniciocodigo
 @<Secundário de Caneta: Deslocamento@>=
 struct pair_variable p;
-if(!eval_pair_primary(mf, cx, last_transformer -> next, end_expression, &p))
+if(!eval_pair_primary(mf, cx, last_transformer -> next, end, &p))
   return false;
 TRANSFORM_SHIFT(pen -> gl_matrix, p.x, p.y);
 return true;
@@ -11217,7 +11211,7 @@ O próximo transformador é a inclinação.
 \iniciocodigo
 @<Secundário de Caneta: Inclinação@>=
 struct numeric_variable a;
-if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &a))
+if(!eval_numeric_primary(mf, cx, last_transformer -> next, end, &a))
   return false;
 TRANSFORM_SLANT(pen -> gl_matrix, a.value);
 // Inclinar canetas curvas não-circulares requer retriangulação:
@@ -11238,7 +11232,7 @@ horizontal:
 \iniciocodigo
 @<Secundário de Caneta: X-Escala@>=
 struct numeric_variable a;
-if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &a))
+if(!eval_numeric_primary(mf, cx, last_transformer -> next, end, &a))
   return false;
 TRANSFORM_SCALE_X(pen -> gl_matrix, a.value);
 // Canetas curvas devem ser retrianguladas se aumentam de tamanho:
@@ -11257,7 +11251,7 @@ abaixo:
 \iniciocodigo
 @<Secundário de Caneta: Y-Escala@>=
 struct numeric_variable a;
-if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &a))
+if(!eval_numeric_primary(mf, cx, last_transformer -> next, end, &a))
   return false;
 TRANSFORM_SCALE_Y(pen -> gl_matrix, a.value);
 // Canetas curvas devem ser retrianguladas se aumentam de tamanho:
@@ -11282,7 +11276,7 @@ Podemos então realizar a operação acima usando o código abaixo:
 \iniciocodigo
 @<Secundário de Caneta: Z-Escala@>=
 struct pair_variable p;
-if(!eval_pair_primary(mf, cx, last_transformer -> next, end_expression, &p))
+if(!eval_pair_primary(mf, cx, last_transformer -> next, end, &p))
   return false;
 TRANSFORM_SCALE_Z(pen -> gl_matrix, p.x, p.y);
 // Canetas curvas devem ser retrianguladas neste caso:
@@ -11301,7 +11295,7 @@ transformação linear que está armazenada em um transformador:
 \iniciocodigo
 @<Secundário de Caneta: Transformação Genérica@>=
 struct transform_variable t;
-if(!eval_transform_primary(mf, cx, last_transformer -> next, end_expression, &t))
+if(!eval_transform_primary(mf, cx, last_transformer -> next, end, &t))
   return false;
 MATRIX_MULTIPLICATION(pen -> gl_matrix, t.value);
 // Canetas curvas devem ser retrianguladas neste caso:
@@ -11350,8 +11344,8 @@ A função que irá interpretar expressões primárias de caneta é:
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
 bool eval_pen_primary(struct metafont *mf, struct context *cx,
-                      struct generic_token *begin_expression,
-                      struct generic_token *end_expression,
+                      struct generic_token *begin,
+                      struct generic_token *end,
                       struct pen_variable *result);
 @
 \fimcodigo
@@ -11361,33 +11355,31 @@ E sua implementação:
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
 bool eval_pen_primary(struct metafont *mf, struct context *cx,
-                      struct generic_token *begin_expression,
-                      struct generic_token *end_expression,
+                      struct generic_token *begin,
+                      struct generic_token *end,
                       struct pen_variable *result){
-  if(begin_expression == end_expression){
-    if(begin_expression -> type == TYPE_SYMBOLIC){
+  if(begin == end){
+    if(begin -> type == TYPE_SYMBOLIC){
       @<Caneta Primária: Variável@>
     }
-    else if(begin_expression -> type == TYPE_NULLPEN){
+    else if(begin -> type == TYPE_NULLPEN){
       @<Caneta Primária: Caneta Nula@>
     }
-    else if(begin_expression -> type == TYPE_PENCIRCLE){
+    else if(begin -> type == TYPE_PENCIRCLE){
       @<Caneta Primária: Caneta Circular@>
     }
   }
   else{
-    if(begin_expression -> type == TYPE_OPEN_PARENTHESIS &&
-      end_expression -> type == TYPE_CLOSE_PARENTHESIS){
+    if(begin -> type == TYPE_OPEN_PARENTHESIS &&
+      end -> type == TYPE_CLOSE_PARENTHESIS){
       @<Caneta Primária: Parênteses@>
     }
-    else if(begin_expression -> type == TYPE_MAKEPEN){
+    else if(begin -> type == TYPE_MAKEPEN){
       @<Caneta Primária: Formato Personalizado@>
     }
   }
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognized pen expression.\n",
-          mf -> file, begin_expression -> line);
-#endif
+  RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(begin -> line),
+                                 TYPE_T_PEN);
   return false;
 }
 @
@@ -11401,20 +11393,20 @@ matriz da variável que aponta pela matriz obtida copiada.
 
 \iniciocodigo
 @<Caneta Primária: Variável@>=
-struct symbolic_token *v = (struct symbolic_token *) begin_expression;
+struct symbolic_token *v = (struct symbolic_token *) begin;
 struct pen_variable *content = v -> var, *to_copy = v -> var;
 if(content == NULL){
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s:%d: Using unknown variable '%s'.\n",
-          mf -> file, begin_expression -> line, v -> value);
-#endif
+  RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, OPTIONAL(v -> line), v -> value);
   return false;
 }
 if(content -> type != TYPE_T_PEN){
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s:%d: Got non-pen variable (%d) in pen expression.\n",
-          mf -> file, begin_expression -> line, content -> type);
-#endif
+  RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, OPTIONAL(v -> line), v -> value, 
+                                 ((struct variable *)(v -> var)) -> type,
+                                 TYPE_T_PEN);
+  return false;
+}
+if(content -> format == NULL && content -> flags == false){
+  RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, OPTIONAL(v -> line), v -> value);
   return false;
 }
 if(content -> referenced != NULL)
@@ -11468,20 +11460,18 @@ do fechar parênteses:
 
 \iniciocodigo
 @<Caneta Primária: Parênteses@>=
-struct generic_token *t = begin_expression -> next;
+struct generic_token *t = begin -> next;
 DECLARE_NESTING_CONTROL();
-if(begin_expression -> next == end_expression){
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s:%d: Empty parenthesis.\n",
-          mf -> file, begin_expression -> line);
-#endif
+if(begin -> next == end){ // Parênteses vazio: '()':
+  RAISE_ERROR_EMPTY_DELIMITER(mf, cx, OPTIONAL(begin -> line), '(');
   return false;
 }
-while(t != NULL && t -> next != end_expression){
+while(t != NULL && t -> next != end){
   COUNT_NESTING(t);
   t = t -> next;
 }
-return eval_pen_expression(mf, cx, begin_expression -> next, t, result);
+RAISE_ERROR_AND_EXIT_IF_WRONG_NESTING(mf, cx, OPTIONAL(begin -> line));
+return eval_pen_expression(mf, cx, begin -> next, t, result);
 @
 \fimcodigo
 
@@ -11492,24 +11482,17 @@ formato:
 
 \iniciocodigo
 @<Caneta Primária: Formato Personalizado@>=
-struct generic_token *p = begin_expression -> next;
+struct generic_token *p = begin -> next;
 result -> format =
         (struct path_variable *) temporary_alloc(sizeof(struct path_variable));
 if(result -> format == NULL){
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s:%d: Not enough memory.\n",
-          mf -> file, begin_expression -> line);
-#endif
+  RAISE_ERROR_NO_MEMORY(mf, cx, OPTIONAL(begin -> line));
   return false;
 }
-if(!eval_path_primary(mf, cx, p, end_expression, result -> format))
+if(!eval_path_primary(mf, cx, p, end, result -> format))
   return false;
 if(!(result -> format -> cyclic)){
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr,
-          "METAFONT: Error: %s:%d: Using 'makepen' with non-cyclic path.\n",
-          mf -> file, begin_expression -> line);
-#endif
+  RAISE_ERROR_NONCYCLICAL_PEN(mf, cx, OPTIONAL(begin -> line));
   return false;
 }
 result -> flags = read_flags(result -> format); // Função a ser implemementada
@@ -11521,9 +11504,39 @@ return true;
 @
 \fimcodigo
 
-O que falta implementar para que o código acima funcione é a função
-que percorra os pontos de uma variável de caminho e retorne quais
-flags teria uma caneta com aquele formato.
+Nesta expressão podemos encontrar um novo tipo de erro:
+
+\iniciocodigo
+@<Tipos de Erros@>+=
+ERROR_NONCYCLICAL_PEN,
+@
+\fimcodigo
+
+Ela só ocorre quando tenta-se criar uma caneta com um formato
+representado por caminho não-cíclico:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_NONCYCLICAL_PEN(mf, cx, line) {\
+  RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NO_MEMORY);}
+@
+\fimcodigo
+
+A mensagem de erro para o usuário:
+
+\iniciocodigo
+@<Imprime Mensagem de Erro@>+=
+case ERROR_NONCYCLICAL_PEN:
+  fprintf(stderr, "%s:%s Tried to create a pen with non-cyclical format.",
+          mf -> file, line_number);
+  break;
+@
+\fimcodigo
+
+O que falta implementar para que o código de criação de canetas
+personalizadas funcione é a função que percorra os pontos de uma
+variável de caminho e retorne quais flags teria uma caneta com aquele
+formato.
 
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
@@ -11593,7 +11606,7 @@ int read_flags(struct path_variable *path){
           if(positive_cross_product == -1)
             positive_cross_product = (z_cross_product > 0);
           else if((z_cross_product > 0) != positive_cross_product){
-            //flag -= FLAG_CONVEX;
+            flag -= FLAG_CONVEX;
             break;
           }
         }
@@ -11645,10 +11658,8 @@ então precisamos gerar um caminho novo, já que não temos caminho nenhum:
 else if(begin -> type == TYPE_MAKEPATH){
   struct pen_variable tmp;
   if(begin -> next == NULL || begin == end){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable "
-            "expression.\n",  mf -> file, begin -> line);
-#endif
+    RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(begin -> line),
+                                   TYPE_T_PATH);
     return false;
   }
   if(!eval_pen_primary(mf, cx, begin -> next, end, &tmp))
@@ -12040,6 +12051,8 @@ E podemos usar esta função para inicializar nosso programa de shader padrão:
 @<Inicialização WEAVEFONT@>+=
 {
   program = compile_shader_program(vertex_shader, fragment_shader);
+  if(program == 0)
+    return false;
   uniform_matrix = glGetUniformLocation(program, "model_view_matrix");
   uniform_texture = glGetUniformLocation(program, "texture1");
 }
@@ -12084,9 +12097,6 @@ bool get_new_framebuffer(GLuint *new_framebuffer, GLuint *new_texture,
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
                          *new_texture, 0);
   if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: OpenGL cannot create framebuffer!\n");
-#endif
     glBindTexture(GL_TEXTURE_2D, 0);
     return false;
   }
@@ -12163,7 +12173,7 @@ texturas:
 
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
-void assign_picture_variable(struct metafont *mf,
+bool assign_picture_variable(struct metafont *mf,
                              struct picture_variable *target,
                              struct picture_variable *source);
 @
@@ -12173,7 +12183,7 @@ E a sua implementação:
 
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
-void assign_picture_variable(struct metafont *mf,
+bool assign_picture_variable(struct metafont *mf,
                              struct picture_variable *target,
                              struct picture_variable *source){
   GLuint temporary_framebuffer;
@@ -12184,8 +12194,11 @@ void assign_picture_variable(struct metafont *mf,
   if(target -> texture != 0)
     glDeleteTextures(1, &(target -> texture));
   glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &previous_framebuffer);
-  get_new_framebuffer(&temporary_framebuffer, &(target -> texture),
-                      source -> width, source -> height);
+  if(!get_new_framebuffer(&temporary_framebuffer, &(target -> texture),
+                          source -> width, source -> height)){
+    RAISE_ERROR_OPENGL_FRAMEBUFFER(mf, NULL, 0);
+    return false;
+  }
   render_picture(source, model_view_matrix, source -> width, source -> height, true);
   // Finalizando
   glBindTexture(GL_TEXTURE_2D, 0);
@@ -12196,7 +12209,38 @@ void assign_picture_variable(struct metafont *mf,
     // O código abaixo será definido na Subseção 11.2:
     @<Gera nova 'currentpicture'@>
   }
+  return true;
 }
+@
+\fimcodigo
+
+O único erro que pode ocorrer acima é um erro no OpenGL, caso não seja
+possível criar um framebuffer. Isso é algo que definitivamente não
+deve acontecer. Mas se acontecer, o erro gerado é este:
+
+\iniciocodigo
+@<Tipos de Erros@>+=
+ERROR_OPENGL_FRAMEBUFFER,
+@
+\fimcodigo
+
+Gerar este erro é feito pela macro:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_OPENGL_FRAMEBUFFER(mf, cx, line) {\
+  RAISE_GENERIC_ERROR(mf, cx, line, ERROR_OPENGL_FRAMEBUFFER);}
+@
+\fimcodigo
+
+E a mensagem de erro para o usuário é:
+
+\iniciocodigo
+@<Imprime Mensagem de Erro@>+=
+case ERROR_OPENGL_FRAMEBUFFER:
+  fprintf(stderr, "%s:%s OpenGL error. Couldn't create framebuffer for image.",
+          mf -> file, line_number);
+  break;
 @
 \fimcodigo
 
@@ -12224,8 +12268,8 @@ A função que avalia expressões terciárias de imagem:
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
 bool eval_picture_expression(struct metafont *mf, struct context *cx,
-                             struct generic_token *begin_expression,
-                             struct generic_token *end_token_list,
+                             struct generic_token *begin,
+                             struct generic_token *end,
                              struct picture_variable *result);
 @
 \fimcodigo
@@ -12240,15 +12284,15 @@ soma ou subtração.
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
 bool eval_picture_expression(struct metafont *mf, struct context *cx,
-                             struct generic_token *begin_expression,
-                             struct generic_token *end_expression,
+                             struct generic_token *begin,
+                             struct generic_token *end,
                              struct picture_variable *result){
   DECLARE_NESTING_CONTROL();
-  struct generic_token *p = begin_expression, *prev = NULL;
+  struct generic_token *p = begin, *prev = NULL;
   struct generic_token *last_operator = NULL, *before_last_operator = NULL;
-  while(p != end_expression){
+  while(p != end){
     COUNT_NESTING(p);
-    if(IS_NOT_NESTED() && p != begin_expression &&
+    if(IS_NOT_NESTED() && p != begin &&
        (p -> type == TYPE_SUM || p -> type == TYPE_SUBTRACT) &&
        prev -> type != TYPE_SUM && prev -> type != TYPE_SUBTRACT){
       last_operator = p;
@@ -12266,15 +12310,12 @@ bool eval_picture_expression(struct metafont *mf, struct context *cx,
   else{
     struct picture_variable a, b;
     struct picture_variable *sec = &b;
-    if(last_operator == end_expression){
-#if defined(W_DEBUG_METAFONT)
-      fprintf(stderr, "METAFONT: Error: %s:%d: Incomplete picture expression "
-                      "ending with '+' or '-'.\n",
-              mf -> file, begin_expression -> line);
-#endif
+    if(last_operator == end){
+      RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(begin -> line),
+                                     TYPE_T_PICTURE);
       return false;
     }
-    if(!eval_picture_expression(mf, cx, begin_expression, before_last_operator, &a))
+    if(!eval_picture_expression(mf, cx, begin, before_last_operator, &a))
       return false;
     @<Imagem: Avalia Expressão Secundária em 'sec'@>
     @<Expressão de Imagem: Soma ou Subtração@>
@@ -12474,16 +12515,17 @@ somente se a matriz passada for modificada.
   bool modified = false;
   INITIALIZE_IDENTITY_MATRIX(matrix);
   if(last_operator == NULL){
-     if(!eval_picture_secondary(mf, cx, begin_expression, end_expression, sec,
-                             matrix, &modified))
+     if(!eval_picture_secondary(mf, cx, begin, end, sec, matrix, &modified))
       return false;
   }
   else if(!eval_picture_secondary(mf, cx, last_operator -> next,
-                                  end_expression, sec, matrix, &modified))
+                                  end, sec, matrix, &modified))
     return false;
   if(modified){
-    if(!apply_image_transformation(mf, result, sec, matrix))
+    if(!apply_image_transformation(mf, result, sec, matrix)){
+      RAISE_ERROR_OPENGL_FRAMEBUFFER(mf, cx, OPTIONAL(begin -> line));
       return false;
+    }
     if(sec -> texture != 0)
       glDeleteTextures(1, &(sec -> texture));
   }
@@ -12501,8 +12543,8 @@ A declaração da função que avalia expressões secundárias de imagem é:
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
 bool eval_picture_secondary(struct metafont *mf, struct context *cx,
-                            struct generic_token *begin_expression,
-                            struct generic_token *end_token_list,
+                            struct generic_token *begin,
+                            struct generic_token *end,
                             struct picture_variable *result,
                             float *matrix, bool *modified);
 @
@@ -12517,14 +12559,14 @@ secundária e aplicamos a transformação:
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
 bool eval_picture_secondary(struct metafont *mf, struct context *cx,
-                            struct generic_token *begin_expression,
-                            struct generic_token *end_expression,
+                            struct generic_token *begin,
+                            struct generic_token *end,
                             struct picture_variable *result,
                             float *matrix, bool *modified){
   DECLARE_NESTING_CONTROL();
   struct generic_token *p, *prev = NULL, *last_transformer = NULL,
-                       *before_last_transformer = begin_expression;
-  p = begin_expression;
+                       *before_last_transformer = begin;
+  p = begin;
   do{
     COUNT_NESTING(p);
     if(IS_NOT_NESTED() && (p -> type == TYPE_ROTATED ||
@@ -12536,16 +12578,16 @@ bool eval_picture_secondary(struct metafont *mf, struct context *cx,
       before_last_transformer = prev;
     }
     prev = p;
-    if(p != end_expression)
+    if(p != end)
       p = (struct generic_token *) p -> next;
     else
       p = NULL;
   }while(p != NULL);
   if(last_transformer == NULL)
-    return eval_picture_primary(mf, cx, begin_expression, end_expression, result);
+    return eval_picture_primary(mf, cx, begin, end, result);
   else{
-    if(!eval_picture_secondary(mf, cx, begin_expression,
-                               before_last_transformer, result, matrix, modified))
+    if(!eval_picture_secondary(mf, cx, begin, before_last_transformer, result,
+                               matrix, modified))
       return false;
     if(last_transformer -> type == TYPE_ROTATED){
       @<Secundário de Imagem: Rotação@>
@@ -12571,10 +12613,8 @@ bool eval_picture_secondary(struct metafont *mf, struct context *cx,
     else if(last_transformer -> type == TYPE_TRANSFORMED){
       @<Secundário de Imagem: Transformação Genérica@>
     }
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognized picture transformer\n",
-            mf -> file, begin_expression -> line);
-#endif
+    RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(begin -> line),
+                                   TYPE_T_PICTURE);
     return false;
   }
 }
@@ -12591,7 +12631,7 @@ Esta é a mudança de escala:
 \iniciocodigo
 @<Secundário de Imagem: Escala@>=
 struct numeric_variable a;
-if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &a))
+if(!eval_numeric_primary(mf, cx, last_transformer -> next, end, &a))
   return false;
 TRANSFORM_SCALE(matrix, a.value);
 *modified = true;
@@ -12605,7 +12645,7 @@ Este é o código que realiza a rotação:
 @<Secundário de Imagem: Rotação@>=
 struct numeric_variable r;
 double rotation;
-if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &r))
+if(!eval_numeric_primary(mf, cx, last_transformer -> next, end, &r))
   return false;
 rotation = 0.017453292519943295 * r.value;
 TRANSFORM_ROTATE(matrix, rotation);
@@ -12622,7 +12662,7 @@ coordenadas OpenGL que dependem do tamanho da imagem:
 \iniciocodigo
 @<Secundário de Imagem: Deslocamento@>=
 struct pair_variable p;
-if(!eval_pair_primary(mf, cx, last_transformer -> next, end_expression, &p))
+if(!eval_pair_primary(mf, cx, last_transformer -> next, end, &p))
   return false;
 p.x = 2.0 * (p.x / result -> width);
 p.y = 2.0 * (p.y / result -> height);
@@ -12637,7 +12677,7 @@ O código que inclina uma imagem:
 \iniciocodigo
 @<Secundário de Imagem: Inclinação@>=
 struct numeric_variable a;
-if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &a))
+if(!eval_numeric_primary(mf, cx, last_transformer -> next, end, &a))
   return false;
 TRANSFORM_SLANT(matrix, a.value);
 *modified = true;
@@ -12650,7 +12690,7 @@ O código que muda a escala somente no eixo $x$:
 \iniciocodigo
 @<Secundário de Imagem: X-Escala@>=
 struct numeric_variable a;
-if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &a))
+if(!eval_numeric_primary(mf, cx, last_transformer -> next, end, &a))
   return false;
 TRANSFORM_SCALE_X(matrix, a.value);
 *modified = true;
@@ -12663,7 +12703,7 @@ O código que muda a escala somente no eixo $y$:
 \iniciocodigo
 @<Secundário de Imagem: Y-Escala@>=
 struct numeric_variable a;
-if(!eval_numeric_primary(mf, cx, last_transformer -> next, end_expression, &a))
+if(!eval_numeric_primary(mf, cx, last_transformer -> next, end, &a))
   return false;
 TRANSFORM_SCALE_Y(matrix, a.value);
 *modified = true;
@@ -12677,7 +12717,7 @@ complexo:
 \iniciocodigo
 @<Secundário de Imagem: Z-Escala@>=
 struct pair_variable p;
-if(!eval_pair_primary(mf, cx, last_transformer -> next, end_expression, &p))
+if(!eval_pair_primary(mf, cx, last_transformer -> next, end, &p))
   return false;
 TRANSFORM_SCALE_Z(matrix, p.x, p.y);
 *modified = true;
@@ -12691,8 +12731,7 @@ armazenada em um transformador:
 \iniciocodigo
 @<Secundário de Imagem: Transformação Genérica@>=
 struct transform_variable t;
-if(!eval_transform_primary(mf, cx, last_transformer -> next, end_expression,
-                           &t))
+if(!eval_transform_primary(mf, cx, last_transformer -> next, end, &t))
   return false;
 MATRIX_MULTIPLICATION(matrix, t.value);
 *modified = true;
@@ -12793,8 +12832,9 @@ bool apply_image_transformation(struct metafont *mf,
   }
   // Gerando textura inicial, framebuffer
   glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &previous_framebuffer);
-  get_new_framebuffer(&temporary_framebuffer, &(dst -> texture), dst -> width,
-                    dst -> height);
+  if(!get_new_framebuffer(&temporary_framebuffer, &(dst -> texture), dst -> width,
+                         dst -> height))
+    return false;
   // Renderizando:
   render_picture(origin, matrix, dst -> width, dst -> height, true);
   // Finalização
@@ -12842,8 +12882,8 @@ A função que irá interpretar expressões primárias de imagem é:
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
 bool eval_picture_primary(struct metafont *mf, struct context *cx,
-                          struct generic_token *begin_expression,
-                          struct generic_token *end_expression,
+                          struct generic_token *begin,
+                          struct generic_token *end,
                           struct picture_variable *result);
 @
 \fimcodigo
@@ -12853,36 +12893,34 @@ E sua implementação:
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
 bool eval_picture_primary(struct metafont *mf, struct context *cx,
-                         struct generic_token *begin_expression,
-                         struct generic_token *end_expression,
+                         struct generic_token *begin,
+                         struct generic_token *end,
                          struct picture_variable *result){
-  if(begin_expression == end_expression){
-    if(begin_expression -> type == TYPE_SYMBOLIC){
+  if(begin == end){
+    if(begin -> type == TYPE_SYMBOLIC){
       @<Imagem Primária: Variável@>
     }
   }
   else{
-    if(begin_expression -> type == TYPE_OPEN_PARENTHESIS &&
-      end_expression -> type == TYPE_CLOSE_PARENTHESIS){
+    if(begin -> type == TYPE_OPEN_PARENTHESIS &&
+      end -> type == TYPE_CLOSE_PARENTHESIS){
       @<Imagem Primária: Parênteses@>
     }
-    else if(begin_expression -> type == TYPE_NULLPICTURE){
+    else if(begin -> type == TYPE_NULLPICTURE){
       @<Imagem Primária: Imagem em Branco@>
     }
-    else if(begin_expression -> type == TYPE_SUM){
+    else if(begin -> type == TYPE_SUM){
       @<Imagem Primária: Identidade@>
     }
-    else if(begin_expression -> type == TYPE_SUBTRACT){
+    else if(begin -> type == TYPE_SUBTRACT){
       @<Imagem Primária: Inverso@>
     }
-    else if(begin_expression -> type == TYPE_SUBPICTURE){
+    else if(begin -> type == TYPE_SUBPICTURE){
       @<Imagem Primária: Subimagem@>
     }
   }
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognized picture expression.\n",
-          mf -> file, begin_expression -> line);
-#endif
+  RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(begin -> line),
+                                 TYPE_T_PICTURE);
   return false;
 }
 @
@@ -12899,21 +12937,20 @@ GLint previous_framebuffer;
 float identity_matrix[9] = {1.0, 0.0, 0.0,
                              0.0, 1.0, 0.0,
                              0.0, 0.0, 1.0};
-struct symbolic_token *v = (struct symbolic_token *) begin_expression;
+struct symbolic_token *v = (struct symbolic_token *) begin;
 struct picture_variable *content = v -> var;
 if(content == NULL){
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s:%d: Using unknown variable '%s'.\n",
-          mf -> file, begin_expression -> line, v -> value);
-#endif
+  RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, OPTIONAL(v -> line), v -> value);
+  return false;
+}
+if(content -> width == -1 && content -> height == -1){
+  RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, OPTIONAL(v -> line), v -> value);
   return false;
 }
 if(content -> type != TYPE_T_PICTURE){
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s:%d: Got non-picture variable (%d) in "
-                  "picture expression.\n",
-          mf -> file, begin_expression -> line, content -> type);
-#endif
+  RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, OPTIONAL(v -> line), v -> value, 
+                                 ((struct variable *)(v -> var)) -> type,
+                                 TYPE_T_PICTURE);
   return false;
 }
 // Preparar renderização:
@@ -12938,20 +12975,14 @@ e o final:
 
 \iniciocodigo
 @<Imagem Primária: Parênteses@>=
-struct generic_token *t = begin_expression -> next;
-DECLARE_NESTING_CONTROL();
-if(begin_expression -> next == end_expression){
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s:%d: Empty parenthesis.\n",
-          mf -> file, begin_expression -> line);
-#endif
+struct generic_token *t = begin -> next;
+if(begin -> next == end){
+  RAISE_ERROR_EMPTY_DELIMITER(mf, cx, OPTIONAL(begin -> line), '(');
   return false;
 }
-while(t != NULL && t -> next != end_expression){
-  COUNT_NESTING(t);
+while(t != NULL && t -> next != end)
   t = t -> next;
-}
-return eval_picture_expression(mf, cx, begin_expression -> next, t, result);
+return eval_picture_expression(mf, cx, begin -> next, t, result);
 @
 \fimcodigo
 
@@ -12966,13 +12997,10 @@ seu tamanho e em seguida criar uma textura vazia com tal tamanho.
 struct generic_token *begin_pair_expression, *end_pair_expression;
 struct pair_variable p;
 unsigned char *data;
-begin_pair_expression = begin_expression -> next;
-end_pair_expression = end_expression;
-if(begin_expression == end_expression){
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s:%d: Missing pair expression.\n",
-          mf -> file, begin_expression -> line);
-#endif
+begin_pair_expression = begin -> next;
+end_pair_expression = end;
+if(begin == end){
+  RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(begin -> line), TYPE_T_PAIR);
   return false;
 }
 if(!eval_pair_primary(mf, cx, begin_pair_expression, end_pair_expression, &p))
@@ -12981,9 +13009,7 @@ result -> width = p.x;
 result -> height = p.y;
 data = temporary_alloc(p.x * p.y * 4);
 if(data == NULL){
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: Not enough memory.\n");
-#endif
+  RAISE_ERROR_NO_MEMORY(mf, cx, OPTIONAL(begin -> line));
   return false;
 }
 // Pintando a nova textura de branco
@@ -13015,15 +13041,13 @@ ignorar ele e avaliar os tokens restantes:
 
 \iniciocodigo
 @<Imagem Primária: Identidade@>=
-struct generic_token *p = begin_expression -> next;
-if(begin_expression == end_expression){
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s:%d: Missing image expression "
-                  "after '+'.\n", mf -> file, begin_expression -> line);
-#endif
+struct generic_token *p = begin -> next;
+if(begin == end){
+  RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(begin -> line),
+                                 TYPE_T_PICTURE);
   return false;
 }
-return eval_picture_primary(mf, cx, p, end_expression, result);
+return eval_picture_primary(mf, cx, p, end, result);
 @
 \fimcodigo
 
@@ -13043,14 +13067,12 @@ GLint previous_framebuffer;
 float identity_matrix[9] = {1.0, 0.0, 0.0,
                              0.0, 1.0, 0.0,
                              0.0, 0.0, 1.0};
-if(begin_expression == end_expression){
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s:%d: Missing picture expression after "
-                  "'-'.\n", mf -> file, begin_expression -> line);
-#endif
+if(begin == end){
+  RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(begin -> line),
+                                 TYPE_T_PICTURE);
   return false;
 }
-if(!eval_picture_primary(mf, cx, begin_expression -> next, end_expression, &p))
+if(!eval_picture_primary(mf, cx, begin -> next, end, &p))
   return false;
 // Preparar renderização:
 result -> width = p.width;
@@ -13111,19 +13133,15 @@ de auxílio aparecem, mas na ordem errada ou sem expressões entre eles:
   struct generic_token *begin_pair1 = NULL, *end_pair1 = NULL,
                        *begin_pair2 = NULL, *end_pair2 = NULL,
                        *begin_pic = NULL, *end_pic = NULL,
-                       *p = begin_expression -> next,
-                       *last_token = begin_expression;
+                       *p = begin -> next,
+                       *last_token = begin;
   int state = 0;
   begin_pair1 = p;
-  while(p != end_expression && p != NULL){
+  while(p != end && p != NULL){
     COUNT_NESTING(p);
     if(IS_NOT_NESTED() && p -> type == TYPE_AND){
       if(state != 0 || last_token -> type == TYPE_SUBPICTURE){
-#if defined(W_DEBUG_METAFONT)
-        fprintf(stderr,
-                "METAFONT: Error: %s:%d: Malformed subpicture expression.\n",
-                mf -> file, p -> line);
-#endif
+        RAISE_ERROR_UNEXPECTED_TOKEN(mf, cx, OPTIONAL(p -> line), TYPE_AND);
         return false;
       }
       end_pair1 = last_token;
@@ -13132,11 +13150,7 @@ de auxílio aparecem, mas na ordem errada ou sem expressões entre eles:
     }
     else if(IS_NOT_NESTED() && p -> type == TYPE_OF){
       if(state != 1 || last_token -> type == TYPE_AND){
-#if defined(W_DEBUG_METAFONT)
-        fprintf(stderr,
-                "METAFONT: Error: %s:%d: Malformed subpicture expression.\n",
-                mf -> file, p -> line);
-#endif
+        RAISE_ERROR_UNEXPECTED_TOKEN(mf, cx, OPTIONAL(p -> line), TYPE_OF);
         return false;
       }
       end_pair2 = last_token;
@@ -13147,11 +13161,14 @@ de auxílio aparecem, mas na ordem errada ou sem expressões entre eles:
     p = p -> next;
   }
   if(p == NULL){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr,
-            "METAFONT: Error: %s:%d: Malformed subpicture expression.\n",
-            mf -> file, p -> line);
-#endif
+    if(state < 2){
+      RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(begin -> line),
+                                    TYPE_T_PAIR);
+    }
+    else{
+      RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(begin -> line),
+                                     TYPE_T_PICTURE);
+    }
     return false;
   }
   end_pic = p;
@@ -13267,35 +13284,31 @@ else if(begin -> type == TYPE_TOTALWEIGHT){
                                0.0, 1.0, 0.0,
                                0.0, 0.0, 1.0};
   if(begin == end){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s:%d: Missing picture expression after "
-                    "'totalweight'.\n", mf -> file, begin -> line);
-#endif
+    RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(begin -> line),
+                                   TYPE_T_PICTURE);
     return false;
   }
   if(!eval_picture_primary(mf, cx, begin -> next, end, &p))
     return false;
   data = temporary_alloc(p.width * p.height * 4);
   if(data == NULL){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s: Not enough memory!\n", mf -> file);
-#endif
+    RAISE_ERROR_NO_MEMORY(mf, cx, OPTIONAL(begin -> line));
     return false;
   }
   glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &previous_framebuffer);
-  get_new_framebuffer(&temporary_framebuffer, &(temporary_texture),
-                    p.width, p.height);
+  if(!get_new_framebuffer(&temporary_framebuffer, &(temporary_texture),
+                          p.width, p.height)){
+    RAISE_ERROR_OPENGL_FRAMEBUFFER(mf, NULL, 0);
+    return false;
+  }
   // Renderiza:
   render_picture(&p, identity_matrix, p.width, p.height, true);
   // Ler dados do framebuffer:
   glReadPixels(0, 0, p.width, p.height, GL_RGBA, GL_UNSIGNED_BYTE, data);
   {
-    //printf("--WEIGHT---\n");
     int i, size = p.width * p.height * 4;
     double sum = 0.0;
     for(i = 0; i < size; i += 4){
-      //if(i%(4*p.width) == 0) printf("\n");
-      //printf("(%d %d %d %d)", (unsigned char) data[i], (unsigned char) data[i+1], (unsigned char) data[i+2], (unsigned char) data[i+3]);
       // If the values are equal, let's avoid rounding errors:
       if(data[i] == data[i+1] && data[i+1] == data[i+2]){
         sum += ((255 - (unsigned char) data[i]) / 255.0) *
@@ -13332,10 +13345,8 @@ largura e altura. No caso da largura:
 else if(begin -> type == TYPE_WIDTH){
   struct picture_variable p;
   if(begin == end){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s:%d: Missing picture expression after "
-                    "'width'.\n", mf -> file, begin -> line);
-#endif
+    RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(begin -> line),
+                                   TYPE_T_PICTURE);
     return false;
   }
   if(!eval_picture_primary(mf, cx, begin -> next, end, &p))
@@ -13353,10 +13364,8 @@ E no caso da altura:
 else if(begin -> type == TYPE_HEIGHT){
   struct picture_variable p;
   if(begin == end){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s:%d: Missing picture expression after "
-                    "'height'.\n", mf -> file, begin -> line);
-#endif
+    RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(begin -> line),
+                                   TYPE_T_PICTURE);
     return false;
   }
   if(!eval_picture_primary(mf, cx, begin -> next, end, &p))
