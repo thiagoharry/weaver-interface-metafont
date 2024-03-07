@@ -30,11 +30,11 @@ extern"C"{
 #line 383 "weaver-interface-metafont_en.tex"
 
 
-/*602:*/
-#line 16142 "weaver-interface-metafont_en.tex"
+/*605:*/
+#line 16165 "weaver-interface-metafont_en.tex"
 
 struct _glyph;
-/*:602*/
+/*:605*/
 #line 385 "weaver-interface-metafont_en.tex"
 
 /*65:*/
@@ -51,11 +51,11 @@ struct generic_token*end_token_stack;
 #line 2872 "weaver-interface-metafont_en.tex"
 
 struct variable*variables;
-/*:118*//*612:*/
-#line 16524 "weaver-interface-metafont_en.tex"
+/*:118*//*615:*/
+#line 16547 "weaver-interface-metafont_en.tex"
 
 struct _glyph*current_glyph;
-/*:612*/
+/*:615*/
 #line 1799 "weaver-interface-metafont_en.tex"
 
 };
@@ -109,21 +109,21 @@ struct picture_variable*internal_picture_variables;
 
 bool have_stored_normaldeviate;
 float normaldeviate;
-/*:279*//*550:*/
-#line 14368 "weaver-interface-metafont_en.tex"
+/*:279*//*553:*/
+#line 14391 "weaver-interface-metafont_en.tex"
 
 float pen_lft,pen_rt,pen_top,pen_bot;
-/*:550*//*599:*/
-#line 16011 "weaver-interface-metafont_en.tex"
+/*:553*//*602:*/
+#line 16034 "weaver-interface-metafont_en.tex"
 
 int current_depth;
-/*:599*//*605:*/
-#line 16190 "weaver-interface-metafont_en.tex"
+/*:602*//*608:*/
+#line 16213 "weaver-interface-metafont_en.tex"
 
 struct _glyph*glyphs[332];
 struct _glyph*first_glyph;
 int number_of_glyphs;
-/*:605*/
+/*:608*/
 #line 1820 "weaver-interface-metafont_en.tex"
 
 };
@@ -164,19 +164,19 @@ void _Wfinish_weavefont(void);
 #line 342 "weaver-interface-metafont_en.tex"
 
 void _Wprint_metafont_error(struct metafont*);
-/*:6*//*615:*/
-#line 16704 "weaver-interface-metafont_en.tex"
+/*:6*//*618:*/
+#line 16727 "weaver-interface-metafont_en.tex"
 
 bool _Wwrite_numeric_variable(struct metafont*mf,char*name,float value);
 float _Wread_numeric_variable(struct metafont*mf,char*name);
-/*:615*//*619:*/
-#line 16796 "weaver-interface-metafont_en.tex"
+/*:618*//*622:*/
+#line 16819 "weaver-interface-metafont_en.tex"
 
 bool _Wrender_glyph(struct metafont*mf,char*glyph,
 char*next_glyph,GLuint*texture,
 int*width,int*height,int*depth,
 int*italcorr,int*kerning);
-/*:619*/
+/*:622*/
 #line 387 "weaver-interface-metafont_en.tex"
 
 #ifdef __cplusplus

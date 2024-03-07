@@ -1979,6 +1979,8 @@ void test_boolean_expressions(void){
   cx = init_context(mf);
   lexer(mf,  "tests/boolean_expressions.mf", &first, &last);
   ret = eval_program(mf, cx, first, last);
+  if(!ret)
+    _Wprint_metafont_error(mf);
   a0 = (struct named_variable *) mf -> named_variables;
   b0 = a0 -> next; c0 = b0 -> next; d0 = c0 -> next; e0 = d0 -> next;
   f0 = e0 -> next; a1 = f0 -> next; b1 = a1 -> next; c1 = b1 -> next;
