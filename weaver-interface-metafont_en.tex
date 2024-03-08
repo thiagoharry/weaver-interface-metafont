@@ -14318,7 +14318,8 @@ else if(begin -> type == TYPE_ELSEIF || begin -> type == TYPE_ELSE){
   struct generic_token *t;
   if(cx -> end_token_stack == NULL ||
      cx -> end_token_stack -> type != TYPE_FI){
-    RAISE_ERROR_UNEXPECTED_TOKEN(mf, cx, OPTIONAL(tok -> line), begin -> type);
+    RAISE_ERROR_UNEXPECTED_TOKEN(mf, cx, OPTIONAL(begin -> line),
+                                 begin -> type);
     return false;
   }
   current_nesting_level = cx -> nesting_level;
