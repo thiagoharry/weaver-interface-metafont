@@ -14198,10 +14198,7 @@ else if(begin -> type == TYPE_IF){
   while(end_bool != *end && end_bool -> next -> type != TYPE_COLON)
     end_bool = end_bool -> next;
   if(end_bool == *end){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s:%d: Error delimiting boolean "
-                    "condition.\n", mf -> file, end_bool -> line);
-#endif
+    RAISE_ERROR_MISSING_TOKEN(mf, cx, OPTIONAL(begin -> line), TYPE_COLON);
     return false;
   }
   // Evaluating boolean expression:
@@ -14226,11 +14223,8 @@ else if(begin -> type == TYPE_IF){
         // We found the 'else' corresponding to this 'if'
         *end = t -> next;
         if((*end) -> type != TYPE_COLON){
-#if defined(W_DEBUG_METAFONT)
-          fprintf(stderr, "METAFONT: Error: %s:%d: Expected ':' after "
-                  "'else'.\n", mf -> file,
-                  (*end) -> line);
-#endif
+          RAISE_ERROR_MISSING_TOKEN(mf, cx, OPTIONAL(begin -> line),
+                                   TYPE_COLON);
           return false;
         }
         return true;
@@ -14260,25 +14254,61 @@ else if(begin -> type == TYPE_IF){
       t = t -> next;
     }
   }
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s:%d: Not found corresponding 'fi' "
-          "for 'if' statement.\n", mf -> file,
-          begin -> line);
-#endif  
+  RAISE_ERROR_UNFINISHED_STATEMENT(mf, cx, OPTIONAL(begin -> line),
+                                   TYPE_IF);
   return false;
 }
 @
 \fimcodigo
 
-Find the correct code to be evaluated is the above code
-responsability. If we find a \monoespaco{elseif} or \monoespaco{else}
-in the beginning of a new statement, one of two things is happening:
-we either are dealing with a syntax error, where these tokens do not
-have a corresponding \monoespaco{if}, or we are inside
-some \monoespaco{if} where we already evaluated the right conditional
-code and found the other conditional expression with code that should
-not be evaluated. In the second case, we should ignore the following
-tokens until we find the \monoespaco{fi} corresponding to
+If the user forgets to place a ``:''
+after \monoespaco{if}, \monoespaco{else} or \monoespaco{elseif}, the
+following error is raised:
+
+\iniciocodigo
+@<Types of Error@>+=
+ERROR_MISSING_TOKEN,
+@
+\fimcodigo
+
+This error means that a token was expected in that construction but it
+was not found. The macro that raises this error stores the expected
+token in \monoespaco{mf -> errno\_int}:
+
+\iniciocodigo
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_MISSING_TOKEN(mf, cx, line, tok) {\
+  if(!mf -> errno){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_MISSING_TOKEN);\
+    mf -> errno_int = tok;}}
+@
+\fimcodigo
+
+And the error message for the user:
+
+\iniciocodigo
+@<Print Error Message@>+=
+case ERROR_MISSING_TOKEN:
+  fprintf(stderr, "%s:%s We expected to find a '%s' token in the present "
+          "context, but none was found.", mf -> file, line_number,
+          ((mf -> errno_int < 8)?
+          (token_names_not_in_list_of_keywords[mf -> errno_int]):
+          (list_of_keywords[mf -> errno_int - 8])));
+  break;
+@
+\fimcodigo
+
+Back to the code that evaluates the \monoespaco{if}, finding the
+correct code to be evaluated depending on the conditional, is the
+responsibility of the code shown above, before the error dealing. If
+we find a \monoespaco{elseif} or \monoespaco{else} in the beginning of
+a new statement, one of two things is happening: we either are dealing
+with a syntax error, where these tokens do not have a
+corresponding \monoespaco{if}, or we are inside some \monoespaco{if}
+where we already evaluated the right conditional code and found the
+other conditional expression with code that should not be
+evaluated. In the second case, we should ignore the following tokens
+until we find the \monoespaco{fi} corresponding to
 our \monoespaco{ìf}:
 
 \iniciocodigo
@@ -14288,11 +14318,7 @@ else if(begin -> type == TYPE_ELSEIF || begin -> type == TYPE_ELSE){
   struct generic_token *t;
   if(cx -> end_token_stack == NULL ||
      cx -> end_token_stack -> type != TYPE_FI){
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s:%d: Token 'elseif' or 'else' should "
-          "have a corresponding 'if'.\n", mf -> file,
-          begin -> line);
-#endif  
+    RAISE_ERROR_UNEXPECTED_TOKEN(mf, cx, OPTIONAL(tok -> line), begin -> type);
     return false;
   }
   current_nesting_level = cx -> nesting_level;
@@ -14314,11 +14340,8 @@ else if(begin -> type == TYPE_ELSEIF || begin -> type == TYPE_ELSE){
         return false;
     t = t -> next;
   }
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s:%d: Not found corresponding 'fi' "
-          "for 'else' or 'elseif' statement.\n", mf -> file,
-          begin -> line);
-#endif
+  RAISE_ERROR_UNFINISHED_STATEMENT(mf, cx, OPTIONAL(begin -> line),
+                                   TYPE_IF);
   return false;
 }
 @

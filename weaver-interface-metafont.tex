@@ -14403,10 +14403,7 @@ else if(begin -> type == TYPE_IF){
   while(end_bool != *end && end_bool -> next -> type != TYPE_COLON)
     end_bool = end_bool -> next;
   if(end_bool == *end){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s:%d: Error delimiting boolean "
-                    "condition.\n", mf -> file, end_bool -> line);
-#endif
+    RAISE_ERROR_MISSING_TOKEN(mf, cx, OPTIONAL(begin -> line), TYPE_COLON);
     return false;
   }
   // Avaliando a expressão booleana:
@@ -14431,11 +14428,8 @@ else if(begin -> type == TYPE_IF){
         // Achamos o 'else' correspondente ao nosso 'if'
         *end = t -> next;
         if((*end) -> type != TYPE_COLON){
-#if defined(W_DEBUG_METAFONT)
-          fprintf(stderr, "METAFONT: Error: %s:%d: Expected ':' after "
-                  "'else'.\n", mf -> file,
-                  (*end) -> line);
-#endif
+          RAISE_ERROR_MISSING_TOKEN(mf, cx, OPTIONAL(begin -> line),
+                                   TYPE_COLON);
           return false;
         }
         return true;
@@ -14465,28 +14459,64 @@ else if(begin -> type == TYPE_IF){
       t = t -> next;
     }
   }
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s:%d: Not found corresponding 'fi' "
-          "for 'if' statement.\n", mf -> file,
-          begin -> line);
-#endif  
+  RAISE_ERROR_UNFINISHED_STATEMENT(mf, cx, OPTIONAL(begin -> line),
+                                   TYPE_IF);
   return false;
 }
 @
 \fimcodigo
 
-A responsabilidade de encontrar o código certo a ser executado é do
-trecho acima que trata o \monoespaco{if}. Mas nós podemos também
-encontrar um \monoespaco{elseif} ou um \monoespaco{else} no começo de
-uma declaração a ser avaliada. Quando isso ocorre, ou indica que é um
-erro de sintaxe, quando um destes tokens está solto, sem
-um \monoespaco{if} correspondenteo, ou então significa que estamos
-dentro de um \monoespaco{if}, onde já terminamos de executar o código
-correto e encontramos um delimitador onde novas expressões booleanas
-podems ser testadas. Independente da expressão que estiver lá, nós já
-terminamos de executar o nosso \monoespaco{if}. Então devemos ignorar
-tudo que vem a seguir até achar o \monoespaco{fi} que encerra
-o \monoespaco{if} em que estamos:
+Se o usuário esquecer de colocar um ``:'' após
+o \monoespaco{if}, \monoespaco{else} ou \monoespaco{elseif}, o
+seguinte erro é gerado:
+
+\iniciocodigo
+@<Tipos de Erros@>+=
+ERROR_MISSING_TOKEN,
+@
+\fimcodigo
+
+Este erro significa que um token era esperado na construção, mas não
+foi encontrado. A macro que gera este erro armazena o tipo
+em \monoespaco{mf -> errno\_int}:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_MISSING_TOKEN(mf, cx, line, tok) {\
+  if(!mf -> errno){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_MISSING_TOKEN);\
+    mf -> errno_int = tok;}}
+@
+\fimcodigo
+
+E a mensagem de erro que mostramos para o usuário é:
+
+\iniciocodigo
+@<Imprime Mensagem de Erro@>+=
+case ERROR_MISSING_TOKEN:
+  fprintf(stderr, "%s:%s We expected to find a '%s' token in the present "
+          "context, but none was found.", mf -> file, line_number,
+          ((mf -> errno_int < 8)?
+          (token_names_not_in_list_of_keywords[mf -> errno_int]):
+          (list_of_keywords[mf -> errno_int - 8])));
+  break;
+@
+\fimcodigo
+
+
+De volta ao código de execução do \monoespaco{if}, a responsabilidade
+de encontrar o código certo a ser executado dependendo da condicional
+é do código mostrado mais acima. Mas nós podemos também encontrar
+um \monoespaco{elseif} ou um \monoespaco{else} no começo de uma
+declaração a ser avaliada. Quando isso ocorre, ou indica que é um erro
+de sintaxe, quando um destes tokens está solto, sem um \monoespaco{if}
+correspondenteo, ou então significa que estamos dentro de
+um \monoespaco{if}, onde já terminamos de executar o código correto e
+encontramos um delimitador onde novas expressões booleanas podems ser
+testadas. Independente da expressão que estiver lá, nós já terminamos
+de executar o nosso \monoespaco{if}. Então devemos ignorar tudo que
+vem a seguir até achar o \monoespaco{fi} que encerra o \monoespaco{if}
+em que estamos:
 
 \iniciocodigo
 @<Instrução: Composta@>+= 
@@ -14495,11 +14525,7 @@ else if(begin -> type == TYPE_ELSEIF || begin -> type == TYPE_ELSE){
   struct generic_token *t;
   if(cx -> end_token_stack == NULL ||
      cx -> end_token_stack -> type != TYPE_FI){
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s:%d: Token 'elseif' or 'else' should "
-          "have a corresponding 'if'.\n", mf -> file,
-          begin -> line);
-#endif  
+    RAISE_ERROR_UNEXPECTED_TOKEN(mf, cx, OPTIONAL(tok -> line), begin -> type);
     return false;
   }
   current_nesting_level = cx -> nesting_level;
@@ -14521,11 +14547,8 @@ else if(begin -> type == TYPE_ELSEIF || begin -> type == TYPE_ELSE){
         return false;
     t = t -> next;
   }
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s:%d: Not found corresponding 'fi' "
-          "for 'else' or 'elseif' statement.\n", mf -> file,
-          begin -> line);
-#endif
+  RAISE_ERROR_UNFINISHED_STATEMENT(mf, cx, OPTIONAL(begin -> line),
+                                   TYPE_IF);
   return false;
 }
 @
