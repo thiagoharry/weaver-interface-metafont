@@ -14705,17 +14705,24 @@ void path_extremity_points(struct metafont *mf, struct path_variable *p,
   DECLARE_PEN_EXTREMITIES();
   for(i = 0; i < length; i ++){
     float x0, y0, u_x, u_y, v_x, v_y, x1, y1;
-    CHECK_PEN_EXTREMITIES(p -> points[i].point.x, p -> points[i].point.y, matrix);
-    x0 = LINEAR_TRANSFORM_X(p -> points[i].point.x, p -> points[i].point.y, matrix);
-    y0 = LINEAR_TRANSFORM_Y(p -> points[i].point.x, p -> points[i].point.y, matrix);
-    u_x = LINEAR_TRANSFORM_X(p -> points[i].point.u_x, p -> points[i].point.u_y, matrix);
-    u_y = LINEAR_TRANSFORM_Y(p -> points[i].point.u_x, p -> points[i].point.u_y, matrix);
-    v_x = LINEAR_TRANSFORM_X(p -> points[i].point.v_x, p -> points[i].point.v_y, matrix);
-    v_y = LINEAR_TRANSFORM_Y(p -> points[i].point.v_x, p -> points[i].point.v_y, matrix);    
-    x1 = LINEAR_TRANSFORM_X(p -> points[(i+1)%length].point.x, p -> points[i].point.y,
+    CHECK_PEN_EXTREMITIES(p -> points[i].point.x, p -> points[i].point.y,
+                          matrix);
+    x0 = LINEAR_TRANSFORM_X(p -> points[i].point.x, p -> points[i].point.y,
                             matrix);
-    y1 = LINEAR_TRANSFORM_Y(p -> points[(i+1)%length].point.y, p -> points[i].point.y,
+    y0 = LINEAR_TRANSFORM_Y(p -> points[i].point.x, p -> points[i].point.y,
                             matrix);
+    u_x = LINEAR_TRANSFORM_X(p -> points[i].point.u_x,
+                             p -> points[i].point.u_y, matrix);
+    u_y = LINEAR_TRANSFORM_Y(p -> points[i].point.u_x,
+                             p -> points[i].point.u_y, matrix);
+    v_x = LINEAR_TRANSFORM_X(p -> points[i].point.v_x,
+                             p -> points[i].point.v_y, matrix);
+    v_y = LINEAR_TRANSFORM_Y(p -> points[i].point.v_x,
+                            p -> points[i].point.v_y, matrix);    
+    x1 = LINEAR_TRANSFORM_X(p -> points[(i+1)%length].point.x,
+                            p -> points[i].point.y, matrix);
+    y1 = LINEAR_TRANSFORM_Y(p -> points[(i+1)%length].point.y,
+                            p -> points[i].point.y, matrix);
     // Bhaskara Formula (axis x)
     float a, b, c, deltah, t;
     a = (-3*x0+9*u_x-9*v_x+3*x1);
@@ -14983,9 +14990,7 @@ if((pen -> flags & FLAG_STRAIGHT) && (pen -> flags & FLAG_CONVEX)){
   GLsizei size = sizeof(float) * 2 * pen -> format -> length;
   float *data = (float *) temporary_alloc(size);
   if(data == NULL){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: Not enough memory.\n");
-#endif
+    RAISE_ERROR_NO_MEMORY(mf, NULL, 0);
     return false;
   }
   if(is_pen_counterclockwise(pen)){
@@ -15075,9 +15080,7 @@ if((pen -> flags & FLAG_CIRCULAR)){
   GLsizei size = sizeof(float) * 2 * (((int) (2 * M_PI * radius)) + 4);
   float *data = (float *) temporary_alloc(size);
   if(data == NULL){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: Not enough memory.\n");
-#endif
+    RAISE_ERROR_NO_MEMORY(mf, NULL, 0);
     return false;
   }
   {
@@ -15201,10 +15204,8 @@ if((pen -> flags & FLAG_CONVEX)){
   float *data = (float *) temporary_alloc(number_of_vertices * 2 *
                                           sizeof(float));
     if(data == NULL){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: Not enough memory.\n");
-#endif
-    return false;
+      RAISE_ERROR_NO_MEMORY(mf, NULL, 0);
+      return false;
   }
   {
     struct path_points *p0, *p1;
@@ -15292,9 +15293,7 @@ the future:
 \iniciocodigo
 @<Triangulation: Concave Shape@>=
 if(!(pen -> flags & FLAG_CONVEX)){
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: Concave pens still not supported.\n");
-#endif
+  RAISE_GENERIC_ERROR(mf, NULL, 0, ERROR_UNKNOWN);
   return false;
 }
 return false;
@@ -15319,16 +15318,16 @@ initialized, we return an error.
 else if(begin -> type == TYPE_PICKUP){
   struct generic_token *end_expression = *end;
   struct generic_token *next_token = begin -> next;
-  if(begin == *end ||
-     (next_token -> type != TYPE_NULLPEN &&
-      next_token -> type != TYPE_SYMBOLIC &&
-      next_token -> type != TYPE_PENCIRCLE)){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s:%d: Expected 'nullpen' or pen "
-                    "variable after 'pickup'. Not an arbitrary "
-                    "expression.\n",
-            mf -> file, next_token -> line);
-#endif
+  if(begin == *end){
+    RAISE_ERROR_UNFINISHED_STATEMENT(mf, cx, OPTIONAL(begin -> line),
+                                     TYPE_PICKUP);
+    return false;
+  }
+  if(next_token -> type != TYPE_NULLPEN &&
+     next_token -> type != TYPE_SYMBOLIC &&
+     next_token -> type != TYPE_PENCIRCLE){
+    RAISE_ERROR_UNEXPECTED_TOKEN(mf, cx, OPTIONAL(next_token -> line),
+                                next_token -> type);
     return false;
   }
   if(mf -> internal_pen_variables[0].gl_vbo != 0)
@@ -15344,22 +15343,22 @@ else if(begin -> type == TYPE_PICKUP){
     mf -> internal_pen_variables[0].gl_vbo = 0;
   }
   else{
-    struct pen_variable *var = ((struct symbolic_token *) next_token) -> var;
+    struct symbolic_token *symbol = ((struct symbolic_token *) next_token);
+    struct pen_variable *var = (struct pen_variable *) (symbol -> var);
     if(var == NULL){
-#if defined(W_DEBUG_METAFONT)
-      fprintf(stderr, "METAFONT: Error: %s:%d: Non-initialized variable after "
-                      "after 'pickup' command.\n",
-              mf -> file, next_token -> line);
-#endif
+      RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, OPTIONAL(next_token -> line),
+                                      symbol -> value);
       return false;
     }
     if(var -> type != TYPE_T_PEN){
-#if defined(W_DEBUG_METAFONT)
-      fprintf(stderr, "METAFONT: Error: %s:%d: Variable '%s' is not a "
-                      "pen variable.\n",
-              mf -> file, next_token -> line,
-              ((struct symbolic_token *) next_token) -> value);
-#endif
+      RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, OPTIONAL(next_token -> line),
+                                     symbol -> value, var -> type,
+                                     TYPE_T_PEN);
+      return false;
+    }
+    if(var -> format == NULL && var -> flags == false){
+      RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, OPTIONAL(next_token -> line),
+                                         symbol -> value);
       return false;
     }
     mf -> internal_pen_variables[0].referenced = var;
@@ -15388,11 +15387,8 @@ while(next_token != end_expression){
   DECLARE_NESTING_CONTROL();
   next_token = next_token -> next;
   if(next_token == NULL || next_token == end_expression){
-#if defined(W_DEBUG_METAFONT)
-      fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable 'pickup' "
-                      "command format.\n",
-              mf -> file, next_token -> line);
-#endif
+    RAISE_ERROR_UNFINISHED_STATEMENT(mf, cx, OPTIONAL(begin -> line),
+                                     TYPE_PICKUP);
     return false;
   }
   begin_subexpr = next_token -> next;
@@ -15503,11 +15499,8 @@ while(next_token != end_expression){
     }
     break;
   default:
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s:%d: Unrecognizable 'pickup' "
-                    "command format.\n",
-            mf -> file, next_token -> line);
-#endif
+    RAISE_ERROR_UNEXPECTED_TOKEN(mf, cx, OPTIONAL(next_token -> line),
+                                next_token -> type);
     return false;  
   }
   next_token = end_subexpr;
@@ -15741,6 +15734,10 @@ initializes it:
     glBindFramebuffer(GL_FRAMEBUFFER, currentpicture_fb);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
                            texture, 0);
+    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
+      RAISE_ERROR_OPENGL_FRAMEBUFFER(mf, cx, 0);
+      return false;
+    }
   }
   else
     glBindFramebuffer(GL_FRAMEBUFFER, currentpicture_fb);
@@ -16383,10 +16380,7 @@ static struct _glyph *get_glyph(struct metafont *mf, unsigned char *c,
       return NULL;
     mf -> glyphs[block] = permanent_alloc(sizeof(struct _glyph) * block_size);
     if(mf -> glyphs[block] == NULL){
-#if defined(W_DEBUG_METAFONT)
-      fprintf(stderr, "METAFONT: Error: %s: No memory to allocate "
-                      "Unicode block.\n", mf -> file);
-#endif
+      RAISE_ERROR_NO_MEMORY(mf, NULL, 0);
       return NULL;
     }
     for(i = 0; i < block_size; i ++)
@@ -16455,21 +16449,15 @@ else if(begin -> type == TYPE_BEGINCHAR && mf -> loading){
   struct _glyph *glyph;
   struct generic_token *t = begin -> next;
   if(t -> type != TYPE_OPEN_PARENTHESIS || begin == *end){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s:%d: Missing '(' "
-                    "after 'beginchar'.\n", mf -> file,
-                    begin -> line);
-#endif
+    RAISE_ERROR_MISSING_TOKEN(mf, cx, OPTIONAL(t -> line),
+                              TYPE_OPEN_PARENTHESIS);
     return false;
   }
   if(t != *end)
     t = t -> next;
   if(t -> type != TYPE_STRING){
-#if defined(W_DEBUG_METAFONT)
-    fprintf(stderr, "METAFONT: Error: %s:%d: Missing UTF-8 string "
-                    "after 'beginchar('.\n", mf -> file,
-            begin -> line);
-#endif
+    RAISE_ERROR_MISSING_TOKEN(mf, cx, OPTIONAL(t -> line),
+                              TYPE_STRING);
     return false;
   }
   {
@@ -16480,12 +16468,7 @@ else if(begin -> type == TYPE_BEGINCHAR && mf -> loading){
     if(mf -> first_glyph == NULL)
       mf -> first_glyph = glyph;
     if(glyph -> begin != NULL){
-#if defined(W_DEBUG_METAFONT)
-      fprintf(stderr, "METAFONT: Error: %s:%d: Glyph \"%s\" is defined "
-                      "twice.\n", mf -> file,
-              begin -> line,
-              str -> value);
-#endif
+      RAISE_ERROR_DUPLICATE_GLYPH(mf, cx, OPTIONAL(begin -> line), str -> value);
       return false;
     }
     glyph -> begin = begin;
@@ -16507,30 +16490,21 @@ else if(begin -> type == TYPE_BEGINCHAR && mf -> loading){
     }
     if(t == NULL || number_of_commas != 3 ||
        t -> type != TYPE_CLOSE_PARENTHESIS){
-#if defined(W_DEBUG_METAFONT)
-      fprintf(stderr, "METAFONT: Error: %s:%d: Malformed 'beginchar' "
-                      "compound command.\n", mf -> file,
-              begin -> line);
-#endif
+      RAISE_ERROR_MALFORMED_STATEMENT(mf, cx, OPTIONAL(begin -> line),
+                                     TYPE_BEGINCHAR);
       return false;
     }
     t = t -> next;
     while(t != NULL && t -> type != TYPE_ENDCHAR){
       if(t -> type == TYPE_BEGINCHAR){
-#if defined(W_DEBUG_METAFONT)
-        fprintf(stderr, "METAFONT: Error: %s:%d: Nested 'beginchar'.\n",
-                mf -> file, t -> line);
-#endif
+        RAISE_ERROR_NESTED_BEGINCHAR(mf, cx, OPTIONAL(begin -> line));
         return false;
       }
       t = t -> next;
     }
     if(t == NULL){
-#if defined(W_DEBUG_METAFONT)
-      fprintf(stderr, "METAFONT: Error: %s:%d: Missing 'endchar' "
-                      "after'beginchar' command.\n", mf -> file,
-              begin -> line);
-#endif
+      RAISE_ERROR_UNFINISHED_STATEMENT(mf, cx, OPTIONAL(begin -> line),
+                                      TYPE_BEGINCHAR);
       return false;
     }
     glyph -> end = t;
@@ -16542,6 +16516,62 @@ else if(begin -> type == TYPE_BEGINCHAR && mf -> loading){
 @
 \fimcodigo
 
+The code above can generate 3 new errors that had not been introduced
+before: when a glyph is defined more than once
+with \monoespaco{beginchar}, when a \monoespaco{beginchar} is
+malformed (it's the first compound statement sufficiently complex to
+cause this error) and when we nest a \monoespaco{beginchar} inside another:
+
+\iniciocodigo
+@<Types of Error@>+=
+ERROR_DUPLICATE_GLYPH, ERROR_MALFORMED_STATEMENT, ERROR_NESTED_BEGINCHAR,
+@
+\fimcodigo
+
+The macros that raise these errors in the first case must store the
+glyph name for printing the error message, in the second case must
+store the statement type (as an integer) and in the last case no
+additional data need to be stored, as the error is self evident:
+
+\iniciocodigo
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_DUPLICATE_GLYPH(mf, cx, line, glyph) {\
+  if(!mf -> errno){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_DUPLICATE_GLYPH);\
+    mf -> errno_str = (char *) permanent_alloc(strlen(glyph)+1);\
+    memcpy(mf -> errno_str, glyph, strlen(glyph)+1);}}
+#define RAISE_ERROR_MALFORMED_STATEMENT(mf, cx, line, stat) {\
+  if(!mf -> errno){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_MALFORMED_STATEMENT);\
+    mf -> errno_int = stat;}}
+#define RAISE_ERROR_NESTED_BEGINCHAR(mf, cx, line) {\
+  RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NESTED_BEGINCHAR);}
+@
+\fimcodigo
+
+Finally, this is the error message for each one of these errors:
+
+\iniciocodigo
+@<Print Error Message@>+=
+case ERROR_DUPLICATE_GLYPH:
+  fprintf(stderr,
+          "%s:%s Glyph '%s' was defined twice by 'beginchar' statement.",
+          mf -> file, line_number, mf -> errno_str);
+  break;
+case ERROR_MALFORMED_STATEMENT:
+  fprintf(stderr,
+          "%s:%s Malformed '%s' statement.", mf -> file, line_number,
+          list_of_keywords[mf -> errno_int - 8]);
+  break;
+case ERROR_NESTED_BEGINCHAR:
+  fprintf(stderr,
+          "%s:%s Nested 'beginchar' statement.", mf -> file, line_number);
+  break;
+@
+\fimcodigo
+
+
+
 If we are in loading mode, and we read a \monoespaco{endchar} token,
 this is always an error: it means that we have an \monoespaco{endchar}
 without a previous \monoespaco{beginchar}. Tokens that end character
@@ -16551,11 +16581,8 @@ when in loading mode:
 \iniciocodigo
 @<Statement: Compound@>+=
 else if(begin -> type == TYPE_ENDCHAR && mf -> loading){
-#if defined(W_DEBUG_METAFONT)
-  fprintf(stderr, "METAFONT: Error: %s:%d: Found 'endchar' token "
-                  "without previous 'beginchar'.\n", mf -> file,
-          begin -> line);
-#endif
+  RAISE_ERROR_UNEXPECTED_TOKEN(mf, cx, OPTIONAL(begin -> line),
+                               TYPE_ENDCHAR);
   return false;
 }
 @
@@ -16662,9 +16689,7 @@ else if(begin -> type == TYPE_BEGINCHAR){
     size = pic -> width * pic -> height * 4;
     data = temporary_alloc(size);
     if(data == NULL){
-#if defined(W_DEBUG_METAFONT)
-      fprintf(stderr, "METAFONT: Error: Not enough memory.\n");
-#endif
+      RAISE_ERROR_NO_MEMORY(mf, cx, OPTIONAL(begin -> line));
       return false;
     }
     // Making a new white texture

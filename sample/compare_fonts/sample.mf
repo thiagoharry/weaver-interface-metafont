@@ -596,10 +596,137 @@ beginchar("7", (0.465+0.037*(weight-1)+0.073*italic+0.007*italic*(weight-1))*siz
   p3 = bot rt ((0.169-0.033*(weight-1)-0.2*italic+0.02*italic*(weight-1))*w, 0);
   draw p1--p2--p3;
 endchar;
-beginchar("8", 0, 0, 0);
+beginchar("8", (0.497+0.054*(weight-1)+0.024*italic-0.013*italic*(weight-1))*size*pt, 0.68*size*pt, 0);
+  path circle, upper, lower;
+  numeric udiameter, pendiameter, lowermult;
+  circle =
+    (0.5, 0)
+    .. controls (0.5, 0.13261) and (0.44733, 0.2598) ..
+    (0.35356, 0.35356)
+    .. controls (0.2598, 0.44733) and (0.13261, 0.5) ..
+    (0, 0.5);
+  udiameter = (0.42-0.03*(weight-1))*h;
+  pendiameter = (0.108+0.078*(weight-1))*h;
+  lowermult = (1.2+0.1*(weight-1));
+  circle = circle & circle rotated 90;
+  circle = circle & circle rotated 180 & cycle;
+  upper = circle scaled udiameter shifted (0.5*w, h-((udiameter+pendiameter)/2)) slanted(0.08*italic);
+  pickup pencircle scaled pendiameter;
+  draw upper;
+  pickup pencircle yscaled pendiameter xscaled (pendiameter*lowermult);
+  lower = circle xscaled ((w-(pendiameter*lowermult))*(1-0.05*italic)) yscaled (h-udiameter-pendiameter);
+  lower = lower shifted (0.5*w, (h-udiameter)/2);
+  draw lower;
 endchar;
-beginchar("9", 0, 0, 0);
+beginchar("9", (0.483-0.002*(weight-1)+0.103*italic+0.03*italic*(weight-1))*size*pt, 0.68*size*pt, 0);
+  path circle;
+  numeric basis, pendiameter, slant, circle_diameter;
+  pair circle_connection, circle_center;
+  basis = (0.32-0.044*(weight-1)-0.15*italic)*w;
+  slant = 0.1 * italic;
+  pendiameter = (0.12+0.08*(weight-1)-0.00*italic)*h;
+  circle_diameter = (w-pendiameter)*(1-0.25*italic);
+  circle_center = (0.5*w, h-(circle_diameter)/2-pendiameter/2);
+  circle = 
+    (0.5, 0)
+    .. controls (0.5, 0.13261) and (0.44733, 0.2598) ..
+    (0.35356, 0.35356)
+    .. controls (0.2598, 0.44733) and (0.13261, 0.5) ..
+    (0, 0.5);
+  circle = circle & circle rotated 90;
+  circle = circle & circle rotated 180 & cycle;
+  pickup pencircle scaled pendiameter;
+  circle = circle slanted slant scaled circle_diameter shifted circle_center;
+  draw circle;
+  circle_connection = (cosd (-20-10*italic), sind (-20-10*italic)) * (circle_diameter/2);
+  circle_connection = circle_connection slanted slant shifted circle_center;
+  draw circle_connection  -- bot rt (basis, 0);
+  pickup pencircle slanted slant scaled (circle_diameter-pendiameter);
+  erase circle_center;
 endchar;
+
+beginchar(":", (0.13+0.067*(weight-1)+0.082*italic-0.012*italic*(weight-1))*size*pt, (0.505+0.005*(weight-1))*size*pt, 0);
+  numeric pen_diameter;
+  pair top1, top2, bot1, bot2;
+  pen_diameter = w;
+  if pen_diameter > (0.25+0.13*(weight-1)) * h:
+    pen_diameter = (0.25+0.13*(weight-1)) * h;
+  fi
+  pickup pencircle scaled pen_diameter;
+  top1 = bot (0.5*w, h);
+  top2 = bot lft (w, h);
+  bot1 = top (0.5*w, 0);
+  bot2 = top rt (0, 0);
+  draw italic[top1, top2];
+  draw italic[bot1, bot2];
+endchar;
+
+beginchar(";", (0.13+0.067*(weight-1)+0.117*italic-0.017*italic*(weight-1))*size*pt, (0.505+0.005*(weight-1))*size*pt, (0.132+0.015*(weight-1))*size*pt);
+  numeric pen_diameter;
+  pair top1, top2, bot1, bot2;
+  pair bottom, circle_connection, bottom_point;
+  pen_diameter = w;
+  if pen_diameter > (0.25+0.13*(weight-1)) * h:
+    pen_diameter = (0.25+0.13*(weight-1)) * h;
+  fi
+  pickup pencircle scaled pen_diameter;
+  top1 = bot (0.5*w, h);
+  top2 = bot lft (w, h);
+  bot1 = top (0.5*w, 0);
+  bot2 = top rt (0.1*italic*w, 0);
+  bottom_point = italic[bot1, bot2];
+  draw italic[top1, top2];
+  draw bottom_point;
+  pickup pencircle scaled (pen_diameter*0.4);
+  bottom = rt ((0.1*(weight-1)-0.1*italic*(weight-1))*w, -d);
+  circle_connection = (cosd (-20+10*(weight-1)*italic), sind (-20+10*(weight-1)*italic)) * (pen_diameter/2);
+  circle_connection = circle_connection shifted (lft bottom_point);
+  draw circle_connection -- bottom;
+endchar;
+
+beginchar("<", (0.478+0.02*(weight-1)-0.002*italic)*size*pt, (0.495+0.015*(weight-1))*size*pt, 0);
+  pickup pencircle scaled ((0.17+0.06*(weight-1)) * h);
+  draw top (w, 0) -- (0, 0.5*h) -- bot (w, h);
+endchar;
+
+beginchar("=", (0.497+0.016*(weight-1)+0.001*italic*(weight-1))*size*pt, (0.387+0.022*(weight-1))*size*pt, -((0.12-0.025*(weight-1))*size*pt));
+  pickup pencircle scaled ((0.205+0.105*(weight-1)) * h);
+  draw bot (0, h) -- bot (w, h);
+  draw top (0, -d) -- top (w, -d);
+endchar;
+
+beginchar(">", (0.478+0.02*(weight-1)-0.002*italic)*size*pt, (0.495+0.015*(weight-1))*size*pt, 0);
+  pickup pencircle scaled ((0.17+0.06*(weight-1)) * h);
+  draw top (0, 0) -- (w, 0.5*h) -- bot (0, h);
+endchar;
+
+beginchar("?", (0.432+0.095*(weight-1)+0.02*italic+0.015*italic*(weight-1))*size*pt, 0.68*size*pt, 0);
+  pickup pencircle yscaled 0.101*h xscaled 0.127*h;
+  pair p1, p2, p3, p8, p9;
+  p1 = rt (0, 0.759*h); % Beginning: position to the right
+  p2 = (0.514*w, h); % Top of '?'
+  p3 = (w, 0.763*h);
+  p8 = (0.43*w, 0.347*h);
+  p9 = (0.43*w, 0.292*h);
+  draw p1..{1, 0}bot p2..{0, -1}lft p3..{0, -1}p8--p9;
+  pickup pencircle scaled 0.186*h;
+  draw top (0.43*w, 0);
+  % Erasing
+  path semicircle;
+  pen eraser;
+  semicircle =   (0.5, 0)
+    .. controls (0.5, 0.13261) and (0.44733, 0.2598) ..
+    (0.35356, 0.35356)
+    .. controls (0.2598, 0.44733) and (0.13261, 0.5) ..
+    (0, 0.5);
+  semicircle = semicircle & semicircle rotated 90 -- (0.5, 0) & cycle;
+  eraser = makepen(semicircle);
+  pickup eraser yscaled (0.11*h) xscaled (0.13*h)  rotated (-196-3*(weight-1));  
+  erase p1;
+  pickup eraser yscaled (0.11*h) xscaled (0.13*h) rotated 180;
+  erase p9;
+endchar;
+
 % Just testing stuff:
 beginchar("z", 500, 500, 300);
   path m, n;
