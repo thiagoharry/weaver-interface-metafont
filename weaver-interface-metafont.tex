@@ -6038,8 +6038,10 @@ bool eval_numeric_expression(struct metafont *mf, struct context *cx,
   RAISE_ERROR_AND_EXIT_IF_WRONG_NESTING(mf, cx, OPTIONAL(begin -> line));
   if(end_tertiary != NULL){ // Se nós temos operador terciário:
     begin_secondary = (struct generic_token *) (last_sum -> next);
-    eval_numeric_expression(mf, cx, begin, end_tertiary, &a);
-    eval_numeric_secondary(mf, cx, begin_secondary, end, &b);
+    if(!eval_numeric_expression(mf, cx, begin, end_tertiary, &a))
+      return false;
+    if(!eval_numeric_secondary(mf, cx, begin_secondary, end, &b))
+      return false;
     if(last_sum -> type == TYPE_SUM) // Avalia '+':
       result -> value = a.value + b.value;
     else if(last_sum -> type == TYPE_SUBTRACT) // Avalia '-':
@@ -6191,8 +6193,10 @@ bool eval_numeric_secondary(struct metafont *mf, struct context *cx,
   RAISE_ERROR_AND_EXIT_IF_WRONG_NESTING(mf, cx, OPTIONAL(begin -> line));
   if(end_secondary != NULL){ // Se nós temos operador secundário:
     begin_primary = (struct generic_token *) (last_mul -> next);
-    eval_numeric_secondary(mf, cx, begin, end_secondary, &a);
-    eval_numeric_primary(mf, cx, begin_primary, end, &b);
+    if(!eval_numeric_secondary(mf, cx, begin, end_secondary, &a))
+      return false;
+    if(!eval_numeric_primary(mf, cx, begin_primary, end, &b))
+      return false;
     if(last_mul -> type == TYPE_MULTIPLICATION) // Avalia '*':
       result -> value = a.value * b.value;
     else if(last_mul -> type == TYPE_DIVISION){ // Avalia '/':
@@ -16857,6 +16861,10 @@ else if(begin -> type == TYPE_BEGINCHAR){
   } while(!IS_NOT_NESTED() || t -> type != TYPE_COMMA);
   if(!eval_numeric_expression(mf, cx, begin_expr, end_expr, &width))
     return false;
+  if(width.value <= 0.0){
+    RAISE_ERROR_INVALID_DIMENSION_GLYPH(mf, cx, OPTIONAL(begin -> line));
+    return false;
+  }
   t = t -> next;
   begin_expr = t;
   do{
@@ -16875,6 +16883,10 @@ else if(begin -> type == TYPE_BEGINCHAR){
   } while(!IS_NOT_NESTED() || t -> type != TYPE_CLOSE_PARENTHESIS);
   if(!eval_numeric_expression(mf, cx, begin_expr, end_expr, &depth))
     return false;
+  if(height.value + depth.value <= 0.0){
+    RAISE_ERROR_INVALID_DIMENSION_GLYPH(mf, cx, OPTIONAL(begin -> line));
+    return false;
+  }
   *end = t;
   { // Inicializando currentpicture = nullpicture(width, height + depth):
     unsigned char *data;
@@ -16940,6 +16952,39 @@ else if(begin -> type == TYPE_BEGINCHAR){
 }
 @
 \fimcodigo
+
+Caso um glifo com largura ou altura mais profundidade não-positiva
+tenha sido especificada, isso é um erro:
+
+\iniciocodigo
+@<Tipos de Erros@>+=
+ERROR_INVALID_DIMENSION_GLYPH,
+@
+\fimcodigo
+
+A macro que produz este erro é genérica:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_INVALID_DIMENSION_GLYPH(mf, cx, line) {\
+  RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INVALID_DIMENSION_GLYPH);}
+@
+\fimcodigo
+
+E o erro gera esta mensagem de diagnóstico:
+
+\iniciocodigo
+@<Imprime Mensagem de Erro@>+=
+case ERROR_INVALID_DIMENSION_GLYPH:
+  fprintf(stderr,
+          "%s:%s You tried to specify a glyph with nonpositive width or "
+          "non-positive height+depth.", mf -> file, line_number);
+  break;
+@
+\fimcodigo
+
+
+
 
 Finalmente, quando lemos um \monoespaco{endchar} em modo de execução,
 significa que terminamos de renderizar um novo glifo. Devemos então

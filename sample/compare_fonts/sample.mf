@@ -701,16 +701,14 @@ beginchar(">", (0.478+0.02*(weight-1)-0.002*italic)*size*pt, (0.495+0.015*(weigh
 endchar;
 
 beginchar("?", (0.432+0.095*(weight-1)+0.02*italic+0.015*italic*(weight-1))*size*pt, 0.68*size*pt, 0);
-  pickup pencircle yscaled 0.101*h xscaled 0.127*h;
+  pickup pencircle yscaled (0.101+0.075*(weight-1))*h xscaled (0.127+0.098*(weight-1))*h;
   pair p1, p2, p3, p8, p9;
   p1 = rt (0, 0.759*h); % Beginning: position to the right
   p2 = (0.514*w, h); % Top of '?'
   p3 = (w, 0.763*h);
-  p8 = (0.43*w, 0.347*h);
-  p9 = (0.43*w, 0.292*h);
+  p8 = (0.43*w, (0.347+0.02*(weight-1))*h);
+  p9 = (0.43*w, (0.292+0.075*(weight-1))*h);
   draw p1..{1, 0}bot p2..{0, -1}lft p3..{0, -1}p8--p9;
-  pickup pencircle scaled 0.186*h;
-  draw top (0.43*w, 0);
   % Erasing
   path semicircle;
   pen eraser;
@@ -721,11 +719,15 @@ beginchar("?", (0.432+0.095*(weight-1)+0.02*italic+0.015*italic*(weight-1))*size
     (0, 0.5);
   semicircle = semicircle & semicircle rotated 90 -- (0.5, 0) & cycle;
   eraser = makepen(semicircle);
-  pickup eraser yscaled (0.11*h) xscaled (0.13*h)  rotated (-196-3*(weight-1));  
+  pickup eraser yscaled ((0.11+0.09*(weight-1))*h) xscaled ((0.13+0.1*(weight-1))*h)  rotated (-196-3*(weight-1));  
   erase p1;
-  pickup eraser yscaled (0.11*h) xscaled (0.13*h) rotated 180;
+  pickup eraser yscaled ((0.11+0.09*(weight-1))*h) xscaled ((0.13+0.1*(weight-1))*h) rotated 180;
   erase p9;
+  % Drawing lower point
+  pickup pencircle scaled (0.186+0.096*(weight-1))*h;
+  draw top (0.43*w, 0);
 endchar;
+
 
 % Just testing stuff:
 beginchar("z", 500, 500, 300);
