@@ -334,7 +334,7 @@ beginchar("*", (0.297+0.04*(weight-1)-0.01*italic)*size*pt,
 endchar;
 
 beginchar("+", (0.497+0.015*(weight-1)+0.0025*italic)*size*pt, 0.495*size*pt, 0);
-  pickup pensquare scaled 0.16*h;
+  pickup pensquare scaled (0.16+0.1*(weight-1))*h;
   draw top (w/2, 0) -- bot (w/2, h);
   draw rt (0, h/2) -- lft (w, h/2);
 endchar;
@@ -705,10 +705,10 @@ beginchar("?", (0.432+0.095*(weight-1)+0.02*italic+0.015*italic*(weight-1))*size
   pair p1, p2, p3, p8, p9;
   p1 = rt (0, 0.759*h); % Beginning: position to the right
   p2 = (0.514*w, h); % Top of '?'
-  p3 = (w, 0.763*h);
-  p8 = (0.43*w, (0.347+0.02*(weight-1))*h);
-  p9 = (0.43*w, (0.292+0.075*(weight-1))*h);
-  draw p1..{1, 0}bot p2..{0, -1}lft p3..{0, -1}p8--p9;
+  p3 = ((1-0.05*italic)*w, 0.763*h);
+  p8 = ((0.43-0.05*italic)*w, (0.347+0.02*(weight-1)+0.1*italic)*h);
+  p9 = ((0.43-0.15*italic)*w, (0.292+0.075*(weight-1))*h);
+  draw p1..{1, 0}bot p2..{0, -1}lft p3..{0, -1+1*italic}p8..p9;
   % Erasing
   path semicircle;
   pen eraser;
@@ -721,13 +721,62 @@ beginchar("?", (0.432+0.095*(weight-1)+0.02*italic+0.015*italic*(weight-1))*size
   eraser = makepen(semicircle);
   pickup eraser yscaled ((0.11+0.09*(weight-1))*h) xscaled ((0.13+0.1*(weight-1))*h)  rotated (-196-3*(weight-1));  
   erase p1;
-  pickup eraser yscaled ((0.11+0.09*(weight-1))*h) xscaled ((0.13+0.1*(weight-1))*h) rotated 180;
+  pickup eraser yscaled ((0.11+0.09*(weight-1))*h) xscaled ((0.13+0.15*(weight-1))*h) rotated 180;
   erase p9;
   % Drawing lower point
   pickup pencircle scaled (0.186+0.096*(weight-1))*h;
-  draw top (0.43*w, 0);
+  draw top ((0.43-0.2*italic)*w, 0);
 endchar;
 
+beginchar("@", (0.682+0.006*(weight-1))*size*pt, 0.68*size*pt, 0);
+  pair p1, p2, p3, p5, p4, p7, p8, p9, p10, p11, p12, p6;
+  pickup pencircle yscaled ((0.107+0.025*(weight-1))*h) xscaled ((0.117+0.019*(weight-1))*h);
+  p1 = ((0.65-0.026*(weight-1)+0.017*italic)*w, (0.694-0.012*(weight-1)+0.004*italic)*h);
+  p2 = ((0.31-0.032*italic)*w, (0.458+0.029*(weight-1)-0.032*italic)*h);
+  p3 = ((0.456-0.057*italic)*w, (0.279+0.035*(weight-1)+0.017*italic)*h);
+  p4=((0.554-0.016*(weight-1)-0.053*italic)*w, (0.327+0.015*(weight-1)+0.004*italic)*h);
+  p5 = (-0.04*w*italic + xpart p1, (0.487-0.009*italic)*h);
+  % The angle in p4 is not this in italic
+  draw p1..{0, -1}p2..{1, 0}p3.. tension (1+0.5*italic) .. p4 .. p5--p1;
+  pickup pencircle yscaled (0.107*h) xscaled (0.117*h);
+  p6 = ((0.005*(weight-1)*w) + xpart p5, ypart p5); % BUG: Seg fault
+  p7 = (0.774*w, 0.296*h);
+  p8 = lft (w, 0.546*h);
+  p9 = bot (0.509*w, h);
+  p10 = rt (0, 0.501*h);
+  p11 = top (0.512*w, 0);
+  p12 = (0.709*w, 0.091*h);
+  draw p6{-0.174+0.174*italic, -1+0.015*italic}..{1, 0}p7..{0, 1}p8..{-1, 0}p9..{0, -1}p10..{1, 0}p11..p12;
+  pickup pensquare scaled (0.117.h);
+  erase rt p12;
+endchar;
+
+beginchar("A", (0.608+0.075*(weight-1)+0.01*italic-0.003*italic*(weight-1))*size*pt, (0.67-0.002*(weight-1)-0.002*italic+0.002*italic*(weight-1))*size*pt, 0);
+  numeric pen_width, pen_height;
+  pen_width = ((0.13+0.127*(weight-1))*h);
+  pen_height = ((0.121+0.071*(weight-1))*h);
+  pickup pencircle xscaled pen_width yscaled pen_height;
+  pair p1, p2, p3, p4, p5;
+  numeric basis, slant;
+  basis = 0.277-0.01*(weight-1);
+  slant = 0.5+0.229*italic;
+  p1 = rt (0, 0);
+  p2 = (slant*w, h);
+  p3 = lft (w, 0);
+  p4 = basis[p1, p2];
+  p5 = basis[p3, p2];
+  draw p1--p2--p3;
+  pickup pencircle xscaled pen_width yscaled pen_height;
+  draw p4--p5;
+  pair t1, t2, t3;
+  pen triangle_pen;
+  t1 = ((xpart p4)+pen_width/2+0.03*w, (ypart p4)+pen_height/2);
+  t2 = ((xpart p5)-pen_width/2-0.03*w, (ypart p5)+pen_height/2);
+  t3 = ((slant-0.04*italic-0.042*italic*(weight-1))*w, (0.84-0.1*(weight-1))*h);
+  triangle_pen = makepen(t1--t2--t3--cycle);
+  pickup triangle_pen;
+  erase (0, 0);
+endchar;
 
 % Just testing stuff:
 beginchar("z", 500, 500, 300);

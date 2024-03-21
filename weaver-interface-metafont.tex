@@ -7071,8 +7071,10 @@ bool eval_pair_expression(struct metafont *mf, struct context *cx,
   RAISE_ERROR_AND_EXIT_IF_WRONG_NESTING(mf, cx, OPTIONAL(begin -> line));
   if(end_tertiary != NULL){
     begin_secondary = last_sum -> next;
-    eval_pair_expression(mf, cx, begin, end_tertiary, &a);
-    eval_pair_secondary(mf, cx, begin_secondary, end, &b);
+    if(!eval_pair_expression(mf, cx, begin, end_tertiary, &a))
+      return false;
+    if(!eval_pair_secondary(mf, cx, begin_secondary, end, &b))
+      return false;
     if(last_sum -> type == TYPE_SUM){ // Avalia '+'
       result -> x = a.x + b.x;
       result -> y = a.y + b.y;
@@ -11568,12 +11570,12 @@ int read_flags(struct path_variable *path){
       double area =  current -> point.x * (current -> point.u_y - next -> point.y) +
                      current -> point.u_x * (next -> point.y - current -> point.y) +
                      next -> point.x * (current -> point.y - current -> point.u_y);
-      if(area > 0.00002)
+      if(area > 0.01)
         flag -= FLAG_STRAIGHT;
       area =  current -> point.x * (current -> point.v_y - next -> point.y) +
               current -> point.v_x * (next -> point.y - current -> point.y) +
               next -> point.x * (current -> point.y - current -> point.v_y);
-      if((flag & FLAG_STRAIGHT) && area > 0.00002)
+      if((flag & FLAG_STRAIGHT) && area > 0.01)
         flag -= FLAG_STRAIGHT;
     }
     if(flag & FLAG_CONVEX){
@@ -11606,7 +11608,7 @@ int read_flags(struct path_variable *path){
         d2_x = p3_x - p2_x;
         d2_y = p3_y - p2_y;
         z_cross_product = d1_x * d2_y - d1_y * d2_x;
-        if(z_cross_product > 0.004 || z_cross_product < -0.004){
+        if(z_cross_product > 0.01 || z_cross_product < -0.01){
           if(positive_cross_product == -1)
             positive_cross_product = (z_cross_product > 0);
           else if((z_cross_product > 0) != positive_cross_product){
@@ -14087,7 +14089,10 @@ int get_primary_expression_type(struct metafont *mf, struct context *cx,
     if(begin_expr -> type == TYPE_SYMBOLIC){ // Caso 1
       struct variable *var = (struct variable *)
                                ((struct symbolic_token *) begin_expr) -> var;
-      return var -> type;
+      if(var == NULL)
+        return -1;
+      else
+        return var -> type;
     }
     if(begin_expr -> type == TYPE_TRUE || begin_expr -> type == TYPE_FALSE ||
        begin_expr -> type == TYPE_NOT) // Caso 2
