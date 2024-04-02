@@ -3760,10 +3760,13 @@ void recursive_aux_copy(struct path_points **dst, struct path_variable *origin,
       *previous_point = *dst;
       (*dst) ++;
     }
-    else if(origin -> points[index].format == SUBPATH_FORMAT)
+    else if(origin -> points[index].format == SUBPATH_FORMAT){
       recursive_aux_copy(dst, (struct path_variable *)
                               (origin -> points[index].subpath),
                          missing_directions, previous_point);
+      path_recursive_free(temporary_free, (struct path_variable *)
+                         (origin -> points[index].subpath), true);
+    }
     index  ++;
   }
   return;
@@ -4944,11 +4947,13 @@ variable \monoespaco{flags}. Some of the possible flags are:
 
 \iniciocodigo
 @<Local Macros (metafont.c)@>+=
-#define FLAG_CONVEX   1
-#define FLAG_STRAIGHT 2
-#define FLAG_CIRCULAR 4
-#define FLAG_SQUARE   8
-#define FLAG_NULL    16
+#define FLAG_CONVEX        1
+#define FLAG_STRAIGHT      2
+#define FLAG_CIRCULAR      4
+#define FLAG_SEMICIRCULAR  8
+#define FLAG_SQUARE       16
+#define FLAG_NULL         32
+// More flags will be defined later, Subsection 10.2
 @
 \fimcodigo
 
@@ -4964,9 +4969,11 @@ its size, for example. Conversely, if our pen has non-straight curves,
 then the triangulation needs to be redone to show more details if the
 pen size is increased. 
 
-The flag \monoespaco{FLAG\_CIRCULAR} stores if we know that the pen has
-a circular format. In this case, we can generate the triangulation
-without looking at the path variable format.
+The flag \monoespaco{FLAG\_CIRCULAR} stores if we know that the pen
+has a circular format. In this case, we can generate the triangulation
+without looking at the path variable format. Likewise, the
+flag \monoespaco{FLAG\_SEMICIRCULAR} checks if the pen is a
+semi-circle, which has the same property.
 
 The flag \monoespaco{FLAG\_SQUARE} stores if this is a square pen. If
 so, we also do not need points from the path variable and probably we
@@ -9841,7 +9848,7 @@ of path primary expressions. In the primary expressions we will have
 variables (which to have been stored, were returned by
 \monoespaco{eval\_path\_expression}) or sub-expressions (which are
 interpreted recursively by
-a \monospace{eval\_path\_expression}). Fortunately, this will limit
+a \monoespaco{eval\_path\_expression}). Fortunately, this will limit
 the complexity of the code that handles such operations.
 
 If we have a rotation, to interpret the totation transformer after we
@@ -10865,7 +10872,8 @@ bool eval_pen_expression(struct metafont *mf, struct context *cx,
                         struct pen_variable *result){
   if(begin -> type != TYPE_SYMBOLIC && begin -> type != TYPE_NULLPEN &&
      begin -> type != TYPE_OPEN_PARENTHESIS &&
-     begin -> type != TYPE_PENCIRCLE && begin -> type != TYPE_MAKEPEN){
+     begin -> type != TYPE_PENCIRCLE && begin -> type != TYPE_PENSEMICIRCLE &&
+     begin -> type != TYPE_MAKEPEN){
     RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(begin -> line),
                                    TYPE_T_PEN);
     return false;
@@ -11135,15 +11143,17 @@ The grammar for pen primary expressions are defined as:
 \alinhaverbatim
 <Primário de Caneta> -> <Variável de Caneta> |
                         nullpen | ( <Expressão de Caneta> ) |
-                        pencircle | makepen <Primário de Caminho>
+                        pencircle | pensemicircle |
+                        makepen <Primário de Caminho>
 \alinhanormal
 
-This requires three new reserved words:
+This requires four new reserved words:
 
 \iniciocodigo
 @<WEAVEFONT: Symbolic Token Definition@>+=
 TYPE_NULLPEN,        // The symbolic token 'nullpen'
 TYPE_PENCIRCLE,      // The symbolic token 'pencircle'
+TYPE_PENSEMICIRCLE,  // The symbolic token 'pensemicircle'
 TYPE_MAKEPEN,        // The symbolic token 'makepen'
 @
 \fimcodigo
@@ -11152,7 +11162,7 @@ And we add a string with their names in the list of reserved keywords:
 
 \iniciocodigo
 @<List of Keywords@>+=
-"nullpen", "pencircle", "makepen",
+"nullpen", "pencircle", "pensemicircle", "makepen",
 @
 \fimcodigo
 
@@ -11184,6 +11194,9 @@ bool eval_pen_primary(struct metafont *mf, struct context *cx,
     }
     else if(begin -> type == TYPE_PENCIRCLE){
       @<Pen Primary: Circle Pen@>
+    }
+    else if(begin -> type == TYPE_PENSEMICIRCLE){
+      @<Pen Primary: Semicircle Pen@>
     }
   }
   else{
@@ -11270,6 +11283,21 @@ INITIALIZE_IDENTITY_MATRIX(result -> gl_matrix);
 return true;
 @
 \fimcodigo
+
+If the pen is a a semicircle, the code is very similar:
+
+\iniciocodigo
+@<Pen Primary: Semicircle Pen@>=
+result -> format = NULL;
+result -> flags = FLAG_CONVEX | FLAG_SEMICIRCULAR;
+result -> referenced = NULL;
+result -> gl_vbo = 0;
+result -> indices = 0;
+INITIALIZE_IDENTITY_MATRIX(result -> gl_matrix);
+return true;
+@
+\fimcodigo
+
 
 Evaluate parenthesis requires to evaluate as a pen expression every
 token after the open parenthesis until the position before the closing
@@ -11380,12 +11408,12 @@ int read_flags(struct path_variable *path){
       double area =  current -> point.x * (current -> point.u_y - next -> point.y) +
                      current -> point.u_x * (next -> point.y - current -> point.y) +
                      next -> point.x * (current -> point.y - current -> point.u_y);
-      if(area > 0.01)
+      if(area > 0.01 || area < -0.01)
         flag -= FLAG_STRAIGHT;
       area =  current -> point.x * (current -> point.v_y - next -> point.y) +
               current -> point.v_x * (next -> point.y - current -> point.y) +
               next -> point.x * (current -> point.y - current -> point.v_y);
-      if((flag & FLAG_STRAIGHT) && area > 0.01)
+      if((flag & FLAG_STRAIGHT) && (area > 0.01 || area < -0.01))
         flag -= FLAG_STRAIGHT;        
     }
     if(flag & FLAG_CONVEX){
@@ -11486,6 +11514,9 @@ else if(begin -> type == TYPE_MAKEPATH){
   else if(tmp.flags & FLAG_CIRCULAR){ // circlepen: Circle approximation
     @<'makepath': 'pencircle'@>
   }
+  else if(tmp.flags & FLAG_SEMICIRCULAR){
+    @<'makepath': 'pensemicircle'@>
+  }
   else if(tmp.flags & FLAG_SQUARE){ // Caneta quadrada
     @<'makepath': 'pensquare'@>
   }
@@ -11566,6 +11597,38 @@ result -> points[7].format = FINAL_FORMAT;
 result -> points[8].point.x = 0.5; result -> points[8].point.y = 0.0;
 result -> points[8].point.u_x = 0.5; result -> points[8].point.u_y = 0.13261;
 result -> points[8].point.v_x = 0.44733; result -> points[8].point.v_y = 0.2598;
+result -> cyclic = true;
+@
+\fimcodigo
+
+For a semicircular pen, it is the same, we just use half of the above points:
+
+\iniciocodigo
+@<'makepath': 'pensemicircle'@>=
+result -> length = 5;
+result -> number_of_points = 5;
+result -> points =
+   (struct path_points *) temporary_alloc(sizeof(struct path_points) * 9);
+result -> points[0].format = FINAL_FORMAT;
+result -> points[0].point.x = 0.5; result -> points[0].point.y = 0.0;
+result -> points[0].point.u_x = 0.5; result -> points[0].point.u_y = 0.13261;
+result -> points[0].point.v_x = 0.44733; result -> points[0].point.v_y = 0.2598;
+result -> points[1].format = FINAL_FORMAT;
+result -> points[1].point.x = 0.35356; result -> points[1].point.y = 0.35356;
+result -> points[1].point.u_x = 0.2598; result -> points[1].point.u_y = 0.44733;
+result -> points[1].point.v_x = 0.13261; result -> points[1].point.v_y = 0.5;
+result -> points[2].format = FINAL_FORMAT;
+result -> points[2].point.x = 0.0; result -> points[2].point.y = 0.5;
+result -> points[2].point.u_x = -0.13261; result -> points[2].point.u_y = 0.5;
+result -> points[2].point.v_x = -0.2598; result -> points[2].point.v_y = 0.44733;
+result -> points[3].format = FINAL_FORMAT;
+result -> points[3].point.x = -0.35356; result -> points[3].point.y = 0.35356;
+result -> points[3].point.u_x = -0.44733; result -> points[3].point.u_y = 0.2598;
+result -> points[3].point.v_x = -0.5; result -> points[3].point.v_y = 0.13261;
+result -> points[4].format = FINAL_FORMAT;
+result -> points[4].point.x = -0.5; result -> points[4].point.y = 0.0;
+result -> points[4].point.u_x = -0.33333; result -> points[4].point.u_y = 0.0;
+result -> points[4].point.v_x =  0.33333; result -> points[4].point.v_y = 0.0;
 result -> cyclic = true;
 @
 \fimcodigo
@@ -14378,9 +14441,8 @@ command \monoespaco{pickup} is:
 
 \alinhaverbatim
 <Command> -> <'pickup' Command>
-<'pickup' Command> -> pickup <Pen Variable, 'nullpen' or 'pencircle'>
-                             <Optional Transformers>
-<Pen Variable or 'nullpen'> -> nullpen | pencircle | <Pen Variable>
+<'pickup' Command> -> pickup <Pen to be Picked> <Optional Transformers>
+<Pen to be Picked> -> nullpen | pencircle | pensemicircle | <Pen Variable>
 <Optional Transformers> -> <Empty> |
                            <Transformer><Optional Transformers>
 \alinhanormal
@@ -14498,19 +14560,21 @@ call \monoespaco{CHECK\_PEN\_EXTREMITIES} in all points and then we
 get who has the biggest and smallest value in each axis. But in cases
 when we will not iterate over each point, we will need more functions
 to deduce their values. For example, if we are using
-a \monoespaco{pickup} command over \monoespaco{pencircle} with a
-linear transform stored in a matrix. The function below can be used to
-get this pen extremity points:
+a \monoespaco{pickup} command over \monoespaco{pencircle}
+or \monoespaco{pensemicircle} with a linear transform stored in a
+matrix. The function below can be used to get this pen extremity
+points:
 
 \iniciocodigo
 @<Local Function Declaration (metafont.c)@>+=
-void pencircle_extremity_points(struct metafont *mf, float *matrix);
+void pencircular_extremity_points(struct metafont *mf, float *matrix,
+                                  bool fullcircle);
 @
 \fimcodigo
 
-A default \monoespaco{pencircle}, with no linear transform is a
-circular pen with radius $1/2$. Which means that every pen coordinate
-$(x, y)$ follows the formula:
+A default \monoespaco{pencircle} or \monoespaco{pensemicircle}, with
+no linear transform is a pen with radius $1/2$. Which means
+that every pen coordinate $(x, y)$ follows the formula:
 
 $$
 x^2+y^2= 0.25
@@ -14526,6 +14590,9 @@ $$
 y=\pm\sqrt{0.25-x^2}
 $$
 
+In the case of a semicircle, the same formulas are valid, except that
+we have the restriction that $y\geq 0$.
+
 Given a linear transform defined by matrix $N$, we get new values
 $(x,y)$ using th formulas:
 
@@ -14534,8 +14601,13 @@ f_x(x) = M_{11}x \pm M_{21}\sqrt{0.25-x^2} + M_{31}
 $$
 
 $$
-f_y(y) = M_{22}y \pm M_{12}\sqrt{0.25-y^2} + M_{32}
+f_y(y) = M_{22}y \pm M_{12}\sqrt{0.25-y^2} + M_{32}\ \ (circle)
 $$
+
+$$
+f_y(y) = M_{22}y + M_{12}\sqrt{0.25-y^2} + M_{32}\ \ (semicircle)
+$$
+
 
 When $M_{11}=0$, the most extreme points in axis $x$ will be $(-0.5,
 0)$ and $(0.5, 0)$ after passing by the linear transform defined by
@@ -14554,7 +14626,11 @@ f_x'(x)=M_{11} \pm (M_{21}x)/(\sqrt{0.25-x^2})=0
 $$
 
 $$
-f_y'(y)=M_{22} \pm (M_{12}y)/(\sqrt{0.25-y^2})=0
+f_y'(y)=M_{22} \pm (M_{12}y)/(\sqrt{0.25-y^2})=0\ {(circle)}
+$$
+
+$$
+f_y'(y)=M_{22} + (M_{12}y)/(\sqrt{0.25-y^2})=0\ {(semicircle)}
 $$
 
 As there is no closed formula to compute the soluction directly, we
@@ -14583,22 +14659,23 @@ y_{n+1} = y_{n} - (f'_y(y_n)/f''_y(y_n))
 $$
 
 The problem of Newton Method in this function is that it is defined
-only in the interval between -0.5 and +0.5. If the value that we are
-searching is near the extremity, it is possible that we step outside
-the function Domain. If this happens, we will change to another
-method. We will use the slowerBissection Method. For this method,
-notice that $f'(-0.5)$ and $f'(+0.5)$ has opposite signals. The root
-of this functions is in this interval. Next, we make the interval
-slower computing $f'$ in the middle of the interval and checking the
-signal. And we repeat until we find the value or the interval becames
-too small.
+only in the interval between -0.5 and +0.5 (or between 0 and 0.5 for
+$f_y$ in case of a semicircle). If the value that we are searching is
+near the extremity, it is possible that we step outside the function
+Domain. If this happens, we will change to another method. We will use
+the slowerBissection Method. For this method, notice that $f'(-0.5)$
+and $f'(+0.5)$ has opposite signals. The root of this functions is in
+this interval. Next, we make the interval slower computing $f'$ in the
+middle of the interval and checking the signal. And we repeat until we
+find the value or the interval becames too small.
 
 After reviewing the theory, we finally can write the function that
 gets the extremity points for \monoespaco{pencircle}:
 
 \iniciocodigo
 @<Auxiliary Local Functions (metafont.c)@>+=
-void pencircle_extremity_points(struct metafont *mf, float *matrix){
+void pencircular_extremity_points(struct metafont *mf, float *matrix,
+                                  bool fullcircle){
   DECLARE_PEN_EXTREMITIES();
   int i, index[4] = {0, 3, 4, 1};
   for(i = 0; i < 2; i ++){ // i=0 computes axis x, i=1 computes axis y
@@ -14611,7 +14688,8 @@ void pencircle_extremity_points(struct metafont *mf, float *matrix){
     else if((i == 0 && matrix[0] == 0.0) ||
             (i == 1 && matrix[1] == 0.0)){
       CHECK_PEN_EXTREMITIES(0.0, 0.5, matrix);
-      CHECK_PEN_EXTREMITIES(0.0, -0.5, matrix);
+      if(fullcircle)
+        CHECK_PEN_EXTREMITIES(0.0, -0.5, matrix);
     }
     else{
       // Newton Method
@@ -14653,15 +14731,19 @@ void pencircle_extremity_points(struct metafont *mf, float *matrix){
       } while(x0 != x1);
       if(i == 0){
         CHECK_PEN_EXTREMITIES(x0, sqrt(0.25-x0*x0), matrix);
-        CHECK_PEN_EXTREMITIES(x0, -sqrt(0.25-x0*x0), matrix);
+        if(fullcircle)
+          CHECK_PEN_EXTREMITIES(x0, -sqrt(0.25-x0*x0), matrix);
         CHECK_PEN_EXTREMITIES(-x0, sqrt(0.25-x0*x0), matrix);
-        CHECK_PEN_EXTREMITIES(-x0, -sqrt(0.25-x0*x0), matrix);
+        if(fullcircle)
+          CHECK_PEN_EXTREMITIES(-x0, -sqrt(0.25-x0*x0), matrix);
       }
       else{
         CHECK_PEN_EXTREMITIES(sqrt(0.25-x0*x0), x0, matrix);
         CHECK_PEN_EXTREMITIES(-sqrt(0.25-x0*x0), x0, matrix);
-        CHECK_PEN_EXTREMITIES(sqrt(0.25-x0*x0), -x0, matrix);
-        CHECK_PEN_EXTREMITIES(-sqrt(0.25-x0*x0), -x0, matrix);
+        if(fullcircle){
+          CHECK_PEN_EXTREMITIES(sqrt(0.25-x0*x0), -x0, matrix);
+          CHECK_PEN_EXTREMITIES(-sqrt(0.25-x0*x0), -x0, matrix);
+        }
       }
     }
   }
@@ -14801,8 +14883,8 @@ triangulation:
 
 \iniciocodigo
 @<Local Macros (metafont.c)@>+=
-#define FLAG_ORIENTATION      32
-#define FLAG_COUNTERCLOCKWISE 64
+#define FLAG_ORIENTATION      64
+#define FLAG_COUNTERCLOCKWISE 128
 @
 \fimcodigo
 
@@ -14896,7 +14978,7 @@ bool triangulate_pen(struct metafont *mf, struct pen_variable *pen,
   @<Triangulation: Null Pen@>
   @<Triangulation: Square Pen@>
   @<Triangulation: Convex Polygon@>
-  @<Triangulation: Circle@>
+  @<Triangulation: Circle and Semicircle@>
   @<Triangulation: Convex Shape@>
   @<Triangulation: Concave Shape@>
 }
@@ -15028,47 +15110,52 @@ if((pen -> flags & FLAG_STRAIGHT) && (pen -> flags & FLAG_CONVEX)){
 @
 \fimcodigo
 
-Now let's deal with the next case for triangulation: circles. A
-circular pen is created using expression \monoespaco{pencircle}. For
-this kind of pen, we must generate its vertices during triangulation:
-we will not use the stored vertices. But how many vertices should be
-generated? If the circle have a single pixel as diameter, perhaps 4
-vertices in the perimeter is enough, nobody would notice that this is
-a square instead of a circle. But if the circle becames bigger, we
-would need more vertices to correctly approximate its shape.
+Now let's deal with the next case for triangulation: circles and
+semicircles. A circular pen is created using
+expression \monoespaco{pencircle}. For this kind of pen, we must
+generate its vertices during triangulation: we will not use the stored
+vertices. But how many vertices should be generated? If the circle
+have a single pixel as diameter, perhaps 4 vertices in the perimeter
+is enough, nobody would notice that this is a square instead of a
+circle. But if the circle becames bigger, we would need more vertices
+to correctly approximate its shape. The same applies for semicircles:
+for them we need half the vertices needed for a circle, but the
+required number of vertices increases with the semicircle size.
 
-The number of required vertices is given by the circle circumference,
-in pixels: we need $2\pi r$ vertices in the perimeter. The angle
-between them is given by the formula $L=\theta r$ to compute the arc
-length in the circle. If we want 1 pixel as arc, then, the angle
-between them is $1/r$ in radians, where $r$ is the radius.
+The number of required vertices is given by the formula of circle
+circumference, in pixels: we need $2\pi r$ vertices in the perimeter
+for circles and $\pi r$ vertices for semicircles.
 
 We will use the same fan triangulation as before. But we will use as
-axis the center of the circle. Therefore, we will store $2\pi r +1$
-vertices.
+axis the center of the circle. Therefore, as we need one more vertice
+to be the axis, we will store $2\pi r +1$ vertices for circles and
+$\pi r +1$ for semicircles.
 
 The radius will be approximated as half the biggest side of the square
-where our circle is inscribed. We compute this after performing the
-linear transformation in the square using the circle transform
+where our circular pen is inscribed. We compute this after performing
+the linear transformation in the square using the circle transform
 matrix. Therefore, we will get a suitable upper bound for the radius,
-considering that our circle could have been transformed in a ellipse
-after the linear transformation.
+considering that our circular pen could have been transformed in a
+ellipse or semi-ellipse after the linear transformation.
 
 This biggest side of the rectangle where our circle is inscribed after
 the linear transformation is also how we compute the resolution of a
-circle triangulation. If our circle is already triangulated and we
-need to draw using a smaller circle, then we do not need to
-triangulate it again. But if we need to draw a bigger circle, then we
-need to triangulate, even if we already had a triangulation before.
+circular pen triangulation. If our circular pen is already
+triangulated and we need to draw using a smaller circle, then we do
+not need to triangulate it again. But if we need to draw a bigger
+circle or semicircle, then we need to triangulate, even if we already
+had a triangulation before.
 
-The code to triangulate the circle is:
+The code to triangulate the circular pen is:
 
 \iniciocodigo
-@<Triangulation: Circle@>=
-if((pen -> flags & FLAG_CIRCULAR)){
+@<Triangulation: Circle and Semicircle@>=
+if((pen -> flags & FLAG_CIRCULAR) || (pen -> flags & FLAG_SEMICIRCULAR)){
   float radius;
+  GLsizei size;
   // Get extremity points:
-  pencircle_extremity_points(mf, transform_matrix);
+  pencircular_extremity_points(mf, transform_matrix,
+                               (pen -> flags & FLAG_CIRCULAR));
   // Checking resolution (radius):
   {
     float side1, side2;
@@ -15084,7 +15171,10 @@ if((pen -> flags & FLAG_CIRCULAR)){
       return true;
   }
   pen -> triang_resolution = radius;
-  GLsizei size = sizeof(float) * 2 * (((int) (2 * M_PI * radius)) + 4);
+  if(pen -> flags & FLAG_CIRCULAR)
+    size = sizeof(float) * 2 * (((int) (2 * M_PI * radius)) + 4);
+  else
+    size = sizeof(float) * 2 * (((int) (M_PI * radius)) + 4);
   float *data = (float *) temporary_alloc(size);
   if(data == NULL){
     RAISE_ERROR_NO_MEMORY(mf, NULL, 0);
@@ -15096,10 +15186,12 @@ if((pen -> flags & FLAG_CIRCULAR)){
     data[0] = 0.0;
     data[1] = 0.0; // Circle center
     for(i = 2; i < (size / sizeof(float)); i ++){
-      data[i] = 0.5 * sin(angle);
-      i ++;
       data[i] = 0.5 * cos(angle);
+      i ++;
+      data[i] = 0.5 * sin(angle);
       angle += 1/radius;
+      if((pen -> flags & FLAG_SEMICIRCULAR) && angle > M_PI)
+        angle = M_PI;
     }
   }
   glGenBuffers(1, &(pen -> gl_vbo));
@@ -15332,7 +15424,8 @@ else if(begin -> type == TYPE_PICKUP){
   }
   if(next_token -> type != TYPE_NULLPEN &&
      next_token -> type != TYPE_SYMBOLIC &&
-     next_token -> type != TYPE_PENCIRCLE){
+     next_token -> type != TYPE_PENCIRCLE &&
+     next_token -> type != TYPE_PENSEMICIRCLE){
     RAISE_ERROR_UNEXPECTED_TOKEN(mf, cx, OPTIONAL(next_token -> line),
                                 next_token -> type);
     return false;
@@ -15346,6 +15439,11 @@ else if(begin -> type == TYPE_PICKUP){
   }
   else if(next_token -> type == TYPE_PENCIRCLE){
     mf -> internal_pen_variables[0].flags = FLAG_CONVEX | FLAG_CIRCULAR;
+    mf -> internal_pen_variables[0].referenced = NULL;
+    mf -> internal_pen_variables[0].gl_vbo = 0;
+  }
+  else if(next_token -> type == TYPE_PENSEMICIRCLE){
+    mf -> internal_pen_variables[0].flags = FLAG_CONVEX | FLAG_SEMICIRCULAR;
     mf -> internal_pen_variables[0].referenced = NULL;
     mf -> internal_pen_variables[0].gl_vbo = 0;
   }

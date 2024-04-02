@@ -1372,6 +1372,9 @@ void test_pen_expressions(void){
 	 ALMOST_EQUAL(pen_p4 -> gl_matrix[6], 0.0) &&
 	 ALMOST_EQUAL(pen_p4 -> gl_matrix[7], 0.0) &&
 	 ALMOST_EQUAL(pen_p4 -> gl_matrix[8], 1.0));
+  printf("penrazor: %p(%d pontos)\nFLAGS: %d\n", pen_penrazor -> format,
+	 pen_penrazor -> format -> number_of_points,
+	 pen_penrazor -> flags); 
   assert("Creating straight and convex pen",
 	 pen_penrazor -> format != NULL &&
 	 pen_penrazor -> format -> number_of_points == 3 &&

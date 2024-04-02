@@ -3840,10 +3840,13 @@ void recursive_aux_copy(struct path_points **dst, struct path_variable *origin,
       *previous_point = *dst;
       (*dst) ++;
     }
-    else if(origin -> points[index].format == SUBPATH_FORMAT)
+    else if(origin -> points[index].format == SUBPATH_FORMAT){
       recursive_aux_copy(dst, (struct path_variable *)
                               (origin -> points[index].subpath),
-                         missing_directions, previous_point);
+                         missing_directions, previous_point);        
+      path_recursive_free(temporary_free, (struct path_variable *)
+                         (origin -> points[index].subpath), true);
+    }
     index  ++;
   }
   return;
@@ -3972,13 +3975,6 @@ void convert_to_final(struct path_variable *p){
       p -> points[i].point.u_y = cimag(u);
       p -> points[i].point.v_x = creal(v);
       p -> points[i].point.v_y = cimag(v);
-      if(isnan(p -> points[i].point.u_x)){
-        printf("DEBUG: ERROR! NOT A NUMBER!\n");
-        printf("z0: %f %f\n", creal(z0), cimag(z0));
-        printf("z1: %f %f\n", creal(z1), cimag(z1));
-        printf("theta: %f\n", theta);
-        printf("w0: %f %f\n", w0_x, w0_y);
-      }
       @<Ajuste de Tensão@>
     }
   }
@@ -5056,11 +5052,13 @@ possíveis são:
 
 \iniciocodigo
 @<Macros Locais (metafont.c)@>+=
-#define FLAG_CONVEX   1
-#define FLAG_STRAIGHT 2
-#define FLAG_CIRCULAR 4
-#define FLAG_SQUARE   8
-#define FLAG_NULL    16
+#define FLAG_CONVEX        1
+#define FLAG_STRAIGHT      2
+#define FLAG_CIRCULAR      4
+#define FLAG_SEMICIRCULAR  8
+#define FLAG_SQUARE       16
+#define FLAG_NULL         32
+// Mais flags serão definidas posteriormente, Subseção 10.2
 @
 \fimcodigo
 
@@ -5080,10 +5078,12 @@ estamos usando nenhum tipo de aproximação. Por isso, não precisamos
 gerar a triangulação novamente para poder mostrar mais detalhes
 quando, por exempolo, a caneta se torna maior.
 
-A flag \monoespaco{FLAG\_CIRCULAR} armazena se nós sabemos que a caneta
-tem um formato circular. Neste caso, seremos capazes de fazer a
+A flag \monoespaco{FLAG\_CIRCULAR} armazena se nós sabemos que a
+caneta tem um formato circular. Neste caso, seremos capazes de fazer a
 triangulação sem olhar para os pontos da variável de caminho
-representando o formato.
+representando o formato. De modo similar, a
+flag \monoespaco{FLAG\_SEMICIRCULAR} checa se a caneta é um
+semi-círculo, o que também permite o mesmo.
 
 A flag \monoespaco{FLAG\_SQUARE} armazena se a caneta é uma caneta
 quadrada. Neste caso também não precisamos dos pontos da variável de
@@ -11048,7 +11048,8 @@ bool eval_pen_expression(struct metafont *mf, struct context *cx,
                         struct pen_variable *result){
   if(begin -> type != TYPE_SYMBOLIC && begin -> type != TYPE_NULLPEN &&
      begin -> type != TYPE_OPEN_PARENTHESIS &&
-     begin -> type != TYPE_PENCIRCLE && begin -> type != TYPE_MAKEPEN){
+     begin -> type != TYPE_PENCIRCLE && begin -> type != TYPE_PENSEMICIRCLE &&
+     begin -> type != TYPE_MAKEPEN){
     RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(begin -> line),
                                    TYPE_T_PEN);
     return false;
@@ -11322,16 +11323,18 @@ A gramática das expressões primárias de caminho é definida como:
 \alinhaverbatim
 <Primário de Caneta> -> <Variável de Caneta> |
                         nullpen | ( <Expressão de Caneta> ) |
-                        pencircle | makepen <Primário de Caminho>
+                        pencircle | pensemicircle |
+                        makepen <Primário de Caminho>
 \alinhanormal
 
 
-Isso requer registrar três novas palavras reservadas:
+Isso requer registrar quatro novas palavras reservadas:
 
 \iniciocodigo
 @<WEAVEFONT: Definição de Token Simbólico@>+=
 TYPE_NULLPEN,        // O token simbólico 'nullpen'
 TYPE_PENCIRCLE,      // O token simbólico 'pencircle'
+TYPE_PENSEMICIRCLE,  // O token simbólico 'pensemicircle'
 TYPE_MAKEPEN,        // O token simbólico 'makepen'
 @
 \fimcodigo
@@ -11341,7 +11344,7 @@ reservadas:
 
 \iniciocodigo
 @<Lista de Palavras Reservadas@>+=
-"nullpen", "pencircle", "makepen",
+"nullpen", "pencircle", "pensemicircle", "makepen",
 @
 \fimcodigo
 
@@ -11374,6 +11377,10 @@ bool eval_pen_primary(struct metafont *mf, struct context *cx,
     else if(begin -> type == TYPE_PENCIRCLE){
       @<Caneta Primária: Caneta Circular@>
     }
+    else if(begin -> type == TYPE_PENSEMICIRCLE){
+      @<Caneta Primária: Caneta Semicircular@>
+    }
+
   }
   else{
     if(begin -> type == TYPE_OPEN_PARENTHESIS &&
@@ -11452,6 +11459,20 @@ matriz de transformação como sendo a matriz identidade:
 @<Caneta Primária: Caneta Circular@>=
 result -> format = NULL;
 result -> flags = FLAG_CONVEX | FLAG_CIRCULAR;
+result -> referenced = NULL;
+result -> gl_vbo = 0;
+result -> indices = 0;
+INITIALIZE_IDENTITY_MATRIX(result -> gl_matrix);
+return true;
+@
+\fimcodigo
+
+Se a caneta for semicircular, o código é bastante semelhante:
+
+\iniciocodigo
+@<Caneta Primária: Caneta Semicircular@>=
+result -> format = NULL;
+result -> flags = FLAG_CONVEX | FLAG_SEMICIRCULAR;
 result -> referenced = NULL;
 result -> gl_vbo = 0;
 result -> indices = 0;
@@ -11570,13 +11591,13 @@ int read_flags(struct path_variable *path){
       double area =  current -> point.x * (current -> point.u_y - next -> point.y) +
                      current -> point.u_x * (next -> point.y - current -> point.y) +
                      next -> point.x * (current -> point.y - current -> point.u_y);
-      if(area > 0.01)
+      if(area > 0.01 || area < -0.01)
         flag -= FLAG_STRAIGHT;
       area =  current -> point.x * (current -> point.v_y - next -> point.y) +
               current -> point.v_x * (next -> point.y - current -> point.y) +
               next -> point.x * (current -> point.y - current -> point.v_y);
-      if((flag & FLAG_STRAIGHT) && area > 0.01)
-        flag -= FLAG_STRAIGHT;
+      if((flag & FLAG_STRAIGHT) && (area > 0.01 || area < -0.01))
+        flag -= FLAG_STRAIGHT;        
     }
     if(flag & FLAG_CONVEX){
       // Ela é convexa somente se o componente z do produto vetorial dos
@@ -11676,6 +11697,9 @@ else if(begin -> type == TYPE_MAKEPATH){
   else if(tmp.flags & FLAG_CIRCULAR){ // circlepen: Cria aproximação de círculo
     @<'makepath': 'pencircle'@>
   }
+  else if(tmp.flags & FLAG_SEMICIRCULAR){
+    @<'makepath': 'pensemicircle'@>
+  }
   else if(tmp.flags & FLAG_SQUARE){ // Caneta quadrada
     @<'makepath': 'pensquare'@>
   }
@@ -11758,6 +11782,39 @@ result -> points[8].point.v_x = 0.44733; result -> points[8].point.v_y = 0.2598;
 result -> cyclic = true;
 @
 \fimcodigo
+
+Um semicírculo é a mesma coisa, mas usamos só metade dos pontos acima:
+
+\iniciocodigo
+@<'makepath': 'pensemicircle'@>=
+result -> length = 5;
+result -> number_of_points = 5;
+result -> points =
+   (struct path_points *) temporary_alloc(sizeof(struct path_points) * 9);
+result -> points[0].format = FINAL_FORMAT;
+result -> points[0].point.x = 0.5; result -> points[0].point.y = 0.0;
+result -> points[0].point.u_x = 0.5; result -> points[0].point.u_y = 0.13261;
+result -> points[0].point.v_x = 0.44733; result -> points[0].point.v_y = 0.2598;
+result -> points[1].format = FINAL_FORMAT;
+result -> points[1].point.x = 0.35356; result -> points[1].point.y = 0.35356;
+result -> points[1].point.u_x = 0.2598; result -> points[1].point.u_y = 0.44733;
+result -> points[1].point.v_x = 0.13261; result -> points[1].point.v_y = 0.5;
+result -> points[2].format = FINAL_FORMAT;
+result -> points[2].point.x = 0.0; result -> points[2].point.y = 0.5;
+result -> points[2].point.u_x = -0.13261; result -> points[2].point.u_y = 0.5;
+result -> points[2].point.v_x = -0.2598; result -> points[2].point.v_y = 0.44733;
+result -> points[3].format = FINAL_FORMAT;
+result -> points[3].point.x = -0.35356; result -> points[3].point.y = 0.35356;
+result -> points[3].point.u_x = -0.44733; result -> points[3].point.u_y = 0.2598;
+result -> points[3].point.v_x = -0.5; result -> points[3].point.v_y = 0.13261;
+result -> points[4].format = FINAL_FORMAT;
+result -> points[4].point.x = -0.5; result -> points[4].point.y = 0.0;
+result -> points[4].point.u_x = -0.33333; result -> points[4].point.u_y = 0.0;
+result -> points[4].point.v_x =  0.33333; result -> points[4].point.v_y = 0.0;
+result -> cyclic = true;
+@
+\fimcodigo
+
 
 Se acaneta for quadrada, geramos seu formato verdadeiro preenchendo
 manualmente seus pontos de extremidade e de controle:
@@ -14587,9 +14644,9 @@ comando \monoespaco{pickup} é dada por:
 
 \alinhaverbatim
 <Comando> -> <Comando 'pickup'>
-<Comando 'pickup'> -> pickup <Variável de Caneta, 'nullpen' ou 'pencircle'>
-                             <Transformadores Opcionais>
-<Variável de Caneta ou 'nullpen'> -> nullpen | pencircle | <Variável de Caneta>
+<Comando 'pickup'> -> pickup <Caneta a Ser Pega> <Transformadores Opcionais>
+<Caneta a Ser Pega> -> nullpen | pencircle | pensemicircle |
+                       <Variável de Caneta>
 <Transformadores Opcionais> -> <Vazio> |
                                <Transformador> <Transformadores Opcionais>
 \alinhanormal
@@ -14708,20 +14765,21 @@ chamar \monoespaco{CHECK\_PEN\_EXTREMITIES} em todos os pontos e assim
 obtemos os que forem maiores no eixo $x$ e $y$. Nos casos em que não
 queremos iterar sobre todos os pontos, vamos criar também algumas
 funções para deduzi-los para nós. Por exemplo, caso tenhamos usado o
-comando \monoespaco{pickup} sobre \monoespaco{pencircle} e a nossa
-caneta tenha passado por uma transformação linear representada por uma
-matriz. A função abaixo pode ser usada para obter os pontos de
-extremidade para esta caneta:
+comando \monoespaco{pickup} sobre \monoespaco{pencircle}
+ou \monoespaco{pensemicircle} e a nossa caneta tenha passado por uma
+transformação linear representada por uma matriz. A função abaixo pode
+ser usada para obter os pontos de extremidade para esta caneta:
 
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
-void pencircle_extremity_points(struct metafont *mf, float *matrix);
+void pencircular_extremity_points(struct metafont *mf, float *matrix,
+                                  bool fullcircle);
 @
 \fimcodigo
 
-Um \monoespaco{pencircle} padrão, sem senhuma transformação é uma
-caneta circular de raio $1/2$. O que quer dizer que toda coordenada
-$(x,y)$ atende à seguinte fórmula:
+Um \monoespaco{pencircle} ou \monoespaco{pensemicircle} padrão, sem
+nenhuma transformação é uma caneta de raio $1/2$. O que quer
+dizer que toda coordenada $(x,y)$ atende à seguinte fórmula:
 
 $$
 x^2+y^2= 0.25
@@ -14737,6 +14795,9 @@ $$
 y=\pm\sqrt{0.25-x^2}
 $$
 
+No caso do semicírculo as mesmas fórmulas são válidas, exceto que
+temos a restrição adicional que $y\geq 0$.
+
 Dada uma transformação linear definida pela matriz $M$, obtemos os novos
 valores de $x$ e $y$ seguindo a fórmula abaixo:
 
@@ -14745,8 +14806,13 @@ f_x(x) = M_{11}x \pm M_{21}\sqrt{0.25-x^2} + M_{31}
 $$
 
 $$
-f_y(y) = M_{22}y \pm M_{12}\sqrt{0.25-y^2} + M_{32}
+f_y(y) = M_{22}y \pm M_{12}\sqrt{0.25-y^2} + M_{32}\ \ (círculo)
 $$
+
+$$
+f_y(y) = M_{22}y + M_{12}\sqrt{0.25-y^2} + M_{32}\ \ (semicírculo)
+$$
+
 
 Quando $M_{11}$ é igual à 0, os pontos mais extremos no eixo $x$ serão
 a transformação linear dada por $M$ de $(-0.5, 0)$ e $(0.5, 0)$. Se
@@ -14765,8 +14831,13 @@ f_x'(x)=M_{11} \pm (M_{21}x)/(\sqrt{0.25-x^2})=0
 $$
 
 $$
-f_y'(y)=M_{22} \pm (M_{12}y)/(\sqrt{0.25-y^2})=0
+f_y'(y)=M_{22} \pm (M_{12}y)/(\sqrt{0.25-y^2})=0\ {(círculo)}
 $$
+
+$$
+f_y'(y)=M_{22} + (M_{12}y)/(\sqrt{0.25-y^2})=0\ {(semicírculo)}
+$$
+
 
 Como não há uma fórmula que nos dê a solução de maneira direta, temos
 que usar métodos iterativos como o Método de Newton. para achar os
@@ -14779,8 +14850,13 @@ f_x''(x)= \pm (M_{21}\sqrt{0.25-x^2}+(M_{21}x^2)/(\sqrt{0.25-x^2}))
 $$
 
 $$
-f_y''(y)= \pm (M_{12}\sqrt{0.25-x^2}+(M_{12}x^2)/(\sqrt{0.25-x^2}))
+f_y''(y)= \pm (M_{12}\sqrt{0.25-x^2}+(M_{12}x^2)/(\sqrt{0.25-x^2}))\ (círculo)
 $$
+
+$$
+f_y''(y)= + (M_{12}\sqrt{0.25-x^2}+(M_{12}x^2)/(\sqrt{0.25-x^2}))\ (semicírculo)
+$$
+
 
 Pelo Método de Newton, uma vez que tenhamos uma estimativa $x_n$ e
 $y_n$ para o zero da função $f'_x$ e $f'_y$, podemos obter uma
@@ -14795,22 +14871,24 @@ y_{n+1} = y_{n} - (f'_y(y_n)/f''_y(y_n))
 $$
 
 O problema do Método de Newton é que como nossa função $f_x$ e $f_y$
-está definida somente entre -0,5 e +0,5, se o valor que estamos
-buscando estiver muito próximo destas extremidades, ele pode acabar
-nos empurrando para fora do Domínio da função. Caso isso ocorra,
-teremos que recorrer a outro método. No caso, usaremos o mais lento
-Método da Bissecção. Note que $f'_x(-0,5)$ e $f'_x(+0,5)$ tem sinais
-opostos sempre, assumindo que um zero da função exista. Sendo assim,
-este método começa com este intervalo e depois checa o sinal de $f_x$
-no meio das duas extremidades. Baseado no sinal ele reduz o tamanho
-do intervalo até reduzi-lo à zero e encontrar o valor.
+está definida somente entre -0,5 e +0,5 (ou entre 0 e 0,5 no caso de
+$f_y$ para semicírculos), se o valor que estamos buscando estiver
+muito próximo destas extremidades, ele pode acabar nos empurrando para
+fora do Domínio da função. Caso isso ocorra, teremos que recorrer a
+outro método. No caso, usaremos o mais lento Método da Bissecção. Note
+que $f'_x(-0,5)$ e $f'_x(+0,5)$ tem sinais opostos sempre, assumindo
+que um zero da função exista. Sendo assim, este método começa com este
+intervalo e depois checa o sinal de $f_x$ no meio das duas
+extremidades. Baseado no sinal ele reduz o tamanho do intervalo até
+reduzi-lo à zero e encontrar o valor.
 
 Após revisar toda a teoria, podemos enfim implementar a função que
 obtém os pontos de extremidade de uma caneta redonda:
 
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
-void pencircle_extremity_points(struct metafont *mf, float *matrix){
+void pencircular_extremity_points(struct metafont *mf, float *matrix,
+                                  bool fullcircle){
   DECLARE_PEN_EXTREMITIES();
   int i, index[4] = {0, 3, 4, 1};
   for(i = 0; i < 2; i ++){ // i=0 computa eixo x, i=1 computa eixo y
@@ -14823,7 +14901,8 @@ void pencircle_extremity_points(struct metafont *mf, float *matrix){
     else if((i == 0 && matrix[0] == 0.0) ||
             (i == 1 && matrix[1] == 0.0)){
       CHECK_PEN_EXTREMITIES(0.0, 0.5, matrix);
-      CHECK_PEN_EXTREMITIES(0.0, -0.5, matrix);
+      if(fullcircle)
+        CHECK_PEN_EXTREMITIES(0.0, -0.5, matrix);
     }
     else{
       // Método de newton
@@ -14865,15 +14944,19 @@ void pencircle_extremity_points(struct metafont *mf, float *matrix){
       } while(x0 != x1);
       if(i == 0){
         CHECK_PEN_EXTREMITIES(x0, sqrt(0.25-x0*x0), matrix);
-        CHECK_PEN_EXTREMITIES(x0, -sqrt(0.25-x0*x0), matrix);
+        if(fullcircle)
+          CHECK_PEN_EXTREMITIES(x0, -sqrt(0.25-x0*x0), matrix);
         CHECK_PEN_EXTREMITIES(-x0, sqrt(0.25-x0*x0), matrix);
-        CHECK_PEN_EXTREMITIES(-x0, -sqrt(0.25-x0*x0), matrix);
+        if(fullcircle)
+          CHECK_PEN_EXTREMITIES(-x0, -sqrt(0.25-x0*x0), matrix);
       }
       else{
         CHECK_PEN_EXTREMITIES(sqrt(0.25-x0*x0), x0, matrix);
         CHECK_PEN_EXTREMITIES(-sqrt(0.25-x0*x0), x0, matrix);
-        CHECK_PEN_EXTREMITIES(sqrt(0.25-x0*x0), -x0, matrix);
-        CHECK_PEN_EXTREMITIES(-sqrt(0.25-x0*x0), -x0, matrix);
+        if(fullcircle){
+          CHECK_PEN_EXTREMITIES(sqrt(0.25-x0*x0), -x0, matrix);
+          CHECK_PEN_EXTREMITIES(-sqrt(0.25-x0*x0), -x0, matrix);
+        }
       }
     }
   }
@@ -14883,7 +14966,8 @@ void pencircle_extremity_points(struct metafont *mf, float *matrix){
 \fimcodigo
 
 Também podemos querer achar os pontos de extremidade não para um
-círculo, mas para um caminho definido como curvas de Bézier:
+círculo ou semicírculo, mas para um caminho definido como curvas de
+Bézier:
 
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
@@ -15014,8 +15098,8 @@ pen\_variable}:
 
 \iniciocodigo
 @<Macros Locais (metafont.c)@>+=
-#define FLAG_ORIENTATION      32
-#define FLAG_COUNTERCLOCKWISE 64
+#define FLAG_ORIENTATION      64
+#define FLAG_COUNTERCLOCKWISE 128
 @
 \fimcodigo
 
@@ -15110,7 +15194,7 @@ bool triangulate_pen(struct metafont *mf, struct pen_variable *pen,
   @<Triangulação: Caneta Nula@>
   @<Triangulação: Caneta Quadrada@>
   @<Triangulação: Polígono Convexo@>
-  @<Triangulação: Círculo@>
+  @<Triangulação: Círculo e Semicírculo@>
   @<Triangulação: Forma Curva Convexa@>
   @<Triangulação: Forma Côncava@>
 }
@@ -15243,51 +15327,61 @@ if((pen -> flags & FLAG_STRAIGHT) && (pen -> flags & FLAG_CONVEX)){
 @
 \fimcodigo
 
-Vamos agora passar para o próximo caso de triangulação: o círculo. Uma
-caneta circular é gerada com a expressão \monoespaco{pencircle}. Para
-este tipo de caneta, devemos gerar seus vértices na hora para fazer a
-triangulação. Com saber quantos vértices gerar? Se o círculo tiver um
-único pixel de diâmetro, 4 vértices já seriam o suficiente para
-aproximá-lo e ninguém notaria estar diante de um quadrado ao invés de
-um círculo. Mas quanto maior ele fica, maior o número de vértices que
-devemos usar.
+Vamos agora passar para o próximo caso de triangulação: o círculo e
+também o semicírculo. Uma caneta circular é gerada com a
+expressão \monoespaco{pencircle} ou \monoespaco{pensemicircle} no caso
+de semicírculos. Para este tipo de caneta, devemos gerar seus vértices
+na hora para fazer a triangulação. Com saber quantos vértices gerar?
+Se o círculo tiver um único pixel de diâmetro, 4 vértices já seriam o
+suficiente para aproximá-lo e ninguém notaria estar diante de um
+quadrado ao invés de um círculo. Mas quanto maior ele fica, maior o
+número de vértices que devemos usar. O mesmo vale para o semicírculo:
+o número de vértices que ele precisa cai pela metade em relação ao
+círculo, mas quanto maior ele é, maior o número de vértices
+necessários.
 
 Devemos levar em conta a fórmula do arco de circunferência $L=\theta
 r$. Aqui $\theta$ é um ângulo interno do círculo e $r$ seu raio. O
-valor de $L$ é o comprimento de arco definido port ais
+valor de $L$ é o comprimento de arco definido por tais
 valores. Devemos então fazer com que cada arco que desenhamos tenha um
 tamanho de 1 pixel, fazendo com que o desenho sempre se pareça com um
 círculo. Para isso o ângulo interno entre cada um deles em radianos
-deve ser $1/r$. Como o ângulo total é $2\pi$, então devemos
-representar $2\pi r$ vértices diferentes no perímetro do círculo.
+deve ser $1/r$. Como o ângulo total é $2\pi$ para círculos e $\pi$
+para semicírculos, então devemos representar respectivamente $2\pi r$
+e $\pi r$ vértices diferentes no perímetro de tais canetas.
 
 A triangulação que usaremos será a mesma triangulação em leque
-anterior. Mas vamos escolher como pivô o centro do círculo. Desta
-forma, vamos armazenar $2\pi r + 1$ vértices.
+anterior. Mas vamos escolher como pivô o centro do círculo. Para
+semicírculos também escolheremos o ponto análogo como pivô. Desta
+forma, como temos um pivô, vamos armazenar $2\pi r + 1$ vértices para
+círculos e $\pi r + 1$ para semicírculos.
 
-Já o raio do círculo é escolhido como sendo metade do maior lado do
-quadrado de lado 1 que passa pela mesma transformação linear definida
-pela matriz de transformação do círculo. Como um círculo de diâmetro 1
-é inscrito em um quadrado de lado 1, então este valor nos dá um limite
-superior adequado para representar o raio do círculo em cada ponto de
-seu perímetro, mesmo depois de uma transformação linear possivelmente
-transformar nosso círculo em uma elipse.
+Já o raio da caneta circular é escolhido como sendo metade do maior
+lado do quadrado de lado 1 que passa pela mesma transformação linear
+definida pela matriz de transformação do círculo. Como um círculo de
+diâmetro 1 é inscrito em um quadrado de lado 1, então este valor nos
+dá um limite superior adequado para representar o raio da caneta
+circular em cada ponto de seu perímetro, mesmo depois de uma
+transformação linear possivelmente transformar ela em uma
+elipse ou semielipse.
 
 Esse maior número de diâmetro do quadrado no qual o círculo está
-inscrito é também como mediremos a resolução da triangulação de um
-círculo. Se um círculo já estiver triangulado e tivermos que desenhar
-um com resolução menor, não é necessário triangular novamente. Mas se
-tivermos que desenhar um com resoluçao maior, temos que triangulá-lo
-novamente, mesmo que ele já tenha sido triangulado.
+inscrito é também como mediremos a resolução da triangulação de uma
+caneta circular. Se a caneta circular já estiver triangulada e tivermos que
+desenhar um com resolução menor, não é necessário triangular
+novamente. Mas se tivermos que desenhar um com resoluçao maior, temos
+que triangulá-la novamente, mesmo que ele já tenha sido triangulado.
 
-O código para a triangulação do círculo é:
+O código para a triangulação da caneta circular é:
 
 \iniciocodigo
-@<Triangulação: Círculo@>=
-if((pen -> flags & FLAG_CIRCULAR)){
+@<Triangulação: Círculo e Semicírculo@>=
+if((pen -> flags & FLAG_CIRCULAR) || (pen -> flags & FLAG_SEMICIRCULAR)){
   float radius;
+  GLsizei size;
   // Obter pontos de extremidade:
-  pencircle_extremity_points(mf, transform_matrix);
+  pencircular_extremity_points(mf, transform_matrix,
+                               (pen -> flags & FLAG_CIRCULAR));
   // Checando resolução (raio):
   {
     float side1, side2;
@@ -15303,7 +15397,10 @@ if((pen -> flags & FLAG_CIRCULAR)){
       return true;
   }
   pen -> triang_resolution = radius;
-  GLsizei size = sizeof(float) * 2 * (((int) (2 * M_PI * radius)) + 4);
+  if(pen -> flags & FLAG_CIRCULAR)
+    size = sizeof(float) * 2 * (((int) (2 * M_PI * radius)) + 4);
+  else
+    size = sizeof(float) * 2 * (((int) (M_PI * radius)) + 4);
   float *data = (float *) temporary_alloc(size);
   if(data == NULL){
     RAISE_ERROR_NO_MEMORY(mf, NULL, 0);
@@ -15315,10 +15412,12 @@ if((pen -> flags & FLAG_CIRCULAR)){
     data[0] = 0.0;
     data[1] = 0.0; // Centro do círculo
     for(i = 2; i < (size / sizeof(float)); i ++){
-      data[i] = 0.5 * sin(angle);
-      i ++;
       data[i] = 0.5 * cos(angle);
+      i ++;
+      data[i] = 0.5 * sin(angle);
       angle += 1/radius;
+      if((pen -> flags & FLAG_SEMICIRCULAR) && angle > M_PI)
+        angle = M_PI;
     }
   }
   glGenBuffers(1, &(pen -> gl_vbo));
@@ -15385,6 +15484,8 @@ if((pen -> flags & FLAG_CONVEX)){
   int i, number_of_vertices = 1;
   // Obtém pontos de extremidade:
   path_extremity_points(mf, pen -> format, transform_matrix);
+
+
   for(i = 0; i < pen -> format -> length - 1; i ++){
     int distance = 0;
     float x0, y0, u_x, u_y, v_x, v_y, x1, y1;
@@ -15535,10 +15636,11 @@ Agora vamos ao que efetivamente ocorre quando lemos o
 comando \monoespaco{pickup}.
 
 1) Primeiro lemos o próximo token. Se for \monoespaco{nullpen},
-fazemos com que \monoespaco{currentpen} se torne uma caneta nula e se
-for um \monoespaco{pencircle} se torna uma caneta circular. Se for uma
-variável de caneta, fazemos com que ela aponte para essa variável. Em
-ambos os casos, reiniciamos a matriz de transformação
+fazemos com que \monoespaco{currentpen} se torne uma caneta nula, se
+for um \monoespaco{pencircle} se torna uma caneta circular e se for
+um \monoespaco{pensemicircle}, aí será a caneta semicircular. Se for
+uma variável de caneta, fazemos com que ela aponte para essa
+variável. Em ambos os casos, reiniciamos a matriz de transformação
 de \monoespaco{currentpen} para a de uma identidade. Nos demais casos,
 ou se a variável não estiver inicializada, nós retornamos um erro.
 
@@ -15554,7 +15656,8 @@ else if(begin -> type == TYPE_PICKUP){
   }
   if(next_token -> type != TYPE_NULLPEN &&
      next_token -> type != TYPE_SYMBOLIC &&
-     next_token -> type != TYPE_PENCIRCLE){
+     next_token -> type != TYPE_PENCIRCLE &&
+     next_token -> type != TYPE_PENSEMICIRCLE){
     RAISE_ERROR_UNEXPECTED_TOKEN(mf, cx, OPTIONAL(next_token -> line),
                                 next_token -> type);
     return false;
@@ -15568,6 +15671,11 @@ else if(begin -> type == TYPE_PICKUP){
   }
   else if(next_token -> type == TYPE_PENCIRCLE){
     mf -> internal_pen_variables[0].flags = FLAG_CONVEX | FLAG_CIRCULAR;
+    mf -> internal_pen_variables[0].referenced = NULL;
+    mf -> internal_pen_variables[0].gl_vbo = 0;
+  }
+  else if(next_token -> type == TYPE_PENSEMICIRCLE){
+    mf -> internal_pen_variables[0].flags = FLAG_CONVEX | FLAG_SEMICIRCULAR;
     mf -> internal_pen_variables[0].referenced = NULL;
     mf -> internal_pen_variables[0].gl_vbo = 0;
   }
@@ -16742,7 +16850,7 @@ O código acima pode gerar três novos erros ainda não apresentados:
 quando um glifo é definido mais de uma vez com
 um \monoespaco{beginchar}, quando um comando \monoespaco{beginchar} é
 malformado (é o primeiro comando complexo o bastante para causar este
-erro) e quando colocamos um \monoesaco{beginchar} dentro de outro:
+erro) e quando colocamos um \monoespaco{beginchar} dentro de outro:
 
 \iniciocodigo
 @<Tipos de Erros@>+=
