@@ -15386,8 +15386,43 @@ if((pen -> flags & FLAG_CONVEX)){
 @
 \fimcodigo
 
-For now, we will not support concave shapes, but this may change in
-the future:
+Finally, the most complex triangulation: if we have a concave form. We
+cannot triangulate using the simple algorithms seen above, just
+choosing a pivot and creating a triangles that share the pivot as a
+common vertex. Consider the concave polygon below, for example:
+
+\imagem{images/concave1.eps}
+
+If we choose vertex $E$ as pivot, we would produce the triangle
+$ECD$. But this would be a wrong triangle: even if their vertices are
+part of the polygon, it represents a region that is outside the
+polygon and that should not be triangulated. The mistake here would be
+generating a triangle using vertex $D$ and its neighbors. This cannot
+be done because $D$ is not part of the polygon convex hull, composed
+only by $ABCE$. This shows that we cannot generate triangles in this
+way choosing vertices that are not part of the convex hull.
+
+However, being part of the convex hull is not a sufficient
+condition. Consider the triangle $ABC$, composed by vertex $B$ and its
+neighbors. While $B$ is part of the convex hull, if we generate a
+triangle using it, part of the triangle surface would fill a region
+with a hole in the polygon that should not be covered. The problem in
+this case is that vertex $D$ is inside triangle $ABC$, and this is
+another thing that should not happen for the triangles that we should
+generate.
+
+On the other hand, if we triangulate this choosing triangles $BCD$,
+$ABD$ and $ADE$, this would be a correct triangulation for the above
+polygon.
+
+A vertex whose triangle composed by it and its neighbors is a valid
+triangulation is called an ``ear'' of the polygon. There is a known
+theorem that says that any simple polygon (like the ones that could be
+a pen shape) always has at least two ears. Using this theorem, we
+could arrive at a very simple algorithm for triangulation: first we
+find an ear, triangulate it, remove its vertex making or polygon
+smaller and then we repeat this until in the end we get the three
+final vertices, which compose the final triangle.
 
 \iniciocodigo
 @<Triangulation: Concave Shape@>=

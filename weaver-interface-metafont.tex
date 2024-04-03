@@ -15617,8 +15617,47 @@ if((pen -> flags & FLAG_CONVEX)){
 @
 \fimcodigo
 
-Com relação à canetas com formas côncavas, por enquanto nós não iremos
-suportá-las, mas isso deve mudar futuramente:
+Por último, vamos à mais complexa das triangulações: quando temos uma
+forma côncava. Não podemos triangulá-la de maneira tão simples à
+partir de um pivô à partir do qual geramos todos os
+triângulos. Considere o polígono côncavo abaixo, por exemplo:
+
+\imagem{images/concave1.eps}
+
+Se nós escolhermos o vértice $E$ como pivô, poderíamos acabar enviando
+para a triangulação um triângulo $EDC$, que mesmo que seja composto
+por vértice do polígono, não representa uma região que fica dentro do
+polígono e portanto, não deve ser triangulado. O erro que estaríamos
+cometendo seria gerar um triângulo formado pelo vértice $D$ e seus
+dois vizinhos. Isso não deve ser feito porque $D$ não faz parte do
+casco convexo do polígono, composto apenas por $ABCE$. Isso mostra que
+não podemos gerar triângulos à partir de vértices que não façam parte
+do casco convexo.
+
+Contudo, fazer parte do casco convexo, embora necessário, não é o
+único pré-requisito para podermos gerar um triângulo. Considere o
+triângulo $ABC$, formado pelo vértice $B$ e seus dois vizinhos. Embora
+$B$ faça parte do casco convexo, se gerarmos um triângulo à partir
+dele, parte da superfície do triângulo irá cobrir uma área onde há um
+buraco no polígono e não deveria ser coberta. O problema neste caso é
+que o vértice $D$ está dentro do triângulo $ABC$, e isso não pode
+acontecer em um triângulo que queremos gerar.
+
+Por outro lado, se triangulássemos adicionando os triângulos $BCD$,
+$ABD$ e $ADE$, isso seria seguro e triangularia corretamente o
+polígono acima.
+
+Um vértice cujo triângulo formado por ele e seus vizinhos pode ser
+triangulado é chamado de ``orelha'' do polígono. Há um teorema
+conhecido que afirma que qualquer polígono simples (tais como os que
+podem ser a forma de uma caneta) sempre tem um mínimo de duas
+orelhas. Usando este teorema, podemos chegar em um algoritmo bastante
+simples de triangulação: primeiro encontramos uma orelha, triangulamos
+ela, removemos o seu vértice deixando o nosso polígono com um lado a
+menos e repetimos o processo enquanto houverem ainda vértices a serem
+triangulados. O processo terminaria quando restassem somente três
+vértices, os quais formariam o triângulo final.
+
 
 \iniciocodigo
 @<Triangulação: Forma Côncava@>=
