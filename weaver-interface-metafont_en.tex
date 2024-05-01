@@ -808,10 +808,10 @@ void solve_linear_system(int n, double *m, double *b, double *x){
   for(i = 0; i < n; i ++){ // Para cada linha
     // Acha maior pivô possível na coluna atual e troca de posição com ele:
     int max_line = i;
-    double max = abs(m[i * n + i]);
+    double max = fabs(m[i * n + i]);
     for(j = i + 1; j < n; j ++){
-      if(abs(m[j*n+i]) > max){
-        max = abs(m[j*n+i]);
+      if(fabs(m[j*n+i]) > max){
+        max = fabs(m[j*n+i]);
         max_line = j;
       }
     }
@@ -2530,12 +2530,12 @@ store as an integer with its numeric code:
   if(!mf -> errno){\
     mf -> errno_int = found;\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_EXPECTED_FOUND);\
-    if(found >= 8){\
-      size_t _s = strlen(list_of_keywords[found - 8]);\
+    if(expected >= 8){\
+      size_t _s = strlen(list_of_keywords[expected - 8]);\
       mf -> errno_str = (char *) permanent_alloc(_s+1);\
       memcpy(mf -> errno_str, list_of_keywords[expected - 8], _s+1);\
     } else{\
-      size_t _s = strlen(token_names_not_in_list_of_keywords[found]);\
+      size_t _s = strlen(token_names_not_in_list_of_keywords[expected]);\
       mf -> errno_str = (char *) permanent_alloc(_s+1);\
       memcpy(mf -> errno_str, \
              token_names_not_in_list_of_keywords[expected], _s+1);}}}
@@ -4383,8 +4383,7 @@ bool fill_cyclic_missing_directions(struct metafont *mf, struct context *cx,
   struct path_points *p0 = NULL,
                      *p1 = &(p -> points[end]),
                      *p2 = &(p -> points[begin]);
-  double complex z0 = p0 -> prov.x + p0 -> prov.y * I,
-                 z1 = p1 -> prov.x + p1 -> prov.y * I,
+  double complex z0, z1 = p1 -> prov.x + p1 -> prov.y * I,
                  z2 = p2 -> prov.x + p2 -> prov.y * I;
   int i, size = 3 * (p -> length); // System of equations size
   @<Variable Declaration for Unknowns (Cyclic)@>
@@ -13779,9 +13778,13 @@ bool eval_boolean_primary(struct metafont *mf, struct context *cx,
                           struct generic_token *begin,
                           struct generic_token *end,
                           struct boolean_variable *result){
+  struct symbolic_token *symbol;
+  struct path_variable path;
+  struct numeric_variable num;
+  struct boolean_variable b;
   switch(begin -> type){
     case TYPE_SYMBOLIC: // Variável
-      struct symbolic_token *symbol = ((struct symbolic_token *) begin);
+      symbol = ((struct symbolic_token *) begin);
       struct boolean_variable *var = symbol -> var;
       if(var == NULL){
         RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, OPTIONAL(begin -> line),
@@ -13821,7 +13824,6 @@ bool eval_boolean_primary(struct metafont *mf, struct context *cx,
       return true;
     break;
     case TYPE_CYCLE: // 'cycle'
-      struct path_variable path;
       if(!eval_path_primary(mf, cx, begin -> next, end, &path))
         return false;
       result -> value = path.cyclic;
@@ -13830,14 +13832,12 @@ bool eval_boolean_primary(struct metafont *mf, struct context *cx,
       return true;
     break;
     case TYPE_ODD: // 'odd'
-      struct numeric_variable num;
       if(!eval_numeric_primary(mf, cx, begin -> next, end, &num))
         return false;
       result -> value = (((int) round(num.value)) % 2);
       return true;
     break;
     case TYPE_NOT: // 'not'
-      struct boolean_variable b;
       if(!eval_boolean_primary(mf, cx, begin -> next, end, &b))
         return false;
       result -> value = !(b.value);
@@ -15159,8 +15159,8 @@ if((pen -> flags & FLAG_CIRCULAR) || (pen -> flags & FLAG_SEMICIRCULAR)){
   // Checking resolution (radius):
   {
     float side1, side2;
-    side1 = abs(mf -> pen_rt - mf -> pen_lft);
-    side2 = abs(mf -> pen_top - mf -> pen_bot);
+    side1 = fabs(mf -> pen_rt - mf -> pen_lft);
+    side2 = fabs(mf -> pen_top - mf -> pen_bot);
     radius = ((side1 >= side2)?(side1):(side2))/ 2.0;
   }
   // Need to retriangulate only if radius is bigger than already triangulated:
@@ -15396,33 +15396,240 @@ common vertex. Consider the concave polygon below, for example:
 If we choose vertex $E$ as pivot, we would produce the triangle
 $ECD$. But this would be a wrong triangle: even if their vertices are
 part of the polygon, it represents a region that is outside the
-polygon and that should not be triangulated. The mistake here would be
-generating a triangle using vertex $D$ and its neighbors. This cannot
-be done because $D$ is not part of the polygon convex hull, composed
-only by $ABCE$. This shows that we cannot generate triangles in this
-way choosing vertices that are not part of the convex hull.
+polygon and that should not be triangulated.
 
-However, being part of the convex hull is not a sufficient
-condition. Consider the triangle $ABC$, composed by vertex $B$ and its
-neighbors. While $B$ is part of the convex hull, if we generate a
-triangle using it, part of the triangle surface would fill a region
-with a hole in the polygon that should not be covered. The problem in
-this case is that vertex $D$ is inside triangle $ABC$, and this is
-another thing that should not happen for the triangles that we should
-generate.
+Triangulating concave polygons is easier in a particular case: when we
+have a $x$-monotone polygon. This happens when we walk from the
+leftmost vertex in the polygon to the rightmost vertex both in
+clockwise and counter-clockwise direction, and in both cases, when
+going from a vertex to the next one, the $x$ coordinate never becomes
+smaller: it either increases or keeps the same value. For example, the
+polygon above is $x$-monotone. If we rotate it 90 degrees, it ceases
+to be $x$-monotone, but becomes $y$-monotone following an equivalente
+definition for the $y$-axis.
 
-On the other hand, if we triangulate this choosing triangles $BCD$,
-$ABD$ and $ADE$, this would be a correct triangulation for the above
-polygon.
+The polygon below, otherwise, is not $x$-monotone neither $y$-monotone:
 
-A vertex whose triangle composed by it and its neighbors is a valid
-triangulation is called an ``ear'' of the polygon. There is a known
-theorem that says that any simple polygon (like the ones that could be
-a pen shape) always has at least two ears. Using this theorem, we
-could arrive at a very simple algorithm for triangulation: first we
-find an ear, triangulate it, remove its vertex making or polygon
-smaller and then we repeat this until in the end we get the three
-final vertices, which compose the final triangle.
+\imagem{images/concave2.eps}
+
+To triangulate a $x$-monotone polygon, we can assume that we first we
+check that it is $x$-monotone by traversing its vertices from the
+leftmost to the rightmost, both taking the upper path and the lower
+path. In the process we mark each vertex as belonging to the upper
+and/or lower path. The initial vertex and final one belong to both
+paths. In the process we also order each vertex according to its $x$
+coordinate. if two vertices have the same $x$ coordinate, we order
+them according with the coordinate $y$. For example, in the case of
+the first polygon concave that we represent in the images above, the
+order of its vertices would be $(A, E, D, B, C)$. Where $(A, B, C)$ is
+the upper path and $(A, E, D, C)$ is the lower path.
+
+Once the vertices are ordered and marked, we can go through them in
+the order in which we left them. Every time we read a new vertex, we
+try to create a diagonal using non-neighbor previous vertices, forming
+a new triangle. When this is not possible, we store the vertex in a
+stack. When we find an upper vertex, while all the vertices in our
+stack are from the bottom path, we can create diagonal between all of
+them, and we can empty the stack. If we read a vertex of the bottom
+path, when there are only vertices from the upper path in the stack,
+the same thing happens. Otherwise, when we read a vertex from the same
+path than other vertices in the stack, we can try to create a new
+diagonal generating a triangle, but we can do this only if this
+diagonal is entirely inside the polygon (which we can check simply by
+reading the $y$ coordinates of the diagonal and the opposite vertex of
+the triangle it forms). If it is not possible to create the diagonal
+in this case, we let the vertices accumulate on the stack and we
+follow the algorithm, knowing that soon we will find a vertex of
+the opposite path that will allow triangulation.
+
+For example, in the case of our $x$-monotone polygon whose ordered
+vertices are ($A$, $E$, $D$, $B$, $C$), we can start by reading $(A,
+E, D)$. As unfortunately, $D$ and $E$ are both from the bottom path of
+the polygon, triangulation is not automatic. We then check whether we
+can create a diagonal $DA$, forming the triangle $DAE$. Fortunately we
+can, because the diagonal $DA$ passes entirely inside the polygon
+(after all, $DE$ are from the bottom and the vertex $E$ is below the
+two points diagonal $DA$). After generating the $DAE$ triangle, we can
+get rid of $E$ and we now keep $(A, D)$ on our stack. We read the next
+vertex $B$. Since $B$ is from the top and $D$ is from the bottom, a
+diagonal $DB$ can be created. This produces the triangle $ADB$. We can
+then remove the vertex $A$ and we are left with only $(D, B, C)$,
+which is the final triangle of triangulation.
+
+When our pen is not only made up of straight segments and has curves,
+we can first convert it to a polygon with a sufficiently large number
+of edges to apply the method. During the conversion we can identify
+which vertex is furthest left to be able to later test whether it is a
+$x$-monotone polygon. But first we have to define a structure to store
+a list chain of vertices:
+
+\iniciocodigo
+@<Local Data Structures (metafont.c)@>+=
+#define FLAG_UPPER 1
+#define FLAG_LOWER 2
+#define NEW_POLYGON_VERTEX() \
+  (struct polygon_vertex *) temporary_alloc(sizeof(struct polygon_vertex))
+#define DESTROY_POLYGON_VERTEX(v) \
+  ((temporary_free != NULL)?(temporary_free(v):(true))
+struct polygon_vertex{
+  int flag; // Will store if it is a vertex from upper or lower path
+  float x, y;
+  struct polygon_vertex *prev, *next;
+};
+@
+\fimcodigo
+
+A doubled linked list of vertices will be created from a pen using the
+following function:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+struct polygon_vertex *polygon_from_pen(struct metafont *mf,
+                                        struct pen_variable *,
+                                        float *transform_matrix);
+@
+\fimcodigo
+
+And the function implementation:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+struct polygon_vertex *polygon_from_pen(struct metafont *mf,
+                                        struct pen_variable *p,
+                                        float *transform_matrix){
+  int i, j, number_of_vertices = 0;
+  struct polygon_vertex *first, *last, *leftmost;
+  // Getting the pen path:
+  struct path_variable *path = p -> format;
+  if(path == NULL){
+    RAISE_GENERIC_ERROR(mf, NULL, 0, ERROR_UNKNOWN);
+    return NULL; // This should not happen
+  }
+  // First vertex:
+  first = NEW_POLYGON_VERTEX();
+  if(first == NULL){
+    RAISE_ERROR_NO_MEMORY(mf, NULL, 0);
+    return NULL;
+  }
+  first -> next = NULL;
+  first -> prev = NULL;
+  first -> x = LINEAR_TRANSFORM_X(path -> points[0].point.x,
+                                 path -> points[0].point.y, transform_matrix);
+  first -> y = LINEAR_TRANSFORM_Y(path -> points[0].point.x,
+                                 path -> points[0].point.y, transform_matrix);
+  leftmost = first;
+  last = first;
+  number_of_vertices = 1;
+  // Loop over extremity points in our path
+  for(i = 0; i < path -> length; i ++){
+    double x0, y0, u_x, u_y, v_x, v_y, x1, y1;
+    bool straight_line = (p -> flags & FLAG_STRAIGHT);
+    x0 = last -> x;
+    y0 = last -> y;
+    u_x = LINEAR_TRANSFORM_X(path -> points[i].point.u_x,
+                            path -> points[i].point.u_y, transform_matrix);
+    u_y = LINEAR_TRANSFORM_Y(path -> points[i].point.u_x,
+                            path -> points[i].point.u_y, transform_matrix);
+    v_x = LINEAR_TRANSFORM_X(path -> points[i].point.v_x,
+                            path -> points[i].point.v_y, transform_matrix);
+    v_y = LINEAR_TRANSFORM_Y(path -> points[i].point.v_x,
+                            path -> points[i].point.v_y, transform_matrix);
+    x1 = LINEAR_TRANSFORM_X(path -> points[i + 1].point.x,
+                            path -> points[i + 1].point.y, transform_matrix);
+    y1 = LINEAR_TRANSFORM_Y(path -> points[i + 1].point.x,
+                            path -> points[i + 1].point.y, transform_matrix);
+    if(!straight_line){
+      double slope1, slope2, slope3;
+      slope1 = (u_x - x0) / (u_y - y0);
+      slope2 = (v_x - u_x) / (v_y - u_y);
+      slope3 = (x1 - v_x) / (y1 - v_y);
+      if((y0 == u_y && u_y == v_y && v_y == y1) ||
+         (slope1 == slope2 && slope2 == slope3))
+        straight_line = true;
+    }
+    if(straight_line){ // In a straight line, we need just 1 more vertex
+      last -> next = NEW_POLYGON_VERTEX();
+      if(last -> next == NULL){
+        RAISE_ERROR_NO_MEMORY(mf, NULL, 0);
+        return NULL;
+      }
+      last -> next -> prev = last;
+      last -> next -> next = NULL;
+      last = last -> next;
+      last -> x = x1;
+      last -> y = y1;
+      number_of_vertices ++;
+      if(last -> x < leftmost -> x ||
+        (last -> x == leftmost -> x && last -> y < leftmost -> y))
+        leftmost = last;
+    }
+    else{ // In a curve, we insert several vertices
+      double dt;
+      int distance = (int) ceil(sqrt(pow(u_x-x0, 2.0)+pow(u_y-y0, 2.0)));
+      distance += (int) ceil(sqrt(pow(v_x-u_x, 2.0)+pow(v_y-u_y, 2.0)));
+      distance += (int) ceil(sqrt(pow(x1-v_x, 2.0)+pow(y1-v_y, 2.0)));
+      dt = 1.0/((double) distance);
+      for(j = 1; j <= distance; j ++){
+        double t = dt * j;
+        float x = (1-t)*(1-t)*(1-t) * path -> points[i].point.x +
+                  3*(1-t)*(1-t)*t * path -> points[i].point.u_x +
+                  3*(1-t)*t*t * path -> points[i].point.v_x +
+                  t*t*t * path -> points[(i + 1) % (path -> length)].point.x;
+        float y = (1-t)*(1-t)*(1-t) * path -> points[i].point.y +
+                  3*(1-t)*(1-t)*t * path -> points[i].point.u_y +
+                  3*(1-t)*t*t * path -> points[i].point.v_y +
+                  t*t*t * path -> points[(i + 1) % (path -> length)].point.y;
+        if(number_of_vertices > 1){ // We really need the previous vertex?
+          double slope1, slope2;
+          slope1 = (last->x - last->prev->x)/(last->y - last->prev->y);
+          slope2 = (last->prev->x - last->prev->prev->x) /
+                   (last->prev->y - last->prev->prev->y);
+          if((last->y == last->prev->y && last->y == last->prev->prev->y) ||
+             slope1 == slope2){ // If we do not need, we overwrite:
+            last -> x = x;
+            last -> y = y;
+            continue;
+          }
+        }
+        // Creating new vertex:
+        last -> next = NEW_POLYGON_VERTEX();
+        if(last -> next == NULL){
+          RAISE_ERROR_NO_MEMORY(mf, NULL, 0);
+          return NULL;
+        }
+        last -> next -> prev = last;
+        last -> next -> next = NULL;
+        last = last -> next;
+        last -> x = x1;
+        last -> y = y1;
+        number_of_vertices ++;
+        if(last -> x < leftmost -> x ||
+          (last -> x == leftmost -> x && last -> y < leftmost -> y))
+          leftmost = last;
+      }
+    }
+  }
+  first -> prev = last;
+  last -> next = first;
+  return leftmost;
+}
+@
+\fimcodigo
+
+The previous function works by first extracting the format path from
+the pen and generating the first vertex from the first point. Then, if
+we have a straight line to the next extremity point, we just add one
+more vertex. Otherwise, we estimate the number of vertices needed to
+approximate the curve by the straight path distance of the first
+extremity point to the next, passing through the control points. We
+then generate this number of vertices, but each time we detect that a
+new vertex, together with the previous two, are in the same line, we
+overwrite the previous vertex with the current one, since the previous
+one is redundant. The number of operations that the above function
+executes to insert vertices is asymptotically equivalent to pen
+perimeter (in pixels) for curved pens and the number of vertices for
+polygonal pens.
+
 
 \iniciocodigo
 @<Triangulation: Concave Shape@>=

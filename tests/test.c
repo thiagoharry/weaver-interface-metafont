@@ -1372,9 +1372,6 @@ void test_pen_expressions(void){
 	 ALMOST_EQUAL(pen_p4 -> gl_matrix[6], 0.0) &&
 	 ALMOST_EQUAL(pen_p4 -> gl_matrix[7], 0.0) &&
 	 ALMOST_EQUAL(pen_p4 -> gl_matrix[8], 1.0));
-  printf("penrazor: %p(%d pontos)\nFLAGS: %d\n", pen_penrazor -> format,
-	 pen_penrazor -> format -> number_of_points,
-	 pen_penrazor -> flags); 
   assert("Creating straight and convex pen",
 	 pen_penrazor -> format != NULL &&
 	 pen_penrazor -> format -> number_of_points == 3 &&
@@ -2192,10 +2189,10 @@ void test_drawing_commands(void){
 	 // message decimal ypart top lft (0, 0);
 	 // message decimal xpart bot rt (0, 0);
 	 // message decimal ypart bot rt (0, 0);
-	 abs(pair_pd1 -> x + 6.0) < 0.2 &&
-	 abs(pair_pd1 -> y - 6.0) < 0.2 &&
-	 abs(pair_pd2 -> x - 6.0) < 0.2 &&
-	 abs(pair_pd2 -> y + 6.0) < 0.2	 
+	 fabs(pair_pd1 -> x + 6.0) < 0.2 &&
+	 fabs(pair_pd1 -> y - 6.0) < 0.2 &&
+	 fabs(pair_pd2 -> x - 6.0) < 0.2 &&
+	 fabs(pair_pd2 -> y + 6.0) < 0.2	 
 	 //ALMOST_EQUAL(pair_pd1 -> point.x, -6.0) &&
 	 //ALMOST_EQUAL(pair_pd1 -> point.y, 6.0) &&
 	 //ALMOST_EQUAL(pair_pd2 -> point.x, 6.0) &&
@@ -2219,10 +2216,10 @@ void test_drawing_commands(void){
 	 // pen to polygon, which changes the results. As we keep always
 	 // treating them as curves, we should use the values below, which are
 	 // the correct values, computed with high precision:
-	 abs(pair_pe1 -> x + 5.92623739298447238162743669702386846) < 0.2 &&
-	 abs(pair_pe1 -> y - 5.926255757660079919904343789205625362) < 0.2 &&
-	 abs(pair_pe2 -> x - 5.926237392984472381627436697023868466) < 0.2 &&
-	 abs(pair_pe2 -> y + 5.9262557576600799199043437892056253) < 0.2
+	 fabs(pair_pe1 -> x + 5.92623739298447238162743669702386846) < 0.28 &&
+	 fabs(pair_pe1 -> y - 5.926255757660079919904343789205625362) < 0.28 &&
+	 fabs(pair_pe2 -> x - 5.926237392984472381627436697023868466) < 0.28 &&
+	 fabs(pair_pe2 -> y + 5.9262557576600799199043437892056253) < 0.28
 	 //ALMOST_EQUAL(pair_pe1 -> point.x, -5.92623739298447238162743669702386846) &&
 	 //ALMOST_EQUAL(pair_pe1 -> point.y, 5.926255757660079919904343789205625362) &&
 	 //ALMOST_EQUAL(pair_pe2 -> point.x, 5.926237392984472381627436697023868466) &&
