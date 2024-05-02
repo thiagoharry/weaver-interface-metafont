@@ -15864,6 +15864,62 @@ executa para inserir vértices é assintoticamente equivalente ao
 perímetro da caneta (em pixeis) para canetas curvas e ao número de
 vértices para canetas poligonais.
 
+A função que checa se um polígono é $x$-convexo é declarada abaixo:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+bool is_xmonotone(struct polygon_vertex *poly);
+@
+\fimcodigo
+
+Ela assume que um polígono é já representado como um ponteiro para seu
+vértice mais à esquerda. A função então tentará identificar se o
+polígono está no sentido horário ou anti-horário. Baseado nisso ele
+percorre os demais vértices ajustando sua flag
+para \texttt{FLAG\_UPPER} ou \texttt{FLAG\_LOWER}. Caso cheguemos em
+um vértice que viola o que se espera de um polígono $x$-monótono,
+interrompemos e retornamos falso. As flags preenchidas neste caso
+devem ser simplesmente ignoradas. Segue a implementação da função:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+bool is_xmonotone(struct polygon_vertex *poly){
+  bool clockwise;
+  struct polygon_vertex *upper, *lower;
+  upper = lower = poly;
+  upper -> flag = (FLAG_UPPER | FLAG_LOWER);
+  while(upper -> next -> y == lower -> prev -> y){
+    if(upper -> next -> x >= upper -> x)
+      upper = upper -> next;
+    else if(lower -> prev -> x >= lower -> x)
+      lower = lower -> prev;
+    else break;
+  }
+  clockwise = (upper -> next -> y >= lower -> prev -> y);
+  upper = lower = poly;
+  do{
+    if(upper -> next -> x >= upper -> x){
+      upper = upper -> next;
+      if(clockwise)
+        upper -> flag = FLAG_UPPER;
+      else
+        upper -> flag = FLAG_LOWER;
+    }
+    else if(lower -> prev -> x >= lower -> x){
+      lower = lower -> prev;
+      if(clockwise)
+        upper -> flag = FLAG_LOWER;
+      else
+        upper -> flag = FLAG_UPPER;
+    }
+    else
+      return false;
+  } while(upper != lower);
+  return true;
+}
+@
+
+
 \iniciocodigo
 @<Triangulação: Forma Côncava@>=
 if(!(pen -> flags & FLAG_CONVEX)){

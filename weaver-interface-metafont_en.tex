@@ -15630,6 +15630,60 @@ executes to insert vertices is asymptotically equivalent to pen
 perimeter (in pixels) for curved pens and the number of vertices for
 polygonal pens.
 
+The function that checks if a polygon is $x$-monotone is:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+bool is_xmonotone(struct polygon_vertex *poly);
+@
+\fimcodigo
+
+It assumes that the polygon given as argument is represented as a
+pointer to the leftmost vertex in the double linked list. The function
+first checks if the polygon has its vertices in the clockwise or
+counter-clockwise order. Basing on this information, it walks over the
+vertices adjusting its flag as \texttt{FLAG\_UPPER}
+or \texttt{FLAG\_LOWER}. If we find a vertex not compatible with a
+$x$-monotone polygon, we return false and the vertex flags should be
+ignored. This is the function implementation:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+bool is_xmonotone(struct polygon_vertex *poly){
+  bool clockwise;
+  struct polygon_vertex *upper, *lower;
+  upper = lower = poly;
+  upper -> flag = (FLAG_UPPER | FLAG_LOWER);
+  while(upper -> next -> y == lower -> prev -> y){
+    if(upper -> next -> x >= upper -> x)
+      upper = upper -> next;
+    else if(lower -> prev -> x >= lower -> x)
+      lower = lower -> prev;
+    else break;
+  }
+  clockwise = (upper -> next -> y >= lower -> prev -> y);
+  upper = lower = poly;
+  do{
+    if(upper -> next -> x >= upper -> x){
+      upper = upper -> next;
+      if(clockwise)
+        upper -> flag = FLAG_UPPER;
+      else
+        upper -> flag = FLAG_LOWER;
+    }
+    else if(lower -> prev -> x >= lower -> x){
+      lower = lower -> prev;
+      if(clockwise)
+        upper -> flag = FLAG_LOWER;
+      else
+        upper -> flag = FLAG_UPPER;
+    }
+    else
+      return false;
+  } while(upper != lower);
+  return true;
+}
+@
 
 \iniciocodigo
 @<Triangulation: Concave Shape@>=
