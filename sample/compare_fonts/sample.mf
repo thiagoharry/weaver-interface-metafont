@@ -1069,11 +1069,12 @@ beginchar("O", (0.63+0.065*(weight-1)+0.058*italic-0.009*italic*(weight-1))*size
 endchar;
 
 beginchar("P", (0.63+0.065*(weight-1)+0.058*italic-0.009*italic*(weight-1))*size*pt, 0.68*size*pt, 0);
-  pickup pencircle xscaled ((0.139+0.102*(weight-1))*h) yscaled ((0.114+0.074*(weight-1))*h);
-  pair p1, p2, p3, p4;
-  p1 = bot ((0.5+0.086*italic)*w, h);
-  p2 = rt (0.0385*italic*w, (0.5-0.094*italic)*h);
-  p3 = top ((0.5-0.088*italic)*w, 0);
-  p4 = lft ((1-0.0385*italic)*w, (0.5+0.1*italic)*h);
-  draw p1{-1, 0}..p2{0, -1}..p3{1, 0}..p4{0, 1}..cycle;
+  pen p;
+  path concave;
+  concave = (5, 5)--(5, 200)--(200, 200)--(200, 5)--(100, 100)--cycle;
+  p = makepen(concave);
+  pickup p;
+  draw (0,0);
+  pickup pencircle scaled 2;
+  draw concave;
 endchar;

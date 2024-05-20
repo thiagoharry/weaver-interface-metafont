@@ -2192,12 +2192,7 @@ void test_drawing_commands(void){
 	 fabs(pair_pd1 -> x + 6.0) < 0.2 &&
 	 fabs(pair_pd1 -> y - 6.0) < 0.2 &&
 	 fabs(pair_pd2 -> x - 6.0) < 0.2 &&
-	 fabs(pair_pd2 -> y + 6.0) < 0.2	 
-	 //ALMOST_EQUAL(pair_pd1 -> point.x, -6.0) &&
-	 //ALMOST_EQUAL(pair_pd1 -> point.y, 6.0) &&
-	 //ALMOST_EQUAL(pair_pd2 -> point.x, 6.0) &&
-	 //ALMOST_EQUAL(pair_pd2 -> point.y, -6.0));
-	 );
+	 fabs(pair_pd2 -> y + 6.0) < 0.2);
   assert("Drawing dot with custom curved pen",
 	 picture_e -> width == 12 && picture_e -> height == 12 &&
   	 ALMOST_EQUAL(numeric_we -> value, 112.0) &&
@@ -2219,12 +2214,7 @@ void test_drawing_commands(void){
 	 fabs(pair_pe1 -> x + 5.92623739298447238162743669702386846) < 0.28 &&
 	 fabs(pair_pe1 -> y - 5.926255757660079919904343789205625362) < 0.28 &&
 	 fabs(pair_pe2 -> x - 5.926237392984472381627436697023868466) < 0.28 &&
-	 fabs(pair_pe2 -> y + 5.9262557576600799199043437892056253) < 0.28
-	 //ALMOST_EQUAL(pair_pe1 -> point.x, -5.92623739298447238162743669702386846) &&
-	 //ALMOST_EQUAL(pair_pe1 -> point.y, 5.926255757660079919904343789205625362) &&
-	 //ALMOST_EQUAL(pair_pe2 -> point.x, 5.926237392984472381627436697023868466) &&
-	 //ALMOST_EQUAL(pair_pe2 -> point.y, -5.9262557576600799199043437892056253));
-	 );
+	 fabs(pair_pe2 -> y + 5.9262557576600799199043437892056253) < 0.28);
   assert("Drawing a square with custom polygonal pen",
 	 picture_f -> width == 6 && picture_f -> height == 6 &&
   	 ALMOST_EQUAL(numeric_wf -> value, 12.0) &&
@@ -2287,6 +2277,29 @@ void test_font_rendering(void){
 
 }
 
+void test_pen_rendering(void){
+  struct generic_token *first, *last;
+  struct metafont *mf;
+  struct context *cx;
+  bool ret;
+  struct named_variable *wa;
+  struct numeric_variable *numeric_wa;
+  mf = init_metafont("tests/pen_rendering.mf");
+  cx = init_context(mf);
+  lexer(mf,  "tests/pen_rendering.mf", &first, &last);
+  ret = eval_program(mf, cx, first, last);
+  if(!ret)
+    _Wprint_metafont_error(mf);
+  wa = (struct named_variable *) mf -> named_variables;
+  numeric_wa = (struct numeric_variable *) wa -> var;
+  assert("Interpreting program with concave pens", ret);
+  assert("Rendering x-monotone polygonal pen", numeric_wa -> value > 70.0 &&
+	 numeric_wa -> value < 103.0);
+  free_token_list(first);
+  destroy_context(mf, cx);
+  _Wdestroy_metafont(mf);
+}
+
 void test_opengl(void){
   assert("No errors in OpenGL", glGetError() == GL_NO_ERROR);
 }
@@ -2313,6 +2326,7 @@ int main(int argc, char **argv){
   test_if_statements();
   test_drawing_commands();
   test_font_rendering();
+  test_pen_rendering();
   test_opengl();
   imprime_resultado();
   _Wfinish_weavefont();

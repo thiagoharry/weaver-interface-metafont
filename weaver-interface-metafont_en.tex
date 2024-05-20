@@ -15412,8 +15412,8 @@ The polygon below, otherwise, is not $x$-monotone neither $y$-monotone:
 
 \imagem{images/concave2.eps}
 
-To triangulate a $x$-monotone polygon, we can assume that we first we
-check that it is $x$-monotone by traversing its vertices from the
+To triangulate a $x$-monotone polygon, we can assume that we already
+checked that it is $x$-monotone by traversing its vertices from the
 leftmost to the rightmost, both taking the upper path and the lower
 path. In the process we mark each vertex as belonging to the upper
 and/or lower path. The initial vertex and final one belong to both
@@ -15435,12 +15435,12 @@ path, when there are only vertices from the upper path in the stack,
 the same thing happens. Otherwise, when we read a vertex from the same
 path than other vertices in the stack, we can try to create a new
 diagonal generating a triangle, but we can do this only if this
-diagonal is entirely inside the polygon (which we can check simply by
-reading the $y$ coordinates of the diagonal and the opposite vertex of
-the triangle it forms). If it is not possible to create the diagonal
-in this case, we let the vertices accumulate on the stack and we
-follow the algorithm, knowing that soon we will find a vertex of
-the opposite path that will allow triangulation.
+diagonal is entirely inside the polygon (which is easier to check if
+we know if each vertex is in the top or bottom part of the
+polygon). If it is not possible to create the diagonal in this case,
+we let the vertices accumulate on the stack and we follow the
+algorithm, knowing that soon we will find a vertex of the opposite
+path that will allow triangulation.
 
 For example, in the case of our $x$-monotone polygon whose ordered
 vertices are ($A$, $E$, $D$, $B$, $C$), we can start by reading $(A,
@@ -15461,7 +15461,7 @@ we can first convert it to a polygon with a sufficiently large number
 of edges to apply the method. During the conversion we can identify
 which vertex is furthest left to be able to later test whether it is a
 $x$-monotone polygon. But first we have to define a structure to store
-a list chain of vertices:
+a linked list of vertices:
 
 \iniciocodigo
 @<Local Data Structures (metafont.c)@>+=
@@ -15470,23 +15470,51 @@ a list chain of vertices:
 #define NEW_POLYGON_VERTEX() \
   (struct polygon_vertex *) temporary_alloc(sizeof(struct polygon_vertex))
 #define DESTROY_POLYGON_VERTEX(v) \
-  ((temporary_free != NULL)?(temporary_free(v):(true))
+  ((temporary_free != NULL)?(temporary_free(v)):(true))
 struct polygon_vertex{
   int flag; // Will store if it is a vertex from upper or lower path
   float x, y;
   struct polygon_vertex *prev, *next;
+  @<struct polygon_vertex: Additional Variables@>
 };
 @
 \fimcodigo
 
-A doubled linked list of vertices will be created from a pen using the
+When we have a double linked list of vertices, if we want to destroy
+it and free the memory, we can use the auxiliary function:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+void destroy_vertex_linked_list(struct polygon_vertex *poly);
+@
+\fimcodigo
+
+Which we implement below:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+void destroy_vertex_linked_list(struct polygon_vertex *poly){
+  if(temporary_alloc != NULL && poly != NULL){
+    poly -> prev -> next = NULL;
+    while(poly -> next != NULL){
+      poly = poly -> next;
+      temporary_free(poly -> prev);
+    }
+    temporary_free(poly);
+  }
+}
+@
+\fimcodigo
+
+The doubled linked list of vertices will be created from a pen using the
 following function:
 
 \iniciocodigo
 @<Local Function Declaration (metafont.c)@>+=
 struct polygon_vertex *polygon_from_pen(struct metafont *mf,
                                         struct pen_variable *,
-                                        float *transform_matrix);
+                                        float *transform_matrix,
+                                        int *number_of_vertices);
 @
 \fimcodigo
 
@@ -15496,10 +15524,12 @@ And the function implementation:
 @<Auxiliary Local Functions (metafont.c)@>+=
 struct polygon_vertex *polygon_from_pen(struct metafont *mf,
                                         struct pen_variable *p,
-                                        float *transform_matrix){
-  int i, j, number_of_vertices = 0;
+                                        float *transform_matrix,
+                                        int *number_of_vertices){
+  int i, j;
+  *number_of_vertices = 0;
   struct polygon_vertex *first, *last, *leftmost;
-  // Getting the pen path:
+  // Getting the path inside the pen
   struct path_variable *path = p -> format;
   if(path == NULL){
     RAISE_GENERIC_ERROR(mf, NULL, 0, ERROR_UNKNOWN);
@@ -15519,9 +15549,9 @@ struct polygon_vertex *polygon_from_pen(struct metafont *mf,
                                  path -> points[0].point.y, transform_matrix);
   leftmost = first;
   last = first;
-  number_of_vertices = 1;
-  // Loop over extremity points in our path
-  for(i = 0; i < path -> length; i ++){
+  *number_of_vertices = 1;
+  // Looping over path extremity points
+  for(i = 0; i < path -> length - 1; i ++){
     double x0, y0, u_x, u_y, v_x, v_y, x1, y1;
     bool straight_line = (p -> flags & FLAG_STRAIGHT);
     x0 = last -> x;
@@ -15547,23 +15577,25 @@ struct polygon_vertex *polygon_from_pen(struct metafont *mf,
          (slope1 == slope2 && slope2 == slope3))
         straight_line = true;
     }
-    if(straight_line){ // In a straight line, we need just 1 more vertex
-      last -> next = NEW_POLYGON_VERTEX();
-      if(last -> next == NULL){
-        RAISE_ERROR_NO_MEMORY(mf, NULL, 0);
-        return NULL;
+    if(straight_line){ // For straight lines, we need just 1 vertex
+      if(i < path -> length - 2){
+        last -> next = NEW_POLYGON_VERTEX();
+        if(last -> next == NULL){
+          RAISE_ERROR_NO_MEMORY(mf, NULL, 0);
+          return NULL;
+        }
+        last -> next -> prev = last;
+        last -> next -> next = NULL;
+        last = last -> next;
+        last -> x = x1;
+        last -> y = y1;
+        (*number_of_vertices) ++;
+        if(last -> x < leftmost -> x ||
+          (last -> x == leftmost -> x && last -> y < leftmost -> y))
+          leftmost = last;
       }
-      last -> next -> prev = last;
-      last -> next -> next = NULL;
-      last = last -> next;
-      last -> x = x1;
-      last -> y = y1;
-      number_of_vertices ++;
-      if(last -> x < leftmost -> x ||
-        (last -> x == leftmost -> x && last -> y < leftmost -> y))
-        leftmost = last;
     }
-    else{ // In a curve, we insert several vertices
+    else{ // In curved paths, we need several vertices
       double dt;
       int distance = (int) ceil(sqrt(pow(u_x-x0, 2.0)+pow(u_y-y0, 2.0)));
       distance += (int) ceil(sqrt(pow(v_x-u_x, 2.0)+pow(v_y-u_y, 2.0)));
@@ -15579,13 +15611,13 @@ struct polygon_vertex *polygon_from_pen(struct metafont *mf,
                   3*(1-t)*(1-t)*t * path -> points[i].point.u_y +
                   3*(1-t)*t*t * path -> points[i].point.v_y +
                   t*t*t * path -> points[(i + 1) % (path -> length)].point.y;
-        if(number_of_vertices > 1){ // We really need the previous vertex?
+        if(*number_of_vertices > 1){ // Vértice anterior é desnecessário?
           double slope1, slope2;
           slope1 = (last->x - last->prev->x)/(last->y - last->prev->y);
           slope2 = (last->prev->x - last->prev->prev->x) /
                    (last->prev->y - last->prev->prev->y);
           if((last->y == last->prev->y && last->y == last->prev->prev->y) ||
-             slope1 == slope2){ // If we do not need, we overwrite:
+             slope1 == slope2){ // Se for desnecessário:
             last -> x = x;
             last -> y = y;
             continue;
@@ -15602,7 +15634,7 @@ struct polygon_vertex *polygon_from_pen(struct metafont *mf,
         last = last -> next;
         last -> x = x1;
         last -> y = y1;
-        number_of_vertices ++;
+        (*number_of_vertices) ++;
         if(last -> x < leftmost -> x ||
           (last -> x == leftmost -> x && last -> y < leftmost -> y))
           leftmost = last;
@@ -15642,8 +15674,8 @@ It assumes that the polygon given as argument is represented as a
 pointer to the leftmost vertex in the double linked list. The function
 first checks if the polygon has its vertices in the clockwise or
 counter-clockwise order. Basing on this information, it walks over the
-vertices adjusting its flag as \texttt{FLAG\_UPPER}
-or \texttt{FLAG\_LOWER}. If we find a vertex not compatible with a
+vertices adjusting its flag as \monoespaco{FLAG\_UPPER}
+or \monoespaco{FLAG\_LOWER}. If we find a vertex not compatible with a
 $x$-monotone polygon, we return false and the vertex flags should be
 ignored. This is the function implementation:
 
@@ -15666,30 +15698,340 @@ bool is_xmonotone(struct polygon_vertex *poly){
   do{
     if(upper -> next -> x >= upper -> x){
       upper = upper -> next;
-      if(clockwise)
+      if(clockwise){
         upper -> flag = FLAG_UPPER;
-      else
+      }
+      else{
         upper -> flag = FLAG_LOWER;
+      }
     }
     else if(lower -> prev -> x >= lower -> x){
       lower = lower -> prev;
-      if(clockwise)
-        upper -> flag = FLAG_LOWER;
-      else
-        upper -> flag = FLAG_UPPER;
+      if(clockwise){
+        lower -> flag = FLAG_LOWER;
+      }
+      else{
+        lower -> flag = FLAG_UPPER;
+      }
     }
     else
       return false;
   } while(upper != lower);
+  upper -> flag = (FLAG_UPPER | FLAG_LOWER);
   return true;
 }
 @
 
+When we triangulate a concave polygon, we will not use the
+optimizations where we assume that all triangles share a same point
+(which allows us to spend less space to store the triangles) just as
+we did to triangulate circles, squares, semicircles and convex
+polygons. Instead, each triangle is entirely represented by three
+coordinates of your vertex. We assume that we will have allocated an
+array with $3n$ elements and during triangulation we will fill it. And
+for that, we will need always an index $t$ ($0\leq t<3n$) to indicate
+where inside the array we can place the next triangle.
+
+The function that triangulates $x$-monotone polygons has the objective
+of filling this array. It assumes that it was already allocated with
+sufficient space, so it doesn't do any checking for array bounds. It
+implements the algorithm over some polygon $P$ which we described more
+informally above, but which is described more formally below:
+
+\noindent\negrito{1.} Sort all polygon vertices according with
+$x$ coordinate. Let $u_1$, $\ldots$, $u_n$ be the sorted sequence.
+
+\noindent\negrito{2.} Initialize a stack $S$ and push $u_1$ and $u_2$.
+
+\noindent\negrito{3.} \negrito{Do} $j\leftarrow 3$ \negrito{until} $n-1$:
+
+\noindent\negrito{4.}\ \ \ \negrito{If} $u_j$ and the next vertex in $S$ are on different paths (above and below):
+
+\noindent\negrito{5.}\ \ \ \ \ \ Pop all vertices from $S$.
+
+\noindent\negrito{6.}\ \ \ \ \ \ Create a diagonal from $u_j$
+to the popped vertex, except the last one.
+
+\noindent\negrito{7.}\ \ \ \ \ \ Push $u_{j-1}$ and $u_j$.
+
+\noindent\negrito{8.}\ \ \ \negrito{Else}:
+
+\noindent\negrito{9.}\ \ \ \ \ \ Pop a vertex from $S$.
+
+\noindent\negrito{10.}\ \ \ \ \ Pop from $S$ while the diagonal from $u_j$ to the vertex is inside $P$.
+
+\noindent\negrito{11.}\ \ \ \ \ Create a diagonal from $u_j$ to each popped vertice.
+
+\noindent\negrito{12.}\ \ \ \ \ Push the last popped vertex to $S$.
+
+\noindent\negrito{13.}\ \ \ \ \ Push $u_j$ in $S$.
+
+\noindent\negrito{14.} Add diagonals from $u_n$ to each vertice in the stack.
+
+A diagonal is an additional edge placed on the polygon. After adding
+all the diagonals, the polygon will be triangulated. In practice, each
+diagonal allows us to add a new triangle and allows us to remove a
+vertex from our polygon.
+
+The first step in the above algorithm is ordering the vertices from
+the least $x$-coordinate to the greatest one. As we have a
+$x$-monotone polygon, we can do this in $O(n)$ time, just walking from
+the first polygon to the upper and lower path until the last
+one. Instead of creating a new structure for the linked list of
+ordered vertices, we will add a new pointer to the existing structure,
+that will point for the next vertex on the ordered list:
+
+\iniciocodigo
+@<struct polygon_vertex: Additional Variables@>=
+  struct polygon_vertex *succ;
+@
+\fimcodigo
+
+We initialize this pointer running the following function that orders
+the vertices:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+void order_vertices_on_xmonotone_polygon(struct polygon_vertex *p,
+                                        int number_of_vertices){
+  struct polygon_vertex *upper, *lower, *last;
+  last = upper = lower = p;
+  while(number_of_vertices){
+    if(upper -> next -> x <= lower -> prev -> x){
+      last -> succ = upper -> next;
+      last = upper -> next;
+      upper = upper -> next;
+    }
+    else{
+      last -> succ = lower -> prev;
+      last = lower -> prev;
+      lower = lower -> prev;    
+    }
+    number_of_vertices --;
+  }
+}
+@
+\fimcodigo
+
+And finally, the triangulation function:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+bool triangulate_xmonotone_polygon(struct metafont *mf,
+                                   struct polygon_vertex *p,
+                                   int number_of_vertices, float **triangles,
+                                   int *number_of_triangles);
+@
+\fimcodigo
+
+The function gets a polygon $p$, is informed how many vertices it has
+and receives a pointer to the next position where it can insert the
+next triangle. It also can update that position. It also gets a
+pointer where it writes how many triangles were generated. As the
+function implements the triangulation algorithm discussed above, we
+write in the comments which part of the algorithm each part of the
+code is implementing:
+
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+bool triangulate_xmonotone_polygon(struct metafont *mf,
+                                   struct polygon_vertex *p,
+                                   int number_of_vertices, float **triangles,
+                                   int *number_of_triangles){
+  float *data = *triangles;
+  *number_of_triangles = 0;
+  struct polygon_vertex **stack;
+  int stack_size, j;
+  stack = (struct polygon_vertex **)
+             temporary_alloc(sizeof(struct polygon_vertex *) *
+             number_of_vertices);
+  if(stack == NULL){
+    RAISE_ERROR_NO_MEMORY(mf, NULL, 0);
+    return false;
+  }
+  // 1: Order all polygon vertices
+  order_vertices_on_xmonotone_polygon(p, number_of_vertices);
+  // 2: Initialize stack 'S' and push 'u_1' and 'u_2':
+  stack[0] = p;
+  p = p -> succ;
+  stack[1] = p;
+  p = p -> succ;
+  stack_size = 2;
+  // 3: Looping 'j' from 3 until 'n-1':
+  for(j = 3; j < number_of_vertices; j ++){
+    p = p -> succ;
+    // 4: If 'u_j' and the next vertex are in different paths: 
+    if(!(p -> flag & stack[stack_size-1] -> flag)){
+      int d;
+      // 5 and 6: Pop everything from 'S' and create diagonal to 'u_j':
+      for(d = 1; d < stack_size; d ++){
+        ADD_DIAGONAL(data, p, stack[d]);
+      }
+      // 7: Push 'u_{j-1}' and 'u_j':
+      stack[0] = stack[stack_size - 1];
+      stack[1] = p;
+      stack_size = 2;
+    } // 8: Else (if 'u_j' and the next vertex are in the same path):
+    else{
+      // 9 and 10: Pop and repeat while creating diagonals is possible:
+      int d = stack_size - 2, last_popped_vertex = stack_size - 1;
+      while(d>=0 && IS_DIAGONAL_INSIDE(stack[d], p)){
+        last_popped_vertex = d;
+        d --;
+      }
+      // 11: Create diagonals between 'u_j' and each popped vertex:
+      while(d < stack_size - 2){
+        d ++;
+        ADD_DIAGONAL(data, p, stack[d]);
+      }
+      // 12 and 13: Push last popped vertex and 'u_j':
+      stack[last_popped_vertex + 1] = p;
+      stack_size = last_popped_vertex + 2;
+    }
+  }
+  {
+    int d;
+    p = p -> succ;
+    // 14: Add diagonal from 'u_n' to each vertex in the stack:
+    for(d = 1; d < stack_size - 1; d ++){
+      ADD_DIAGONAL(data, p, stack[d]);
+    }
+    ADD_TRIANGLE(data, p -> prev -> x, p -> prev -> y, p -> x, p -> y,
+                 p -> next -> x, p -> next -> y);
+    DESTROY_POLYGON_VERTEX(p -> next);
+    DESTROY_POLYGON_VERTEX(p -> prev);
+    DESTROY_POLYGON_VERTEX(p);
+    if(temporary_free != NULL)
+      temporary_free(stack);
+  }
+  return true;
+}
+@
+\fimcodigo
+
+In the code above we use the \monoespaco{ADD\_DIAGONAL} macro to
+insert a diagonal. That is, we generate a triangle by establishing a
+new edge between two previously unconnected vertices which had a
+common neighbor. By doing this we create a triangle. One of
+the main tasks of this macro is to establish which is the common neighbor
+of both vertices. Once this is done, we can generate the triangle and
+we can remove one of the vertices of the polygon:
+
+\iniciocodigo
+@<Local Macros (metafont.c)@>+=
+#define ADD_DIAGONAL(data, v1, v2) \
+        if(v1 -> prev == v2 -> next){\
+          ADD_TRIANGLE(data, v1 -> x, v1 -> y, v2 -> x, v2 -> y,\
+                       v1 -> prev -> x, v1 -> prev -> y);\
+          v1 -> prev = v2;\
+          DESTROY_POLYGON_VERTEX(v2 -> next);\
+          v2 -> next = v1;\
+        }\
+        else if(v1 -> next == v2 -> prev){\
+          ADD_TRIANGLE(data, v1 -> x, v1 -> y, v2 -> x, v2 -> y,\
+                       v1 -> next -> x, v1 -> next -> y);\
+          v1 -> next = v2;\
+          DESTROY_POLYGON_VERTEX(v2 -> prev);\
+          v2 -> prev = v1;\
+        }
+@
+\fimcodigo
+
+The macro that destroys vertices already has been written. But the
+macro that inserts triangles was not. Its task will be inserting
+triangles in an array, ensuring that the vertices will be in
+counterclockwise order, so that it can be correctly rendered by the
+video card.  After doing this, you must update the pointer for the
+place where the next triangle must be stored:
+
+\iniciocodigo
+@<Local Macros (metafont.c)@>+=
+#define ADD_TRIANGLE(data, x1, y1, x2, y2, x3, y3) \
+  if(x1*y2+y1*x3+x2*y3-x3*y2-x2*y1-x1*y3 > 0){\
+    data[0] = x1; data[1] = y1;\
+    data[2] = x2; data[3] = y2;\
+    data[4] = x3; data[5] = y3;\
+  } else{\
+    data[0] = x1; data[1] = y1;\
+    data[2] = x3; data[3] = y3;\
+    data[4] = x2; data[5] = y2;\
+  }\
+  (*number_of_triangles) ++;\
+  data += 6;
+@
+\fimcodigo
+
+Finally, we need a macro to test if a diagonal is inside the polygon
+or not. We assume that the connecting vertices are from the same path
+in the polygon (otherwise we would already know that the diagonal is
+internal to the polygon). The macro that does this is:
+
+\iniciocodigo
+@<Local Macros (metafont.c)@>+=
+#define COMMON_VERTEX(v1, v2) ((v1 -> next == v2 -> prev)?\
+                               (v1 -> next):(v1 -> prev))
+#define IS_DIAGONAL_INSIDE(v1, v2)\
+  ((v1 -> y != v2 -> y) && \
+   (((v1 -> flag & FLAG_UPPER) && \
+     (COMMON_VERTEX(v1, v2)->x)*(v2->x-v1->x)/(v2->y-v1->y)+v1->y < \
+      COMMON_VERTEX(v1,v2)->y)\
+    ||\
+   ((v1 -> flag & FLAG_LOWER) && \
+    (COMMON_VERTEX(v1, v2)->x)*(v2->x-v1->x)/(v2->y-v1->y)+v1->y > \
+     COMMON_VERTEX(v1,v2)->y)))
+@
+\fimcodigo
+
+Having written all functions for $x$-monotone polygons, we can begin
+triangulating this specific case of concave polygons. First we convert
+the pen to a polygon. Then, based on the number of vertices, we
+allocate space for the triangles, and also check if we need to
+triangulate again if the pen is already triangulated. If so, we
+allocate space for the vertices and run the triangulation
+function. Finally, we use the corresponding OpenGL functions to send
+the triangles to the video card.
+
 \iniciocodigo
 @<Triangulation: Concave Shape@>=
 if(!(pen -> flags & FLAG_CONVEX)){
-  RAISE_GENERIC_ERROR(mf, NULL, 0, ERROR_UNKNOWN);
-  return false;
+  struct polygon_vertex *poly;
+  int number_of_vertices = 0, number_of_triangles = 0;  
+  poly = polygon_from_pen(mf, pen, transform_matrix, &number_of_vertices);
+  if(poly == NULL)
+    return false;
+  if(pen -> gl_vbo != 0){
+    if(number_of_vertices <= pen -> triang_resolution){
+      destroy_vertex_linked_list(poly);
+      return true; // Já triangulado satisfatoriamente
+    }
+    else
+      glDeleteBuffers(1, &(pen -> gl_vbo)); // Precisa retriangular
+  }
+  pen -> triang_resolution = number_of_vertices;
+  if(is_xmonotone(poly)){
+    float *triang;
+    triang = temporary_alloc(3 * number_of_vertices * 2 * sizeof(float));
+    if(triang == NULL){
+      RAISE_ERROR_NO_MEMORY(mf, NULL, 0);
+      return false;
+    }
+    if(!triangulate_xmonotone_polygon(mf, poly, number_of_vertices, &triang,
+                                      &number_of_triangles))
+      return false;
+    glGenBuffers(1, &(pen -> gl_vbo));
+    glBindBuffer(GL_ARRAY_BUFFER, pen -> gl_vbo);
+    glBufferData(GL_ARRAY_BUFFER, number_of_triangles * 3 * 2 *
+                 sizeof(float), triang, GL_STATIC_DRAW);
+    pen -> indices = number_of_triangles * 3;
+    if(temporary_free != NULL)
+      temporary_free(triang);
+    return true;
+  }
+  else{
+    RAISE_GENERIC_ERROR(mf, NULL, 0, ERROR_UNKNOWN);
+    return false;
+  }
 }
 return false;
 @
@@ -16530,7 +16872,10 @@ void drawpoint(struct metafont *mf, struct pen_variable *pen,
     glUniform4f(pen_uniform_color, 0.0, 0.0, 0.0, 1.0);
   }
   glEnableVertexAttribArray(0);
-  glDrawArrays(GL_TRIANGLE_FAN, 0, pen -> indices);
+  if(pen -> flags & FLAG_CONVEX)
+    glDrawArrays(GL_TRIANGLE_FAN, 0, pen -> indices);
+  else
+    glDrawArrays(GL_TRIANGLES, 0, pen -> indices);
 }
 @
 \fimcodigo

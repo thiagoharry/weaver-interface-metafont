@@ -15667,12 +15667,12 @@ criar diagonal entre todos eles, e podemos esvaziar a pilha. Se lemos
 um vértice do caminho de baixo, quando só há vértices do caminho de
 cima empilhados, o mesmo ocorre. Já se lemos um vértice do mesmo
 caminho, podemos tentar criar uma nova diagonal gerando um triângulo,
-somente se essa diagonal passa por dentro do polígono (o que podemos
-verificar simplesmente lendo as coordenadas $y$ da diagonal e do
-vértice oposto do triângulo que ela forma). Se não for possível criar
-a diagonal neste caso, nós deixamos os vértices acumularem na pilha e
-seguimos o algoritmo, sabendo que uma hora acharemos um vértice do
-caminho oposto que permitirá a triangulação.
+somente se essa diagonal passa por dentro do polígono (o que é fácil
+de checar se sabemos se cada vértice está na parte de cima ou de baixo
+do polígono). Se não for possível criar a diagonal neste caso, nós
+deixamos os vértices acumularem na pilha e seguimos o algoritmo,
+sabendo que uma hora acharemos um vértice do caminho oposto que
+permitirá a triangulação.
 
 Por exemplo, no caso de nosso polígono $x$-monótono cujos vértices
 ordenados são ($A$, $E$, $D$, $B$, $C$), podemos começar lendo $(A, E,
@@ -15703,23 +15703,51 @@ encadeada de vértices:
 #define NEW_POLYGON_VERTEX() \
   (struct polygon_vertex *) temporary_alloc(sizeof(struct polygon_vertex))
 #define DESTROY_POLYGON_VERTEX(v) \
-  ((temporary_free != NULL)?(temporary_free(v):(true))
+  ((temporary_free != NULL)?(temporary_free(v)):(true))
 struct polygon_vertex{
   int flag; // Vai armazenar se é um vértice de cima ou de baixo
   float x, y;
   struct polygon_vertex *prev, *next;
+  @<struct polygon_vertex: Variáveis Adicionais@>
 };
 @
 \fimcodigo
 
-Uma lista duplamente encadeada de vértices será gerada à partir de
+Caso tenhamos uma lista duplamente encadeada de vértices e queiramos
+remover todos os elementos dela, podemos usar a função:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+void destroy_vertex_linked_list(struct polygon_vertex *poly);
+@
+\fimcodigo
+
+Que é implementada abaixo:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+void destroy_vertex_linked_list(struct polygon_vertex *poly){
+  if(temporary_alloc != NULL && poly != NULL){
+    poly -> prev -> next = NULL;
+    while(poly -> next != NULL){
+      poly = poly -> next;
+      temporary_free(poly -> prev);
+    }
+    temporary_free(poly);
+  }
+}
+@
+\fimcodigo
+
+A lista duplamente encadeada de vértices será gerada à partir de
 uma caneta por meio da seguinte função:
 
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
 struct polygon_vertex *polygon_from_pen(struct metafont *mf,
                                        struct pen_variable *,
-                                       float *transform_matrix);
+                                       float *transform_matrix,
+                                       int *number_of_vertices);
 @
 \fimcodigo
 
@@ -15729,8 +15757,10 @@ A implementação da função:
 @<Funções Auxiliares Locais (metafont.c)@>+=
 struct polygon_vertex *polygon_from_pen(struct metafont *mf,
                                         struct pen_variable *p,
-                                        float *transform_matrix){
-  int i, j, number_of_vertices = 0;
+                                        float *transform_matrix,
+                                        int *number_of_vertices){
+  int i, j;
+  *number_of_vertices = 0;
   struct polygon_vertex *first, *last, *leftmost;
   // Obter o caminho à partir da caneta:
   struct path_variable *path = p -> format;
@@ -15752,9 +15782,9 @@ struct polygon_vertex *polygon_from_pen(struct metafont *mf,
                                  path -> points[0].point.y, transform_matrix);
   leftmost = first;
   last = first;
-  number_of_vertices = 1;
+  *number_of_vertices = 1;
   // Loop sobre pontos de extremidade do caminho:
-  for(i = 0; i < path -> length; i ++){
+  for(i = 0; i < path -> length - 1; i ++){
     double x0, y0, u_x, u_y, v_x, v_y, x1, y1;
     bool straight_line = (p -> flags & FLAG_STRAIGHT);
     x0 = last -> x;
@@ -15781,20 +15811,22 @@ struct polygon_vertex *polygon_from_pen(struct metafont *mf,
         straight_line = true;
     }
     if(straight_line){ // Em caso de linha reta, precisamos só de 1 vértice
-      last -> next = NEW_POLYGON_VERTEX();
-      if(last -> next == NULL){
-        RAISE_ERROR_NO_MEMORY(mf, NULL, 0);
-        return NULL;
+      if(i < path -> length - 2){
+        last -> next = NEW_POLYGON_VERTEX();
+        if(last -> next == NULL){
+          RAISE_ERROR_NO_MEMORY(mf, NULL, 0);
+          return NULL;
+        }
+        last -> next -> prev = last;
+        last -> next -> next = NULL;
+        last = last -> next;
+        last -> x = x1;
+        last -> y = y1;
+        (*number_of_vertices) ++;
+        if(last -> x < leftmost -> x ||
+          (last -> x == leftmost -> x && last -> y < leftmost -> y))
+          leftmost = last;
       }
-      last -> next -> prev = last;
-      last -> next -> next = NULL;
-      last = last -> next;
-      last -> x = x1;
-      last -> y = y1;
-      number_of_vertices ++;
-      if(last -> x < leftmost -> x ||
-        (last -> x == leftmost -> x && last -> y < leftmost -> y))
-        leftmost = last;
     }
     else{ // Em caso de curva, vamos inserir vários vértices
       double dt;
@@ -15812,7 +15844,7 @@ struct polygon_vertex *polygon_from_pen(struct metafont *mf,
                   3*(1-t)*(1-t)*t * path -> points[i].point.u_y +
                   3*(1-t)*t*t * path -> points[i].point.v_y +
                   t*t*t * path -> points[(i + 1) % (path -> length)].point.y;
-        if(number_of_vertices > 1){ // Vértice anterior é desnecessário?
+        if(*number_of_vertices > 1){ // Vértice anterior é desnecessário?
           double slope1, slope2;
           slope1 = (last->x - last->prev->x)/(last->y - last->prev->y);
           slope2 = (last->prev->x - last->prev->prev->x) /
@@ -15835,7 +15867,7 @@ struct polygon_vertex *polygon_from_pen(struct metafont *mf,
         last = last -> next;
         last -> x = x1;
         last -> y = y1;
-        number_of_vertices ++;
+        (*number_of_vertices) ++;
         if(last -> x < leftmost -> x ||
           (last -> x == leftmost -> x && last -> y < leftmost -> y))
           leftmost = last;
@@ -15876,7 +15908,7 @@ Ela assume que um polígono é já representado como um ponteiro para seu
 vértice mais à esquerda. A função então tentará identificar se o
 polígono está no sentido horário ou anti-horário. Baseado nisso ele
 percorre os demais vértices ajustando sua flag
-para \texttt{FLAG\_UPPER} ou \texttt{FLAG\_LOWER}. Caso cheguemos em
+para \monoespaco{FLAG\_UPPER} ou \monoespaco{FLAG\_LOWER}. Caso cheguemos em
 um vértice que viola o que se espera de um polígono $x$-monótono,
 interrompemos e retornamos falso. As flags preenchidas neste caso
 devem ser simplesmente ignoradas. Segue a implementação da função:
@@ -15900,31 +15932,346 @@ bool is_xmonotone(struct polygon_vertex *poly){
   do{
     if(upper -> next -> x >= upper -> x){
       upper = upper -> next;
-      if(clockwise)
+      if(clockwise){
         upper -> flag = FLAG_UPPER;
-      else
+      }
+      else{
         upper -> flag = FLAG_LOWER;
+      }
     }
     else if(lower -> prev -> x >= lower -> x){
       lower = lower -> prev;
-      if(clockwise)
-        upper -> flag = FLAG_LOWER;
-      else
-        upper -> flag = FLAG_UPPER;
+      if(clockwise){
+        lower -> flag = FLAG_LOWER;
+      }
+      else{
+        lower -> flag = FLAG_UPPER;
+      }
     }
     else
       return false;
   } while(upper != lower);
+  upper -> flag = (FLAG_UPPER | FLAG_LOWER);
   return true;
 }
 @
 
+Quando triangulamos um polígono côncavo, não iremos usar as
+otimizações em que assumimos que todos os triângulos compartilham um
+mesmo ponto (o que nos permite gastar menos espaço para armazenar os
+triângulos) tal omo fizemos para triangular círculos, quadrados,
+semicírculos e polígonos convexos. Ao invés disso, cada triângulo é
+inteiramente representado por três coordenadas de seu
+vértice. Assumimos que teremos alocado um vetor com $3n$ elementos e
+durante a triangulação iremos preenchê-lo. E para isso, precisaremos
+sempre de um índice $t$ ($0\leq t<3n$) para nos indicar em qual
+posição do vetor podemos colocar o próximo triângulo.
+
+A função que triangula polígonos $x$-monótonos tem o objetivo de
+preencher este vetor. Ela assume que o vetor foi alocado com espaço
+suficiente, então não faz nenhuma checagem. Ela implementa o algoritmo
+sobre o polígono $P$ que descrevemos mais informalmente acima, mas que
+é descrito de maneira mais formal abaixo:
+
+\noindent\negrito{1.} Ordene todos os vértices do polígono em ordem crescente
+de acordo com sua coordenada $x$.\quebra
+\relax\ \ Seja $u_1$, $\ldots$, $u_n$ a sequência ordenada.
+
+\noindent\negrito{2.} Inicialize uma pilha $S$ e empilhe nela $u_1$ e $u_2$.
+
+\noindent\negrito{3.} \negrito{Faça} $j\leftarrow 3$ variar até $n-1$:
+
+\noindent\negrito{4.}\ \ \ \negrito{Se} $u_j$ e o vértice no topo de $S$ estão em caminhos
+diferentes (cima e baixo):
+
+\noindent\negrito{5.}\ \ \ \ \ \ Desempilhe todos os vértices de $S$.
+
+\noindent\negrito{6.}\ \ \ \ \ \ Crie diagonal de $u_j$
+a cada vértice desempilhado, exceto o último.
+
+\noindent\negrito{7.}\ \ \ \ \ \ Empilhe $u_{j-1}$ e $u_j$.
+
+\noindent\negrito{8.}\ \ \ \negrito{Senão}:
+
+\noindent\negrito{9.}\ \ \ \ \ \ Desempilhe um vértice de $S$.
+
+\noindent\negrito{10.}\ \ \ \ \ Desempilhe de $S$ enquanto diagonal de vértice desempilhado a $u_j$ for inscrita em $P$.
+
+\noindent\negrito{11.}\ \ \ \ \ Crie diagonal $u_j$ até cada vértice desempilhado.
+
+\noindent\negrito{12.}\ \ \ \ \ Devolva último vértice desempilhado a $S$.
+
+\noindent\negrito{13.}\ \ \ \ \ Empilhe $u_j$ em $S$.
+
+\noindent\negrito{14.} Adicione diagonais de $u_n$ a todo vértice que ainda estiver na
+pilha.
+
+Uma diagonal é uma aresta adicional colocada no polígono. Após
+preencher todas as diagonais, o polígono estará triangulado. Na
+prática, cada diagonal permite que adicionemos um novo triângulo e
+permite que removamos um vértice de nosso polígono.
+
+A primeira etapa do algoritmo acima é ordenar os vértices de modo
+crescente, da menor coordenada $x$ até a maior. Como é um polígono
+$x$-monótono, podemos fazer isso em $O(n)$ apenas percorrendo os
+vértices à partir do vértice inicial e usando o caminho de cima e o de
+baixo. Ao invés de criar uma nova estrutura para a lista encadeada ou
+vetor de vértices ordenados, nós apenas vamos adicionar neles um
+ponteiro adicional para que cada um deles aponte para o próximo
+vértice na lita ordenada:
+
+\iniciocodigo
+@<struct polygon_vertex: Variáveis Adicionais@>=
+  struct polygon_vertex *succ;
+@
+\fimcodigo
+
+Nós inicializamos este ponteiro executando a seguinte função de
+ordenação de vértices:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+void order_vertices_on_xmonotone_polygon(struct polygon_vertex *p,
+                                        int number_of_vertices){
+  struct polygon_vertex *upper, *lower, *last;
+  last = upper = lower = p;
+  while(number_of_vertices){
+    if(upper -> next -> x <= lower -> prev -> x){
+      last -> succ = upper -> next;
+      last = upper -> next;
+      upper = upper -> next;
+    }
+    else{
+      last -> succ = lower -> prev;
+      last = lower -> prev;
+      lower = lower -> prev;    
+    }
+    number_of_vertices --;
+  }
+}
+@
+\fimcodigo
+
+E finalmente a função de triangulação:
+
+\iniciocodigo
+@<Declaração de Função Local (metafont.c)@>+=
+bool triangulate_xmonotone_polygon(struct metafont *mf,
+                                   struct polygon_vertex *p,
+                                   int number_of_vertices, float **triangles,
+                                   int *number_of_triangles);
+@
+\fimcodigo
+
+A função recebe um polígono $p$, é informada quantos vértices ele tem
+e recebe um ponteiro para a próxima posição onde ela pode inserir o
+próximo triângulo, e ela também pode atualizar tal posição. Ela recebe
+também um ponteiro onde ela deve escrever quanto triângulos
+gerou. Como ela implementa o algoritmo descrito mais acima, deixamos
+indicado nos comentários cada uma das partes do algoritmo:
+
+\iniciocodigo
+@<Funções Auxiliares Locais (metafont.c)@>+=
+bool triangulate_xmonotone_polygon(struct metafont *mf,
+                                   struct polygon_vertex *p,
+                                   int number_of_vertices, float **triangles,
+                                   int *number_of_triangles){
+  float *data = *triangles;
+  *number_of_triangles = 0;
+  struct polygon_vertex **stack;
+  int stack_size, j;
+  stack = (struct polygon_vertex **)
+             temporary_alloc(sizeof(struct polygon_vertex *) *
+             number_of_vertices);
+  if(stack == NULL){
+    RAISE_ERROR_NO_MEMORY(mf, NULL, 0);
+    return false;
+  }
+  // 1: Ordena todos os vértices do polígono:
+  order_vertices_on_xmonotone_polygon(p, number_of_vertices);
+  // 2: Inicializa pilha 'S' e empilha 'u_1' e 'u_2':
+  stack[0] = p;
+  p = p -> succ;
+  stack[1] = p;
+  p = p -> succ;
+  stack_size = 2;
+  // 3: Iterando 'j' de 3 até 'n-1':
+  for(j = 3; j < number_of_vertices; j ++){
+    p = p -> succ;
+    // 4: Se 'u_j' e próximo vértice estão em caminhos diferentes: 
+    if(!(p -> flag & stack[stack_size-1] -> flag)){
+      int d;
+      // 5 e 6: Desempilha tudo de 'S' e cria diagonal de 'u_j' nos vértices:
+      for(d = 1; d < stack_size; d ++){
+        ADD_DIAGONAL(data, p, stack[d]);
+      }
+      // 7: Empilha 'u_{j-1}' e 'u_j':
+      stack[0] = stack[stack_size - 1];
+      stack[1] = p;
+      stack_size = 2;
+    } // 8: Senão (se 'u_j' e próximo vértice são do mesmo caminho):
+    else{
+      // 9 e 10: Desempilhe e repita enquanto criar diagonal for possível:
+      int d = stack_size - 2, last_popped_vertex = stack_size - 1;
+      while(d>=0 && IS_DIAGONAL_INSIDE(stack[d], p)){
+        last_popped_vertex = d;
+        d --;
+      }
+      // 11: Crie diagonal entre 'u_j' e cada vértice desempilhado:
+      while(d < stack_size - 2){
+        d ++;
+        ADD_DIAGONAL(data, p, stack[d]);
+      }
+      // 12 e 13: Empilhe de volta último vértice desempilhado e 'u_j':
+      stack[last_popped_vertex + 1] = p;
+      stack_size = last_popped_vertex + 2;
+    }
+  }
+  {
+    int d;
+    p = p -> succ;
+    // 14: Adicione diagonal de 'u_n' a cada vértice na pilha
+    for(d = 1; d < stack_size - 1; d ++){
+      ADD_DIAGONAL(data, p, stack[d]);
+    }
+    ADD_TRIANGLE(data, p -> prev -> x, p -> prev -> y, p -> x, p -> y,
+                 p -> next -> x, p -> next -> y);
+    DESTROY_POLYGON_VERTEX(p -> next);
+    DESTROY_POLYGON_VERTEX(p -> prev);
+    DESTROY_POLYGON_VERTEX(p);
+    if(temporary_free != NULL)
+      temporary_free(stack);
+  }
+  return true;
+}
+@
+\fimcodigo
+
+
+No código acima nós usamos a macro \monoespaco{ADD\_DIAGONAL} para
+inserir uma diagonal. Isto é, nós geramos um triângulo estabelecendo
+uma nova aresta entre dois vértices anteriormente não conectados, mas
+que tinham um vizinho em comum. Ao fazer isso criamos um
+triângulo. Uma das principais tarefas desta macro é estabelecer qual é
+o vizinho em comum de ambos os vértices. Uma vez que isso seja feito,
+nós podemos gerar o triangulo e podemos remover um dos vértices do
+polígono:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#define ADD_DIAGONAL(data, v1, v2) \
+        if(v1 -> prev == v2 -> next){\
+          ADD_TRIANGLE(data, v1 -> x, v1 -> y, v2 -> x, v2 -> y,\
+                       v1 -> prev -> x, v1 -> prev -> y);\
+          v1 -> prev = v2;\
+          DESTROY_POLYGON_VERTEX(v2 -> next);\
+          v2 -> next = v1;\
+        }\
+        else if(v1 -> next == v2 -> prev){\
+          ADD_TRIANGLE(data, v1 -> x, v1 -> y, v2 -> x, v2 -> y,\
+                       v1 -> next -> x, v1 -> next -> y);\
+          v1 -> next = v2;\
+          DESTROY_POLYGON_VERTEX(v2 -> prev);\
+          v2 -> prev = v1;\
+        }
+@
+\fimcodigo
+
+A macro que destrói vértices já foi escrita. Mas a macro que insere
+triângulos ainda não. A tarefa dela será inserir um triângulo no
+sentido anti-horário para que ele seja renderizado
+corretamente. Depois de fazer isso, deve-se atualizar o ponteiro do
+local onde inserimos o triângulo.
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#define ADD_TRIANGLE(data, x1, y1, x2, y2, x3, y3) \
+  if(x1*y2+y1*x3+x2*y3-x3*y2-x2*y1-x1*y3 > 0){\
+    data[0] = x1; data[1] = y1;\
+    data[2] = x2; data[3] = y2;\
+    data[4] = x3; data[5] = y3;\
+  } else{\
+    data[0] = x1; data[1] = y1;\
+    data[2] = x3; data[3] = y3;\
+    data[4] = x2; data[5] = y2;\
+  }\
+  (*number_of_triangles) ++;\
+  data += 6;
+@
+\fimcodigo
+
+Por fim, precisamos da macro que testa se uma diagonal está dentro de
+um polígono ou não, assumindo que ambos os vértices da diagonal fazem
+parte ou do caminho de cima ou do de baixo do polígono (se eles
+pertencerem a caminhos diferentes, então já saberíamos que a diagonal
+está dentro do polígono e não seria necessário testar). A macro que
+faz isso é:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#define COMMON_VERTEX(v1, v2) ((v1 -> next == v2 -> prev)?\
+                               (v1 -> next):(v1 -> prev))
+#define IS_DIAGONAL_INSIDE(v1, v2)\
+  ((v1 -> y != v2 -> y) && \
+   (((v1 -> flag & FLAG_UPPER) && \
+     (COMMON_VERTEX(v1, v2)->x)*(v2->x-v1->x)/(v2->y-v1->y)+v1->y < \
+      COMMON_VERTEX(v1,v2)->y)\
+    ||\
+   ((v1 -> flag & FLAG_LOWER) && \
+    (COMMON_VERTEX(v1, v2)->x)*(v2->x-v1->x)/(v2->y-v1->y)+v1->y > \
+     COMMON_VERTEX(v1,v2)->y)))
+@
+\fimcodigo
+
+Tendo todas as macros e funções para polígonos $x$-monótonos, podemos
+começar a tratar alguns casos de polígonos côncavos. Primeiro
+transformamos a caneta em um polígono, baseados no número de vértices
+verificamos se ela precisa ser triangulada novamente, caso ela já
+tenha sido no passado, e em caso afirmativo, alocamos espaço para os
+vértices e a triangulamos. Finalmente, depois disso, usamos as funções
+correspondentes no OpenGL para enviar os triângulos para a placa de
+vídeo.
 
 \iniciocodigo
 @<Triangulação: Forma Côncava@>=
 if(!(pen -> flags & FLAG_CONVEX)){
-  RAISE_GENERIC_ERROR(mf, NULL, 0, ERROR_UNKNOWN);
-  return false;
+  struct polygon_vertex *poly;
+  int number_of_vertices = 0, number_of_triangles = 0;  
+  poly = polygon_from_pen(mf, pen, transform_matrix, &number_of_vertices);
+  if(poly == NULL)
+    return false;
+  if(pen -> gl_vbo != 0){
+    if(number_of_vertices <= pen -> triang_resolution){
+      destroy_vertex_linked_list(poly);
+      return true; // Já triangulado satisfatoriamente
+    }
+    else
+      glDeleteBuffers(1, &(pen -> gl_vbo)); // Precisa retriangular
+  }
+  pen -> triang_resolution = number_of_vertices;
+  if(is_xmonotone(poly)){
+    float *triang;
+    triang = temporary_alloc(3 * number_of_vertices * 2 * sizeof(float));
+    if(triang == NULL){
+      RAISE_ERROR_NO_MEMORY(mf, NULL, 0);
+      return false;
+    }
+    if(!triangulate_xmonotone_polygon(mf, poly, number_of_vertices, &triang,
+                                      &number_of_triangles))
+      return false;
+    glGenBuffers(1, &(pen -> gl_vbo));
+    glBindBuffer(GL_ARRAY_BUFFER, pen -> gl_vbo);
+    glBufferData(GL_ARRAY_BUFFER, number_of_triangles * 3 * 2 *
+                 sizeof(float), triang, GL_STATIC_DRAW);
+    pen -> indices = number_of_triangles * 3;
+    if(temporary_free != NULL)
+      temporary_free(triang);
+    return true;
+  }
+  else{
+    RAISE_GENERIC_ERROR(mf, NULL, 0, ERROR_UNKNOWN);
+    return false;
+  }
 }
 return false;
 @
@@ -16761,7 +17108,11 @@ void drawpoint(struct metafont *mf, struct pen_variable *pen,
     glUniform4f(pen_uniform_color, 0.0, 0.0, 0.0, 1.0);
   }
   glEnableVertexAttribArray(0);
-  glDrawArrays(GL_TRIANGLE_FAN, 0, pen -> indices);
+  if(pen -> flags & FLAG_CONVEX)
+    glDrawArrays(GL_TRIANGLE_FAN, 0, pen -> indices);
+  else
+    glDrawArrays(GL_TRIANGLES, 0, pen -> indices);
+  
 }
 @
 \fimcodigo
