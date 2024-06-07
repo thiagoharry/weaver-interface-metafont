@@ -10985,8 +10985,9 @@ bool assign_pen_variable(struct metafont *mf,
                          struct pen_variable *source){
   void *(*alloc)(size_t);
   void (*disalloc)(void *);
+  bool permanent = target -> permanent;
   struct variable *next = target -> next;
-  if(target -> permanent){
+  if(permanent){
     disalloc = permanent_free;
     alloc = permanent_alloc;
   }
@@ -11001,6 +11002,7 @@ bool assign_pen_variable(struct metafont *mf,
   memcpy(target, source, sizeof(struct pen_variable));
   target -> type = TYPE_T_PEN;
   target -> next = next;
+  target -> permanent = permanent;
   if(! (source -> flags & (FLAG_CIRCULAR | FLAG_SQUARE | FLAG_NULL)))
     if(!recursive_copy_points(mf, NULL, alloc, &(target -> format),
                              source -> format, true))
@@ -11778,6 +11780,7 @@ result -> points[7].format = FINAL_FORMAT;
 result -> points[8].point.x = 0.5; result -> points[8].point.y = 0.0;
 result -> points[8].point.u_x = 0.5; result -> points[8].point.u_y = 0.13261;
 result -> points[8].point.v_x = 0.44733; result -> points[8].point.v_y = 0.2598;
+result -> points[8].format = FINAL_FORMAT;
 result -> cyclic = true;
 @
 \fimcodigo
@@ -15675,7 +15678,7 @@ sabendo que uma hora acharemos um vértice do caminho oposto que
 permitirá a triangulação.
 
 Por exemplo, no caso de nosso polígono $x$-monótono cujos vértices
-ordenados são ($A$, $E$, $D$, $B$, $C$), podemos começar lendo $(A, E,
+    ordenados são ($A$, $E$, $D$, $B$, $C$), podemos começar lendo $(A, E,
 D)$. Como infelizmente, $D$ e $E$ são ambos da parte de baixo do
 polígono, a triangulação não é automática. Verificamos então se
 podemos criar uma diagonal $DA$, formando o triângulo $DAE$. Por sorte
@@ -15708,7 +15711,7 @@ struct polygon_vertex{
   int flag; // Vai armazenar se é um vértice de cima ou de baixo
   float x, y;
   struct polygon_vertex *prev, *next;
-  @<struct polygon_vertex: Variáveis Adicionais@>
+  @<struct polygon\_vertex: Variáveis Adicionais@>
 };
 @
 \fimcodigo
@@ -15836,21 +15839,24 @@ struct polygon_vertex *polygon_from_pen(struct metafont *mf,
       dt = 1.0/((double) distance);
       for(j = 1; j <= distance; j ++){
         double t = dt * j;
-        float x = (1-t)*(1-t)*(1-t) * path -> points[i].point.x +
-                  3*(1-t)*(1-t)*t * path -> points[i].point.u_x +
-                  3*(1-t)*t*t * path -> points[i].point.v_x +
-                  t*t*t * path -> points[(i + 1) % (path -> length)].point.x;
-        float y = (1-t)*(1-t)*(1-t) * path -> points[i].point.y +
-                  3*(1-t)*(1-t)*t * path -> points[i].point.u_y +
-                  3*(1-t)*t*t * path -> points[i].point.v_y +
-                  t*t*t * path -> points[(i + 1) % (path -> length)].point.y;
+        float x = (1-t)*(1-t)*(1-t) * x0 + 3*(1-t)*(1-t)*t * u_x +
+                  3*(1-t)*t*t * v_x + t*t*t * x1;
+        float y = (1-t)*(1-t)*(1-t) * y0 + 3*(1-t)*(1-t)*t * u_y +
+                  3*(1-t)*t*t * v_y + t*t*t * y1;
+        if(*number_of_vertices > 0){
+          if(last -> y == x && last -> y == y){
+            last -> x = x;
+            last -> y = y;
+            continue;
+          }
+        }
         if(*number_of_vertices > 1){ // Vértice anterior é desnecessário?
           double slope1, slope2;
-          slope1 = (last->x - last->prev->x)/(last->y - last->prev->y);
-          slope2 = (last->prev->x - last->prev->prev->x) /
-                   (last->prev->y - last->prev->prev->y);
-          if((last->y == last->prev->y && last->y == last->prev->prev->y) ||
-             slope1 == slope2){ // Se for desnecessário:
+          slope1 = (x - last->x)/(y - last->y);
+          slope2 = (last->x - last->prev->x) /
+                   (last->y - last->prev->y);
+          if((y == last->y && y == last->prev->y) || slope1 == slope2){
+          // Se for desnecessário:
             last -> x = x;
             last -> y = y;
             continue;
@@ -15865,8 +15871,8 @@ struct polygon_vertex *polygon_from_pen(struct metafont *mf,
         last -> next -> prev = last;
         last -> next -> next = NULL;
         last = last -> next;
-        last -> x = x1;
-        last -> y = y1;
+        last -> x = x;
+        last -> y = y;
         (*number_of_vertices) ++;
         if(last -> x < leftmost -> x ||
           (last -> x == leftmost -> x && last -> y < leftmost -> y))
@@ -16021,7 +16027,7 @@ ponteiro adicional para que cada um deles aponte para o próximo
 vértice na lita ordenada:
 
 \iniciocodigo
-@<struct polygon_vertex: Variáveis Adicionais@>=
+@<struct polygon\_vertex: Variáveis Adicionais@>=
   struct polygon_vertex *succ;
 @
 \fimcodigo
@@ -16093,13 +16099,13 @@ bool triangulate_xmonotone_polygon(struct metafont *mf,
   stack[0] = p;
   p = p -> succ;
   stack[1] = p;
-  p = p -> succ;
   stack_size = 2;
-  // 3: Iterando 'j' de 3 até 'n-1':
-  for(j = 3; j < number_of_vertices; j ++){
+  // 3: Iterando 'j' de 3 até 'n-1' (mas contamos começando do 0, não do 1):
+  for(j = 2; j <= number_of_vertices - 2; j ++){
     p = p -> succ;
-    // 4: Se 'u_j' e próximo vértice estão em caminhos diferentes: 
-    if(!(p -> flag & stack[stack_size-1] -> flag)){
+    // 4: Se 'u_j' e próximo vértice estão em caminhos diferentes:
+    if(((p -> flag & FLAG_UPPER) && (stack[stack_size-1] -> flag & FLAG_LOWER)) ||
+       ((p -> flag & FLAG_LOWER) && (stack[stack_size-1] -> flag & FLAG_UPPER))){
       int d;
       // 5 e 6: Desempilha tudo de 'S' e cria diagonal de 'u_j' nos vértices:
       for(d = 1; d < stack_size; d ++){
@@ -16113,15 +16119,12 @@ bool triangulate_xmonotone_polygon(struct metafont *mf,
     else{
       // 9 e 10: Desempilhe e repita enquanto criar diagonal for possível:
       int d = stack_size - 2, last_popped_vertex = stack_size - 1;
+      // 11: Crie diagonal entre 'u_j' e cada vértice desempilhado:
       while(d>=0 && IS_DIAGONAL_INSIDE(stack[d], p)){
+        ADD_DIAGONAL(data, p, stack[d]);
         last_popped_vertex = d;
         d --;
-      }
-      // 11: Crie diagonal entre 'u_j' e cada vértice desempilhado:
-      while(d < stack_size - 2){
-        d ++;
-        ADD_DIAGONAL(data, p, stack[d]);
-      }
+      }      
       // 12 e 13: Empilhe de volta último vértice desempilhado e 'u_j':
       stack[last_popped_vertex + 1] = p;
       stack_size = last_popped_vertex + 2;
@@ -16130,15 +16133,13 @@ bool triangulate_xmonotone_polygon(struct metafont *mf,
   {
     int d;
     p = p -> succ;
-    // 14: Adicione diagonal de 'u_n' a cada vértice na pilha
-    for(d = 1; d < stack_size - 1; d ++){
+    // 14: Adicione diagonal de 'u_n' a cada vértice na pilha menos 1o e último
+    for(d = stack_size - 2; d >= 1; d --){
       ADD_DIAGONAL(data, p, stack[d]);
     }
-    ADD_TRIANGLE(data, p -> prev -> x, p -> prev -> y, p -> x, p -> y,
-                 p -> next -> x, p -> next -> y);
-    DESTROY_POLYGON_VERTEX(p -> next);
-    DESTROY_POLYGON_VERTEX(p -> prev);
-    DESTROY_POLYGON_VERTEX(p);
+    ADD_DIAGONAL(data, stack[0], stack[stack_size-1]);
+    DESTROY_POLYGON_VERTEX(stack[0]);
+    DESTROY_POLYGON_VERTEX(stack[stack_size-1]);
     if(temporary_free != NULL)
       temporary_free(stack);
   }
@@ -16173,7 +16174,8 @@ polígono:
           v1 -> next = v2;\
           DESTROY_POLYGON_VERTEX(v2 -> prev);\
           v2 -> prev = v1;\
-        }
+        }\
+        else printf("WARNING: This should not happen (%p<-v1->%p)(%p<-v2->%p)!\n", v1->prev, v1->next,v2->prev,v2->next);
 @
 \fimcodigo
 

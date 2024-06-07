@@ -2282,8 +2282,10 @@ void test_pen_rendering(void){
   struct metafont *mf;
   struct context *cx;
   bool ret;
-  struct named_variable *wa;
-  struct numeric_variable *numeric_wa;
+  struct named_variable *wa, *wb;
+  struct named_variable *a, *b;
+  struct numeric_variable *numeric_wa, *numeric_wb;
+  struct picture_variable *picture_a, *picture_b;
   mf = init_metafont("tests/pen_rendering.mf");
   cx = init_context(mf);
   lexer(mf,  "tests/pen_rendering.mf", &first, &last);
@@ -2291,10 +2293,21 @@ void test_pen_rendering(void){
   if(!ret)
     _Wprint_metafont_error(mf);
   wa = (struct named_variable *) mf -> named_variables;
+  wb = wa -> next;
+  a = wb -> next;
+  b = a -> next;
   numeric_wa = (struct numeric_variable *) wa -> var;
+  numeric_wb = (struct numeric_variable *) wb -> var;
+  picture_a = (struct picture_variable *) a -> var;
+  picture_b = (struct picture_variable *) b -> var;
   assert("Interpreting program with concave pens", ret);
-  assert("Rendering x-monotone polygonal pen", numeric_wa -> value > 70.0 &&
-	 numeric_wa -> value < 103.0);
+  assert("Rendering x-monotone polygonal pen", numeric_wa -> value == 61.0 &&
+	 picture_a -> width == 11 && picture_a -> height == 11);
+  assert("Rendering x-monotone curved pen",  picture_b -> width == 11 &&
+  	 picture_b -> height == 11 &&
+  	 numeric_wb -> value > numeric_wa -> value);
+  //print_picture(picture_a);
+  //print_picture(picture_b);
   free_token_list(first);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);

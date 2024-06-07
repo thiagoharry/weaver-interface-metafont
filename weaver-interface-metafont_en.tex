@@ -10809,8 +10809,9 @@ bool assign_pen_variable(struct metafont *mf,
                          struct pen_variable *source){
   void *(*alloc)(size_t);
   void (*disalloc)(void *);
+  bool permanent = target -> permanent;
   struct variable *next = target -> next;
-  if(target -> permanent == 0){
+  if(permanent){
     disalloc = permanent_free;
     alloc = permanent_alloc;
   }
@@ -10825,6 +10826,7 @@ bool assign_pen_variable(struct metafont *mf,
   memcpy(target, source, sizeof(struct pen_variable));
   target -> type = TYPE_T_PEN;
   target -> next = next;
+  target -> permanent = permanent;
   if(! (source -> flags & (FLAG_CIRCULAR | FLAG_SQUARE | FLAG_NULL)))
     if(!recursive_copy_points(mf, NULL, alloc, &(target -> format),
                               source -> format, true))
@@ -11596,6 +11598,7 @@ result -> points[7].format = FINAL_FORMAT;
 result -> points[8].point.x = 0.5; result -> points[8].point.y = 0.0;
 result -> points[8].point.u_x = 0.5; result -> points[8].point.u_y = 0.13261;
 result -> points[8].point.v_x = 0.44733; result -> points[8].point.v_y = 0.2598;
+result -> points[8].format = FINAL_FORMAT;
 result -> cyclic = true;
 @
 \fimcodigo
@@ -15475,7 +15478,7 @@ struct polygon_vertex{
   int flag; // Will store if it is a vertex from upper or lower path
   float x, y;
   struct polygon_vertex *prev, *next;
-  @<struct polygon_vertex: Additional Variables@>
+  @<struct polygon\_vertex: Additional Variables@>
 };
 @
 \fimcodigo
@@ -15529,7 +15532,7 @@ struct polygon_vertex *polygon_from_pen(struct metafont *mf,
   int i, j;
   *number_of_vertices = 0;
   struct polygon_vertex *first, *last, *leftmost;
-  // Getting the path inside the pen
+  // Getting the path from our pen:
   struct path_variable *path = p -> format;
   if(path == NULL){
     RAISE_GENERIC_ERROR(mf, NULL, 0, ERROR_UNKNOWN);
@@ -15550,7 +15553,7 @@ struct polygon_vertex *polygon_from_pen(struct metafont *mf,
   leftmost = first;
   last = first;
   *number_of_vertices = 1;
-  // Looping over path extremity points
+  // Loop over the path extremity points
   for(i = 0; i < path -> length - 1; i ++){
     double x0, y0, u_x, u_y, v_x, v_y, x1, y1;
     bool straight_line = (p -> flags & FLAG_STRAIGHT);
@@ -15577,7 +15580,7 @@ struct polygon_vertex *polygon_from_pen(struct metafont *mf,
          (slope1 == slope2 && slope2 == slope3))
         straight_line = true;
     }
-    if(straight_line){ // For straight lines, we need just 1 vertex
+    if(straight_line){ // In a straight line we need just 2 vertices
       if(i < path -> length - 2){
         last -> next = NEW_POLYGON_VERTEX();
         if(last -> next == NULL){
@@ -15595,7 +15598,7 @@ struct polygon_vertex *polygon_from_pen(struct metafont *mf,
           leftmost = last;
       }
     }
-    else{ // In curved paths, we need several vertices
+    else{ // In a curve we need several vertices
       double dt;
       int distance = (int) ceil(sqrt(pow(u_x-x0, 2.0)+pow(u_y-y0, 2.0)));
       distance += (int) ceil(sqrt(pow(v_x-u_x, 2.0)+pow(v_y-u_y, 2.0)));
@@ -15603,27 +15606,30 @@ struct polygon_vertex *polygon_from_pen(struct metafont *mf,
       dt = 1.0/((double) distance);
       for(j = 1; j <= distance; j ++){
         double t = dt * j;
-        float x = (1-t)*(1-t)*(1-t) * path -> points[i].point.x +
-                  3*(1-t)*(1-t)*t * path -> points[i].point.u_x +
-                  3*(1-t)*t*t * path -> points[i].point.v_x +
-                  t*t*t * path -> points[(i + 1) % (path -> length)].point.x;
-        float y = (1-t)*(1-t)*(1-t) * path -> points[i].point.y +
-                  3*(1-t)*(1-t)*t * path -> points[i].point.u_y +
-                  3*(1-t)*t*t * path -> points[i].point.v_y +
-                  t*t*t * path -> points[(i + 1) % (path -> length)].point.y;
-        if(*number_of_vertices > 1){ // Vértice anterior é desnecessário?
-          double slope1, slope2;
-          slope1 = (last->x - last->prev->x)/(last->y - last->prev->y);
-          slope2 = (last->prev->x - last->prev->prev->x) /
-                   (last->prev->y - last->prev->prev->y);
-          if((last->y == last->prev->y && last->y == last->prev->prev->y) ||
-             slope1 == slope2){ // Se for desnecessário:
+        float x = (1-t)*(1-t)*(1-t) * x0 + 3*(1-t)*(1-t)*t * u_x +
+                  3*(1-t)*t*t * v_x + t*t*t * x1;
+        float y = (1-t)*(1-t)*(1-t) * y0 + 3*(1-t)*(1-t)*t * u_y +
+                  3*(1-t)*t*t * v_y + t*t*t * y1;
+        if(*number_of_vertices > 0){
+          if(last -> y == x && last -> y == y){
             last -> x = x;
             last -> y = y;
             continue;
           }
         }
-        // Creating new vertex:
+        if(*number_of_vertices > 1){ // Do we need previous vertex?
+          double slope1, slope2;
+          slope1 = (x - last->x)/(y - last->y);
+          slope2 = (last->x - last->prev->x) /
+                   (last->y - last->prev->y);
+          if((y == last->y && y == last->prev->y) || slope1 == slope2){
+          // If not needed:
+            last -> x = x;
+            last -> y = y;
+            continue;
+          }
+        }
+        // Create new vertex:
         last -> next = NEW_POLYGON_VERTEX();
         if(last -> next == NULL){
           RAISE_ERROR_NO_MEMORY(mf, NULL, 0);
@@ -15632,8 +15638,8 @@ struct polygon_vertex *polygon_from_pen(struct metafont *mf,
         last -> next -> prev = last;
         last -> next -> next = NULL;
         last = last -> next;
-        last -> x = x1;
-        last -> y = y1;
+        last -> x = x;
+        last -> y = y;
         (*number_of_vertices) ++;
         if(last -> x < leftmost -> x ||
           (last -> x == leftmost -> x && last -> y < leftmost -> y))
@@ -15782,7 +15788,7 @@ ordered vertices, we will add a new pointer to the existing structure,
 that will point for the next vertex on the ordered list:
 
 \iniciocodigo
-@<struct polygon_vertex: Additional Variables@>=
+@<struct polygon\_vertex: Additional Variables@>=
   struct polygon_vertex *succ;
 @
 \fimcodigo
@@ -15856,13 +15862,13 @@ bool triangulate_xmonotone_polygon(struct metafont *mf,
   stack[0] = p;
   p = p -> succ;
   stack[1] = p;
-  p = p -> succ;
   stack_size = 2;
-  // 3: Looping 'j' from 3 until 'n-1':
-  for(j = 3; j < number_of_vertices; j ++){
+  // 3: Looping 'j' from 3 until 'n-1' (but we start counting on 0):
+  for(j = 2; j <= number_of_vertices - 2; j ++){
     p = p -> succ;
     // 4: If 'u_j' and the next vertex are in different paths: 
-    if(!(p -> flag & stack[stack_size-1] -> flag)){
+    if(((p -> flag & FLAG_UPPER) && (stack[stack_size-1] -> flag & FLAG_LOWER)) ||
+       ((p -> flag & FLAG_LOWER) && (stack[stack_size-1] -> flag & FLAG_UPPER))){
       int d;
       // 5 and 6: Pop everything from 'S' and create diagonal to 'u_j':
       for(d = 1; d < stack_size; d ++){
@@ -15876,15 +15882,12 @@ bool triangulate_xmonotone_polygon(struct metafont *mf,
     else{
       // 9 and 10: Pop and repeat while creating diagonals is possible:
       int d = stack_size - 2, last_popped_vertex = stack_size - 1;
+      // 11: Create diagonals between 'u_j' and each popped vertex:
       while(d>=0 && IS_DIAGONAL_INSIDE(stack[d], p)){
+        ADD_DIAGONAL(data, p, stack[d]);
         last_popped_vertex = d;
         d --;
-      }
-      // 11: Create diagonals between 'u_j' and each popped vertex:
-      while(d < stack_size - 2){
-        d ++;
-        ADD_DIAGONAL(data, p, stack[d]);
-      }
+      }      
       // 12 and 13: Push last popped vertex and 'u_j':
       stack[last_popped_vertex + 1] = p;
       stack_size = last_popped_vertex + 2;
@@ -15894,14 +15897,12 @@ bool triangulate_xmonotone_polygon(struct metafont *mf,
     int d;
     p = p -> succ;
     // 14: Add diagonal from 'u_n' to each vertex in the stack:
-    for(d = 1; d < stack_size - 1; d ++){
+    for(d = stack_size - 2; d >= 1; d --){
       ADD_DIAGONAL(data, p, stack[d]);
     }
-    ADD_TRIANGLE(data, p -> prev -> x, p -> prev -> y, p -> x, p -> y,
-                 p -> next -> x, p -> next -> y);
-    DESTROY_POLYGON_VERTEX(p -> next);
-    DESTROY_POLYGON_VERTEX(p -> prev);
-    DESTROY_POLYGON_VERTEX(p);
+    ADD_DIAGONAL(data, stack[0], stack[stack_size-1]);
+    DESTROY_POLYGON_VERTEX(stack[0]);
+    DESTROY_POLYGON_VERTEX(stack[stack_size-1]);
     if(temporary_free != NULL)
       temporary_free(stack);
   }
@@ -15934,7 +15935,8 @@ we can remove one of the vertices of the polygon:
           v1 -> next = v2;\
           DESTROY_POLYGON_VERTEX(v2 -> prev);\
           v2 -> prev = v1;\
-        }
+        }\
+        else printf("WARNING: This should not happen (%p<-v1->%p)(%p<-v2->%p)!\n", v1->prev, v1->next,v2->prev,v2->next);
 @
 \fimcodigo
 
@@ -16003,10 +16005,10 @@ if(!(pen -> flags & FLAG_CONVEX)){
   if(pen -> gl_vbo != 0){
     if(number_of_vertices <= pen -> triang_resolution){
       destroy_vertex_linked_list(poly);
-      return true; // Já triangulado satisfatoriamente
+      return true; // Already triangulated with sufficient resolution
     }
     else
-      glDeleteBuffers(1, &(pen -> gl_vbo)); // Precisa retriangular
+      glDeleteBuffers(1, &(pen -> gl_vbo)); // Needs to re-triangulate
   }
   pen -> triang_resolution = number_of_vertices;
   if(is_xmonotone(poly)){

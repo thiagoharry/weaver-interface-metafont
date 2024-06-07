@@ -1,0 +1,17 @@
+% This test the rendering of concave pens
+numeric wa, wb;
+picture a, b;
+pen p;
+
+currentpicture = nullpicture(11, 11);
+p = makepen((1,1)--(1, 10)--(10,10)--(10, 1)--(5, 5)--cycle);
+pickup p;
+draw (0,0);
+a = currentpicture;
+wa = totalweight a;
+currentpicture = nullpicture(11, 11);
+p = makepen((1,1)..(1, 10)..(10,10)..(10, 1)..(5, 5)..cycle);
+pickup p;
+draw (0,0);
+b = currentpicture;
+wb = totalweight b;
