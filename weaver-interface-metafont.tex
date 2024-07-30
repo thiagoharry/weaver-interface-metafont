@@ -16098,9 +16098,9 @@ static bool triangulate_xmonotone_polygon(struct polygon_vertex *p,
   if(p -> next -> next == p -> prev){ // Triângulo
     ADD_TRIANGLE(data, p -> x, p -> y, p -> next -> x, p -> next -> y,
                  p -> prev -> x, p -> prev -> y);
-    DESTROY_POLYGON_VERTEX(p);
     DESTROY_POLYGON_VERTEX(p -> next);
     DESTROY_POLYGON_VERTEX(p -> prev);
+    DESTROY_POLYGON_VERTEX(p);
     *triangles = data;
     return true;
   }
