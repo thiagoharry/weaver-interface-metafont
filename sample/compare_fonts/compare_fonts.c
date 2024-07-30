@@ -332,6 +332,7 @@ void test(struct metafont *mf, char *font_name, char *c, int weight, int italic)
   free(y_values1);
   free(y_values2);
   free(y_values3);
+  FT_Done_FreeType(library);
 }
 
 int main(int argc, char **argv){

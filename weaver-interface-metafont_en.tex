@@ -15401,6 +15401,9 @@ $ECD$. But this would be a wrong triangle: even if their vertices are
 part of the polygon, it represents a region that is outside the
 polygon and that should not be triangulated.
 
+To help triangulating polygons with more general shapes, we will
+implement the algorithms discussed in [DE BERG, 2000].
+
 Triangulating concave polygons is easier in a particular case: when we
 have a $x$-monotone polygon. This happens when we walk from the
 leftmost vertex in the polygon to the rightmost vertex both in
@@ -15482,6 +15485,17 @@ struct polygon_vertex{
 };
 @
 \fimcodigo
+
+To order vertices in a polygon according with their $x$-coordinate,
+but using the $y$-coordinate to break the tie if both are in the same
+$x$-coordinate, is done with the following macro:
+
+\iniciocodigo
+@<Local Data Structures (metafont.c)@>+=
+#define XMONOTONE_LEQ(v1, v2) ((v1->x==v2->x)?(v1->y<=v2->y):(v1->x<=v2->x))
+@
+\fimcodigo
+
 
 When we have a double linked list of vertices, if we want to destroy
 it and free the memory, we can use the auxiliary function:
@@ -15702,7 +15716,7 @@ bool is_xmonotone(struct polygon_vertex *poly){
   clockwise = (upper -> next -> y >= lower -> prev -> y);
   upper = lower = poly;
   do{
-    if(upper -> next -> x >= upper -> x){
+    if(XMONOTONE_LEQ(upper, upper -> next)){
       upper = upper -> next;
       if(clockwise){
         upper -> flag = FLAG_UPPER;
@@ -15711,7 +15725,7 @@ bool is_xmonotone(struct polygon_vertex *poly){
         upper -> flag = FLAG_LOWER;
       }
     }
-    else if(lower -> prev -> x >= lower -> x){
+    else if(XMONOTONE_LEQ(lower, lower -> prev)){
       lower = lower -> prev;
       if(clockwise){
         lower -> flag = FLAG_LOWER;
@@ -15798,12 +15812,11 @@ the vertices:
 
 \iniciocodigo
 @<Auxiliary Local Functions (metafont.c)@>+=
-void order_vertices_on_xmonotone_polygon(struct polygon_vertex *p,
-                                        int number_of_vertices){
+static void order_vertices_on_xmonotone_polygon(struct polygon_vertex *p){
   struct polygon_vertex *upper, *lower, *last;
   last = upper = lower = p;
-  while(number_of_vertices){
-    if(upper -> next -> x <= lower -> prev -> x){
+  while(lower -> prev != upper && upper -> next != lower){
+    if(XMONOTONE_LEQ(upper -> next, lower -> prev)){
       last -> succ = upper -> next;
       last = upper -> next;
       upper = upper -> next;
@@ -15813,8 +15826,8 @@ void order_vertices_on_xmonotone_polygon(struct polygon_vertex *p,
       last = lower -> prev;
       lower = lower -> prev;    
     }
-    number_of_vertices --;
   }
+  last -> succ = NULL;
 }
 @
 \fimcodigo
@@ -15823,48 +15836,48 @@ And finally, the triangulation function:
 
 \iniciocodigo
 @<Local Function Declaration (metafont.c)@>+=
-bool triangulate_xmonotone_polygon(struct metafont *mf,
-                                   struct polygon_vertex *p,
-                                   int number_of_vertices, float **triangles,
-                                   int *number_of_triangles);
+static bool triangulate_xmonotone_polygon(struct polygon_vertex *p,
+                                          float **triangles,
+                                          int *number_of_triangles,
+                                          struct polygon_vertex **stack);
 @
 \fimcodigo
 
-The function gets a polygon $p$, is informed how many vertices it has
-and receives a pointer to the next position where it can insert the
-next triangle. It also can update that position. It also gets a
-pointer where it writes how many triangles were generated. As the
-function implements the triangulation algorithm discussed above, we
-write in the comments which part of the algorithm each part of the
-code is implementing:
+The function gets the Metafont structure (to be able to warn about
+errors), a polygon $p$ to be triangulated, a pointer to where the
+triangles generated must be stored and a pointer to the total number
+of triangles already generated, which must have its content updated as
+more triangles are generated. The last pointer is an allocated buffer
+that must have enough space to store all vertices of the polygon if we
+want. The implementation of the algorithm is:
 
 
 \iniciocodigo
 @<Auxiliary Local Functions (metafont.c)@>+=
-bool triangulate_xmonotone_polygon(struct metafont *mf,
-                                   struct polygon_vertex *p,
-                                   int number_of_vertices, float **triangles,
-                                   int *number_of_triangles){
+static bool triangulate_xmonotone_polygon(struct polygon_vertex *p,
+                                          float **triangles,
+                                          int *number_of_triangles,
+                                          struct polygon_vertex **stack){
   float *data = *triangles;
-  *number_of_triangles = 0;
-  struct polygon_vertex **stack;
-  int stack_size, j;
-  stack = (struct polygon_vertex **)
-             temporary_alloc(sizeof(struct polygon_vertex *) *
-             number_of_vertices);
-  if(stack == NULL){
-    RAISE_ERROR_NO_MEMORY(mf, NULL, 0);
-    return false;
+  int stack_size;
+  if(p -> next -> next == p -> prev){ // Single triangle
+    ADD_TRIANGLE(data, p -> x, p -> y, p -> next -> x, p -> next -> y,
+                 p -> prev -> x, p -> prev -> y);
+    DESTROY_POLYGON_VERTEX(p);
+    DESTROY_POLYGON_VERTEX(p -> next);
+    DESTROY_POLYGON_VERTEX(p -> prev);
+    *triangles = data;
+    return true;
   }
   // 1: Order all polygon vertices
-  order_vertices_on_xmonotone_polygon(p, number_of_vertices);
+  order_vertices_on_xmonotone_polygon(p);
   // 2: Initialize stack 'S' and push 'u_1' and 'u_2':
   stack[0] = p;
   p = p -> succ;
   stack[1] = p;
   stack_size = 2;
-  // 3: Looping 'j' from 3 until 'n-1' (but we start counting on 0):
-  for(j = 2; j <= number_of_vertices - 2; j ++){
+  // 3: Looping 'j' from 3 until 'n-1':
+  while(p != NULL && p -> succ != NULL && p -> succ -> succ != NULL){
     p = p -> succ;
     // 4: If 'u_j' and the next vertex are in different paths: 
     if(((p -> flag & FLAG_UPPER) && (stack[stack_size-1] -> flag & FLAG_LOWER)) ||
@@ -15895,7 +15908,8 @@ bool triangulate_xmonotone_polygon(struct metafont *mf,
   }
   {
     int d;
-    p = p -> succ;
+    if(p -> succ != NULL)
+      p = p -> succ;
     // 14: Add diagonal from 'u_n' to each vertex in the stack:
     for(d = stack_size - 2; d >= 1; d --){
       ADD_DIAGONAL(data, p, stack[d]);
@@ -15903,9 +15917,8 @@ bool triangulate_xmonotone_polygon(struct metafont *mf,
     ADD_DIAGONAL(data, stack[0], stack[stack_size-1]);
     DESTROY_POLYGON_VERTEX(stack[0]);
     DESTROY_POLYGON_VERTEX(stack[stack_size-1]);
-    if(temporary_free != NULL)
-      temporary_free(stack);
   }
+  *triangles = data;
   return true;
 }
 @
@@ -15926,6 +15939,7 @@ we can remove one of the vertices of the polygon:
           ADD_TRIANGLE(data, v1 -> x, v1 -> y, v2 -> x, v2 -> y,\
                        v1 -> prev -> x, v1 -> prev -> y);\
           v1 -> prev = v2;\
+          if(v1 -> succ == v2 -> next) v1 -> succ = v1 -> succ -> succ;\
           DESTROY_POLYGON_VERTEX(v2 -> next);\
           v2 -> next = v1;\
         }\
@@ -15933,6 +15947,7 @@ we can remove one of the vertices of the polygon:
           ADD_TRIANGLE(data, v1 -> x, v1 -> y, v2 -> x, v2 -> y,\
                        v1 -> next -> x, v1 -> next -> y);\
           v1 -> next = v2;\
+          if(v1 -> succ == v2 -> prev) v1 -> succ = v1 -> succ -> succ;\
           DESTROY_POLYGON_VERTEX(v2 -> prev);\
           v2 -> prev = v1;\
         }\
@@ -15997,6 +16012,7 @@ the triangles to the video card.
 \iniciocodigo
 @<Triangulation: Concave Shape@>=
 if(!(pen -> flags & FLAG_CONVEX)){
+  float *triang, *last_triang;
   struct polygon_vertex *poly;
   int number_of_vertices = 0, number_of_triangles = 0;  
   poly = polygon_from_pen(mf, pen, transform_matrix, &number_of_vertices);
@@ -16011,16 +16027,29 @@ if(!(pen -> flags & FLAG_CONVEX)){
       glDeleteBuffers(1, &(pen -> gl_vbo)); // Needs to re-triangulate
   }
   pen -> triang_resolution = number_of_vertices;
+  triang = temporary_alloc(3 * number_of_vertices * 2 * sizeof(float));
+  if(triang == NULL){
+    RAISE_ERROR_NO_MEMORY(mf, NULL, 0);
+    return false;
+  }
+  last_triang = triang;
   if(is_xmonotone(poly)){
-    float *triang;
-    triang = temporary_alloc(3 * number_of_vertices * 2 * sizeof(float));
-    if(triang == NULL){
+    struct polygon_vertex **stack;
+    stack = (struct polygon_vertex **)
+             temporary_alloc(sizeof(struct polygon_vertex *) *
+             number_of_vertices);
+    if(stack == NULL){
       RAISE_ERROR_NO_MEMORY(mf, NULL, 0);
+      if(temporary_free != NULL) temporary_free(triang);
       return false;
     }
-    if(!triangulate_xmonotone_polygon(mf, poly, number_of_vertices, &triang,
-                                      &number_of_triangles))
+    if(!triangulate_xmonotone_polygon(poly, &last_triang, &number_of_triangles,
+                                      stack)){
+      if(temporary_free != NULL) temporary_free(triang);
       return false;
+    }
+    if(temporary_free != NULL)
+      temporary_free(stack);
     glGenBuffers(1, &(pen -> gl_vbo));
     glBindBuffer(GL_ARRAY_BUFFER, pen -> gl_vbo);
     glBufferData(GL_ARRAY_BUFFER, number_of_triangles * 3 * 2 *
@@ -16031,13 +16060,1200 @@ if(!(pen -> flags & FLAG_CONVEX)){
     return true;
   }
   else{
-    RAISE_GENERIC_ERROR(mf, NULL, 0, ERROR_UNKNOWN);
+    @<Triangulation: Non-monotonous concave form@>
     return false;
   }
 }
 return false;
 @
 \fimcodigo
+
+But what if our polygon is not $x$-monotone? In this case, the most
+efficient known solution involves partitioning the polygon so that
+each partition is $x$-monotone. After this, we triangulate separately
+each partition. To analyze how to do so, we need to categorize the
+different types of vertices.
+
+The first type is the regular vertex: a vertex which is between its
+neighbors in the $x$-axis. In a $x$-monotone polygon, we expect that
+most vertices will be regular (except for the first one and last
+one). The image below shows two regular vertices. The first one has an
+internal angle lesser than 180 degrees and the vertex below has an
+internal angle greater than 180 degrees.
+
+\imagem{images/regular_vertices.eps}
+
+The two next types of vertices are the start and the end vertices. A
+start vertex has both neighbors at its right and an internal angle
+lesser than 180 degrees. An end vertex has both neighbors at its left
+and its internal angle is lesser than 180 degrees. A $x$-monotone
+polygon should have a single start vertex and a single end vertex. The
+picture below shows both kind of vertices highlighted:
+
+\imagem{images/start_end_vertices.eps}
+
+Finally, the last two types of vertices are the merge and split
+vertices. A merge vertex has both neighbors at its left, but its
+internal angle is greater than 180 degrees. A split vertex has both
+neighbors at the right, but the internal angle is greater than 180
+degrees. The figure below shows a polygon with a merge vertex (at the
+left) and a split vertex (at the right), both highlighted:
+
+\imagem{images/merge_split_vertices.eps}
+
+The split and merge vertices are a source of non-monotonicity. Every
+polygon without these types of vertices is a $x$-monotonous
+polygon. Therefore, if we could remove all split and merge vertices,
+we would obtain a $x$-monotone polygon.
+
+For this we can create a new diagonal from each join vertex to some
+other vertex at its right, partitioning the polygon with such
+diagonal. And each merge vertex can be connected to the another vertex
+at its left. If we do this without creating an intersection with a
+previous edge, we will be able to remove all split and merge vertices.
+
+The way in which we connect a join and merge vertex to another one
+involves traversing the ordered vertices, to the right or left,
+depending on the type of vertex. We must also identify the pair of
+edges that have an intersection with the vertical line that intersects
+the vertex that is a source of non-monotonicity. When traversing the
+ordered vertices, we must choose the next vertex that lies between the
+two edges. If there are none, we will end up choosing a vertex that
+belongs to such edges and we make the connection, partitioning the
+polygon creating a new edge in this region.
+
+For example: in the image below, when traversing the vertices on the
+left to the right, we find the vertex P1, which is a source of non
+monotonicity. It is a join vertex. We draw an imaginary dashed
+vertical line, that tells us that this vertex is between the edge A1
+and A2. If there were another more external edge (if vertex P3
+extended further to the left), it would be ignored. So we transverse
+the vertices looking to the next one at the right. The first one we
+find is P3, which is ignored because it is not between the edges A1
+and A2. After we find P2 which is between both edges and so we choose
+P1 and P2 as the vertices where we will ``cut'' our polygon
+partitioning it:
+
+\imagem{images/partition_polygon.eps}
+
+This means that we need to define new flags to represent the different
+types of vertices that we could find:
+
+\iniciocodigo
+@<Local Data Structures (metafont.c)@>+=
+#define TYPE_UNKNOWN_VERTEX  0
+#define TYPE_REGULAR_VERTEX  4
+#define TYPE_BEGIN_VERTEX    8
+#define TYPE_END_VERTEX     12
+#define TYPE_SPLIT_VERTEX   16
+#define TYPE_MERGE_VERTEX   20
+#define GET_VERTEX_TYPE(v) (((v -> flag) >> 2) << 2)
+@
+\fimcodigo
+
+Now we must write code that initializes these flags in the vertex and
+also orders the vertices according to their $x$ coordinate. We already
+have a pointer in each vertex to link them in an ordered linked
+list. But now, as we have a non-monotone polygon, and we may need to
+generate an ordering which cannot be formed just by adding new
+vertices in the end of the linked list. Therefore, we will need to use
+a double linked list. This requires an additional pointer to the
+predecessor of each vertex in the doubly linked list:
+
+\iniciocodigo
+@<struct polygon\_vertex: Additional Variables@>=
+  struct polygon_vertex *pred;
+@
+\fimcodigo
+
+Finally, to generate our ordered double linked list, we will first
+traverse all the vertices in the order in which it are drawn. While
+we're doing this, we can classify each vertex and also connect them in
+the double linked list, which at first would be unordered. After that,
+we sort it using a ``merge sort''. By doing this, we can order and
+organize the vertices in $O(n \log n)$.
+
+The function that merges two ordered double linked lists in a single
+one, and which is the core of our merge sort is given below:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+struct polygon_vertex *merge(struct polygon_vertex *begin1,
+                             struct polygon_vertex *begin2){
+  struct polygon_vertex *ret = NULL, *v = NULL;
+  if(XMONOTONE_LEQ(begin1, begin2)){
+    ret = v = begin1;
+    begin1 = begin1 -> succ;
+  }
+  else{
+    ret = v = begin2;
+    begin2 = begin2 -> succ;
+  }
+  while(begin1 != NULL || begin2 != NULL){
+    if(begin1 == NULL){
+      v -> succ = begin2;
+      begin2 -> pred = v;
+      v = v -> succ;
+      begin2 = begin2 -> succ;
+    }
+    else if(begin2 == NULL){
+      v -> succ = begin1;
+      begin1 -> pred = v;
+      v = v -> succ;
+      begin1 = begin1 -> succ;
+    }
+    else if(XMONOTONE_LEQ(begin1, begin2)){
+      v -> succ = begin1;
+      begin1 -> pred = v;
+      v = v -> succ;
+      begin1 = begin1 -> succ;
+    }
+    else{
+      v -> succ = begin2;
+      begin2 -> pred = v;
+      v = v -> succ;
+      begin2 = begin2 -> succ;
+    }
+  }
+  return ret;
+}
+@
+\fimcodigo
+
+And the merge sort follows below:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+struct polygon_vertex *merge_sort(struct polygon_vertex *p, int size){
+  if(size == 1)
+    return p;
+  else{
+    int i = 0;
+    struct polygon_vertex *p2 = p;
+    while(i < size/2){
+      p2 = p2 -> succ;
+      i ++;
+    }
+    p2 -> pred -> succ = NULL;
+    p2 -> pred = NULL;
+    p = merge_sort(p, i);
+    p2 = merge_sort(p2, size - i);
+    p = merge(p, p2);
+    return p;
+  }
+}
+@
+\fimcodigo
+
+Now let's create the double linked list itself. By doing this, we must
+also fill in the flags of each vertex. Which includes information
+about the vertex type or whether it is a vertex of the bottom or top
+of the polygon. Remember that we know that the first vertex is not a
+join or merge vertex. So we know that its internal angle is not lesser
+than 180 degrees. If we follow the path from this vertex, passing
+through the edges either clockwise or anticlockwise, if we are at a
+$x$-monotone vertex, then all the turns in the path will be either to
+the right, or to the left. But if we arrive at a join or merge vertex,
+with an internal angle greater than 180 degrees, then we will turn
+into a different direction than the initial one. Therefore, we can
+identify whether we are at a split or merge vertex just by observing
+the direction in which we turn. If all our turns are to the right,
+then we are following the path in counter-clockwise direction. And if
+they are to the left, we are in clockwise direction.
+
+Using this logic we can create an iteration that goes through all the
+vertices by identifying their types and creating a doubled linked
+list. After that, we sort everything with a ``merge sort''. And
+finally, after sorting, as we already know which is the leftmost and
+rightmost vertex, we can also set the flag that indicates which vertex
+is in the upper or lower path of the polygon, just in case we need
+this information after partition our polygon in smaller $x$-monotone
+polygons:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+void prepare_non_monotonous(struct polygon_vertex *p, int number_of_vertices);
+@
+\fimcodigo
+
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+void prepare_non_monotonous(struct polygon_vertex *p, int number_of_vertices){
+  bool turn_left = (p -> next -> y < p -> y);
+  struct polygon_vertex *first_vertex = p;
+  do{
+    bool is_current_turn_left = is_turning_left(p -> prev, p, p -> next);
+    if((XMONOTONE_LEQ(p, p -> next) && XMONOTONE_LEQ(p -> prev, p)) ||
+       (XMONOTONE_LEQ(p, p -> prev) && XMONOTONE_LEQ(p -> next, p)))
+      p -> flag = TYPE_REGULAR_VERTEX;
+    // Begin or split vertex
+    else if(XMONOTONE_LEQ(p, p -> next) && XMONOTONE_LEQ(p, p -> prev)){
+      if(p == first_vertex)
+        p -> flag = TYPE_BEGIN_VERTEX | FLAG_UPPER | FLAG_LOWER;
+      else if((turn_left && is_current_turn_left) ||
+              (!turn_left && !is_current_turn_left))
+        p -> flag = TYPE_BEGIN_VERTEX | FLAG_UPPER | FLAG_LOWER;
+      else
+        p -> flag = TYPE_SPLIT_VERTEX;
+    }
+    else{ // End or merge vertex
+      if((turn_left && is_current_turn_left) ||
+         (!turn_left && !is_current_turn_left))
+        p -> flag = TYPE_END_VERTEX | FLAG_UPPER | FLAG_LOWER;
+      else
+        p -> flag = TYPE_MERGE_VERTEX;
+    }
+    p -> succ = p -> next;
+    p -> next -> pred = p;
+    p = p -> next;
+  } while(p != first_vertex);
+  p -> pred -> succ = NULL;
+  p -> pred = NULL;
+  p = merge_sort(first_vertex, number_of_vertices);
+  {
+    struct polygon_vertex *tmp = p;
+    unsigned current_flag = (turn_left)?(FLAG_LOWER):(FLAG_UPPER);
+    while(tmp -> succ != NULL){
+      tmp -> flag |= current_flag;
+      tmp = tmp -> next;
+    }
+    tmp -> flag |= current_flag;
+    tmp = p;
+    current_flag = (current_flag == FLAG_LOWER)?(FLAG_UPPER):(FLAG_LOWER);
+    while(tmp -> succ != NULL){
+      tmp -> flag |= current_flag;
+      tmp = tmp -> prev;
+    }
+    tmp -> flag |= current_flag;
+  }
+}
+@
+\fimcodigo
+
+But how can we know if we are turning to the right or to the left when
+we follow a path defined by three vertices?  To do this, we can
+represent such a path by two vectors and calculate the cross product
+to obtain the $z$ component. If the result is positive, walking along
+the vertices means turning towards the left. If it's negative, we're
+turning to the right. So the function below can be used to give us the
+answer:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+static bool is_turning_left(struct polygon_vertex *p1,
+                            struct polygon_vertex *p2,
+                            struct polygon_vertex *p3);
+@
+\fimcodigo
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+static bool is_turning_left(struct polygon_vertex *p1,
+                            struct polygon_vertex *p2,
+                            struct polygon_vertex *p3){
+  float v1_x, v1_y, v2_x, v2_y;
+  v1_x = p2 -> x - p1 -> x;
+  v1_y = p2 -> y - p1 -> y;
+  v2_x = p3 -> x - p2 -> x;
+  v2_y = p3 -> y - p2 -> y;
+  return ((v1_x * v2_y - v1_y * v2_x) > 0);
+}
+@
+\fimcodigo
+
+
+Now go back to the last image we showed of a concave polygon. We had
+commented that the way to partitioning it is separating it in
+$x$-monotone polygons. To do so, we imagine a vertical line that moves
+through the region occupied by the polygon, from left to right. Using
+this straight line, we would know which edges exist in the same
+coordinate $x$ of each vertex, and so we could know when we can make a
+new partition connecting two different vertices.
+
+Our vertical line will be represented by two different pieces of
+information: which vertex it is passing through at this exact moment
+(we can simulate it traveling through the polygon area from left to
+right making her jump from one vertex to another, following the order
+of vertices from left to right in the double linked list) and which
+edges it is crossing in a given time. Furthermore, each edge that is
+below some vertex must store as additional information what is its
+``helper''. The ``helper'' is the vertex to the left of our imaginary
+line closest to it such that the segment that connects such a vertex
+to the given edge is internal to the polygon. As the imaginary
+vertical line travels from left to right, the ``helper'' of each edge
+can change. Storing ``helpers'' is important because they are possible
+candidates that we should consider when we want to create a new
+partition.
+
+The list of edges, where each one might potentially store a
+``helper'', is more efficiently represented as a binary tree. It
+allows us to search for relevant edges in $O(\log n)$, which helps to
+better handle pathological polygons with a very large number of edges
+crossing the same coordinate on $x$-axis. The nodes in the tree will
+be sorted according with their position in the axis $y$ (using axis
+$x$ as tiebreaker). Each node in our tree is:
+
+\iniciocodigo
+@<Local Data Structures (metafont.c)@>+=
+struct polygon_edge{
+  float x1, y1, x2, y2; // Pontos da aresta
+  struct polygon_vertex *helper;
+  struct polygon_edge *parent, *left, *right;
+};
+#define NEW_POLYGON_EDGE() \
+  (struct polygon_edge *) temporary_alloc(sizeof(struct polygon_edge));
+#define INITIALIZE_POLYGON_EDGE(p, x1, y1, x2, y2, helper) {\
+ p -> x1 = x1; p -> x2 = x2; p -> y1 = y1; p -> y2 = y2;\
+ p -> helper = helper;\
+ p -> parent = p -> left = p -> right = NULL;}
+#define DESTROY_POLYGON_EDGE(p) \
+  ((temporary_free != NULL)?(temporary_free(p)):(true))
+@
+\fimcodigo
+
+To insert a new edge in the tree, we can use the function below. We
+will write the function in a way that the user calling the function
+will pass as argument which function we will use to compare which edge
+is lesser or equal other. This allow us to use the tree to sort edges
+in different ways: according with their first vertex, according with
+the helper vertex, etc.  The user optionally could also use as last
+argument a function used to compare if two edges are equal. If she
+does so, then we use it to avoid storing equal edges in the tree:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+static struct polygon_edge *insert_polygon_edge(struct polygon_edge **,
+                                               float, float, float, float,
+                                               struct polygon_vertex *,
+                                            bool (*)(struct polygon_edge *,
+                                                        struct polygon_edge *),
+                                            bool (*)(struct polygon_edge *,
+                                                       struct polygon_edge *));
+@
+\fimcodigo
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+static void insert_polygon_edge_aux(struct polygon_edge *tree,
+                                    struct polygon_edge *new_edge,
+                                    bool (*leq)(struct polygon_edge *p1,
+                                                struct polygon_edge *p2),
+                                    bool (*eq)(struct polygon_edge *p1,
+                                                struct polygon_edge *p2)){
+  if(leq(new_edge, tree)){
+    if(eq != NULL && eq(new_edge, tree)){
+      DESTROY_POLYGON_EDGE(new_edge);
+      return;
+    }
+    if(tree -> left == NULL)
+      tree -> left = new_edge;
+    else
+      insert_polygon_edge_aux(tree -> left, new_edge, leq, eq);
+  }
+  else{
+    if(tree -> right == NULL)
+      tree -> right = new_edge;
+    else
+      insert_polygon_edge_aux(tree -> right, new_edge, leq, eq);
+  }
+}
+static struct polygon_edge *insert_polygon_edge(struct polygon_edge **tree,
+                                               float x1, float y1,
+                                               float x2, float y2,
+                                               struct polygon_vertex *helper,
+                                         bool (*leq)(struct polygon_edge *p1,
+                                                     struct polygon_edge *p2),
+                                         bool (*eq)(struct polygon_edge *p1,
+                                                    struct polygon_edge *p2)){
+  struct polygon_edge *new_edge;
+  new_edge = NEW_POLYGON_EDGE();
+  if(new_edge == NULL)
+    return NULL;
+  INITIALIZE_POLYGON_EDGE(new_edge, x1, y1, x2, y2, helper);
+  if(*tree == NULL)
+    *tree = new_edge;
+  else{
+    struct polygon_edge *current = *tree;
+    insert_polygon_edge_aux(current, new_edge, leq, eq);
+  }
+  return new_edge;
+}
+@
+\fimcodigo
+
+
+But how should we order the elements in our tree? We need a function
+to create a order relationship, so that we can use the above
+functions:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+static bool leq_by_vertex(struct polygon_edge *, struct polygon_edge *);
+@
+\fimcodigo
+
+For the order relationship, consider that one of the use cases for
+this tree will be storing the edges that an imaginary vertical line is
+crossing. And that we may need to search in these edges which is the
+edge directly below a given point. This means that it will be useful
+to order the edges according with the point $y$ where our imaginary
+vertical line is crossing. As we will not have an edge that crosses
+another edge, and as we will remove from the tree any edge not being
+crossed by the imaginary vertical line, we can get such ordering just
+checking, given two edges, which have the leftmost coordinate,
+obtaining a line equation that extends it, and using this line
+equation to check if the leftmost coordinate of the other edge is
+above or below it:
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+static bool leq_by_vertex(struct polygon_edge *p1, struct polygon_edge *p2){
+  if(p1 -> x1 == p1 -> x2 && p2 -> x1 == p2 -> x2){ // 2 vertical vertices
+    return (p1 -> y1 <= p2 -> y1);
+  }
+  else if(p1 -> x1 == p1 -> x2){ // 1st vertical vertex
+    float slope = (p2 -> y2 - p2 -> y1)/(p2 -> x2 - p2 -> x1);
+    float b = p2 -> y1 - slope * p2 -> x1;
+    if(p1 -> y1 <= p1 -> y2)
+      return (p1 -> y2 <= (slope * p1 -> x2 + b));
+    else
+      return (p1 -> y1 <= (slope * p1 -> x1 + b));
+  }
+  else if(p2 -> x1 == p2 -> x2){ // 2nd vertical vertice
+    float slope = (p1 -> y2 - p1 -> y1)/(p1 -> x2 - p1 -> x1);
+    float b = p1 -> y1 - slope * p1 -> x1;
+    if(p2 -> y1 <= p2 -> y2)
+      return (slope * p2 -> x1 + b) <= p2 -> y1;
+    else
+      return (slope * p2 -> x2 + b) <= p2 -> y2;
+  }  
+  if((p1 -> x1 <= p2 -> x1 && p1 -> x1 <= p2 -> x2) ||
+     (p1 -> x2 <= p2 -> x1 && p1 -> x2 <= p2 -> x2)){ // p1 comes first
+    float slope = (p1 -> y2 - p1 -> y1)/(p1 -> x2 - p1 -> x1);
+    float b = p1 -> y1 - slope * p1 -> x1;
+    if(p2 -> x1 <= p2 -> x2)
+      return (slope * p2 -> x1 + b <= p2 -> y1);
+    else
+      return (slope * p2 -> x2 + b <= p2 -> y2);
+  }
+  else{ // p2 comes first
+    float slope = (p2 -> y2 - p2 -> y1)/(p2 -> x2 - p2 -> x1);
+    float b = p2 -> y1 - slope * p2 -> x1;
+    if(p1 -> x1 <= p1 -> x2)
+      return (slope * p1 -> x1 + b <= p1 -> y1);
+    else
+      return (slope * p1 -> x2 + b <= p1 -> y2);
+  }
+}
+@
+\fimcodigo
+
+The equality test tor edges is simpler. We just need to compare the
+vertices. But taking into account that their order does not matter:
+the vertex $(0,1)--(1,0)$ is equal to $(1,0)--(0,1)$:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+static bool eq_by_vertex(struct polygon_edge *, struct polygon_edge *);
+@
+\fimcodigo
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+static bool eq_by_vertex(struct polygon_edge *p1, struct polygon_edge *p2){
+  return (p1 -> x1 == p2 -> x1 && p1 -> y1 == p2 -> y1 &&
+          p1 -> x2 == p2 -> x2 && p1 -> y2 == p2 -> y2) ||
+         (p1 -> x1 == p2 -> x2 && p1 -> y1 == p2 -> y2 &&
+          p1 -> x2 == p2 -> x1 && p1 -> y2 == p2 -> y1);
+}
+@
+\fimcodigo
+
+
+To remove an edge from the tree, we use the code:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+static struct polygon_edge *remove_polygon_edge(struct polygon_edge **,
+                                               float, float, float, float,
+                                          bool (*)(struct polygon_edge *,
+                                                     struct polygon_edge *),
+                                           bool (*)(struct polygon_edge *,
+                                                     struct polygon_edge *));
+@
+\fimcodigo
+
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+static struct polygon_edge *remove_polygon_edge(struct polygon_edge **tree,
+                                               float x1, float y1, float x2,
+                                               float y2,
+                                          bool (*leq)(struct polygon_edge *p1,
+                                                     struct polygon_edge *p2),
+                                           bool (*eq)(struct polygon_edge *p1,
+                                                     struct polygon_edge *p2)){
+  struct polygon_edge *current = *tree, searched;
+  searched.x1 = x1; searched.x2 = x2;
+  searched.y1 = y1; searched.y2 = y2;
+  if(current == NULL)
+    return NULL;
+  if(eq(current, &searched)){
+     if(current -> left == NULL && current -> right == NULL){
+       *tree = NULL; // Removed node has no children
+       return current;
+     }
+     else if(current -> right == NULL){
+       *tree = current -> left; // Removed node has a single left child
+       current -> left -> parent = current -> parent;
+       return current;
+     }
+     else if(current -> left == NULL){
+       *tree = current -> right; // Removed node has a single right child
+       current -> right -> parent = current -> parent;
+       return current;
+     }
+     else{
+       struct polygon_edge *max = current;
+       while(max -> right != NULL) // Removed node has 2 children
+         max = max -> right;
+       max -> parent -> right = max -> left;
+       max -> left = NULL;
+       max -> right = current -> right;
+       max -> left = current -> left;
+       *tree = max;
+       return current;
+     }
+  }
+  else{ // Not found yet: searching in current node children:
+    if(leq(&searched, current)){
+      if(current -> left != NULL)
+        return remove_polygon_edge(&(current -> left),x1, y1, x2, y2, leq, eq);
+      else
+        return NULL;
+    }
+    else{
+      if(current -> right != NULL)
+        return remove_polygon_edge(&(current -> right),x1, y1, x2, y2,leq, eq);
+      else
+        return NULL;
+    }
+  }
+}
+@
+\fimcodigo
+
+Finally, we will need a function to get the edge immediately below
+some $(x, y)$ coordinate. For this, we use the function below:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+static struct polygon_edge *find_edge_below(struct polygon_edge *,
+                                            float, float);
+@
+\fimcodigo
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+static struct polygon_edge *find_edge_below(struct polygon_edge *tree,
+                                            float x, float y){
+  float slope, b;
+  if(tree == NULL)
+    return NULL;
+  slope = (tree -> y2 - tree -> y1)/(tree -> x2 - tree -> x1);
+  b = tree -> y1 - slope * tree -> x1;
+  if(slope * x + b <= y){ // Valid edge. Can we find a greater one?
+    struct polygon_edge *candidate;
+    candidate = find_edge_below(tree -> right, x, y);
+    if(candidate != NULL)
+      return candidate;
+    else return tree;
+  }
+  // Not valid edge. Try to find one smaller:
+  else return find_edge_below(tree -> left, x, y);
+}
+@
+\fimcodigo
+
+We must also be able to partition a polygon, passing the pointer to
+two of its vertices as argument. Such vertices must then be joined
+together and the polygon will be divided into two. To do this, we must
+clone both vertices, now having two copies of each. Both copies will
+be connected, each in a different way. Neighboring vertices will be
+updated consistently. We use two final pointers received as an
+argument to store the pointers to the newly created polygons:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+static bool cut_polygon(struct polygon_vertex *v1, struct polygon_vertex *v2,
+                        struct polygon_vertex **new1,
+                        struct polygon_vertex **new2);
+@
+\fimcodigo
+
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+static bool cut_polygon(struct polygon_vertex *v1, struct polygon_vertex *v2,
+                        struct polygon_vertex **new1,
+                        struct polygon_vertex **new2){
+  struct polygon_vertex *vv1, *vv2;
+  bool turn1 = is_turning_left(v1 -> prev, v1, v1 -> next);
+  bool turn2 = is_turning_left(v2 -> prev, v2, v2 -> next);
+  vv1 = NEW_POLYGON_VERTEX();
+  if(vv1 == NULL)
+    return false;
+  vv2 = NEW_POLYGON_VERTEX();
+  if(vv2 == NULL)
+    return false;
+  // Remove flags:
+  v1 -> flag &= (~0x3);
+  v2 -> flag &= (~0x3);
+  // Separate:
+  memcpy(vv1, v1, sizeof(struct polygon_vertex));
+  memcpy(vv2, v2, sizeof(struct polygon_vertex));
+  // There are 2 ways to split the polygon. We discuss below why we need
+  // the following test:
+  if((is_turning_left(v2, v1, v1 -> next) != turn1 &&
+     is_turning_left(vv1 -> prev, vv1, vv2) == turn1) ||
+     (is_turning_left(v2 -> prev, v2, v1) != turn2 &&
+     is_turning_left(vv1, vv2, vv2 -> next) == turn2)){
+     v1 -> next -> prev = vv1;
+     v1 -> next = v2;
+     v2 -> prev -> next = vv2;
+     v2 -> prev = v1;
+     vv1 -> prev -> next = v1;
+     vv1 -> prev = vv2;
+     vv2 -> next -> prev = v2;
+     vv2 -> next = vv1;
+  }
+  else{
+    vv1 -> next -> prev = v1;
+    vv1 -> next = vv2;
+    vv2 -> prev -> next = v2;
+    vv2 -> prev = vv1;
+    v1 -> prev -> next = vv1;
+    v1 -> prev = v2;
+    v2 -> next -> prev = vv2;
+    v2 -> next = v1;
+  }
+  // Set flags:
+  aux_update_flags(v1);
+  aux_update_flags(v2);
+  aux_update_flags(vv1);
+  aux_update_flags(vv2);  
+  // Find pointer for the new polygon:
+  while(XMONOTONE_LEQ(vv1 -> prev, vv1))
+    vv1 = vv1 -> prev;
+  while(XMONOTONE_LEQ(vv1 -> next, vv1))
+    vv1 = vv1 -> next;
+  *new1 = vv1;
+  while(XMONOTONE_LEQ(v1 -> prev, v1))
+    v1 = v1 -> prev;
+  while(XMONOTONE_LEQ(v1 -> next, v1))
+    v1 = v1 -> next;
+  *new2 = v1;
+  return true;
+}
+@
+\fimcodigo
+
+In the code, the most mysterious part if when we test the direction in
+which we turn around follow the vertices where we make a cut and how
+this influences the way we cut. To understand why we do this, consider
+that if we are cutting a polygon, at least one of the vertices that we
+are connecting with a new diagonal has an internal angle greater than
+180 degrees. If it has a smaller internal angle, the angle will remain
+small and this never will be a problem for us. If the internal angle
+is greater, then after cutting, either all angles become smaller than
+180 degrees, or else one of the newly created polygons will keep
+having a greater internal angle. If so, further cuts must be made at
+that vertex until its angle is reduced. But as we may have previously
+identified which vertices we need to cut, we may have stored pointers
+to these vertices. Because of this, in the function above, we must not
+modify the pointer to any vertex that will still need further
+cutting. If after the cut we discover that there is still big internal
+angles in some vertex, we must keep using the pointers \monoespaco{v1}
+and \monoespaco{v2} to represent them, not the new pointers
+\monoespaco{vv1} and \monoespaco{vv2}. And the way that we check for this,
+is checking if the turning direction changed in some vertex (which
+means that we had a big angle that becomes small).
+
+Let's now consider how to update the flags of the vertices that have
+been modified by the above function. As we assume that after the
+partition our polygon will only have $x$-monotone polygons, we will
+only need the flags that say whether each vertex is part of the upper
+or lower path when we walk from the leftmost to the rightmost
+vertex. The vertex type no longer matters. So we just need fill in the
+flag attribute the value ``\monoespaco{FLAG\_UPPER}'' and
+``\monoespaco{FLAG\_LOWER}''.
+
+The cases that we should consider are:
+
+A) The new vertex has both neighbors at its right. In this case, as we
+know that the final polygon will be $x$-monotone, this means that our
+vertex is a begin vertex and its the leftmost vertex. Its part of both
+the upper and lower path.
+
+B) The new vertex has both neighbors at its left. Like in the case
+above, except that in this case we have an end vertex, which is the
+rightmost vertex.
+
+C) The new vertex is part of a newly formed triangle or
+quadrilateral. In this case, if we are above the line that connects
+the leftmost and rightmost vertex, then we are in the upper
+path. Otherwise, we are in the lower path.
+
+D) Both neighbor vertices are begin or end vertices. In this case, we
+walk two vertices in any direction, and keep walking if we are in a
+vertex which we do not know if it is in the lower or upper path (it
+happens if this vertex is also a new vertex recently created). Our
+path is the opposite to the path of the vertex that we found.
+
+E) The next vertex, but not the previous vertex, is either a begin or
+end vertex. In this case, our path is the same than the path of the
+previous vertex if this is a known information. If not, then we check
+the even previous vertex: if it is not a begin or end vertex, we are
+in the same path. Otherwise, we are in the opposite path than the even
+previous vertex.
+
+F) In all other cases, our path is the same path than the next vertex,
+if it is a known information. Otherwise, it is the same path than the
+next one vertex, provided that it is not a begin or end vertex. In
+that case, the path is opposite to the path found in the next one
+vertex.
+
+The function that will apply these rules is:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+static void aux_update_flags(struct polygon_vertex *v);
+@
+\fimcodigo
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+static void aux_update_flags(struct polygon_vertex *v){
+  // Case A:
+  if(XMONOTONE_LEQ(v, v -> prev) && XMONOTONE_LEQ(v, v -> next))
+    v -> flag += FLAG_UPPER + FLAG_LOWER;
+  // Case B:
+  else if(XMONOTONE_LEQ(v -> prev, v) && XMONOTONE_LEQ(v -> next, v))
+    v -> flag += FLAG_UPPER + FLAG_LOWER;
+  // Case C:
+  else if(v -> next -> next == v -> prev ||
+          v -> next -> next == v -> prev -> prev){
+    struct polygon_vertex *begin, *end;
+    float m, b;
+    begin = end = v;
+    if(begin -> next -> x <= begin -> x){
+      while(begin -> next -> x <= begin -> x)
+        begin = begin -> next;
+    }
+    else{
+      while(begin -> prev -> x <= begin -> x)
+        begin = begin -> prev;
+    }
+    if(end -> next -> x >= end -> x){
+      while(end -> next -> x >= end -> x)
+        end = end -> next;
+    }
+    else{
+      while(end -> prev -> x >= end -> x)
+        end = end -> prev;
+    }
+    m = (end -> y - begin -> y)/(end -> x - begin -> x);
+    b = begin -> y - m * (begin -> x);
+    if(v -> y >= m * v -> x + b)
+      v -> flag += FLAG_UPPER;
+    else
+      v -> flag += FLAG_LOWER;
+  }
+  else if((XMONOTONE_LEQ(v -> next, v -> next -> next) &&
+           XMONOTONE_LEQ(v -> next, v)) || (XMONOTONE_LEQ(v, v -> next) &&
+           XMONOTONE_LEQ(v -> next -> next, v -> next))){
+    // Case D:
+    if((XMONOTONE_LEQ(v -> prev, v -> prev -> prev) &&
+           XMONOTONE_LEQ(v -> prev, v)) || (XMONOTONE_LEQ(v, v -> prev) &&
+           XMONOTONE_LEQ(v -> prev -> prev, v -> prev))){
+      struct polygon_vertex *aux;
+      aux = v -> next -> next;
+      if((aux -> flag % 4) == 0x0)
+        aux = aux -> next;
+      v -> flag += (~(aux -> flag % 4));
+    }
+    // Case E:
+    else{
+      if(v -> prev -> flag % 4 != 0)
+        v -> flag += (v -> prev -> flag % 4);
+      else if(v -> prev -> prev -> flag % 4 != 3)
+        v -> flag += (v -> prev -> prev -> flag % 4);
+      else
+        v -> flag += ~(v -> prev -> prev -> prev -> flag % 4);
+    }
+  }
+  // Case F
+  else{
+    if(v -> next -> flag % 4 != 0)
+      v -> flag += (v -> next -> flag % 4);
+    else if(v -> next -> next -> flag % 4 != 3)
+      v -> flag += (v -> next -> next -> flag % 4);
+    else
+      v -> flag += ~(v -> next -> next -> next -> flag % 4);
+  }
+}
+@
+\fimcodigo
+
+Now put all this together to create the triangulation for the general
+case, when we do not have a $x$-monotone polygon. First we order the
+vertices creating the doubly linked list between them, then initialize
+an empty binary tree to represent the straight imaginary line that
+will help us with the partition. We will also use a linked list
+containing the vertices where we will add new diagonals, cutting the
+polygon and partitioning it in other polygons. After the
+initialization, we position our imaginary straight vertical line in
+the leftmost vertex and from there, we will slide the line to the
+right. In the process we will discover all the diagonals that need to
+be added and later we will use them to partition the polygon.
+
+We will try to avoid creating new data structures for this. Our list
+of diagonals that need to be added to cut our polygon in several parts
+will use the vertex structure to represent each new diagonal. The
+pointers \monoespaco{next} and \monoespaco{prev} will store which
+vertices each diagonal is joining. The pointer \monoespaco{succ} will
+connect each new diagonal in a linked list. Assuming that we have a
+pointer called \monoespaco{list\_of\_diagonals} that points to the
+beginning of the linked list and a pointer
+called \monoespaco{last\_diagonal} pointing to the last diagonal
+inserted in the list, we could add new diagonals representing future
+cuts with the macro below:
+
+\iniciocodigo
+@<Local Macros (metafont.c)@>+=
+#define ADD_CUT(v1, v2) {                                    \
+  if(last_diagonal == NULL){                                 \
+    last_diagonal = list_of_diagonals = NEW_POLYGON_VERTEX();\
+  } else{                                                    \
+    last_diagonal -> succ = NEW_POLYGON_VERTEX();            \
+    last_diagonal = last_diagonal -> succ;                   \
+  }                                                          \
+  if(last_diagonal == NULL){                                 \
+    RAISE_ERROR_NO_MEMORY(mf, NULL, 0);                      \
+    return false;                                            \
+  }                                                          \
+  last_diagonal -> prev = v1;                                \
+  last_diagonal -> next = v2;                                \
+  last_diagonal -> succ = NULL;}
+@
+\fimcodigo
+
+
+Later, when we use the diagonal list to partition out polygon, the
+newly created polygons also need to be stored. For this we will use
+the same tree structure that we used to represent our imaginary
+vertical line walking over the polygon. Each tree node will use
+the \monoespaco{helper} pointer to point to a unique newly created
+polygon. The other node attributes can be ignored. We will insert and
+store things in this tree sorting according with the
+pointer \monoespaco{helper}. For this, we will need the following
+comparison functions:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+static bool leq_by_helper(struct polygon_edge *p1, struct polygon_edge *p2);
+static bool eq_by_helper(struct polygon_edge *p1, struct polygon_edge *p2);
+@
+\fimcodigo
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+static bool leq_by_helper(struct polygon_edge *p1, struct polygon_edge *p2){
+  return (p1 -> helper <= p2 -> helper);
+}
+static bool eq_by_helper(struct polygon_edge *p1, struct polygon_edge *p2){
+  return (p1 -> helper == p2 -> helper);
+}
+@
+\fimcodigo
+
+And finally, the code that performs the described operations to
+triangulate non-monotonous concave polygons:
+
+\iniciocodigo
+@<Triangulation: Non-monotonous concave form@>=
+{
+  int i;
+  float *last_triang = triang;
+  struct polygon_edge *list_of_subpolygons = NULL, *imaginary_line = NULL;
+  struct polygon_vertex *current_vertex = poly, *last_vertex;
+  struct polygon_vertex *list_of_diagonals = NULL, *last_diagonal = NULL;
+  struct polygon_vertex **buffer;
+  bool clockwise = is_turning_left(poly -> next, poly, poly -> prev);
+  buffer = (struct polygon_vertex **)
+             temporary_alloc(sizeof(struct polygon_vertex *) *
+             number_of_vertices);
+  if(buffer == NULL){
+    RAISE_ERROR_NO_MEMORY(mf, NULL, 0);
+    if(temporary_free != NULL) temporary_free(triang);
+    return false;
+  }
+  prepare_non_monotonous(poly, number_of_vertices);
+  for(i = 0; i < number_of_vertices; i ++){
+    // Here we create the list of new diagonals
+    @<Makes X-Monotonous: Adding Diagonals@>
+    current_vertex = current_vertex -> succ;
+  }
+  current_vertex = list_of_diagonals;
+  // Partitioning:
+  while(current_vertex != NULL){
+    struct polygon_vertex *new1 = NULL, *new2 = NULL;
+    cut_polygon(current_vertex -> next, current_vertex -> prev, &new1, &new2);
+    insert_polygon_edge(&list_of_subpolygons, 0, 0, 0, 0, new1, leq_by_helper,
+                        eq_by_helper);
+    insert_polygon_edge(&list_of_subpolygons, 0, 0, 0, 0, new2, leq_by_helper,
+                        eq_by_helper);
+    last_vertex = current_vertex;
+    current_vertex = current_vertex -> succ;
+    DESTROY_POLYGON_VERTEX(last_vertex);
+  }
+  triangulate_polygon_tree(list_of_subpolygons, &last_triang,
+                           &number_of_triangles, buffer);
+  //destroy_edge_tree(list_of_subpolygons);
+  glGenBuffers(1, &(pen -> gl_vbo));
+  glBindBuffer(GL_ARRAY_BUFFER, pen -> gl_vbo);
+  glBufferData(GL_ARRAY_BUFFER, number_of_triangles * 3 * 2 *
+               sizeof(float), triang, GL_STATIC_DRAW);
+  pen -> indices = number_of_triangles * 3;
+  if(temporary_free != NULL){
+    temporary_free(buffer);
+    temporary_free(triang);
+  }
+  return true;
+}
+@
+\fimcodigo
+
+After creating all partitions and storing all the new polygons in a
+binary tree, it is time to triangulate all them using the following
+function:
+
+\iniciocodigo
+@<Local Function Declaration (metafont.c)@>+=
+static void triangulate_polygon_tree(struct polygon_edge *tree,
+                                     float **triangles,
+                                     int *number_of_triangles,
+                                     struct polygon_vertex **buffer);
+@
+\fimcodigo
+
+\iniciocodigo
+@<Auxiliary Local Functions (metafont.c)@>+=
+static void triangulate_polygon_tree(struct polygon_edge *tree,
+                                     float **triangles,
+                                     int *number_of_triangles,
+                                     struct polygon_vertex **buffer){
+  if(tree == NULL)
+    return;
+  if(tree -> left != NULL)
+    triangulate_polygon_tree(tree -> left, triangles, number_of_triangles,
+                             buffer);
+  if(tree -> right != NULL)
+    triangulate_polygon_tree(tree -> right, triangles, number_of_triangles,
+                             buffer);
+  triangulate_xmonotone_polygon(tree -> helper, triangles,
+                                number_of_triangles, buffer);
+  DESTROY_POLYGON_EDGE(tree);
+  return;
+}
+@
+\fimcodigo
+
+Now all that's left to do is add diagonals so we can partition the
+polygon. To do this, we will move our imaginary vertical line making
+it pass through each vertex from left to right.  What we will do in
+each case depends on the type of vertex that we find. If it is a begin
+vertex, we must register the lower edge connected to it as being being
+crossed by our imaginary straight line (we store it in the tree), and
+we make store as its ``helper'' the current begin vertex:
+
+\iniciocodigo
+@<Makes X-Monotonous: Adding Diagonals@>=
+if(GET_VERTEX_TYPE(current_vertex) == TYPE_BEGIN_VERTEX){
+  if(current_vertex -> prev -> y <= current_vertex -> next -> y)
+    insert_polygon_edge(&imaginary_line, current_vertex -> x,
+                        current_vertex -> y, current_vertex -> prev -> x,
+                        current_vertex -> prev -> y,
+                        current_vertex, leq_by_vertex, NULL);
+  else
+    insert_polygon_edge(&imaginary_line, current_vertex -> x,
+                        current_vertex -> y, current_vertex -> next -> x,
+                        current_vertex -> next -> y,
+                        current_vertex, leq_by_vertex, NULL);
+}
+@
+\fimcodigo
+
+If we find an end vertex, then we check whether the upper edge
+connected to it has as ``helper'' a join vertex. If so, we create a
+new diagonal between the current vertex and the join vertex. In any
+case, our imaginary line will no longer cross the found edge after
+this point  and we must remove it from the tree.
+
+\iniciocodigo
+@<Makes X-Monotonous: Adding Diagonals@>+=
+else if(GET_VERTEX_TYPE(current_vertex) == TYPE_END_VERTEX){
+  struct polygon_edge *removed;
+  if(current_vertex -> prev -> y <= current_vertex -> next -> y)
+    removed = remove_polygon_edge(&imaginary_line, current_vertex -> x,
+                                 current_vertex -> y,
+                                 current_vertex -> prev -> x,
+                                 current_vertex -> prev -> y,
+                                 leq_by_vertex, eq_by_vertex);
+  else
+    removed = remove_polygon_edge(&imaginary_line, current_vertex -> x,
+                                 current_vertex -> y,
+                                 current_vertex -> next -> x,
+                                 current_vertex -> next -> y,
+                                 leq_by_vertex, eq_by_vertex);
+
+  if(GET_VERTEX_TYPE(removed -> helper) == TYPE_MERGE_VERTEX){
+    ADD_CUT(current_vertex, removed -> helper);
+  }
+  DESTROY_POLYGON_EDGE(removed);
+}
+@
+\fimcodigo
+
+If we find a split vertex, then we search for the edge immediately
+below the current vertex. We do this searching for the edges in the
+tree. We create a new diagonal between the current vertex and the
+helper of the found edge. The current vertex then becomes the new
+helper for that edge. And we add to the tree the lower edge connected
+to the current vertex, as our imaginary line will then cross this
+edge:
+
+\iniciocodigo
+@<Makes X-Monotonous: Adding Diagonals@>+=
+else if(GET_VERTEX_TYPE(current_vertex) == TYPE_SPLIT_VERTEX){
+  struct polygon_edge *below;
+  below = find_edge_below(imaginary_line, current_vertex -> x,
+                          current_vertex -> y);
+  ADD_CUT(current_vertex, below -> helper);
+  below -> helper = current_vertex;
+  if(current_vertex -> prev -> y <= current_vertex -> next -> y)
+    insert_polygon_edge(&imaginary_line, current_vertex -> x,
+                        current_vertex -> y, current_vertex -> next -> x,
+                        current_vertex -> next -> y,
+                        current_vertex, leq_by_vertex, NULL);
+  else
+    insert_polygon_edge(&imaginary_line, current_vertex -> x,
+                        current_vertex -> y, current_vertex -> prev -> x,
+                        current_vertex -> prev -> y,
+                        current_vertex, leq_by_vertex, NULL);
+}
+@
+\fimcodigo
+
+If we find a merge vertex, we get the upper edge connected to that
+vertex and check if its ``helper'' is another merge vertex. If so, we
+create a cut diagonal between this vertex and the current
+vertex. After this check, we remove that edge from our tree, as the
+imaginary vertical line will not cross it anymore. Then, we check
+which is the edge in our tree immediately below our current vertex. If
+this edge helper is another merge vertex, we create another diagonal
+between it and the current vertex. Finally, we update the helper of
+the found vertex to point to the current vertex:
+
+\iniciocodigo
+@<Makes X-Monotonous: Adding Diagonals@>+=
+else if(GET_VERTEX_TYPE(current_vertex) == TYPE_MERGE_VERTEX){
+  struct polygon_edge *removed, *below;
+  if(current_vertex -> prev -> y <= current_vertex -> next -> y)
+    removed = remove_polygon_edge(&imaginary_line, current_vertex -> x,
+                                 current_vertex -> y,
+                                 current_vertex -> next -> x,
+                                 current_vertex -> next -> y,
+                                 leq_by_vertex, eq_by_vertex);
+  else
+    removed = remove_polygon_edge(&imaginary_line, current_vertex -> x,
+                                 current_vertex -> y,
+                                 current_vertex -> prev -> x,
+                                 current_vertex -> prev -> y,
+                                 leq_by_vertex, eq_by_vertex);
+  if(GET_VERTEX_TYPE(removed -> helper) == TYPE_MERGE_VERTEX)
+    ADD_CUT(current_vertex, removed -> helper);
+  DESTROY_POLYGON_EDGE(removed);
+  below = find_edge_below(imaginary_line, current_vertex -> x,
+                          current_vertex -> y);
+  if(GET_VERTEX_TYPE(below -> helper) == TYPE_MERGE_VERTEX)
+    ADD_CUT(current_vertex, below -> helper);
+  below -> helper = current_vertex;
+}
+@
+\fimcodigo
+
+The last case is when we have a regular vertex. What we do depends if
+the polygon interior is above or below our vertex. We check this
+according with the position of our neighbor vertices and knowing if we
+stored our vertices clockwise or counterclockwise.
+
+If the polygon interior is above the vertex, we check if the previous
+edge has a ``helper'' which is a merge vertex. If so, we connect it
+with current vertex. Anyway, we remove the previous edge and add the
+next edge to the tree, using the current vertex as the helper.
+
+If the polygon interior is below the vertex, we look for the edge
+immediately below. If its ``helper'' is a merge vertex, we connect it
+to the current vertex. Anyway, we set the current vertex as the new
+``helper'' for that edge.
+
+\iniciocodigo
+@<Makes X-Monotonous: Adding Diagonals@>+=
+else{
+  struct polygon_edge *removed;
+  if((clockwise && // Checa se interior está acima:
+     XMONOTONE_LEQ(current_vertex -> next, current_vertex -> prev)) ||
+     (!clockwise &&
+      XMONOTONE_LEQ(current_vertex -> prev, current_vertex -> next))){
+    struct polygon_vertex *to_append;
+    if(current_vertex -> prev -> x <= current_vertex -> next -> x){
+      removed = remove_polygon_edge(&imaginary_line, current_vertex -> x,
+                                    current_vertex -> y,
+                                    current_vertex -> prev -> x,
+                                    current_vertex -> prev -> y,
+                                    leq_by_vertex, eq_by_vertex);
+      to_append = current_vertex -> next;
+    }
+    else{
+      removed = remove_polygon_edge(&imaginary_line, current_vertex -> x,
+                                    current_vertex -> y,
+                                    current_vertex -> next -> x,
+                                    current_vertex -> next -> y,
+                                    leq_by_vertex, eq_by_vertex);
+      to_append = current_vertex -> prev;
+    }
+    if(GET_VERTEX_TYPE(removed -> helper) == TYPE_MERGE_VERTEX)
+      ADD_CUT(current_vertex, removed -> helper);
+    DESTROY_POLYGON_EDGE(removed);
+    insert_polygon_edge(&imaginary_line, current_vertex -> x,
+                        current_vertex -> y, to_append -> x,
+                        to_append -> y, current_vertex, leq_by_vertex, NULL);
+  }
+  else{ // The polygon interior is below:
+    struct polygon_edge *below;
+    below = find_edge_below(imaginary_line, current_vertex -> x,
+                            current_vertex -> y);    
+    if(GET_VERTEX_TYPE(below -> helper) == TYPE_MERGE_VERTEX)
+      ADD_CUT(current_vertex, below -> helper);
+    below -> helper = current_vertex;
+  }
+} 
+@
+\fimcodigo
+
+
 
 \subsecao{10.3. Reading the \monoespaco{pickup} Command}
 
@@ -17144,7 +18360,7 @@ during finalization, we need to iterate over all glyphs and deallocate
 them and their internal data:
 
 \iniciocodigo
-@<Finalização (struct metafont)@>+=
+@<Finalization (struct metafont)@>+=
 {
   int block, block_size, index;
   // Walking over all blocks:
@@ -17716,6 +18932,10 @@ bool _Wrender_glyph(struct metafont *mf, char *glyph,
 
 
 \secao{References}
+
+\referencia{De Berg, M. (2000)
+``Computational geometry: algorithms and applications''.
+Springer Science \& Business Media.}
 
 \referencia{Knuth, D. E. (1984) ``Literate Programming'', The Computer
   Journal, Volume 27, Issue 2, Pages 97--111.}

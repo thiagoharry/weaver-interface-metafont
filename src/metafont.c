@@ -556,14 +556,15 @@
 
 #define FLAG_ORIENTATION      64
 #define FLAG_COUNTERCLOCKWISE 128
-/*:567*//*591:*/
-#line 15923 "weaver-interface-metafont_en.tex"
+/*:567*//*592:*/
+#line 15936 "weaver-interface-metafont_en.tex"
 
 #define ADD_DIAGONAL(data, v1, v2) \
         if(v1 -> prev == v2 -> next){\
           ADD_TRIANGLE(data, v1 -> x, v1 -> y, v2 -> x, v2 -> y,\
                        v1 -> prev -> x, v1 -> prev -> y);\
           v1 -> prev =  v2;\
+          if(v1 -> succ == v2 -> next) v1 -> succ =  v1 -> succ -> succ;\
           DESTROY_POLYGON_VERTEX(v2 -> next);\
           v2 -> next =  v1;\
         }\
@@ -571,12 +572,13 @@
           ADD_TRIANGLE(data, v1 -> x, v1 -> y, v2 -> x, v2 -> y,\
                        v1 -> next -> x, v1 -> next -> y);\
           v1 -> next =  v2;\
+          if(v1 -> succ == v2 -> prev) v1 -> succ =  v1 -> succ -> succ;\
           DESTROY_POLYGON_VERTEX(v2 -> prev);\
           v2 -> prev =  v1;\
         }\
         else printf("WARNING: This should not happen (%p<-v1->%p)(%p<-v2->%p)!\n", v1->prev, v1->next,v2->prev,v2->next);
-/*:591*//*592:*/
-#line 15951 "weaver-interface-metafont_en.tex"
+/*:592*//*593:*/
+#line 15966 "weaver-interface-metafont_en.tex"
 
 #define ADD_TRIANGLE(data, x1, y1, x2, y2, x3, y3) \
   if(x1*y2+y1*x3+x2*y3-x3*y2-x2*y1-x1*y3 >  0){\
@@ -590,8 +592,8 @@
   }\
   (*number_of_triangles) ++;\
   data +=  6;
-/*:592*//*593:*/
-#line 15973 "weaver-interface-metafont_en.tex"
+/*:593*//*594:*/
+#line 15988 "weaver-interface-metafont_en.tex"
 
 #define COMMON_VERTEX(v1, v2) ((v1 -> next == v2 -> prev)?\
                                (v1 -> next):(v1 -> prev))
@@ -604,8 +606,25 @@
    ((v1 -> flag & FLAG_LOWER) && \
     (COMMON_VERTEX(v1, v2)->x)*(v2->x-v1->x)/(v2->y-v1->y)+v1->y >  \
      COMMON_VERTEX(v1,v2)->y)))
-/*:593*//*634:*/
-#line 17285 "weaver-interface-metafont_en.tex"
+/*:594*//*619:*/
+#line 16934 "weaver-interface-metafont_en.tex"
+
+#define ADD_CUT(v1, v2) {                                    \
+  if(last_diagonal == NULL){                                 \
+    last_diagonal =  list_of_diagonals =  NEW_POLYGON_VERTEX();\
+  } else{                                                    \
+    last_diagonal -> succ =  NEW_POLYGON_VERTEX();            \
+    last_diagonal =  last_diagonal -> succ;                   \
+  }                                                          \
+  if(last_diagonal == NULL){                                 \
+    RAISE_ERROR_NO_MEMORY(mf, NULL, 0);                      \
+    return false;                                            \
+  }                                                          \
+  last_diagonal -> prev =  v1;                                \
+  last_diagonal -> next =  v2;                                \
+  last_diagonal -> succ =  NULL;}
+/*:619*//*669:*/
+#line 18501 "weaver-interface-metafont_en.tex"
 
 #define RAISE_ERROR_DUPLICATE_GLYPH(mf, cx, line, glyph) {\
   if(!mf -> errno){\
@@ -618,12 +637,12 @@
     mf -> errno_int =  stat;}}
 #define RAISE_ERROR_NESTED_BEGINCHAR(mf, cx, line) {\
   RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NESTED_BEGINCHAR);}
-/*:634*//*640:*/
-#line 17499 "weaver-interface-metafont_en.tex"
+/*:669*//*675:*/
+#line 18715 "weaver-interface-metafont_en.tex"
 
 #define RAISE_ERROR_INVALID_DIMENSION_GLYPH(mf, cx, line) {\
   RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INVALID_DIMENSION_GLYPH);}
-/*:640*/
+/*:675*/
 #line 417 "weaver-interface-metafont_en.tex"
 
 /*32:*/
@@ -800,19 +819,19 @@ TYPE_COLON,
 #line 14456 "weaver-interface-metafont_en.tex"
 
 TYPE_PICKUP,
-/*:556*//*598:*/
-#line 16305 "weaver-interface-metafont_en.tex"
+/*:556*//*633:*/
+#line 17521 "weaver-interface-metafont_en.tex"
 
 TYPE_BOT,
 TYPE_TOP,
 TYPE_LFT,
 TYPE_RT,
-/*:598*//*604:*/
-#line 16418 "weaver-interface-metafont_en.tex"
+/*:633*//*639:*/
+#line 17634 "weaver-interface-metafont_en.tex"
 
 TYPE_DRAW,
 TYPE_ERASE,
-/*:604*/
+/*:639*/
 #line 1030 "weaver-interface-metafont_en.tex"
 
 
@@ -954,15 +973,15 @@ ERROR_INVALID_COMPARISON,
 #line 14342 "weaver-interface-metafont_en.tex"
 
 ERROR_MISSING_TOKEN,
-/*:551*//*633:*/
-#line 17274 "weaver-interface-metafont_en.tex"
+/*:551*//*668:*/
+#line 18490 "weaver-interface-metafont_en.tex"
 
 ERROR_DUPLICATE_GLYPH,ERROR_MALFORMED_STATEMENT,ERROR_NESTED_BEGINCHAR,
-/*:633*//*639:*/
-#line 17491 "weaver-interface-metafont_en.tex"
+/*:668*//*674:*/
+#line 18707 "weaver-interface-metafont_en.tex"
 
 ERROR_INVALID_DIMENSION_GLYPH,
-/*:639*/
+/*:674*/
 #line 1971 "weaver-interface-metafont_en.tex"
 
 
@@ -1077,7 +1096,7 @@ void*next;
 short value;
 };
 /*:210*//*580:*/
-#line 15470 "weaver-interface-metafont_en.tex"
+#line 15473 "weaver-interface-metafont_en.tex"
 
 #define FLAG_UPPER 1
 #define FLAG_LOWER 2
@@ -1089,16 +1108,50 @@ struct polygon_vertex{
 int flag;
 float x,y;
 struct polygon_vertex*prev,*next;
-/*587:*/
-#line 15791 "weaver-interface-metafont_en.tex"
+/*588:*/
+#line 15805 "weaver-interface-metafont_en.tex"
 
 struct polygon_vertex*succ;
-/*:587*/
-#line 15481 "weaver-interface-metafont_en.tex"
+/*:588*//*597:*/
+#line 16164 "weaver-interface-metafont_en.tex"
+
+struct polygon_vertex*pred;
+/*:597*/
+#line 15484 "weaver-interface-metafont_en.tex"
 
 };
-/*:580*//*625:*/
-#line 16940 "weaver-interface-metafont_en.tex"
+/*:580*//*581:*/
+#line 15494 "weaver-interface-metafont_en.tex"
+
+#define XMONOTONE_LEQ(v1, v2) ((v1->x==v2->x)?(v1->y<=v2->y):(v1->x<=v2->x))
+/*:581*//*596:*/
+#line 16143 "weaver-interface-metafont_en.tex"
+
+#define TYPE_UNKNOWN_VERTEX  0
+#define TYPE_REGULAR_VERTEX  4
+#define TYPE_BEGIN_VERTEX    8
+#define TYPE_END_VERTEX     12
+#define TYPE_SPLIT_VERTEX   16
+#define TYPE_MERGE_VERTEX   20
+#define GET_VERTEX_TYPE(v) (((v -> flag) >> 2) << 2)
+/*:596*//*604:*/
+#line 16398 "weaver-interface-metafont_en.tex"
+
+struct polygon_edge{
+float x1,y1,x2,y2;
+struct polygon_vertex*helper;
+struct polygon_edge*parent,*left,*right;
+};
+#define NEW_POLYGON_EDGE() \
+  (struct polygon_edge *) temporary_alloc(sizeof(struct polygon_edge));
+#define INITIALIZE_POLYGON_EDGE(p, x1, y1, x2, y2, helper) {\
+ p -> x1 =  x1; p -> x2 =  x2; p -> y1 =  y1; p -> y2 =  y2;\
+ p -> helper =  helper;\
+ p -> parent =  p -> left =  p -> right =  NULL;}
+#define DESTROY_POLYGON_EDGE(p) \
+  ((temporary_free != NULL)?(temporary_free(p)):(true))
+/*:604*//*660:*/
+#line 18156 "weaver-interface-metafont_en.tex"
 
 struct _glyph{
 struct generic_token*begin,*end;
@@ -1119,15 +1172,15 @@ bool need_rendering;
                             a.need_rendering =  true; \
                             }
 
-/*:625*//*626:*/
-#line 16968 "weaver-interface-metafont_en.tex"
+/*:660*//*661:*/
+#line 18184 "weaver-interface-metafont_en.tex"
 
 struct kerning{
 char next_char[5];
 int kern;
 struct kerning*next;
 };
-/*:626*/
+/*:661*/
 #line 418 "weaver-interface-metafont_en.tex"
 
 /*29:*/
@@ -1236,15 +1289,15 @@ static char*list_of_keywords[]= {
 #line 14462 "weaver-interface-metafont_en.tex"
 
 "pickup",
-/*:557*//*599:*/
-#line 16317 "weaver-interface-metafont_en.tex"
+/*:557*//*634:*/
+#line 17533 "weaver-interface-metafont_en.tex"
 
 "bot","top","lft","rt",
-/*:599*//*605:*/
-#line 16425 "weaver-interface-metafont_en.tex"
+/*:634*//*640:*/
+#line 17641 "weaver-interface-metafont_en.tex"
 
 "draw","erase",
-/*:605*/
+/*:640*/
 #line 1640 "weaver-interface-metafont_en.tex"
 
 NULL};
@@ -1315,16 +1368,16 @@ static GLint uniform_inv_matrix;
 #line 15015 "weaver-interface-metafont_en.tex"
 
 static GLuint pensquare_vbo;
-/*:573*//*606:*/
-#line 16443 "weaver-interface-metafont_en.tex"
+/*:573*//*641:*/
+#line 17659 "weaver-interface-metafont_en.tex"
 
 static GLuint currentpicture_fb;
-/*:606*//*610:*/
-#line 16523 "weaver-interface-metafont_en.tex"
+/*:641*//*645:*/
+#line 17739 "weaver-interface-metafont_en.tex"
 
 static GLint previous_fb;
-/*:610*//*613:*/
-#line 16563 "weaver-interface-metafont_en.tex"
+/*:645*//*648:*/
+#line 17779 "weaver-interface-metafont_en.tex"
 
 static const char pen_vertex_shader[]= 
 "#version 100\n"
@@ -1335,8 +1388,8 @@ static const char pen_vertex_shader[]=
 "  coord = vec3(vertex_data.xy, 1.0) * model_view_matrix;\n"
 "  gl_Position = vec4(coord.x, coord.y, 0.0, 1.0);\n"
 "}\n";
-/*:613*//*614:*/
-#line 16581 "weaver-interface-metafont_en.tex"
+/*:648*//*649:*/
+#line 17797 "weaver-interface-metafont_en.tex"
 
 static const char pen_erase_fragment_shader[]= 
 "#version 100\n"
@@ -1356,7 +1409,7 @@ static const char pen_fragment_shader[]=
 static GLuint pen_program,pen_erase_program;
 static GLint pen_uniform_matrix,pen_erase_uniform_matrix;
 static GLint pen_uniform_color,pen_erase_uniform_color;
-/*:614*/
+/*:649*/
 #line 419 "weaver-interface-metafont_en.tex"
 
 /*19:*/
@@ -1749,45 +1802,109 @@ bool is_pen_counterclockwise(struct pen_variable*pen);
 
 bool triangulate_pen(struct metafont*mf,struct pen_variable*pen,
 float*transform_matrix);
-/*:570*//*581:*/
-#line 15490 "weaver-interface-metafont_en.tex"
+/*:570*//*582:*/
+#line 15504 "weaver-interface-metafont_en.tex"
 
 void destroy_vertex_linked_list(struct polygon_vertex*poly);
-/*:581*//*583:*/
-#line 15516 "weaver-interface-metafont_en.tex"
+/*:582*//*584:*/
+#line 15530 "weaver-interface-metafont_en.tex"
 
 struct polygon_vertex*polygon_from_pen(struct metafont*mf,
 struct pen_variable*,
 float*transform_matrix,
 int*number_of_vertices);
-/*:583*//*585:*/
-#line 15674 "weaver-interface-metafont_en.tex"
+/*:584*//*586:*/
+#line 15688 "weaver-interface-metafont_en.tex"
 
 bool is_xmonotone(struct polygon_vertex*poly);
-/*:585*//*589:*/
-#line 15825 "weaver-interface-metafont_en.tex"
+/*:586*//*590:*/
+#line 15838 "weaver-interface-metafont_en.tex"
 
-bool triangulate_xmonotone_polygon(struct metafont*mf,
-struct polygon_vertex*p,
-int number_of_vertices,float**triangles,
-int*number_of_triangles);
-/*:589*//*618:*/
-#line 16666 "weaver-interface-metafont_en.tex"
+static bool triangulate_xmonotone_polygon(struct polygon_vertex*p,
+float**triangles,
+int*number_of_triangles,
+struct polygon_vertex**stack);
+/*:590*//*600:*/
+#line 16274 "weaver-interface-metafont_en.tex"
+
+void prepare_non_monotonous(struct polygon_vertex*p,int number_of_vertices);
+/*:600*//*602:*/
+#line 16343 "weaver-interface-metafont_en.tex"
+
+static bool is_turning_left(struct polygon_vertex*p1,
+struct polygon_vertex*p2,
+struct polygon_vertex*p3);
+/*:602*//*605:*/
+#line 16425 "weaver-interface-metafont_en.tex"
+
+static struct polygon_edge*insert_polygon_edge(struct polygon_edge**,
+float,float,float,float,
+struct polygon_vertex*,
+bool(*)(struct polygon_edge*,
+struct polygon_edge*),
+bool(*)(struct polygon_edge*,
+struct polygon_edge*));
+/*:605*//*607:*/
+#line 16491 "weaver-interface-metafont_en.tex"
+
+static bool leq_by_vertex(struct polygon_edge*,struct polygon_edge*);
+/*:607*//*609:*/
+#line 16557 "weaver-interface-metafont_en.tex"
+
+static bool eq_by_vertex(struct polygon_edge*,struct polygon_edge*);
+/*:609*//*611:*/
+#line 16577 "weaver-interface-metafont_en.tex"
+
+static struct polygon_edge*remove_polygon_edge(struct polygon_edge**,
+float,float,float,float,
+bool(*)(struct polygon_edge*,
+struct polygon_edge*),
+bool(*)(struct polygon_edge*,
+struct polygon_edge*));
+/*:611*//*613:*/
+#line 16651 "weaver-interface-metafont_en.tex"
+
+static struct polygon_edge*find_edge_below(struct polygon_edge*,
+float,float);
+/*:613*//*615:*/
+#line 16688 "weaver-interface-metafont_en.tex"
+
+static bool cut_polygon(struct polygon_vertex*v1,struct polygon_vertex*v2,
+struct polygon_vertex**new1,
+struct polygon_vertex**new2);
+/*:615*//*617:*/
+#line 16830 "weaver-interface-metafont_en.tex"
+
+static void aux_update_flags(struct polygon_vertex*v);
+/*:617*//*620:*/
+#line 16964 "weaver-interface-metafont_en.tex"
+
+static bool leq_by_helper(struct polygon_edge*p1,struct polygon_edge*p2);
+static bool eq_by_helper(struct polygon_edge*p1,struct polygon_edge*p2);
+/*:620*//*623:*/
+#line 17043 "weaver-interface-metafont_en.tex"
+
+static void triangulate_polygon_tree(struct polygon_edge*tree,
+float**triangles,
+int*number_of_triangles,
+struct polygon_vertex**buffer);
+/*:623*//*653:*/
+#line 17882 "weaver-interface-metafont_en.tex"
 
 bool drawing_commands(struct metafont*mf,struct context*cx,
 struct path_variable*path,unsigned int flags);
-/*:618*//*620:*/
-#line 16765 "weaver-interface-metafont_en.tex"
+/*:653*//*655:*/
+#line 17981 "weaver-interface-metafont_en.tex"
 
 void drawpoint(struct metafont*mf,struct pen_variable*pen,
 struct picture_variable*pic,float x,float y,float*matrix,
 bool erasing);
-/*:620*//*629:*/
-#line 17009 "weaver-interface-metafont_en.tex"
+/*:655*//*664:*/
+#line 18225 "weaver-interface-metafont_en.tex"
 
 static struct _glyph*get_glyph(struct metafont*mf,unsigned char*utf8,
 bool create_if_not_exist);
-/*:629*/
+/*:664*/
 #line 420 "weaver-interface-metafont_en.tex"
 
 /*22:*/
@@ -2476,17 +2593,17 @@ mf->have_stored_normaldeviate= false;
 #line 14496 "weaver-interface-metafont_en.tex"
 
 mf->pen_lft= mf->pen_rt= mf->pen_top= mf->pen_bot= 0.0;
-/*:559*//*622:*/
-#line 16808 "weaver-interface-metafont_en.tex"
+/*:559*//*657:*/
+#line 18024 "weaver-interface-metafont_en.tex"
 
 mf->current_depth= 0;
-/*:622*//*628:*/
-#line 16998 "weaver-interface-metafont_en.tex"
+/*:657*//*663:*/
+#line 18214 "weaver-interface-metafont_en.tex"
 
 memset(mf->glyphs,0,sizeof(struct _glyph*)*332);
 mf->first_glyph= NULL;
 mf->number_of_glyphs= 0;
-/*:628*/
+/*:663*/
 #line 1859 "weaver-interface-metafont_en.tex"
 
 return mf;
@@ -2599,13 +2716,13 @@ struct generic_token*begin_list,
 struct generic_token*end_list){
 struct generic_token*begin,*end= NULL;
 begin= begin_list;
-/*611:*/
-#line 16534 "weaver-interface-metafont_en.tex"
+/*646:*/
+#line 17750 "weaver-interface-metafont_en.tex"
 
 GLint _viewport[4];
 glGetIntegerv(GL_VIEWPORT,_viewport);
 glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING,&previous_fb);
-/*:611*/
+/*:646*/
 #line 2207 "weaver-interface-metafont_en.tex"
 
 while(begin!=NULL){
@@ -2634,12 +2751,12 @@ else
 begin= NULL;
 }
 }
-/*612:*/
-#line 16545 "weaver-interface-metafont_en.tex"
+/*647:*/
+#line 17761 "weaver-interface-metafont_en.tex"
 
 glBindFramebuffer(GL_FRAMEBUFFER,previous_fb);
 glViewport(_viewport[0],_viewport[1],_viewport[2],_viewport[3]);
-/*:612*/
+/*:647*/
 #line 2234 "weaver-interface-metafont_en.tex"
 
 return true;
@@ -2787,8 +2904,8 @@ return false;
 *end= begin;
 return true;
 }
-/*:555*//*632:*/
-#line 17194 "weaver-interface-metafont_en.tex"
+/*:555*//*667:*/
+#line 18410 "weaver-interface-metafont_en.tex"
 
 else if(begin->type==TYPE_BEGINCHAR&&mf->loading){
 DECLARE_NESTING_CONTROL();
@@ -2859,16 +2976,16 @@ glyph->end= t;
 mf->number_of_glyphs++;
 return true;
 }
-/*:632*//*636:*/
-#line 17330 "weaver-interface-metafont_en.tex"
+/*:667*//*671:*/
+#line 18546 "weaver-interface-metafont_en.tex"
 
 else if(begin->type==TYPE_ENDCHAR&&mf->loading){
 RAISE_ERROR_UNEXPECTED_TOKEN(mf,cx,OPTIONAL(begin->line),
 TYPE_ENDCHAR);
 return false;
 }
-/*:636*//*638:*/
-#line 17370 "weaver-interface-metafont_en.tex"
+/*:671*//*673:*/
+#line 18586 "weaver-interface-metafont_en.tex"
 
 else if(begin->type==TYPE_BEGINCHAR){
 DECLARE_NESTING_CONTROL();
@@ -2968,8 +3085,8 @@ glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
 glBindTexture(GL_TEXTURE_2D,0);
 if(temporary_free!=NULL)
 temporary_free(data);
-/*609:*/
-#line 16497 "weaver-interface-metafont_en.tex"
+/*644:*/
+#line 17713 "weaver-interface-metafont_en.tex"
 
 {
 if(currentpicture_fb!=0){
@@ -2979,8 +3096,8 @@ glDeleteFramebuffers(1,&currentpicture_fb);
 }
 currentpicture_fb= 0;
 }
-/*:609*/
-#line 17469 "weaver-interface-metafont_en.tex"
+/*:644*/
+#line 18685 "weaver-interface-metafont_en.tex"
 
 }
 {
@@ -2996,8 +3113,8 @@ mf->pen_lft= mf->pen_rt= mf->pen_top= mf->pen_bot= 0.0;
 }
 return true;
 }
-/*:638*//*642:*/
-#line 17530 "weaver-interface-metafont_en.tex"
+/*:673*//*677:*/
+#line 18746 "weaver-interface-metafont_en.tex"
 
 else if(begin->type==TYPE_ENDCHAR){
 struct picture_variable*currentpicture= 
@@ -3021,7 +3138,7 @@ currentpicture->texture= 0;
 *end= begin;
 return true;
 }
-/*:642*/
+/*:677*/
 #line 2343 "weaver-interface-metafont_en.tex"
 
 /*121:*/
@@ -3272,8 +3389,8 @@ pic->type= TYPE_T_PICTURE;
 if(pic==
 &(mf->internal_picture_variables[INTERNAL_PICTURE_CURRENTPICTURE])){
 
-/*609:*/
-#line 16497 "weaver-interface-metafont_en.tex"
+/*644:*/
+#line 17713 "weaver-interface-metafont_en.tex"
 
 {
 if(currentpicture_fb!=0){
@@ -3283,7 +3400,7 @@ glDeleteFramebuffers(1,&currentpicture_fb);
 }
 currentpicture_fb= 0;
 }
-/*:609*/
+/*:644*/
 #line 11753 "weaver-interface-metafont_en.tex"
 
 }
@@ -3323,8 +3440,8 @@ return true;
 /*:214*/
 #line 2345 "weaver-interface-metafont_en.tex"
 
-/*595:*/
-#line 16056 "weaver-interface-metafont_en.tex"
+/*630:*/
+#line 17272 "weaver-interface-metafont_en.tex"
 
 else if(begin->type==TYPE_PICKUP){
 struct generic_token*end_expression= *end;
@@ -3381,8 +3498,8 @@ return false;
 mf->internal_pen_variables[0].referenced= var;
 }
 INITIALIZE_IDENTITY_MATRIX(mf->internal_pen_variables[0].gl_matrix);
-/*596:*/
-#line 16129 "weaver-interface-metafont_en.tex"
+/*631:*/
+#line 17345 "weaver-interface-metafont_en.tex"
 
 while(next_token!=end_expression){
 struct generic_token*begin_subexpr,*end_subexpr;
@@ -3507,8 +3624,8 @@ return false;
 }
 next_token= end_subexpr;
 }
-/*:596*//*597:*/
-#line 16267 "weaver-interface-metafont_en.tex"
+/*:631*//*632:*/
+#line 17483 "weaver-interface-metafont_en.tex"
 
 {
 float final_transform_matrix[9];
@@ -3530,13 +3647,13 @@ final_transform_matrix))
 return false;
 }
 }
-/*:597*/
-#line 16112 "weaver-interface-metafont_en.tex"
+/*:632*/
+#line 17328 "weaver-interface-metafont_en.tex"
 
 return true;
 }
-/*:595*//*617:*/
-#line 16636 "weaver-interface-metafont_en.tex"
+/*:630*//*652:*/
+#line 17852 "weaver-interface-metafont_en.tex"
 
 else if(begin->type==TYPE_DRAW){
 struct path_variable path;
@@ -3560,7 +3677,7 @@ if(temporary_free!=NULL)
 path_recursive_free(temporary_free,&path,false);
 return true;
 }
-/*:617*/
+/*:652*/
 #line 2346 "weaver-interface-metafont_en.tex"
 
 
@@ -5630,8 +5747,8 @@ if(temporary_free!=NULL)
 path_recursive_free(temporary_free,&b,false);
 return true;
 }
-/*:431*//*600:*/
-#line 16332 "weaver-interface-metafont_en.tex"
+/*:431*//*635:*/
+#line 17548 "weaver-interface-metafont_en.tex"
 
 else if(begin->type==TYPE_BOT){
 if(!eval_pair_primary(mf,cx,(struct generic_token*)
@@ -5641,8 +5758,8 @@ return false;
 result->y+= mf->pen_bot;
 return true;
 }
-/*:600*//*601:*/
-#line 16350 "weaver-interface-metafont_en.tex"
+/*:635*//*636:*/
+#line 17566 "weaver-interface-metafont_en.tex"
 
 else if(begin->type==TYPE_TOP){
 if(!eval_pair_primary(mf,cx,(struct generic_token*)
@@ -5652,8 +5769,8 @@ return false;
 result->y+= mf->pen_top;
 return true;
 }
-/*:601*//*602:*/
-#line 16371 "weaver-interface-metafont_en.tex"
+/*:636*//*637:*/
+#line 17587 "weaver-interface-metafont_en.tex"
 
 else if(begin->type==TYPE_LFT){
 if(!eval_pair_primary(mf,cx,(struct generic_token*)
@@ -5663,8 +5780,8 @@ return false;
 result->x+= mf->pen_lft;
 return true;
 }
-/*:602*//*603:*/
-#line 16389 "weaver-interface-metafont_en.tex"
+/*:637*//*638:*/
+#line 17605 "weaver-interface-metafont_en.tex"
 
 else if(begin->type==TYPE_RT){
 if(!eval_pair_primary(mf,cx,(struct generic_token*)
@@ -5674,7 +5791,7 @@ return false;
 result->x+= mf->pen_rt;
 return true;
 }
-/*:603*/
+/*:638*/
 #line 7329 "weaver-interface-metafont_en.tex"
 
 /*308:*/
@@ -8221,8 +8338,8 @@ glDeleteFramebuffers(1,&temporary_framebuffer);
 if(target==
 &(mf->internal_picture_variables[INTERNAL_PICTURE_CURRENTPICTURE])){
 
-/*609:*/
-#line 16497 "weaver-interface-metafont_en.tex"
+/*644:*/
+#line 17713 "weaver-interface-metafont_en.tex"
 
 {
 if(currentpicture_fb!=0){
@@ -8232,7 +8349,7 @@ glDeleteFramebuffers(1,&currentpicture_fb);
 }
 currentpicture_fb= 0;
 }
-/*:609*/
+/*:644*/
 #line 12093 "weaver-interface-metafont_en.tex"
 
 }
@@ -9880,10 +9997,11 @@ return true;
 /*:579*/
 #line 14985 "weaver-interface-metafont_en.tex"
 
-/*594:*/
-#line 15998 "weaver-interface-metafont_en.tex"
+/*595:*/
+#line 16013 "weaver-interface-metafont_en.tex"
 
 if(!(pen->flags&FLAG_CONVEX)){
+float*triang,*last_triang;
 struct polygon_vertex*poly;
 int number_of_vertices= 0,number_of_triangles= 0;
 poly= polygon_from_pen(mf,pen,transform_matrix,&number_of_vertices);
@@ -9898,16 +10016,29 @@ else
 glDeleteBuffers(1,&(pen->gl_vbo));
 }
 pen->triang_resolution= number_of_vertices;
-if(is_xmonotone(poly)){
-float*triang;
 triang= temporary_alloc(3*number_of_vertices*2*sizeof(float));
 if(triang==NULL){
 RAISE_ERROR_NO_MEMORY(mf,NULL,0);
 return false;
 }
-if(!triangulate_xmonotone_polygon(mf,poly,number_of_vertices,&triang,
-&number_of_triangles))
+last_triang= triang;
+if(is_xmonotone(poly)){
+struct polygon_vertex**stack;
+stack= (struct polygon_vertex**)
+temporary_alloc(sizeof(struct polygon_vertex*)*
+number_of_vertices);
+if(stack==NULL){
+RAISE_ERROR_NO_MEMORY(mf,NULL,0);
+if(temporary_free!=NULL)temporary_free(triang);
 return false;
+}
+if(!triangulate_xmonotone_polygon(poly,&last_triang,&number_of_triangles,
+stack)){
+if(temporary_free!=NULL)temporary_free(triang);
+return false;
+}
+if(temporary_free!=NULL)
+temporary_free(stack);
 glGenBuffers(1,&(pen->gl_vbo));
 glBindBuffer(GL_ARRAY_BUFFER,pen->gl_vbo);
 glBufferData(GL_ARRAY_BUFFER,number_of_triangles*3*2*
@@ -9918,17 +10049,199 @@ temporary_free(triang);
 return true;
 }
 else{
-RAISE_GENERIC_ERROR(mf,NULL,0,ERROR_UNKNOWN);
+/*622:*/
+#line 16985 "weaver-interface-metafont_en.tex"
+
+{
+int i;
+float*last_triang= triang;
+struct polygon_edge*list_of_subpolygons= NULL,*imaginary_line= NULL;
+struct polygon_vertex*current_vertex= poly,*last_vertex;
+struct polygon_vertex*list_of_diagonals= NULL,*last_diagonal= NULL;
+struct polygon_vertex**buffer;
+bool clockwise= is_turning_left(poly->next,poly,poly->prev);
+buffer= (struct polygon_vertex**)
+temporary_alloc(sizeof(struct polygon_vertex*)*
+number_of_vertices);
+if(buffer==NULL){
+RAISE_ERROR_NO_MEMORY(mf,NULL,0);
+if(temporary_free!=NULL)temporary_free(triang);
+return false;
+}
+prepare_non_monotonous(poly,number_of_vertices);
+for(i= 0;i<number_of_vertices;i++){
+
+/*625:*/
+#line 17082 "weaver-interface-metafont_en.tex"
+
+if(GET_VERTEX_TYPE(current_vertex)==TYPE_BEGIN_VERTEX){
+if(current_vertex->prev->y<=current_vertex->next->y)
+insert_polygon_edge(&imaginary_line,current_vertex->x,
+current_vertex->y,current_vertex->prev->x,
+current_vertex->prev->y,
+current_vertex,leq_by_vertex,NULL);
+else
+insert_polygon_edge(&imaginary_line,current_vertex->x,
+current_vertex->y,current_vertex->next->x,
+current_vertex->next->y,
+current_vertex,leq_by_vertex,NULL);
+}
+/*:625*//*626:*/
+#line 17105 "weaver-interface-metafont_en.tex"
+
+else if(GET_VERTEX_TYPE(current_vertex)==TYPE_END_VERTEX){
+struct polygon_edge*removed;
+if(current_vertex->prev->y<=current_vertex->next->y)
+removed= remove_polygon_edge(&imaginary_line,current_vertex->x,
+current_vertex->y,
+current_vertex->prev->x,
+current_vertex->prev->y,
+leq_by_vertex,eq_by_vertex);
+else
+removed= remove_polygon_edge(&imaginary_line,current_vertex->x,
+current_vertex->y,
+current_vertex->next->x,
+current_vertex->next->y,
+leq_by_vertex,eq_by_vertex);
+
+if(GET_VERTEX_TYPE(removed->helper)==TYPE_MERGE_VERTEX){
+ADD_CUT(current_vertex,removed->helper);
+}
+DESTROY_POLYGON_EDGE(removed);
+}
+/*:626*//*627:*/
+#line 17138 "weaver-interface-metafont_en.tex"
+
+else if(GET_VERTEX_TYPE(current_vertex)==TYPE_SPLIT_VERTEX){
+struct polygon_edge*below;
+below= find_edge_below(imaginary_line,current_vertex->x,
+current_vertex->y);
+ADD_CUT(current_vertex,below->helper);
+below->helper= current_vertex;
+if(current_vertex->prev->y<=current_vertex->next->y)
+insert_polygon_edge(&imaginary_line,current_vertex->x,
+current_vertex->y,current_vertex->next->x,
+current_vertex->next->y,
+current_vertex,leq_by_vertex,NULL);
+else
+insert_polygon_edge(&imaginary_line,current_vertex->x,
+current_vertex->y,current_vertex->prev->x,
+current_vertex->prev->y,
+current_vertex,leq_by_vertex,NULL);
+}
+/*:627*//*628:*/
+#line 17170 "weaver-interface-metafont_en.tex"
+
+else if(GET_VERTEX_TYPE(current_vertex)==TYPE_MERGE_VERTEX){
+struct polygon_edge*removed,*below;
+if(current_vertex->prev->y<=current_vertex->next->y)
+removed= remove_polygon_edge(&imaginary_line,current_vertex->x,
+current_vertex->y,
+current_vertex->next->x,
+current_vertex->next->y,
+leq_by_vertex,eq_by_vertex);
+else
+removed= remove_polygon_edge(&imaginary_line,current_vertex->x,
+current_vertex->y,
+current_vertex->prev->x,
+current_vertex->prev->y,
+leq_by_vertex,eq_by_vertex);
+if(GET_VERTEX_TYPE(removed->helper)==TYPE_MERGE_VERTEX)
+ADD_CUT(current_vertex,removed->helper);
+DESTROY_POLYGON_EDGE(removed);
+below= find_edge_below(imaginary_line,current_vertex->x,
+current_vertex->y);
+if(GET_VERTEX_TYPE(below->helper)==TYPE_MERGE_VERTEX)
+ADD_CUT(current_vertex,below->helper);
+below->helper= current_vertex;
+}
+/*:628*//*629:*/
+#line 17213 "weaver-interface-metafont_en.tex"
+
+else{
+struct polygon_edge*removed;
+if((clockwise&&
+XMONOTONE_LEQ(current_vertex->next,current_vertex->prev))||
+(!clockwise&&
+XMONOTONE_LEQ(current_vertex->prev,current_vertex->next))){
+struct polygon_vertex*to_append;
+if(current_vertex->prev->x<=current_vertex->next->x){
+removed= remove_polygon_edge(&imaginary_line,current_vertex->x,
+current_vertex->y,
+current_vertex->prev->x,
+current_vertex->prev->y,
+leq_by_vertex,eq_by_vertex);
+to_append= current_vertex->next;
+}
+else{
+removed= remove_polygon_edge(&imaginary_line,current_vertex->x,
+current_vertex->y,
+current_vertex->next->x,
+current_vertex->next->y,
+leq_by_vertex,eq_by_vertex);
+to_append= current_vertex->prev;
+}
+if(GET_VERTEX_TYPE(removed->helper)==TYPE_MERGE_VERTEX)
+ADD_CUT(current_vertex,removed->helper);
+DESTROY_POLYGON_EDGE(removed);
+insert_polygon_edge(&imaginary_line,current_vertex->x,
+current_vertex->y,to_append->x,
+to_append->y,current_vertex,leq_by_vertex,NULL);
+}
+else{
+struct polygon_edge*below;
+below= find_edge_below(imaginary_line,current_vertex->x,
+current_vertex->y);
+if(GET_VERTEX_TYPE(below->helper)==TYPE_MERGE_VERTEX)
+ADD_CUT(current_vertex,below->helper);
+below->helper= current_vertex;
+}
+}
+/*:629*/
+#line 17005 "weaver-interface-metafont_en.tex"
+
+current_vertex= current_vertex->succ;
+}
+current_vertex= list_of_diagonals;
+
+while(current_vertex!=NULL){
+struct polygon_vertex*new1= NULL,*new2= NULL;
+cut_polygon(current_vertex->next,current_vertex->prev,&new1,&new2);
+insert_polygon_edge(&list_of_subpolygons,0,0,0,0,new1,leq_by_helper,
+eq_by_helper);
+insert_polygon_edge(&list_of_subpolygons,0,0,0,0,new2,leq_by_helper,
+eq_by_helper);
+last_vertex= current_vertex;
+current_vertex= current_vertex->succ;
+DESTROY_POLYGON_VERTEX(last_vertex);
+}
+triangulate_polygon_tree(list_of_subpolygons,&last_triang,
+&number_of_triangles,buffer);
+
+glGenBuffers(1,&(pen->gl_vbo));
+glBindBuffer(GL_ARRAY_BUFFER,pen->gl_vbo);
+glBufferData(GL_ARRAY_BUFFER,number_of_triangles*3*2*
+sizeof(float),triang,GL_STATIC_DRAW);
+pen->indices= number_of_triangles*3;
+if(temporary_free!=NULL){
+temporary_free(buffer);
+temporary_free(triang);
+}
+return true;
+}
+/*:622*/
+#line 16063 "weaver-interface-metafont_en.tex"
+
 return false;
 }
 }
 return false;
-/*:594*/
+/*:595*/
 #line 14986 "weaver-interface-metafont_en.tex"
 
 }
-/*:571*//*582:*/
-#line 15498 "weaver-interface-metafont_en.tex"
+/*:571*//*583:*/
+#line 15512 "weaver-interface-metafont_en.tex"
 
 void destroy_vertex_linked_list(struct polygon_vertex*poly){
 if(temporary_alloc!=NULL&&poly!=NULL){
@@ -9940,8 +10253,8 @@ temporary_free(poly->prev);
 temporary_free(poly);
 }
 }
-/*:582*//*584:*/
-#line 15527 "weaver-interface-metafont_en.tex"
+/*:583*//*585:*/
+#line 15541 "weaver-interface-metafont_en.tex"
 
 struct polygon_vertex*polygon_from_pen(struct metafont*mf,
 struct pen_variable*p,
@@ -10069,8 +10382,8 @@ first->prev= last;
 last->next= first;
 return leftmost;
 }
-/*:584*//*586:*/
-#line 15689 "weaver-interface-metafont_en.tex"
+/*:585*//*587:*/
+#line 15703 "weaver-interface-metafont_en.tex"
 
 bool is_xmonotone(struct polygon_vertex*poly){
 bool clockwise;
@@ -10087,7 +10400,7 @@ else break;
 clockwise= (upper->next->y>=lower->prev->y);
 upper= lower= poly;
 do{
-if(upper->next->x>=upper->x){
+if(XMONOTONE_LEQ(upper,upper->next)){
 upper= upper->next;
 if(clockwise){
 upper->flag= FLAG_UPPER;
@@ -10096,7 +10409,7 @@ else{
 upper->flag= FLAG_LOWER;
 }
 }
-else if(lower->prev->x>=lower->x){
+else if(XMONOTONE_LEQ(lower,lower->prev)){
 lower= lower->prev;
 if(clockwise){
 lower->flag= FLAG_LOWER;
@@ -10111,15 +10424,14 @@ return false;
 upper->flag= (FLAG_UPPER|FLAG_LOWER);
 return true;
 }
-/*:586*//*588:*/
-#line 15800 "weaver-interface-metafont_en.tex"
+/*:587*//*589:*/
+#line 15814 "weaver-interface-metafont_en.tex"
 
-void order_vertices_on_xmonotone_polygon(struct polygon_vertex*p,
-int number_of_vertices){
+static void order_vertices_on_xmonotone_polygon(struct polygon_vertex*p){
 struct polygon_vertex*upper,*lower,*last;
 last= upper= lower= p;
-while(number_of_vertices){
-if(upper->next->x<=lower->prev->x){
+while(lower->prev!=upper&&upper->next!=lower){
+if(XMONOTONE_LEQ(upper->next,lower->prev)){
 last->succ= upper->next;
 last= upper->next;
 upper= upper->next;
@@ -10129,36 +10441,36 @@ last->succ= lower->prev;
 last= lower->prev;
 lower= lower->prev;
 }
-number_of_vertices--;
 }
+last->succ= NULL;
 }
-/*:588*//*590:*/
-#line 15843 "weaver-interface-metafont_en.tex"
+/*:589*//*591:*/
+#line 15856 "weaver-interface-metafont_en.tex"
 
-bool triangulate_xmonotone_polygon(struct metafont*mf,
-struct polygon_vertex*p,
-int number_of_vertices,float**triangles,
-int*number_of_triangles){
+static bool triangulate_xmonotone_polygon(struct polygon_vertex*p,
+float**triangles,
+int*number_of_triangles,
+struct polygon_vertex**stack){
 float*data= *triangles;
-*number_of_triangles= 0;
-struct polygon_vertex**stack;
-int stack_size,j;
-stack= (struct polygon_vertex**)
-temporary_alloc(sizeof(struct polygon_vertex*)*
-number_of_vertices);
-if(stack==NULL){
-RAISE_ERROR_NO_MEMORY(mf,NULL,0);
-return false;
+int stack_size;
+if(p->next->next==p->prev){
+ADD_TRIANGLE(data,p->x,p->y,p->next->x,p->next->y,
+p->prev->x,p->prev->y);
+DESTROY_POLYGON_VERTEX(p);
+DESTROY_POLYGON_VERTEX(p->next);
+DESTROY_POLYGON_VERTEX(p->prev);
+*triangles= data;
+return true;
 }
 
-order_vertices_on_xmonotone_polygon(p,number_of_vertices);
+order_vertices_on_xmonotone_polygon(p);
 
 stack[0]= p;
 p= p->succ;
 stack[1]= p;
 stack_size= 2;
 
-for(j= 2;j<=number_of_vertices-2;j++){
+while(p!=NULL&&p->succ!=NULL&&p->succ->succ!=NULL){
 p= p->succ;
 
 if(((p->flag&FLAG_UPPER)&&(stack[stack_size-1]->flag&FLAG_LOWER))||
@@ -10189,6 +10501,7 @@ stack_size= last_popped_vertex+2;
 }
 {
 int d;
+if(p->succ!=NULL)
 p= p->succ;
 
 for(d= stack_size-2;d>=1;d--){
@@ -10197,13 +10510,479 @@ ADD_DIAGONAL(data,p,stack[d]);
 ADD_DIAGONAL(data,stack[0],stack[stack_size-1]);
 DESTROY_POLYGON_VERTEX(stack[0]);
 DESTROY_POLYGON_VERTEX(stack[stack_size-1]);
-if(temporary_free!=NULL)
-temporary_free(stack);
 }
+*triangles= data;
 return true;
 }
-/*:590*//*619:*/
-#line 16673 "weaver-interface-metafont_en.tex"
+/*:591*//*598:*/
+#line 16180 "weaver-interface-metafont_en.tex"
+
+struct polygon_vertex*merge(struct polygon_vertex*begin1,
+struct polygon_vertex*begin2){
+struct polygon_vertex*ret= NULL,*v= NULL;
+if(XMONOTONE_LEQ(begin1,begin2)){
+ret= v= begin1;
+begin1= begin1->succ;
+}
+else{
+ret= v= begin2;
+begin2= begin2->succ;
+}
+while(begin1!=NULL||begin2!=NULL){
+if(begin1==NULL){
+v->succ= begin2;
+begin2->pred= v;
+v= v->succ;
+begin2= begin2->succ;
+}
+else if(begin2==NULL){
+v->succ= begin1;
+begin1->pred= v;
+v= v->succ;
+begin1= begin1->succ;
+}
+else if(XMONOTONE_LEQ(begin1,begin2)){
+v->succ= begin1;
+begin1->pred= v;
+v= v->succ;
+begin1= begin1->succ;
+}
+else{
+v->succ= begin2;
+begin2->pred= v;
+v= v->succ;
+begin2= begin2->succ;
+}
+}
+return ret;
+}
+/*:598*//*599:*/
+#line 16226 "weaver-interface-metafont_en.tex"
+
+struct polygon_vertex*merge_sort(struct polygon_vertex*p,int size){
+if(size==1)
+return p;
+else{
+int i= 0;
+struct polygon_vertex*p2= p;
+while(i<size/2){
+p2= p2->succ;
+i++;
+}
+p2->pred->succ= NULL;
+p2->pred= NULL;
+p= merge_sort(p,i);
+p2= merge_sort(p2,size-i);
+p= merge(p,p2);
+return p;
+}
+}
+/*:599*//*601:*/
+#line 16281 "weaver-interface-metafont_en.tex"
+
+void prepare_non_monotonous(struct polygon_vertex*p,int number_of_vertices){
+bool turn_left= (p->next->y<p->y);
+struct polygon_vertex*first_vertex= p;
+do{
+bool is_current_turn_left= is_turning_left(p->prev,p,p->next);
+if((XMONOTONE_LEQ(p,p->next)&&XMONOTONE_LEQ(p->prev,p))||
+(XMONOTONE_LEQ(p,p->prev)&&XMONOTONE_LEQ(p->next,p)))
+p->flag= TYPE_REGULAR_VERTEX;
+
+else if(XMONOTONE_LEQ(p,p->next)&&XMONOTONE_LEQ(p,p->prev)){
+if(p==first_vertex)
+p->flag= TYPE_BEGIN_VERTEX|FLAG_UPPER|FLAG_LOWER;
+else if((turn_left&&is_current_turn_left)||
+(!turn_left&&!is_current_turn_left))
+p->flag= TYPE_BEGIN_VERTEX|FLAG_UPPER|FLAG_LOWER;
+else
+p->flag= TYPE_SPLIT_VERTEX;
+}
+else{
+if((turn_left&&is_current_turn_left)||
+(!turn_left&&!is_current_turn_left))
+p->flag= TYPE_END_VERTEX|FLAG_UPPER|FLAG_LOWER;
+else
+p->flag= TYPE_MERGE_VERTEX;
+}
+p->succ= p->next;
+p->next->pred= p;
+p= p->next;
+}while(p!=first_vertex);
+p->pred->succ= NULL;
+p->pred= NULL;
+p= merge_sort(first_vertex,number_of_vertices);
+{
+struct polygon_vertex*tmp= p;
+unsigned current_flag= (turn_left)?(FLAG_LOWER):(FLAG_UPPER);
+while(tmp->succ!=NULL){
+tmp->flag|= current_flag;
+tmp= tmp->next;
+}
+tmp->flag|= current_flag;
+tmp= p;
+current_flag= (current_flag==FLAG_LOWER)?(FLAG_UPPER):(FLAG_LOWER);
+while(tmp->succ!=NULL){
+tmp->flag|= current_flag;
+tmp= tmp->prev;
+}
+tmp->flag|= current_flag;
+}
+}
+/*:601*//*603:*/
+#line 16351 "weaver-interface-metafont_en.tex"
+
+static bool is_turning_left(struct polygon_vertex*p1,
+struct polygon_vertex*p2,
+struct polygon_vertex*p3){
+float v1_x,v1_y,v2_x,v2_y;
+v1_x= p2->x-p1->x;
+v1_y= p2->y-p1->y;
+v2_x= p3->x-p2->x;
+v2_y= p3->y-p2->y;
+return((v1_x*v2_y-v1_y*v2_x)> 0);
+}
+/*:603*//*606:*/
+#line 16437 "weaver-interface-metafont_en.tex"
+
+static void insert_polygon_edge_aux(struct polygon_edge*tree,
+struct polygon_edge*new_edge,
+bool(*leq)(struct polygon_edge*p1,
+struct polygon_edge*p2),
+bool(*eq)(struct polygon_edge*p1,
+struct polygon_edge*p2)){
+if(leq(new_edge,tree)){
+if(eq!=NULL&&eq(new_edge,tree)){
+DESTROY_POLYGON_EDGE(new_edge);
+return;
+}
+if(tree->left==NULL)
+tree->left= new_edge;
+else
+insert_polygon_edge_aux(tree->left,new_edge,leq,eq);
+}
+else{
+if(tree->right==NULL)
+tree->right= new_edge;
+else
+insert_polygon_edge_aux(tree->right,new_edge,leq,eq);
+}
+}
+static struct polygon_edge*insert_polygon_edge(struct polygon_edge**tree,
+float x1,float y1,
+float x2,float y2,
+struct polygon_vertex*helper,
+bool(*leq)(struct polygon_edge*p1,
+struct polygon_edge*p2),
+bool(*eq)(struct polygon_edge*p1,
+struct polygon_edge*p2)){
+struct polygon_edge*new_edge;
+new_edge= NEW_POLYGON_EDGE();
+if(new_edge==NULL)
+return NULL;
+INITIALIZE_POLYGON_EDGE(new_edge,x1,y1,x2,y2,helper);
+if(*tree==NULL)
+*tree= new_edge;
+else{
+struct polygon_edge*current= *tree;
+insert_polygon_edge_aux(current,new_edge,leq,eq);
+}
+return new_edge;
+}
+/*:606*//*608:*/
+#line 16510 "weaver-interface-metafont_en.tex"
+
+static bool leq_by_vertex(struct polygon_edge*p1,struct polygon_edge*p2){
+if(p1->x1==p1->x2&&p2->x1==p2->x2){
+return(p1->y1<=p2->y1);
+}
+else if(p1->x1==p1->x2){
+float slope= (p2->y2-p2->y1)/(p2->x2-p2->x1);
+float b= p2->y1-slope*p2->x1;
+if(p1->y1<=p1->y2)
+return(p1->y2<=(slope*p1->x2+b));
+else
+return(p1->y1<=(slope*p1->x1+b));
+}
+else if(p2->x1==p2->x2){
+float slope= (p1->y2-p1->y1)/(p1->x2-p1->x1);
+float b= p1->y1-slope*p1->x1;
+if(p2->y1<=p2->y2)
+return(slope*p2->x1+b)<=p2->y1;
+else
+return(slope*p2->x2+b)<=p2->y2;
+}
+if((p1->x1<=p2->x1&&p1->x1<=p2->x2)||
+(p1->x2<=p2->x1&&p1->x2<=p2->x2)){
+float slope= (p1->y2-p1->y1)/(p1->x2-p1->x1);
+float b= p1->y1-slope*p1->x1;
+if(p2->x1<=p2->x2)
+return(slope*p2->x1+b<=p2->y1);
+else
+return(slope*p2->x2+b<=p2->y2);
+}
+else{
+float slope= (p2->y2-p2->y1)/(p2->x2-p2->x1);
+float b= p2->y1-slope*p2->x1;
+if(p1->x1<=p1->x2)
+return(slope*p1->x1+b<=p1->y1);
+else
+return(slope*p1->x2+b<=p1->y2);
+}
+}
+/*:608*//*610:*/
+#line 16563 "weaver-interface-metafont_en.tex"
+
+static bool eq_by_vertex(struct polygon_edge*p1,struct polygon_edge*p2){
+return(p1->x1==p2->x1&&p1->y1==p2->y1&&
+p1->x2==p2->x2&&p1->y2==p2->y2)||
+(p1->x1==p2->x2&&p1->y1==p2->y2&&
+p1->x2==p2->x1&&p1->y2==p2->y1);
+}
+/*:610*//*612:*/
+#line 16589 "weaver-interface-metafont_en.tex"
+
+static struct polygon_edge*remove_polygon_edge(struct polygon_edge**tree,
+float x1,float y1,float x2,
+float y2,
+bool(*leq)(struct polygon_edge*p1,
+struct polygon_edge*p2),
+bool(*eq)(struct polygon_edge*p1,
+struct polygon_edge*p2)){
+struct polygon_edge*current= *tree,searched;
+searched.x1= x1;searched.x2= x2;
+searched.y1= y1;searched.y2= y2;
+if(current==NULL)
+return NULL;
+if(eq(current,&searched)){
+if(current->left==NULL&&current->right==NULL){
+*tree= NULL;
+return current;
+}
+else if(current->right==NULL){
+*tree= current->left;
+current->left->parent= current->parent;
+return current;
+}
+else if(current->left==NULL){
+*tree= current->right;
+current->right->parent= current->parent;
+return current;
+}
+else{
+struct polygon_edge*max= current;
+while(max->right!=NULL)
+max= max->right;
+max->parent->right= max->left;
+max->left= NULL;
+max->right= current->right;
+max->left= current->left;
+*tree= max;
+return current;
+}
+}
+else{
+if(leq(&searched,current)){
+if(current->left!=NULL)
+return remove_polygon_edge(&(current->left),x1,y1,x2,y2,leq,eq);
+else
+return NULL;
+}
+else{
+if(current->right!=NULL)
+return remove_polygon_edge(&(current->right),x1,y1,x2,y2,leq,eq);
+else
+return NULL;
+}
+}
+}
+/*:612*//*614:*/
+#line 16658 "weaver-interface-metafont_en.tex"
+
+static struct polygon_edge*find_edge_below(struct polygon_edge*tree,
+float x,float y){
+float slope,b;
+if(tree==NULL)
+return NULL;
+slope= (tree->y2-tree->y1)/(tree->x2-tree->x1);
+b= tree->y1-slope*tree->x1;
+if(slope*x+b<=y){
+struct polygon_edge*candidate;
+candidate= find_edge_below(tree->right,x,y);
+if(candidate!=NULL)
+return candidate;
+else return tree;
+}
+
+else return find_edge_below(tree->left,x,y);
+}
+/*:614*//*616:*/
+#line 16697 "weaver-interface-metafont_en.tex"
+
+static bool cut_polygon(struct polygon_vertex*v1,struct polygon_vertex*v2,
+struct polygon_vertex**new1,
+struct polygon_vertex**new2){
+struct polygon_vertex*vv1,*vv2;
+bool turn1= is_turning_left(v1->prev,v1,v1->next);
+bool turn2= is_turning_left(v2->prev,v2,v2->next);
+vv1= NEW_POLYGON_VERTEX();
+if(vv1==NULL)
+return false;
+vv2= NEW_POLYGON_VERTEX();
+if(vv2==NULL)
+return false;
+
+v1->flag&= (~0x3);
+v2->flag&= (~0x3);
+
+memcpy(vv1,v1,sizeof(struct polygon_vertex));
+memcpy(vv2,v2,sizeof(struct polygon_vertex));
+
+
+if((is_turning_left(v2,v1,v1->next)!=turn1&&
+is_turning_left(vv1->prev,vv1,vv2)==turn1)||
+(is_turning_left(v2->prev,v2,v1)!=turn2&&
+is_turning_left(vv1,vv2,vv2->next)==turn2)){
+v1->next->prev= vv1;
+v1->next= v2;
+v2->prev->next= vv2;
+v2->prev= v1;
+vv1->prev->next= v1;
+vv1->prev= vv2;
+vv2->next->prev= v2;
+vv2->next= vv1;
+}
+else{
+vv1->next->prev= v1;
+vv1->next= vv2;
+vv2->prev->next= v2;
+vv2->prev= vv1;
+v1->prev->next= vv1;
+v1->prev= v2;
+v2->next->prev= vv2;
+v2->next= v1;
+}
+
+aux_update_flags(v1);
+aux_update_flags(v2);
+aux_update_flags(vv1);
+aux_update_flags(vv2);
+
+while(XMONOTONE_LEQ(vv1->prev,vv1))
+vv1= vv1->prev;
+while(XMONOTONE_LEQ(vv1->next,vv1))
+vv1= vv1->next;
+*new1= vv1;
+while(XMONOTONE_LEQ(v1->prev,v1))
+v1= v1->prev;
+while(XMONOTONE_LEQ(v1->next,v1))
+v1= v1->next;
+*new2= v1;
+return true;
+}
+/*:616*//*618:*/
+#line 16836 "weaver-interface-metafont_en.tex"
+
+static void aux_update_flags(struct polygon_vertex*v){
+
+if(XMONOTONE_LEQ(v,v->prev)&&XMONOTONE_LEQ(v,v->next))
+v->flag+= FLAG_UPPER+FLAG_LOWER;
+
+else if(XMONOTONE_LEQ(v->prev,v)&&XMONOTONE_LEQ(v->next,v))
+v->flag+= FLAG_UPPER+FLAG_LOWER;
+
+else if(v->next->next==v->prev||
+v->next->next==v->prev->prev){
+struct polygon_vertex*begin,*end;
+float m,b;
+begin= end= v;
+if(begin->next->x<=begin->x){
+while(begin->next->x<=begin->x)
+begin= begin->next;
+}
+else{
+while(begin->prev->x<=begin->x)
+begin= begin->prev;
+}
+if(end->next->x>=end->x){
+while(end->next->x>=end->x)
+end= end->next;
+}
+else{
+while(end->prev->x>=end->x)
+end= end->prev;
+}
+m= (end->y-begin->y)/(end->x-begin->x);
+b= begin->y-m*(begin->x);
+if(v->y>=m*v->x+b)
+v->flag+= FLAG_UPPER;
+else
+v->flag+= FLAG_LOWER;
+}
+else if((XMONOTONE_LEQ(v->next,v->next->next)&&
+XMONOTONE_LEQ(v->next,v))||(XMONOTONE_LEQ(v,v->next)&&
+XMONOTONE_LEQ(v->next->next,v->next))){
+
+if((XMONOTONE_LEQ(v->prev,v->prev->prev)&&
+XMONOTONE_LEQ(v->prev,v))||(XMONOTONE_LEQ(v,v->prev)&&
+XMONOTONE_LEQ(v->prev->prev,v->prev))){
+struct polygon_vertex*aux;
+aux= v->next->next;
+if((aux->flag%4)==0x0)
+aux= aux->next;
+v->flag+= (~(aux->flag%4));
+}
+
+else{
+if(v->prev->flag%4!=0)
+v->flag+= (v->prev->flag%4);
+else if(v->prev->prev->flag%4!=3)
+v->flag+= (v->prev->prev->flag%4);
+else
+v->flag+= ~(v->prev->prev->prev->flag%4);
+}
+}
+
+else{
+if(v->next->flag%4!=0)
+v->flag+= (v->next->flag%4);
+else if(v->next->next->flag%4!=3)
+v->flag+= (v->next->next->flag%4);
+else
+v->flag+= ~(v->next->next->next->flag%4);
+}
+}
+/*:618*//*621:*/
+#line 16971 "weaver-interface-metafont_en.tex"
+
+static bool leq_by_helper(struct polygon_edge*p1,struct polygon_edge*p2){
+return(p1->helper<=p2->helper);
+}
+static bool eq_by_helper(struct polygon_edge*p1,struct polygon_edge*p2){
+return(p1->helper==p2->helper);
+}
+/*:621*//*624:*/
+#line 17052 "weaver-interface-metafont_en.tex"
+
+static void triangulate_polygon_tree(struct polygon_edge*tree,
+float**triangles,
+int*number_of_triangles,
+struct polygon_vertex**buffer){
+if(tree==NULL)
+return;
+if(tree->left!=NULL)
+triangulate_polygon_tree(tree->left,triangles,number_of_triangles,
+buffer);
+if(tree->right!=NULL)
+triangulate_polygon_tree(tree->right,triangles,number_of_triangles,
+buffer);
+triangulate_xmonotone_polygon(tree->helper,triangles,
+number_of_triangles,buffer);
+DESTROY_POLYGON_EDGE(tree);
+return;
+}
+/*:624*//*654:*/
+#line 17889 "weaver-interface-metafont_en.tex"
 
 #define ERASE_FLAG 1
 bool drawing_commands(struct metafont*mf,struct context*cx,
@@ -10222,8 +11001,8 @@ currentpen= currentpen->referenced;
 }
 else
 memcpy(transform_matrix,currentpen->gl_matrix,9*sizeof(float));
-/*608:*/
-#line 16461 "weaver-interface-metafont_en.tex"
+/*643:*/
+#line 17677 "weaver-interface-metafont_en.tex"
 
 {
 if(currentpicture_fb==0){
@@ -10253,8 +11032,8 @@ return false;
 else
 glBindFramebuffer(GL_FRAMEBUFFER,currentpicture_fb);
 }
-/*:608*/
-#line 16691 "weaver-interface-metafont_en.tex"
+/*:643*/
+#line 17907 "weaver-interface-metafont_en.tex"
 
 glEnable(GL_BLEND);
 if(flags&ERASE_FLAG){
@@ -10301,8 +11080,8 @@ path->points[0].point.y,transform_matrix,flags&ERASE_FLAG);
 glDisable(GL_BLEND);
 return true;
 }
-/*:619*//*623:*/
-#line 16843 "weaver-interface-metafont_en.tex"
+/*:654*//*658:*/
+#line 18059 "weaver-interface-metafont_en.tex"
 
 void drawpoint(struct metafont*mf,struct pen_variable*pen,
 struct picture_variable*pic,float x,float y,float*matrix,
@@ -10342,8 +11121,8 @@ glDrawArrays(GL_TRIANGLE_FAN,0,pen->indices);
 else
 glDrawArrays(GL_TRIANGLES,0,pen->indices);
 }
-/*:623*//*630:*/
-#line 17030 "weaver-interface-metafont_en.tex"
+/*:658*//*665:*/
+#line 18246 "weaver-interface-metafont_en.tex"
 
 static const uint32_t greatest_point[332]= {
 
@@ -10453,7 +11232,7 @@ INITIALIZE_GLYPH(mf->glyphs[block][i]);
 }
 return&(mf->glyphs[block][index]);
 }
-/*:630*/
+/*:665*/
 #line 421 "weaver-interface-metafont_en.tex"
 
 /*30:*/
@@ -10508,12 +11287,12 @@ glBindBuffer(GL_ARRAY_BUFFER,pensquare_vbo);
 glBufferData(GL_ARRAY_BUFFER,8*sizeof(float),square_vertices,
 GL_STATIC_DRAW);
 }
-/*:574*//*607:*/
-#line 16451 "weaver-interface-metafont_en.tex"
+/*:574*//*642:*/
+#line 17667 "weaver-interface-metafont_en.tex"
 
 currentpicture_fb= 0;
-/*:607*//*615:*/
-#line 16607 "weaver-interface-metafont_en.tex"
+/*:642*//*650:*/
+#line 17823 "weaver-interface-metafont_en.tex"
 
 {
 pen_program= compile_shader_program(pen_vertex_shader,pen_fragment_shader);
@@ -10525,7 +11304,7 @@ pen_erase_uniform_matrix= glGetUniformLocation(pen_erase_program,
 "model_view_matrix");
 pen_erase_uniform_color= glGetUniformLocation(pen_erase_program,"color");
 }
-/*:615*/
+/*:650*/
 #line 974 "weaver-interface-metafont_en.tex"
 
 return true;
@@ -10550,12 +11329,12 @@ glDeleteProgram(inv_program);
 #line 15040 "weaver-interface-metafont_en.tex"
 
 glDeleteBuffers(1,&pensquare_vbo);
-/*:575*//*616:*/
-#line 16624 "weaver-interface-metafont_en.tex"
+/*:575*//*651:*/
+#line 17840 "weaver-interface-metafont_en.tex"
 
 glDeleteProgram(pen_program);
 glDeleteProgram(pen_erase_program);
-/*:616*/
+/*:651*/
 #line 987 "weaver-interface-metafont_en.tex"
 
 }
@@ -10684,7 +11463,37 @@ if(mf->internal_picture_variables[0].texture!=0)
 glDeleteTextures(1,&(mf->internal_picture_variables[0].texture));
 if(permanent_free!=NULL)
 permanent_free(mf->internal_picture_variables);
-/*:208*/
+/*:208*//*666:*/
+#line 18363 "weaver-interface-metafont_en.tex"
+
+{
+int block,block_size,index;
+
+for(block= 0;block<332;block++){
+if(mf->glyphs[block]!=NULL){
+
+if(block==0)
+block_size= greatest_point[block]+1;
+else
+block_size= greatest_point[block]-greatest_point[block-1];
+
+for(index= 0;index<block_size;index++){
+struct kerning*kern= mf->glyphs[block][index].kern;
+if(mf->glyphs[block][index].texture!=0)
+glDeleteTextures(1,&(mf->glyphs[block][index].texture));
+while(kern!=NULL&&permanent_free!=NULL){
+struct kerning*to_be_erased;
+to_be_erased= kern;
+kern= kern->next;
+permanent_free(to_be_erased);
+}
+}
+if(permanent_free!=NULL)
+permanent_free(mf->glyphs[block]);
+}
+}
+}
+/*:666*/
 #line 1886 "weaver-interface-metafont_en.tex"
 
 MUTEX_DESTROY(mf->mutex);
@@ -10913,8 +11722,8 @@ fprintf(stderr,"%s:%s We expected to find a '%s' token in the present "
 (token_names_not_in_list_of_keywords[mf->errno_int]):
 (list_of_keywords[mf->errno_int-8])));
 break;
-/*:553*//*635:*/
-#line 17303 "weaver-interface-metafont_en.tex"
+/*:553*//*670:*/
+#line 18519 "weaver-interface-metafont_en.tex"
 
 case ERROR_DUPLICATE_GLYPH:
 fprintf(stderr,
@@ -10930,15 +11739,15 @@ case ERROR_NESTED_BEGINCHAR:
 fprintf(stderr,
 "%s:%s Nested 'beginchar' statement.",mf->file,line_number);
 break;
-/*:635*//*641:*/
-#line 17508 "weaver-interface-metafont_en.tex"
+/*:670*//*676:*/
+#line 18724 "weaver-interface-metafont_en.tex"
 
 case ERROR_INVALID_DIMENSION_GLYPH:
 fprintf(stderr,
 "%s:%s You tried to specify a glyph with nonpositive width or "
 "non-positive height+depth.",mf->file,line_number);
 break;
-/*:641*/
+/*:676*/
 #line 2012 "weaver-interface-metafont_en.tex"
 
 default:
@@ -10951,8 +11760,8 @@ fprintf(stderr,"\n");
 if(temporary_free!=NULL)
 temporary_free(line_number);
 }
-/*:75*//*644:*/
-#line 17576 "weaver-interface-metafont_en.tex"
+/*:75*//*679:*/
+#line 18792 "weaver-interface-metafont_en.tex"
 
 bool _Wwrite_numeric_variable(struct metafont*mf,char*name,float value){
 struct named_variable*var= (struct named_variable*)mf->named_variables;
@@ -10980,8 +11789,8 @@ var= var->next;
 }
 return false;
 }
-/*:644*//*645:*/
-#line 17610 "weaver-interface-metafont_en.tex"
+/*:679*//*680:*/
+#line 18826 "weaver-interface-metafont_en.tex"
 
 float _Wread_numeric_variable(struct metafont*mf,char*name){
 struct named_variable*var= (struct named_variable*)mf->named_variables;
@@ -10996,8 +11805,8 @@ var= var->next;
 }
 return NAN;
 }
-/*:645*//*646:*/
-#line 17631 "weaver-interface-metafont_en.tex"
+/*:680*//*681:*/
+#line 18847 "weaver-interface-metafont_en.tex"
 
 struct metafont*_Wnew_metafont(char*filename){
 struct metafont*mf;
@@ -11015,8 +11824,8 @@ return NULL;
 }
 return mf;
 }
-/*:646*//*648:*/
-#line 17667 "weaver-interface-metafont_en.tex"
+/*:681*//*683:*/
+#line 18883 "weaver-interface-metafont_en.tex"
 
 bool _Wrender_glyph(struct metafont*mf,char*glyph,
 char*next_glyph,GLuint*texture,
@@ -11062,7 +11871,7 @@ destroy_context(mf,cx);
 MUTEX_SIGNAL(mf->mutex);
 return true;
 }
-/*:648*/
+/*:683*/
 #line 422 "weaver-interface-metafont_en.tex"
 
 /*:8*/

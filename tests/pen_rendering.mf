@@ -1,6 +1,6 @@
 % This test the rendering of concave pens
-numeric wa, wb;
-picture a, b;
+numeric wa, wb, wc;
+picture a, b, c;
 pen p;
 
 currentpicture = nullpicture(11, 11);
@@ -15,3 +15,9 @@ pickup p;
 draw (0,0);
 b = currentpicture;
 wb = totalweight b;
+currentpicture = nullpicture(400, 300);
+p = makepen((389, 197)--(284, 118)--(318, 59)--(250, 5)--(140, 23)--(177, 70)--(123, 87)--(66, 40)--(25, 107)--(58, 145)--(29, 198)--(159, 202)--(122, 299)--(253, 247)--(226, 163)--cycle);
+pickup p;
+draw (0,0);
+c = currentpicture;
+wc = totalweight b;
