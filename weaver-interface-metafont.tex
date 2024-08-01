@@ -16149,9 +16149,9 @@ static bool triangulate_xmonotone_polygon(struct polygon_vertex *p,
     for(d = stack_size - 2; d >= 1; d --){
       ADD_DIAGONAL(data, p, stack[d]);
     }
-    ADD_DIAGONAL(data, stack[0], stack[stack_size-1]);
-    DESTROY_POLYGON_VERTEX(stack[0]);
-    DESTROY_POLYGON_VERTEX(stack[stack_size-1]);
+    ADD_DIAGONAL(data, p, p -> next);
+    DESTROY_POLYGON_VERTEX(p -> next);
+    DESTROY_POLYGON_VERTEX(p);
   }
   *triangles = data;
   return true;
@@ -16491,7 +16491,7 @@ devemos preencher também as flags de cada vértice. O que inclui o tipo
 de vértice ou se é um vértice da parte inferior ou superior do
 polígono. Lembre-se que sabemos que o primeiro vértice não é um
 vértice de junção nem de separação. Então sabemos que seu ângulo
-interno não é menor que 180 graus. Se seguirmos o percurso deste
+interno não é maior que 180 graus. Se seguirmos o percurso deste
 vértice, passando pelas arestas no sentido horário ou anti horário,
 caso estejamos em um vértice $x$-monótono, então iremos apenas fazer
 curvas ou só para a direita, ou só para a esquerda. Assim que
@@ -16507,11 +16507,8 @@ estamos em sentido horário.
 Usando esta lógica podemos então criar uma iteração que percorre todos
 os vértices identificando seu tipo e criando alista duplamente
 encadeada. Depois disso, ordenamos tudo com um ``merge sort''. E
-finalmente, depois de ordenar, como já sabemos qual é o vértice mais à
-esquerda e o mais à direita, podemos preencher também a flag que
-indica quais estão em um caminho de cima ou de baixo, para caso
-tenhamos que usá-los depois de particionar o nosso polígono em
-polígonos $x$-monótonos menores:
+finalmente, depois de ordenar, já saberemos qual é o vértice mais à
+esquerda e o mais à direita:
 
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
@@ -16553,22 +16550,6 @@ void prepare_non_monotonous(struct polygon_vertex *p, int number_of_vertices){
   p -> pred -> succ = NULL;
   p -> pred = NULL;
   p = merge_sort(first_vertex, number_of_vertices);
-  {
-    struct polygon_vertex *tmp = p;
-    unsigned current_flag = (turn_left)?(FLAG_LOWER):(FLAG_UPPER);
-    while(tmp -> succ != NULL){
-      tmp -> flag |= current_flag;
-      tmp = tmp -> next;
-    }
-    tmp -> flag |= current_flag;
-    tmp = p;
-    current_flag = (current_flag == FLAG_LOWER)?(FLAG_UPPER):(FLAG_LOWER);
-    while(tmp -> succ != NULL){
-      tmp -> flag |= current_flag;
-      tmp = tmp -> prev;
-    }
-    tmp -> flag |= current_flag;
-  }
 }
 @
 \fimcodigo
@@ -16788,9 +16769,9 @@ static bool leq_by_vertex(struct polygon_edge *p1, struct polygon_edge *p2){
     float slope = (p2 -> y2 - p2 -> y1)/(p2 -> x2 - p2 -> x1);
     float b = p2 -> y1 - slope * p2 -> x1;
     if(p1 -> x1 <= p1 -> x2)
-      return (slope * p1 -> x1 + b <= p1 -> y1);
+      return (p1 -> y1 <= slope * p1 -> x1 + b);
     else
-      return (slope * p1 -> x2 + b <= p1 -> y2);
+      return (p1 -> y2 <= slope * p1 -> x2 + b);
   }
 }
 @
@@ -16860,15 +16841,18 @@ static struct polygon_edge *remove_polygon_edge(struct polygon_edge **tree,
        current -> right -> parent = current -> parent;
        return current;
      }
-     else{
-       struct polygon_edge *max = current;
-       while(max -> right != NULL) // Remoção quando alvo tem 2 filhos
-         max = max -> right;
-       max -> parent -> right = max -> left;
-       max -> left = NULL;
-       max -> right = current -> right;
-       max -> left = current -> left;
-       *tree = max;
+     else{ // Remoção quando alvo tem 2 filhos
+       // suc: sucessor do nodo removido
+       struct polygon_edge *suc = current -> right;
+       while(suc -> left != NULL)
+         suc = suc -> left;
+       if(suc == current -> right)
+         current -> right = suc -> right;
+       else 
+         suc -> parent -> left = suc -> right;
+       suc -> right = current -> right;
+       suc -> left = current -> left;
+       *tree = suc;
        return current;
      }
   }
@@ -16986,11 +16970,6 @@ static bool cut_polygon(struct polygon_vertex *v1, struct polygon_vertex *v2,
     v2 -> next -> prev = vv2;
     v2 -> next = v1;
   }
-  // Ajustar flags:
-  aux_update_flags(v1);
-  aux_update_flags(v2);
-  aux_update_flags(vv1);
-  aux_update_flags(vv2);
   // Achar ponteiro do novo polígono:
   while(XMONOTONE_LEQ(vv1 -> prev, vv1))
     vv1 = vv1 -> prev;
@@ -17030,136 +17009,7 @@ ponteiros \monoespaco{vv1} e \monoespaco{vv2}. E o modo pelo qual
 verificamos isso é observando se a direção de cada vértice mudou (o
 que significa que um ângulo grande se tornou um pequeno).
 
-Vamos agora considerar como atualizar as ``flags'' dos vértices que
-foram modificados pela função acima. Como assumimos que depois de
-particionar o nosso polígono iremos ficar apenas com polígonos
-$x$-monótonos, então só vamos precisar das flags que dizem se eles
-fazem parte do caminho de cima ou de baixo do nosso polígono, quando
-caminhamos do vértice mais à esquerda para o mais à direita. Fora
-isso, o tipo de vértice não importa mais. Então, só precisamos
-preencher as flags ``\monoespaco{FLAG\_UPPER}'' e
-``\monoespaco{FLAG\_LOWER}''.
-
-Os casos que devemos considerar são:
-
-A) O novo vértice tem ambos os vizinhos à sua direita. Nesse caso,
-como sabemos que no fim teremos um polígono $x$-monótono, ele só pode
-ser um vértice de começo. Ele será o vértice inicial mais à esquerda,
-e portanto está tanto no caminho de cima como no de baixo.
-
-B) O novo vértice tem ambos os vizinhos à sua esquerda. Semelhante ao
-caso acima, mas neste caso certamente estamos diante de um vértice de
-fim que será o vértice mais à direita. Ele estará tanto no caminho de
-cima como no de baixo.
-
-C) Estamos em um triângulo ou em um quadrado. Neste caso, se
-estivermos abaixo da reta que conecta o vértice inicial e final, somos
-o vértice de baixo. Senão, somos o vértice de cima.
-
-D) O vértice à esquerda e à direita são ambos vértices ou de começo ou
-de fim. Neste caso, caminhamos até passar por dois vértices em
-qualquer uma das direções. Se chegarmos em um vértice cujo caminho
-também é desconhecido (este vértice também é um vértice novo),
-caminhamos mais uma posição. O nosso caminho é o oposto do caminho do
-vértice no qual chegamos.
-
-E) O próximo vértice, mas não o vértice anterior, é um vértice de
-começo ou de fim. Neste caso, o caminho em que estamos é exatamente o
-mesmo do vértice anterior, caso seja conhecido. Se não for conhecido,
-checamos o vértice antes deste: se não for um vértice de começo ou
-fim, o caminho que queremos é o mesmo que está nele. Caso contrário, o
-nosso caminho é o contrário do vértice que vem ainda antes deste.
-
-F) Em todo os demais casos, o caminho em que estamos é igual ao
-caminho do próximo vértice, caso seja um valor conhecido. Se o próximo
-tiver um caminho desconhecido, será igual ao caminho que vem depois,
-desde que não seja um caminho de começo e fim. Se for o caso, então o
-nosso caminho será o contrário do caminho que vem depois dele.
-
-A função que irá fazer o trabalho de atualizar as flags segundo estas
-regras é:
-
-\iniciocodigo
-@<Declaração de Função Local (metafont.c)@>+=
-static void aux_update_flags(struct polygon_vertex *v);
-@
-\fimcodigo
-
-\iniciocodigo
-@<Funções Auxiliares Locais (metafont.c)@>+=
-static void aux_update_flags(struct polygon_vertex *v){
-  // Caso A:
-  if(XMONOTONE_LEQ(v, v -> prev) && XMONOTONE_LEQ(v, v -> next))
-    v -> flag += FLAG_UPPER + FLAG_LOWER;
-  // Caso B:
-  else if(XMONOTONE_LEQ(v -> prev, v) && XMONOTONE_LEQ(v -> next, v))
-    v -> flag += FLAG_UPPER + FLAG_LOWER;
-  // Caso C:
-  else if(v -> next -> next == v -> prev ||
-          v -> next -> next == v -> prev -> prev){
-    struct polygon_vertex *begin, *end;
-    float m, b;
-    begin = end = v;
-    if(begin -> next -> x <= begin -> x){
-      while(begin -> next -> x <= begin -> x)
-        begin = begin -> next;
-    }
-    else{
-      while(begin -> prev -> x <= begin -> x)
-        begin = begin -> prev;
-    }
-    if(end -> next -> x >= end -> x){
-      while(end -> next -> x >= end -> x)
-        end = end -> next;
-    }
-    else{
-      while(end -> prev -> x >= end -> x)
-        end = end -> prev;
-    }
-    m = (end -> y - begin -> y)/(end -> x - begin -> x);
-    b = begin -> y - m * (begin -> x);
-    if(v -> y >= m * v -> x + b)
-      v -> flag += FLAG_UPPER;
-    else
-      v -> flag += FLAG_LOWER;
-  }
-  else if((XMONOTONE_LEQ(v -> next, v -> next -> next) &&
-           XMONOTONE_LEQ(v -> next, v)) || (XMONOTONE_LEQ(v, v -> next) &&
-           XMONOTONE_LEQ(v -> next -> next, v -> next))){
-    // Caso D:
-    if((XMONOTONE_LEQ(v -> prev, v -> prev -> prev) &&
-           XMONOTONE_LEQ(v -> prev, v)) || (XMONOTONE_LEQ(v, v -> prev) &&
-           XMONOTONE_LEQ(v -> prev -> prev, v -> prev))){
-      struct polygon_vertex *aux;
-      aux = v -> next -> next;
-      if((aux -> flag % 4) == 0x0)
-        aux = aux -> next;
-      v -> flag += (~(aux -> flag % 4));
-    }
-    // Caso E:
-    else{
-      if(v -> prev -> flag % 4 != 0)
-        v -> flag += (v -> prev -> flag % 4);
-      else if(v -> prev -> prev -> flag % 4 != 3)
-        v -> flag += (v -> prev -> prev -> flag % 4);
-      else
-        v -> flag += ~(v -> prev -> prev -> prev -> flag % 4);
-    }
-  }
-  // Caso F:
-  else{
-    if(v -> next -> flag % 4 != 0)
-      v -> flag += (v -> next -> flag % 4);
-    else if(v -> next -> next -> flag % 4 != 3)
-      v -> flag += (v -> next -> next -> flag % 4);
-    else
-      v -> flag += ~(v -> next -> next -> next -> flag % 4);
-  }
-}
-@
-\fimcodigo
-
-E agora vamos juntar tudo isso para criar a triangulação para o caso
+Agora vamos juntar tudo isso para criar a triangulação para o caso
 geral, quando não temos um polígono $x$-monótono. A triangulação irá
 primeiro ordenar os vértices criando a lista duplamente encadeada
 entre eles. Depois irá inicializar uma árvore vazia para representar a
@@ -17296,6 +17146,15 @@ static void triangulate_polygon_tree(struct polygon_edge *tree,
                                      float **triangles,
                                      int *number_of_triangles,
                                      struct polygon_vertex **buffer);
+void print_tree(struct polygon_edge *tree){
+  printf(" (%f %f)--(%f %f)\n", tree -> x1, tree -> y1, tree -> x2, tree -> y2);
+  if(tree -> left != NULL)
+    print_tree(tree -> left);
+  else printf("left nil\n");
+  if(tree -> right != NULL)
+    print_tree(tree -> right);
+  else printf("right nil\n");
+}
 @
 \fimcodigo
 
@@ -17313,6 +17172,8 @@ static void triangulate_polygon_tree(struct polygon_edge *tree,
   if(tree -> right != NULL)
     triangulate_polygon_tree(tree -> right, triangles, number_of_triangles,
                              buffer);
+  if(!is_xmonotone(tree -> helper))
+    fprintf(stderr, "WARNING: This should not happen: non-monotonous pen!\n");
   triangulate_xmonotone_polygon(tree -> helper, triangles,
                                 number_of_triangles, buffer);
   DESTROY_POLYGON_EDGE(tree);
@@ -17445,13 +17306,15 @@ else if(GET_VERTEX_TYPE(current_vertex) == TYPE_MERGE_VERTEX){
                                  current_vertex -> prev -> y,
                                  leq_by_vertex, eq_by_vertex);
   }
-  if(GET_VERTEX_TYPE(removed -> helper) == TYPE_MERGE_VERTEX)
+  if(GET_VERTEX_TYPE(removed -> helper) == TYPE_MERGE_VERTEX){
     ADD_CUT(current_vertex, removed -> helper);
+  }
   DESTROY_POLYGON_EDGE(removed);
   below = find_edge_below(imaginary_line, current_vertex -> x,
                           current_vertex -> y);
-  if(GET_VERTEX_TYPE(below -> helper) == TYPE_MERGE_VERTEX)
+  if(GET_VERTEX_TYPE(below -> helper) == TYPE_MERGE_VERTEX){
     ADD_CUT(current_vertex, below -> helper);
+  }
   below -> helper = current_vertex;
 }
 @
@@ -17500,8 +17363,9 @@ else{
                                     leq_by_vertex, eq_by_vertex);
       to_append = current_vertex -> prev;
     }
-    if(GET_VERTEX_TYPE(removed -> helper) == TYPE_MERGE_VERTEX)
+    if(GET_VERTEX_TYPE(removed -> helper) == TYPE_MERGE_VERTEX){
       ADD_CUT(current_vertex, removed -> helper);
+    }
     DESTROY_POLYGON_EDGE(removed);
     insert_polygon_edge(&imaginary_line, current_vertex -> x,
                         current_vertex -> y, to_append -> x,
@@ -17510,9 +17374,14 @@ else{
   else{ // Interior do polígono está abaixo do vértice:
     struct polygon_edge *below;
     below = find_edge_below(imaginary_line, current_vertex -> x,
-                            current_vertex -> y);    
-    if(GET_VERTEX_TYPE(below -> helper) == TYPE_MERGE_VERTEX)
+                            current_vertex -> y);
+    if(below == NULL){
+      printf("Below (%f %f): %p\n", current_vertex -> x, current_vertex -> y, below);
+      print_tree(imaginary_line);
+    }
+    if(GET_VERTEX_TYPE(below -> helper) == TYPE_MERGE_VERTEX){
       ADD_CUT(current_vertex, below -> helper);
+    }
     below -> helper = current_vertex;
   }
 }
