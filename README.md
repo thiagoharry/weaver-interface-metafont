@@ -12,7 +12,8 @@ different typographical fonts, just changing some parameters. For
 example, with a single source file, you could set the described font
 size to 13pt, set 75% of bold, 10% of italics and toggle monospace
 mode. The typographical font could also define other customized parameters,
-like randomness or slanting, for example. Each WeaveFont source file
+like randomness or slanting, for example. The font designer can create any number of variables 
+that could be customized on real time. Each WeaveFont source file
 describes an entire typographical font family, with a set of parameters
 that could be changed. And each one uses WeaveFont language, a complete interpreted
 language to describe the font.
@@ -31,4 +32,7 @@ Despite similar syntax, WeaveFont has several differences to METAFONT. Some of t
   to curves created by METAFONT (see [Issue 1](https://github.com/thiagoharry/weaver-interface-metafont/issues/1)).
 * We do not support equations, just regular assignments. `a=b+c` is equal `a:=b+c`.
 * All variables must be declared on WeaveFont, not just non-numerical ones.
+* We support pens with concave formats.
+* WeaveFont is not tied with a single interpreter and program. You could use WeaveFont in any
+  other computer program, just inserting a single C file and a single header.
 
