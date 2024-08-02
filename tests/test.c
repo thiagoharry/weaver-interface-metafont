@@ -208,6 +208,7 @@ void test_lexer(void){
   }
   p = ((struct generic_token *) p) -> next;
   if(((struct symbolic_token *) p) -> type != TYPE_JOIN){
+    printf("FAILED TO DETECT '..' TOKEN\n");
     ok = false;
     goto test_lexer_end;
   }
