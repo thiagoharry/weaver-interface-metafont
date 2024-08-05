@@ -1065,8 +1065,7 @@ armazenar todos os subtipos genéricos:
 \iniciocodigo
 @<Estrutura de Dados Locais (metafont.c)@>=
 enum { // Tipos de Tokens
-  TYPE_NUMERIC = 1, TYPE_STRING, TYPE_SYMBOLIC, TYPE_BEGIN_LOOP,
-  TYPE_END_LOOP,
+  TYPE_NUMERIC = 1, TYPE_STRING, TYPE_SYMBOLIC, TYPE_FOR, TYPE_ENDFOR,
   // Os tipos básicos (numérico, string, varivel, começo e fim de
   // loop) estão acima. Os outros serão colocados logo abaixo:
   @<WEAVEFONT: Definição de Token Simbólico@>
@@ -1148,31 +1147,34 @@ quando ele terminar:
 \iniciocodigo
 @<Estrutura de Dados Locais (metafont.c)@>+=
 struct begin_loop_token{
-  int type;   // Deve ser igual a 'TYPE_BEGIN_LOOP'
+  int type;   // Deve ser igual a 'TYPE_FOR'
   struct generic_token *next;
 #if defined(W_DEBUG_METAFONT)
   int line;
 #endif
   bool running;
   float *control_var, increment, limit;
-  struct end_loop_token *end;
+  struct linked_token *end;
 };
 @
 \fimcodigo
 
-O token que marca o fim de um loop deve conter um ponteiro para o
-começo do loop, de modo que possamos rapidamente voltar para o começo
-do loop.
+Há também alguns tokens simbólicos que precisam como informação
+adicional armazenar um ponteiro para outro token, seja ele qual for. É
+o caso do token que representa um \monoespaco{endfor} (fim de uma
+iteração): ele deve apontar para o começo da iteração de modo que seja
+eficiente voltar para o começo dela. Para tokens assim, usamos a
+seguinte estrutura de dados:
 
 \iniciocodigo
 @<Estrutura de Dados Locais (metafont.c)@>+=
-struct end_loop_token{
-  int type;   // Deve ser igual a 'TYPE_END_LOOP'
+struct linked_token{
+  int type;   // Tipicamente será igual a 'TYPE_ENDFOR'
   struct generic_token *next;
 #if defined(W_DEBUG_METAFONT)
   int line;
 #endif
-  struct begin_loop_token *begin;
+  struct generic_token *link;
 };
 @
 \fimcodigo
@@ -1180,7 +1182,9 @@ struct end_loop_token{
 
 Já para os tokens simbólicos genéricos, toda a informação que
 precisamos sobre eles é o seu sub tipo. Podemos então representar eles
-com a seguinte estrutura:
+com a estrutura abaixo. Quando não sabemos o tipo de um token, podemos
+também usar a estrutura abaixo, pois os campos que existem nela estão
+também presentes em todos os outros tipos de tokens:
 
 \iniciocodigo
 @<Estrutura de Dados Locais (metafont.c)@>+=
@@ -1260,6 +1264,7 @@ seus dois últimos argumentos o primeiro e o último token lido.
 @<Funções Auxiliares Locais (metafont.c)@>=
 void lexer(struct metafont *mf, char *path, struct generic_token **first_token,
            struct generic_token **last_token){
+  struct linked_token *aux_stack = NULL;
   FILE *fp;
   char c;
   int line = 1;
@@ -1288,6 +1293,7 @@ void lexer(struct metafont *mf, char *path, struct generic_token **first_token,
     *last_token = NULL;
     return;
   }
+  @<Análise Léxica: Detecção Final de Erros@>
   fclose(fp);
 }
 @
@@ -1779,11 +1785,20 @@ cabeçalho:
 
 Se não for um token simbólico na lista de reservados, mas for um
 ``for'', então estamos sim diante de uma palavra reservada e geramos
-um token especial de começo de loop:
+um token especial de começo de loop para ele. Além disso, também
+geramos o token de finalização para o \monoespaco{endfor}, fazendo com
+que o token \monoespaco{for} possua um ponteiro
+para \monoespaco{endfor} e o \monoespaco{endfor} um ponteiro para o
+token que vem antes do \monoespaco{for}. Isso ajudará nosso
+interpretador a navegar de forma mais rápida diante das operações de
+controle de fluxo. O token do \monoespaco{endfor} é então guardado em
+uma pilha para ser usado depois.
 
 \iniciocodigo
 @<Análise Léxica: Gera Token de Começo de Loop@>=
 if(!strcmp(buffer, "for")){
+  struct generic_token *previous_token = *last_token;
+  struct linked_token *endfor_token;
   struct begin_loop_token *new_token = (struct begin_loop_token *)
                               permanent_alloc(sizeof(struct begin_loop_token));
   if(new_token == NULL){
@@ -1792,7 +1807,7 @@ if(!strcmp(buffer, "for")){
     RAISE_ERROR_NO_MEMORY(mf, NULL, line);
     return;
   }
-  new_token -> type = TYPE_BEGIN_LOOP;
+  new_token -> type = TYPE_FOR;
   new_token -> next = NULL;
 #if defined(W_DEBUG_METAFONT)
   new_token -> line = line;
@@ -1800,45 +1815,76 @@ if(!strcmp(buffer, "for")){
   new_token -> running = false;
   new_token -> control_var = NULL;
   new_token -> increment = new_token -> limit = NAN;
-  new_token -> end = NULL;
   if(*first_token == NULL)
     *first_token = *last_token = (struct generic_token *) new_token;
   else{
     (*last_token) -> next = (struct generic_token *) new_token;
     *last_token = (struct generic_token *) new_token;
+  }
+  endfor_token = (struct linked_token *)
+                                  permanent_alloc(sizeof(struct linked_token));
+  if(endfor_token == NULL){
+    free_token_list(*first_token);
+    *first_token = *last_token = NULL;
+    RAISE_ERROR_NO_MEMORY(mf, NULL, line);
+    return;
+  }
+  endfor_token -> link = (struct generic_token *) previous_token;
+  new_token -> end = endfor_token;
+  endfor_token -> type = TYPE_ENDFOR;
+  if(aux_stack == NULL){
+    aux_stack = endfor_token;
+    endfor_token -> next = NULL;
+  }
+  else{
+    endfor_token -> next = (struct generic_token *) aux_stack;
+    aux_stack = endfor_token;
   }
   continue;
 }
 @
 \fimcodigo
 
-Da mesma forma, se o token for um ``endfor'', também devemos gerar um
-token com formato especial para marcar o fim de um loop:
+Quando finalmente encontrarmos no código um ``endfor'', podemos enfim
+usar o token armazenado na pilha ao invés de termos que gerar um
+novo. Se não existir tal token, devemos gerar um erro (que definiremos
+posteriormente):
 
 \iniciocodigo
 @<Análise Léxica: Gera Token de Fim de Loop@>=
 if(!strcmp(buffer, "endfor")){
-  struct end_loop_token *new_token = (struct end_loop_token *)
-                                permanent_alloc(sizeof(struct end_loop_token));
-  if(new_token == NULL){
+  if(aux_stack == NULL || aux_stack -> type != TYPE_ENDFOR){
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
-    RAISE_ERROR_NO_MEMORY(mf, NULL, line);
+    RAISE_ERROR_UNEXPECTED_TOKEN(mf, NULL, OPTIONAL(line), TYPE_ENDFOR);
     return;
   }
-  new_token -> type = TYPE_END_LOOP;
+  struct linked_token *new_token = aux_stack;
+  aux_stack = (struct linked_token *) aux_stack -> next;
   new_token -> next = NULL;
 #if defined(W_DEBUG_METAFONT)
   new_token -> line = line;
 #endif
-  new_token -> begin = NULL;
-  if(*first_token == NULL)
-    *first_token = *last_token = (struct generic_token *) new_token;
-  else{
-    (*last_token) -> next = (struct generic_token *) new_token;
-    *last_token = (struct generic_token *) new_token;
-  }
+  (*last_token) -> next = (struct generic_token *) new_token;
+  *last_token = (struct generic_token *) new_token;
   continue;
+}
+@
+\fimcodigo
+
+Caso aconteça de terminarmos a análise léxica com
+algum \monoespaco{endfor} empilhado, isso significa que
+um \monoespaco{for} sem um \monoespaco{endfor} correspondente foi
+encontrado. Neste caso, só acusamos um erro (que definiremos depois):
+
+\iniciocodigo
+@<Análise Léxica: Detecção Final de Erros@>=
+if(aux_stack != NULL){
+  free_token_list(*first_token);
+  *first_token = *last_token = NULL;
+  RAISE_ERROR_MISSING_TOKEN(mf, NULL, OPTIONAL(aux_stack -> link -> line),
+                           aux_stack -> type);
+  return;
 }
 @
 \fimcodigo
@@ -2445,22 +2491,28 @@ formadas por muitas outras instruções. As regras gramaticais para elas é:
 \alinhaverbatim
 <Instrução Composta> -> <Bloco Composto> |
                         <Bloco Condicional> |
+                        <Bloco de Iteração> |
                         <Declaração de Caractere>
 <Bloco Composto> -> begingroup <Lista de Instruções> endgroup
 <Bloco Condicional> -> if <Expressão Booleana> :
                          <Lista de Instruções>
                          <Alternativas>
                        fi
+<Bloco de Iteração> -> for <Cabeçalho For>:
+                         <Lista de Instruções>
+                       endfor
 <Definição de Caractere> -> beginchar <Descrição de Caractere>
                               <Lista de Instruções>
                             endchar
 \alinhanormal
 
-Pelas regras acima, as instruções compostas são três: podem ser
+Pelas regras acima, as instruções compostas são qutro: podem ser
 blocos (começam com \monoespaco{begingroup} e terminam
 com \monoespaco{endgroup}), condicionais (começam com \monoespaco{if}
-e terminam com \monoespaco{fi}) ou definição de caractere (começam
-com \monoespaco{beginchar} e terminam com \monoespaco{endchar}).
+e terminam com \monoespaco{fi}), iterações (comaçam
+com \monoespaco{for} e terminam em \monoespaco{endfor}) ou definição
+de caractere (começam com \monoespaco{beginchar} e terminam
+com \monoespaco{endchar}).
 
 Como podem haver listas de instruções dentro de cada instrução
 composta, então várias instruções compostas podem também estar
@@ -2491,6 +2543,13 @@ E adicionamos eles à nossa lista de palavras reservadas:
 "begingroup", "endgroup", "if", "fi", "beginchar", "endchar",
 @
 \fimcodigo
+
+Os tokens que começam e terminam uma iteração
+são \monoespaco{TYPE\_FOR} e \monoespaco{TYPE\_ENDFOR}. Eles já foram
+definidos anteriormente, junto ao nosso analisador léxico. Tivemos que
+tratar eles antes porque os seus tokens precisam armazenar uma
+quantidade maior de informações e por isso precisam de uma
+inicialização mais complexa na etapa léxica.
 
 E agora a função que irá avaliar uma instrução individual.
 
@@ -2557,21 +2616,22 @@ case ERROR_UNKNOWN_STATEMENT:
 @
 \fimcodigo
 
-Agora vamos às instruções composta. A primeira coisa a lembrarmos é que
-será importante para a linguagem saber em qual nível de aninhamento
-estamos para saber o escopo de eventuais variáveis declaradas. Por
-causa disso, o contexto de nossa análise deve memorizar o nível de
-aninhamento atual. Cada início de instrução composta
-(\monoespaco{begingroup}, \monoespaco{if}, \monoespaco{beginchar})
+Agora vamos às instruções composta. A primeira coisa a lembrarmos é
+que será importante para a linguagem saber em qual nível de
+aninhamento estamos para saber o escopo de eventuais variáveis
+declaradas. Por causa disso, o contexto de nossa análise deve
+memorizar o nível de aninhamento atual. Cada início de instrução
+composta
+(\monoespaco{begingroup}, \monoespaco{if}, \monoespaco{beginchar}e \monoespaco{for})
 aumenta esse nível em 1 e cada fim de instrução composta
-(\monoespaco{endgroup}, \monoespaco{fi}, \monoespaco{endchar}) diminui
-o nível em 1. Também devemos saber qual o token que criou o último
-nível de aninhamento caso estejamos aninhados em uma instrução
-composta e devemos armazenar uma cópia do token esperado que o
-finalizará em uma pilha. Desta forma, saberemos se uma instrução
-composta está sendo finalizada pelo token correspondente. Declaramos o
-nível de aninhamento atual e a pilha de tokens esperados de
-finalização:
+(\monoespaco{endgroup}, \monoespaco{fi}, \monoespaco{endchar}
+e \monoespaco{endfor}) diminui o nível em 1. Também devemos saber qual
+o token que criou o último nível de aninhamento caso estejamos
+aninhados em uma instrução composta e devemos armazenar uma cópia do
+token esperado que o finalizará em uma pilha. Desta forma, saberemos
+se uma instrução composta está sendo finalizada pelo token
+correspondente. Declaramos o nível de aninhamento atual e a pilha de
+tokens esperados de finalização:
 
 \iniciocodigo
 @<Atributos (struct context)@>=
@@ -2632,6 +2692,9 @@ bool begin_nesting_level(struct metafont *mf, struct context *cx,
     break;
   case TYPE_BEGINCHAR:
     end_token -> type = TYPE_ENDCHAR;
+    break;
+  case TYPE_FOR:
+    end_token -> type = TYPE_ENDFOR;
     break;
   default:
     return false;
@@ -2736,7 +2799,7 @@ outros tokens possíveis, lemos os seus nomes desta outra lista:
 \iniciocodigo
 @<Variáveis Locais (metafont.c)@>+=
 static char *token_names_not_in_list_of_keywords[] = {
-  "nil", "<Numeric>", "<String>", "<Variable Name>", "for", "endfor", "(", ")",
+  "nil", "<Numeric>", "<String>", "<Variable>", "for", "endfor", "(", ")",
   ",", ";"};
 @
 \fimcodigo
@@ -2817,7 +2880,7 @@ com \monoespaco{begingroup } é:
 @<Instrução: Composta@>=
 if(begin -> type == TYPE_BEGINGROUP){
   begin_nesting_level(mf, cx, begin);
-  // Para que o começo da próxima instrução benha depois de 'begingroup':
+  // Para que o começo da próxima instrução venha depois de 'begingroup':
   *end = begin;
   return true;
 }
@@ -2825,7 +2888,7 @@ if(begin -> type == TYPE_BEGINGROUP){
 \fimcodigo
 
 Da mesma forma, se recebermos uma função que começa
-com \monoespaco{endgroup}, nós tratamos só este priemiro token
+com \monoespaco{endgroup}, nós tratamos só este primeiro token
 encerrando o aninhamento do bloco:
 
 \iniciocodigo
@@ -3316,10 +3379,10 @@ void update_token_pointer_for_variable(struct symbolic_token *var_token,
   int nesting_level = 0;
   while(p != NULL && nesting_level >= 0){
     if(p -> type == TYPE_BEGINGROUP || p -> type == TYPE_IF ||
-       p -> type == TYPE_BEGINCHAR)
+       p -> type == TYPE_BEGINCHAR || p -> type == TYPE_FOR)
       nesting_level ++;
     else if(p -> type == TYPE_ENDGROUP || p -> type == TYPE_FI ||
-            p -> type == TYPE_ENDCHAR)
+            p -> type == TYPE_ENDCHAR || p -> type == TYPE_ENDFOR)
       nesting_level --;
     else if(p -> type == TYPE_SYMBOLIC){
       if(!strcmp(p -> value, var_token -> value)){
@@ -14628,10 +14691,10 @@ else if(begin -> type == TYPE_IF){
       }
       // Outros tokens que mudam nível de aninhamento
       else if(t -> type == TYPE_IF || t -> type == TYPE_BEGINGROUP ||
-              t -> type == TYPE_BEGINCHAR)
+              t -> type == TYPE_BEGINCHAR || t -> type == TYPE_FOR)
         begin_nesting_level(mf, cx, t);
       else if(t -> type == TYPE_FI || t -> type == TYPE_ENDGROUP ||
-              t -> type == TYPE_ENDCHAR)
+              t -> type == TYPE_ENDCHAR || t -> type == TYPE_ENDFOR)
         if(!end_nesting_level(mf, cx, t))
           return false;
       t = t -> next;
@@ -14718,10 +14781,10 @@ else if(begin -> type == TYPE_ELSEIF || begin -> type == TYPE_ELSE){
       return true;
     }
     else if(t -> type == TYPE_IF || t -> type == TYPE_BEGINGROUP ||
-            t -> type == TYPE_BEGINCHAR)
+            t -> type == TYPE_BEGINCHAR || t -> type == TYPE_FOR)
       begin_nesting_level(mf, cx, t);
     else if(t -> type == TYPE_FI || t -> type == TYPE_ENDGROUP ||
-            t -> type == TYPE_ENDCHAR)
+            t -> type == TYPE_ENDCHAR || t -> type == TYPE_ENDFOR)
       if(!end_nesting_level(mf, cx, t))
         return false;
     t = t -> next;
@@ -14749,7 +14812,264 @@ else if(begin -> type == TYPE_FI){
 @
 \fimcodigo
 
-\secao{10. O Comando \monoespaco{pickup}}
+\secao{10. Declaração Composta: Iterações}
+
+Uma iteração é um comando composto \monoespaco{for} que faz com que o
+código interno a ele possa ser executado entre zero e um número
+arbitrário de vezes. A gramática para este tipo de comando é:
+
+\alinhaverbatim
+<Bloco de Iteração> -> for <Cabeçalho For>:
+                         <Lista de Instruções>
+                       endfor
+<Cabeçalho For> -> <Variável Numérica>  = <Expressão Numérica><Progressão> |
+                   <Variável Numérica> := <Expressão Numérica><Progressão>
+<Progressão> -> step <Expressão Numérica> until <Expressão Numérica>
+\alinhanormal
+
+Por exemplo, a seguinte iteração é válida:
+
+\alinhaverbatim
+numeric i;
+for i = 5 step 10 until 50:
+  draw (i, 0);
+endfor
+\alinhanormal
+
+Na iteração acima o comando de desenho \monoespaco{draw} é aplicado
+sobre os pontos $(5, 0)$, $(15, 0)$, $(25, 0)$, $(35, 0)$, $(45,
+0)$. O valor de \monoespaco{i} começa como sendo 5 e a cada iteração
+tal valor é incrementado em 10. No último incremento, o valor se torna
+igual a 55, o que é maior que 50, o valor colocado como o limite da
+iteração. Isso faz com que a iteração e o comando de desenho interno
+pare de ser executado.
+
+Vamos precisar então dos novos tipos de tokens:
+
+\iniciocodigo
+@<WEAVEFONT: Definição de Token Simbólico@>+=
+TYPE_STEP,  // O token simbólico 'step'
+TYPE_UNTIL, // O token simbólico 'until'
+@
+\fimcodigo
+
+Os quais são adicionados à lista de palavras reservadas:
+
+\iniciocodigo
+@<Lista de Palavras Reservadas@>+=
+"step", "until",
+@
+\fimcodigo
+
+Executar um código de loop envolve uma inicialização (que deve ser
+executado caso o loop ainda não tenha começado) e o código de teste da
+condição, que incrementa a variável de controle e checa se o loop deve
+continuar a executar ou encerrar:
+
+\iniciocodigo
+@<Instrução: Composta@>+=
+else if(begin -> type == TYPE_FOR){
+  struct numeric_variable *control;
+  struct numeric_variable increment;
+  struct begin_loop_token *for_token = (struct begin_loop_token *) begin;
+  struct generic_token *current_token = begin, *begin_expr, *end_expr;
+  if(!(for_token -> running)){
+    @<Interação: Prepara Iteração@>
+  }
+  @<Interação: Checa Condição@>
+}
+@
+\fimcodigo
+
+Para preparar a iteração, devemos ler o cabeçalho, que é composto por
+uma variável numérica e duas expressões numéricas delimitadas por
+palavras reservadas \monoespaco{step} e \monoespaco{until}. A variável
+numérica deve ser encontrada imediatamente após o \monoespaco{for}:
+
+\iniciocodigo
+@<Interação: Prepara Iteração@>=
+{
+  struct symbolic_token *var_token = (struct symbolic_token *)for_token -> next;
+  if(var_token == NULL){
+    RAISE_ERROR_UNEXPECTED_TOKEN(mf, cx, OPTIONAL(var_token -> line),
+                                TYPE_SEMICOLON);
+    return false;
+  }
+  if(var_token -> type != TYPE_SYMBOLIC){
+    RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL(var_token -> line),
+                              TYPE_SYMBOLIC, var_token -> type);
+    return false;
+  }
+  if(var_token -> var == NULL){
+    RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, OPTIONAL(var_token -> line),
+                                   var_token -> value);
+    return false;
+  }
+  control = var_token -> var;
+  if(control -> type != TYPE_T_NUMERIC){
+    RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, OPTIONAL(var_token -> line),
+                                   var_token -> value, control -> type,
+                                   TYPE_T_NUMERIC);
+    return false;
+  }
+  for_token -> control_var = &(control -> value);
+}
+@
+\fimcodigo
+
+Depois da variável, devemos obter um token ``\monoespaco{=}'' ou
+``\monoespaco{:=}'':
+
+\iniciocodigo
+@<Interação: Prepara Iteração@>+=
+{
+  current_token = for_token -> next -> next;
+  if(current_token == NULL){
+    RAISE_ERROR_MISSING_TOKEN(mf, cx, OPTIONAL(current_token -> line),
+                             TYPE_EQUAL);
+    return false;
+  }
+  if(current_token -> type != TYPE_ASSIGNMENT &&
+     current_token -> type != TYPE_EQUAL){
+    RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL(current_token -> line),
+                              TYPE_EQUAL, current_token -> type);
+    return false;
+  }
+}
+@
+\fimcodigo
+
+Podemos então delimitar e extrair o resultado da primeira expressão
+numérica que começa logo após o símbolo de atribuição e vai até antes
+do token \monoespaco{step}. O valor lido deve inicializar a variável
+de controle da iteração. Uma expressão numérica não pode conter um
+token \monoespaco{step}, então não precisamos nos preocupar com
+aninhamentos de parênteses e expressões ao avaliar esta parte:
+
+\iniciocodigo
+@<Interação: Prepara Iteração@>+=
+{
+  begin_expr = current_token -> next;
+  if(begin_expr == NULL){
+    RAISE_ERROR_MISSING_EXPRESSION(mf, cx, OPTIONAL(current_token -> line),
+                                   TYPE_T_NUMERIC);
+    return false;
+  }
+  end_expr = begin_expr;
+  while(end_expr -> next != NULL && end_expr -> next -> type != TYPE_STEP)
+    end_expr = end_expr -> next;
+  if(!eval_numeric_expression(mf, cx, begin_expr, end_expr, control))
+    return false;
+  current_token = end_expr;
+}
+@
+\fimcodigo
+
+A próxima coisa a fazer será avaliar a expressão após
+o \monoespaco{step} e antes do \monoespaco{until} para saber o quanto
+o laço precisa ser incrementado. Note, contudo, que o incremento não
+deve ser feito na inicialização, mas sim a cada vez que formos checar
+novamente a condição da iteração. Como a expressão que controla este
+incremento pode ter o seu resultado modificado sempre precisaremos
+reavaliar ela.
+
+\iniciocodigo
+@<Interação: Checa Condição@>=
+{
+  while(current_token != NULL && current_token -> type != TYPE_STEP)
+    current_token = current_token -> next;
+  if(current_token == NULL){
+    RAISE_ERROR_MISSING_TOKEN(mf, cx, OPTIONAL(current_token -> line),
+                             TYPE_STEP);
+    return false;
+  }
+  begin_expr = current_token -> next;
+  end_expr = begin_expr;
+  while(end_expr != NULL && end_expr -> next != NULL &&
+        end_expr -> next -> type != TYPE_UNTIL)
+    end_expr = end_expr -> next;
+  if(end_expr == NULL){
+    RAISE_ERROR_MISSING_EXPRESSION(mf, cx, OPTIONAL(current_token -> line),
+                                   TYPE_T_NUMERIC);
+    return false;
+  }
+  if(end_expr -> next == NULL){
+    RAISE_ERROR_MISSING_TOKEN(mf, cx, OPTIONAL(current_token -> line),
+                             TYPE_UNTIL);
+    return false;
+  }
+  if(!eval_numeric_expression(mf, cx, begin_expr, end_expr, &increment))
+    return false;
+  if(for_token -> running)
+    *(for_token -> control_var) += increment.value;
+  else
+    for_token -> running = true;
+  current_token = end_expr;
+}
+@
+\fimcodigo
+
+Por fim, temos que obter a última expressão: aquela que determina a
+condição de parada da iteração. Ela é delimitada pelo
+token ``\monoespaco{until}'' e pelo token ``\monoespaco{:}'':
+
+\iniciocodigo
+@<Interação: Checa Condição@>=
+{
+  struct numeric_variable limit;
+  current_token = current_token -> next;
+  if(current_token -> next == NULL){
+    RAISE_ERROR_MISSING_EXPRESSION(mf, cx, OPTIONAL(current_token -> line),
+                                   TYPE_T_NUMERIC);
+    return false;
+  }
+  begin_expr = current_token;
+  end_expr = begin_expr;
+  while(end_expr -> next != NULL && end_expr -> next -> type != TYPE_COLON)
+    end_expr = end_expr -> next;
+  if(end_expr -> next == NULL){
+    RAISE_ERROR_MISSING_TOKEN(mf, cx, OPTIONAL(current_token -> line),
+                             TYPE_COLON);
+    return false;
+  }
+  if(!eval_numeric_expression(mf, cx, begin_expr, end_expr, &limit))
+    return false;
+  if((increment.value > 0 && *(for_token -> control_var) > limit.value) ||
+     (increment.value < 0 && *(for_token -> control_var) < limit.value)){
+    // Interromper loop:
+    for_token -> running = false;
+    *end = (struct generic_token *) for_token -> end;
+    return true;
+  }
+  else{
+    // Continuar loop:
+    *end = end_expr -> next;
+    return true;
+  }
+}
+@
+\fimcodigo
+
+Já quando encontramos um token \monoespaco{endfor}, nosso
+comportamento deve ser configurar para que o próximo comando executado
+deva ser novamente o \monoespaco{for} correspondente. Para isso, nós
+apenas ajustamos o ponteiro de final do nosso comando para o ponteiro
+antes do \monoespaco{for}, que foi armazenado no
+token \monoespaco{endfor} durante a criação dos tokens na análise
+léxica.
+
+\iniciocodigo
+@<Instrução: Composta@>+=
+else if(begin -> type == TYPE_ENDFOR){
+  struct linked_token *endfor_token = (struct linked_token *) begin;
+  *end = endfor_token -> link;
+  return true;
+}
+@
+\fimcodigo
+
+
+\secao{11. O Comando \monoespaco{pickup}}
 
 Agora podemos começar a definir o nosso primeiro comando. A sintaxe do
 comando \monoespaco{pickup} é dada por:
@@ -14781,7 +15101,7 @@ O que este comando faz é armazenar um novo valor na
 variável \monoespaco{currentpen}, a qual usaremos para fazer desenhos
 (conforme definiremos na próxima Seção).
 
-\subsecao{10.1. Pontos de Extremidade de Caneta}
+\subsecao{11.1. Pontos de Extremidade de Caneta}
 
 Uma coisa que devemos fazer ao recebermos uma caneta com o
 comando \monoespaco{pickup} é armazenar 4 valores internamente. Dois
@@ -15179,7 +15499,7 @@ void path_extremity_points(struct metafont *mf, struct path_variable *p,
 @
 \fimcodigo
 
-\subsecao{10.2. Triangulação}
+\subsecao{11.2. Triangulação}
 
 Vamos agora lidar com o código de triangulação. As placas de vídeo e o
 OpenGL trabalha com triângulos. Nós devemos então triangular um pincel
@@ -17497,7 +17817,7 @@ else{
 @
 \fimcodigo
 
-\subsecao{10.3. Interpretando o Comando 'pickup'}
+\subsecao{11.3. Interpretando o Comando 'pickup'}
 
 Agora vamos ao que efetivamente ocorre quando lemos o
 comando \monoespaco{pickup}.
@@ -17746,7 +18066,7 @@ transformação, a passamos para a função que fará a triangulação:
 @
 \fimcodigo
 
-\subsecao{10.4. Os Operadores \monoespaco{bot}, \monoespaco{top}, \monoespaco{lft},
+\subsecao{11.4. Os Operadores \monoespaco{bot}, \monoespaco{top}, \monoespaco{lft},
 \monoespaco{rt}}
 
 Embora tenhamos definido quase todos os operadores de pares na
@@ -17854,7 +18174,7 @@ else if(begin  -> type == TYPE_RT){
 @
 \fimcodigo
 
-\secao{11. O Comando \monoespaco{draw} e \monoespaco{erase}}
+\secao{12. O Comando \monoespaco{draw} e \monoespaco{erase}}
 
 Finalmente podemos começar a especificar dois dos mais importantes
 comandos da linguagem. O comando que usa uma caneta para caminhos em
@@ -17882,7 +18202,7 @@ TYPE_ERASE,  // O token simbólico 'erase'
 @
 \fimcodigo
 
-\subsecao{11.1. Preparando o Framebuffer}
+\subsecao{12.1. Preparando o Framebuffer}
 
 Para desenhar ou apagar com uma caneta na
 imagem \monoespaco{currentpicture}, nós precisamos de um framebuffer
@@ -18003,7 +18323,7 @@ glViewport(_viewport[0], _viewport[1], _viewport[2], _viewport[3]);
 @
 \fimcodigo
 
-\subsecao{11.2. Shaders de Desenho}
+\subsecao{12.2. Shaders de Desenho}
 
 Desenhar e apagar com uma caneta vai exigir dois novos shaders (um
 para cada operação) que precisamos definir. Os shaders que definimos
@@ -18082,7 +18402,7 @@ glDeleteProgram(pen_erase_program);
 @
 \fimcodigo
 
-\subsecao{11.3. Desenhando Caminhos}
+\subsecao{12.3. Desenhando Caminhos}
 
 Terminada a preparação da triangulação, do framebuffer e do shader
 usado, podemos escrever agora códigos que fazem o desenho.
@@ -18337,7 +18657,7 @@ void drawpoint(struct metafont *mf, struct pen_variable *pen,
 @
 \fimcodigo
 
-\secao{12. Declaração Composta: Declaração de Caractere}
+\secao{13. Declaração Composta: Declaração de Caractere}
 
 Vamos agora à parte que é o prinicpal objetivo da linguagem: definir
 novos caracteres para fontes tipográficas, ou então definir uma imagem
@@ -18377,7 +18697,7 @@ caractere. O código dentro do corpo de \monoespaco{beginchar} nem
 chega a ser executado e interpretado. No modo de execução, aí sim este
 código será executado para que o caracteres seja renderizado.
 
-\subsecao{12.1 Unicode e UTF-8}
+\subsecao{13.1 Unicode e UTF-8}
 
 Mas onde devemos armazenar o código de um caractere quando estamos no
 modo de carregamento? Vamos definir a seguinte estrutura que armazena
@@ -19005,7 +19325,7 @@ else if(begin -> type == TYPE_ENDCHAR){
 @
 \fimcodigo
 
-\secao{13. Funções de API para Usar as Fontes}
+\secao{14. Funções de API para Usar as Fontes}
 
 Um código WEAVEFONT pode ter suas variáveis globais modificadas e
 assim atualizar a renderização de glifos e imagens sem que o código

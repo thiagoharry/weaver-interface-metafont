@@ -1,5 +1,5 @@
 /*7:*/
-#line 396 "weaver-interface-metafont.tex"
+#line 369 "weaver-interface-metafont_en.tex"
 
 #ifndef __WEAVER_METAFONT
 #define __WEAVER_METAFONT
@@ -7,7 +7,7 @@
 extern"C"{
 #endif
 #include <stdbool.h>  
-#include <stdlib.h>   
+#include <stdlib.h>  
 #if defined(__linux__) || defined(BSD) || defined(__EMSCRIPTEN__)
 #include <GLES3/gl3.h>  
 #endif
@@ -15,55 +15,56 @@ extern"C"{
 #include <sys/param.h>  
 #endif
 /*2:*/
-#line 301 "weaver-interface-metafont.tex"
+#line 283 "weaver-interface-metafont_en.tex"
 
 #if defined(WEAVER_ENGINE)
 #include "interface.h"
 #endif
 /*:2*//*24:*/
-#line 913 "weaver-interface-metafont.tex"
+#line 872 "weaver-interface-metafont_en.tex"
 
 #if defined(__linux__) || defined(BSD) || defined(W_ALWAYS_USE_THREADS)
 #include <pthread.h> 
 #endif
 /*:24*/
-#line 410 "weaver-interface-metafont.tex"
+#line 383 "weaver-interface-metafont_en.tex"
 
-/*662:*/
-#line 18390 "weaver-interface-metafont.tex"
+
+/*671:*/
+#line 18428 "weaver-interface-metafont_en.tex"
 
 struct _glyph;
-/*:662*/
-#line 411 "weaver-interface-metafont.tex"
+/*:671*/
+#line 385 "weaver-interface-metafont_en.tex"
 
-/*69:*/
-#line 1952 "weaver-interface-metafont.tex"
+/*70:*/
+#line 1942 "weaver-interface-metafont_en.tex"
 
 struct context{
 char current_character[5];
-/*97:*/
-#line 2577 "weaver-interface-metafont.tex"
+/*98:*/
+#line 2560 "weaver-interface-metafont_en.tex"
 
 int nesting_level;
 struct generic_token*end_token_stack;
-/*:97*//*122:*/
-#line 3045 "weaver-interface-metafont.tex"
+/*:98*//*123:*/
+#line 3034 "weaver-interface-metafont_en.tex"
 
 struct variable*variables;
-/*:122*//*675:*/
-#line 18799 "weaver-interface-metafont.tex"
+/*:123*//*684:*/
+#line 18840 "weaver-interface-metafont_en.tex"
 
 struct _glyph*current_glyph;
-/*:675*/
-#line 1955 "weaver-interface-metafont.tex"
+/*:684*/
+#line 1945 "weaver-interface-metafont_en.tex"
 
 };
-/*:69*//*70:*/
-#line 1972 "weaver-interface-metafont.tex"
+/*:70*//*71:*/
+#line 1961 "weaver-interface-metafont_en.tex"
 
 struct metafont{
 /*23:*/
-#line 899 "weaver-interface-metafont.tex"
+#line 858 "weaver-interface-metafont_en.tex"
 
 #if defined(_WIN32)
 CRITICAL_SECTION mutex;
@@ -71,66 +72,66 @@ CRITICAL_SECTION mutex;
 pthread_mutex_t mutex;
 #endif
 /*:23*/
-#line 1974 "weaver-interface-metafont.tex"
+#line 1963 "weaver-interface-metafont_en.tex"
 
 char*file;
 bool loading;
-/*76:*/
-#line 2086 "weaver-interface-metafont.tex"
+/*77:*/
+#line 2075 "weaver-interface-metafont_en.tex"
 
 int errno,errno_line;
 char errno_character[5];
 char*errno_str;
 int errno_int;
-/*:76*//*118:*/
-#line 2980 "weaver-interface-metafont.tex"
+/*:77*//*119:*/
+#line 2969 "weaver-interface-metafont_en.tex"
 
 struct named_variable*named_variables;
 struct variable*variables;
-/*:118*//*139:*/
-#line 3390 "weaver-interface-metafont.tex"
+/*:119*//*140:*/
+#line 3372 "weaver-interface-metafont_en.tex"
 
 void*internal_numeric_variables;
-/*:139*//*148:*/
-#line 3564 "weaver-interface-metafont.tex"
+/*:140*//*149:*/
+#line 3544 "weaver-interface-metafont_en.tex"
 
 struct transform_variable*internal_transform_variables;
-/*:148*//*200:*/
-#line 5289 "weaver-interface-metafont.tex"
+/*:149*//*200:*/
+#line 5236 "weaver-interface-metafont_en.tex"
 
 struct pen_variable*internal_pen_variables;
 /*:200*//*210:*/
-#line 5456 "weaver-interface-metafont.tex"
+#line 5402 "weaver-interface-metafont_en.tex"
 
 struct picture_variable*internal_picture_variables;
 /*:210*//*284:*/
-#line 6974 "weaver-interface-metafont.tex"
+#line 6889 "weaver-interface-metafont_en.tex"
 
 bool have_stored_normaldeviate;
 float normaldeviate;
-/*:284*//*563:*/
-#line 14802 "weaver-interface-metafont.tex"
+/*:284*//*572:*/
+#line 14906 "weaver-interface-metafont_en.tex"
 
 float pen_lft,pen_rt,pen_top,pen_bot;
-/*:563*//*659:*/
-#line 18255 "weaver-interface-metafont.tex"
+/*:572*//*668:*/
+#line 18294 "weaver-interface-metafont_en.tex"
 
 int current_depth;
-/*:659*//*665:*/
-#line 18436 "weaver-interface-metafont.tex"
+/*:668*//*674:*/
+#line 18476 "weaver-interface-metafont_en.tex"
 
 struct _glyph*glyphs[332];
 struct _glyph*first_glyph;
 int number_of_glyphs;
-/*:665*/
-#line 1977 "weaver-interface-metafont.tex"
+/*:674*/
+#line 1966 "weaver-interface-metafont_en.tex"
 
 };
-/*:70*/
-#line 412 "weaver-interface-metafont.tex"
+/*:71*/
+#line 386 "weaver-interface-metafont_en.tex"
 
 /*1:*/
-#line 279 "weaver-interface-metafont.tex"
+#line 262 "weaver-interface-metafont_en.tex"
 
 #if defined(WEAVER_ENGINE)
 void _Wmetafont_loading(void*(*permanent_alloc)(size_t),
@@ -143,12 +144,12 @@ char*source_filename,
 struct user_interface*target);
 #endif
 /*:1*//*3:*/
-#line 319 "weaver-interface-metafont.tex"
+#line 299 "weaver-interface-metafont_en.tex"
 
 struct metafont*_Wnew_metafont(char*filename);
 void _Wdestroy_metafont(struct metafont*mf);
 /*:3*//*4:*/
-#line 333 "weaver-interface-metafont.tex"
+#line 312 "weaver-interface-metafont_en.tex"
 
 bool _Winit_weavefont(void*(*temporary_alloc)(size_t),
 void(*temporary_free)(void*),
@@ -156,27 +157,27 @@ void*(*permanent_alloc)(size_t),
 void(*permanent_free)(void*),
 uint64_t(*rand)(void),int dpi);
 /*:4*//*5:*/
-#line 355 "weaver-interface-metafont.tex"
+#line 332 "weaver-interface-metafont_en.tex"
 
 void _Wfinish_weavefont(void);
 /*:5*//*6:*/
-#line 366 "weaver-interface-metafont.tex"
+#line 342 "weaver-interface-metafont_en.tex"
 
 void _Wprint_metafont_error(struct metafont*);
-/*:6*//*681:*/
-#line 19016 "weaver-interface-metafont.tex"
+/*:6*//*690:*/
+#line 19058 "weaver-interface-metafont_en.tex"
 
 bool _Wwrite_numeric_variable(struct metafont*mf,char*name,float value);
 float _Wread_numeric_variable(struct metafont*mf,char*name);
-/*:681*//*685:*/
-#line 19109 "weaver-interface-metafont.tex"
+/*:690*//*694:*/
+#line 19150 "weaver-interface-metafont_en.tex"
 
 bool _Wrender_glyph(struct metafont*mf,char*glyph,
 char*next_glyph,GLuint*texture,
 int*width,int*height,int*depth,
 int*italcorr,int*kerning);
-/*:685*/
-#line 413 "weaver-interface-metafont.tex"
+/*:694*/
+#line 387 "weaver-interface-metafont_en.tex"
 
 #ifdef __cplusplus
 }
