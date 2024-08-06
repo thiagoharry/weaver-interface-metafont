@@ -5834,7 +5834,7 @@ E aqui avisamos ao usuário o quê deu errado:
 case ERROR_WRONG_VARIABLE_TYPE:
   fprintf(stderr, "%s:%s Found '%s', but a variable of type '%s' was expected.",
           mf -> file, line_number, mf -> errno_str,
-          list_of_keywords[mf -> errno_int - 8]);
+          list_of_keywords[mf -> errno_int - 10]);
   break;
 @
 \fimcodigo
@@ -15023,7 +15023,7 @@ token ``\monoespaco{until}'' e pelo token ``\monoespaco{:}'':
                                    TYPE_T_NUMERIC);
     return false;
   }
-  begin_expr = current_token;
+  begin_expr = current_token -> next;
   end_expr = begin_expr;
   while(end_expr -> next != NULL && end_expr -> next -> type != TYPE_COLON)
     end_expr = end_expr -> next;

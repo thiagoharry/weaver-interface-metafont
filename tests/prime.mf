@@ -1,0 +1,24 @@
+numeric prime, count, is_prime, number_of_primes;
+
+number_of_primes = 100;
+
+prime=3;
+is_prime = 1;
+if number_of_primes = 1:
+  prime = 2;
+elseif number_of_primes > 2:
+  for count = 3 step is_prime until number_of_primes:
+    prime = prime + 2;
+    is_prime = 1;
+    numeric i, limit;
+    limit = sqrt(prime);
+    for i = 3 step 2 until limit:
+      numeric result;
+      result = prime / i;
+      if result = floor(result):
+	is_prime = 0;
+	i = limit + 1;
+      fi
+    endfor
+  endfor
+fi

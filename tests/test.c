@@ -2331,6 +2331,30 @@ void test_pen_rendering(void){
   _Wdestroy_metafont(mf);
 }
 
+void test_prime_computing(void){
+  struct generic_token *first, *last;
+  struct metafont *mf;
+  struct context *cx;
+  bool ret;
+  struct named_variable *prime;
+  struct numeric_variable *numeric_prime;
+  mf = init_metafont("tests/prime.mf");
+  cx = init_context(mf);
+  lexer(mf,  "tests/prime.mf", &first, &last);
+  ret = eval_program(mf, cx, first, last);
+  if(!ret)
+    _Wprint_metafont_error(mf);
+  prime = (struct named_variable *) mf -> named_variables;
+  numeric_prime = (struct numeric_variable *) prime -> var;
+  assert("Testing program computing primes",
+	 ret && numeric_prime -> value == 541.0);
+  free_token_list(first);
+  destroy_context(mf, cx);
+  _Wdestroy_metafont(mf);
+
+}
+
+
 void test_opengl(void){
   assert("No errors in OpenGL", glGetError() == GL_NO_ERROR);
 }
@@ -2358,6 +2382,7 @@ int main(int argc, char **argv){
   test_drawing_commands();
   test_font_rendering();
   test_pen_rendering();
+  test_prime_computing();
   test_opengl();
   imprime_resultado();
   _Wfinish_weavefont();

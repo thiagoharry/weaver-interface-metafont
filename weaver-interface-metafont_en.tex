@@ -14809,7 +14809,7 @@ expression found between tokens ``\monoespaco{until}'' and
                                    TYPE_T_NUMERIC);
     return false;
   }
-  begin_expr = current_token;
+  begin_expr = current_token -> next;
   end_expr = begin_expr;
   while(end_expr -> next != NULL && end_expr -> next -> type != TYPE_COLON)
     end_expr = end_expr -> next;
