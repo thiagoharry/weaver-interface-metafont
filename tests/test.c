@@ -2067,6 +2067,8 @@ void test_if_statements(void){
   cx = init_context(mf);
   lexer(mf,  "tests/if_statement.mf", &first, &last);
   ret = eval_program(mf, cx, first, last);
+  if(!ret)
+    _Wprint_metafont_error(mf);
   a = (struct named_variable *) mf -> named_variables;
   b = a -> next;
   c = b -> next;

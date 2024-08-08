@@ -1110,7 +1110,7 @@ struct begin_loop_token{
   int line;
 #endif
   bool running;
-  float *control_var, increment, limit;
+  float *control_var;
   struct linked_token *end;
 };
 @
@@ -1119,13 +1119,15 @@ struct begin_loop_token{
 Some tokens need to store a pointer for other tokens. An example is
 the token \monoespaco{endfor} that marks the end of a loop, but must
 store a pointer to the beginning of the loop, so that we can iterate
-over the code more easily. Tokens like this will use the following
-data structure:
+over the code more easily. Tokens
+like \monoespaco{if}, \monoespaco{elseif} and \monoespaco{else} also
+need to store pointers to the end of its bodies. These tokens will
+use the following data structure:
 
 \iniciocodigo
 @<Local Data Structures (metafont.c)@>+=
 struct linked_token{
-  int type;   // Deve ser igual a 'TYPE_ENDFOR'
+  int type;   // 'TYPE_FOR', 'TYPE_IF', 'TYPE_ELSEIF' ou 'TYPE_ELSE'
   struct generic_token *next;
 #if defined(W_DEBUG_METAFONT)
   int line;
@@ -1464,9 +1466,8 @@ different families:
   @<Lexer: Rule K@>
   @<Lexer: Rule L@>
   // Depending on buffer content, generates next token
+  @<Lexer: New Control Flow Token@>
   @<Lexer: New Reserved Symbolic Token@>
-  @<Lexer: New Begin Loop Token@>
-  @<Lexer: New End Loop Token@>
   @<Lexer: New Generic Symbolic Token@>
 }
 @
@@ -1729,19 +1730,25 @@ To use function \monoespaco{strcmp} we need the following header:
 @
 \fimcodigo
 
-If our symbolic token is not in the list of reserved words, but it is
-a ``for'', then it is indeed a reserved word that will produce a
-special token marking the beginning of a loop. Besides this, we also
-create the token \monoespaco{endfor} that later will close the loop,
-and we initialize both tokens, making \monoespaco{for} having a
-pointer to \monoespaco{endfor} and \monoespaco{endfor} having a
-pointer to the token before \monoespaco{for}. This will make easier to
-the interpreter navigate taking into account commands that control the
-flow. The token \monoespaco{endfor} is then stored in a stack to be
-used later.
+Control flow tokens
+like \monoespaco{for}, \monoespaco{endfor}, \monoespaco{if},
+\monoespaco{elseif}, \monoespaco{else} and \monoespaco{fi} also are tokens
+whose names are reserved words. But we give a higher precedence
+dealing with them and use a different code to initialize them. This
+must happen because several of these tokens should have initialized
+pointers for other tokens, so that it becomes easier to navigate in
+the code while they change the usual flow of the code.
+
+In case of \monoespaco{for}, when we create it, we also create the
+corresponding \monoespaco{endfor} that later will close the loop, and
+we initialize both tokens. We make \monoespaco{for} having a pointer
+to \monoespaco{endfor} and \monoespaco{endfor} having a pointer to the
+token before \monoespaco{for}. This will make easier for the
+interpreter to navigate in the iteration. The
+token \monoespaco{endfor} is then stored in a stack to be used later.
 
 \iniciocodigo
-@<Lexer: New Begin Loop Token@>=
+@<Lexer: New Control Flow Token@>=
 if(!strcmp(buffer, "for")){
   struct generic_token *previous_token = *last_token;
   struct linked_token *endfor_token;
@@ -1760,7 +1767,6 @@ if(!strcmp(buffer, "for")){
 #endif
   new_token -> running = false;
   new_token -> control_var = NULL;
-  new_token -> increment = new_token -> limit = NAN;
   new_token -> end = NULL;
   if(*first_token == NULL)
     *first_token = *last_token = (struct generic_token *) new_token;
@@ -1797,7 +1803,7 @@ stacked token, instead of creating a new one. If such token do not
 exist, we raise an error (which we define later):
 
 \iniciocodigo
-@<Lexer: New End Loop Token@>=
+@<Lexer: New Control Flow Token@>+=
 if(!strcmp(buffer, "endfor")){
   if(aux_stack == NULL || aux_stack -> type != TYPE_ENDFOR){
     free_token_list(*first_token);
@@ -1818,9 +1824,163 @@ if(!strcmp(buffer, "endfor")){
 @
 \fimcodigo
 
+If we read a token \monoespaco{if}, likewise, we alsocreate a
+token \monoespaco{fi} and put it in the stack. But this will be just a
+temporary \monoespaco{fi}, not the one that we will place in the final
+program, because this special \monoespaco{fi} will be a ``linked
+token'' with a pointer to the
+previous \monoespaco{if}, \monoespaco{elseif} or \monoespaco{else} in
+the same nesting level. This pointer will help us to update such past
+tokens so that they will correctly point to the next conditional
+control flow token.
+
+This is how we create a token \monoespaco{if}:
+
+\iniciocodigo
+@<Lexer: New Control Flow Token@>+=
+if(!strcmp(buffer, "if")){
+  struct linked_token *if_token, *fi_token;
+  if_token = (struct linked_token *)
+               permanent_alloc(sizeof(struct linked_token));
+  if(if_token == NULL){
+    free_token_list(*first_token);
+    *first_token = *last_token = NULL;
+    RAISE_ERROR_NO_MEMORY(mf, NULL, line);
+    return;
+  }
+  if_token -> type = TYPE_IF;
+  if_token -> next = NULL;
+#if defined(W_DEBUG_METAFONT)
+  if_token -> line = line;
+#endif
+  if_token -> link = NULL;
+  if(*first_token == NULL)
+    *first_token = *last_token = (struct generic_token *) if_token;
+  else{
+    (*last_token) -> next = (struct generic_token *) if_token;
+    *last_token = (struct generic_token *) if_token;
+  }
+  fi_token = (struct linked_token *)
+               temporary_alloc(sizeof(struct linked_token));
+  if(fi_token == NULL){
+    free_token_list(*first_token);
+    *first_token = *last_token = NULL;
+    RAISE_ERROR_NO_MEMORY(mf, NULL, line);
+    return;
+  }
+  fi_token -> link = (struct generic_token *) if_token;
+  fi_token -> type = TYPE_FI;
+  if(aux_stack == NULL){
+    aux_stack = fi_token;
+    fi_token -> next = NULL;
+  }
+  else{
+    fi_token -> next = (struct generic_token *) aux_stack;
+    aux_stack = fi_token;
+  }
+  continue;
+}
+@
+\fimcodigo
+
+If we find a token \monoespaco{elseif} or \monoespaco{else} in the
+same nesting level, we check the pointer of the
+stacked \monoespaco{if} and make the pointed token point to our
+new \monoespaco{elseif} or \monoespaco{else} found. This will
+correctly initialize this previous token that should be
+a \monoespaco{if} or a previous \monoespaco{elseif}. Then, we create a
+new token to our newly found \monoespaco{elseif} or \monoespaco{else},
+insert it in our program and update the stacked \monoespaco{fi} token
+to point to this newly created token:
+
+\iniciocodigo
+@<Lexer: New Control Flow Token@>+=
+if(!strcmp(buffer, "elseif") || !strcmp(buffer, "else")){
+  struct linked_token *new_token;
+  if(aux_stack == NULL || aux_stack -> type != TYPE_FI ||
+     aux_stack -> link -> type == TYPE_ELSE){
+    free_token_list(*first_token);
+    *first_token = *last_token = NULL;
+    RAISE_ERROR_UNEXPECTED_TOKEN(mf, NULL, line,
+                                 (buffer[4] == 'i')?TYPE_ELSEIF:TYPE_ELSE);
+    return;
+  }
+  new_token = (struct linked_token *)
+                permanent_alloc(sizeof(struct linked_token));
+  if(new_token == NULL){
+    free_token_list(*first_token);
+    *first_token = *last_token = NULL;
+    RAISE_ERROR_NO_MEMORY(mf, NULL, line);
+    return;
+  }
+  ((struct linked_token *) (aux_stack -> link)) -> link =
+                                            (struct generic_token *) new_token;
+  if(buffer[4] == 'i')
+    new_token -> type = TYPE_ELSEIF;
+  else
+    new_token -> type = TYPE_ELSE;
+  new_token -> next = NULL;
+#if defined(W_DEBUG_METAFONT)
+  new_token -> line = line;
+#endif
+  new_token -> link = NULL;
+  if(*first_token == NULL)
+    *first_token = *last_token = (struct generic_token *) new_token;
+  else{
+    (*last_token) -> next = (struct generic_token *) new_token;
+    *last_token = (struct generic_token *) new_token;
+  }
+  aux_stack -> link = (struct generic_token *) new_token;
+  continue;
+}
+@
+\fimcodigo
+
+Finally, when finding a \monoespaco{fi}, we remove from the stack the
+temporary token \monoespao{fi} with a link to the
+previous \monoespaco{if}, \monoespaco{elseif} or \monoespaco{else}. We
+update this previous token's pointer to point to immediately before
+our \monoespaco{fi}, finishing its initialization:
+
+\iniciocodigo
+@<Lexer: New Control Flow Token@>+=
+if(!strcmp(buffer, "fi")){
+  struct generic_token *new_token;
+  if(aux_stack == NULL || aux_stack -> type != TYPE_FI){
+    free_token_list(*first_token);
+    *first_token = *last_token = NULL;
+    RAISE_ERROR_UNEXPECTED_TOKEN(mf, NULL, OPTIONAL(line), TYPE_FI);
+    return;
+  }
+  new_token = (struct generic_token *)
+                permanent_alloc(sizeof(struct generic_token));
+  if(new_token == NULL){
+    free_token_list(*first_token);
+    *first_token = *last_token = NULL;
+    RAISE_ERROR_NO_MEMORY(mf, NULL, line);
+    return;
+  }
+  ((struct linked_token *) aux_stack -> link) -> link = new_token;
+  new_token -> type = TYPE_FI;
+  new_token -> next = NULL;
+#if defined(W_DEBUG_METAFONT)
+  new_token -> line = line;
+#endif
+  (*last_token) -> next = (struct generic_token *) new_token;
+  *last_token = (struct generic_token *) new_token;
+  struct linked_token *tmp = aux_stack;
+  aux_stack = (struct linked_token *) aux_stack -> next;
+  if(temporary_free != NULL)
+    temporary_free(tmp);
+  continue;
+}
+@
+\fimcodigo
+
+
 If in the end of our lexer function we detect that we still have a
-stacked \monoespaco{endfor}, this means that a \monoespaco{for} was
-created without a corresponding \monoespaco{endfor}. Then we raise an
+stacked control flow token, this means that a \monoespaco{for}
+or \monoespaco{if} was opened, but not closed. Then we should raise an
 error (which will be defined later):
 
 \iniciocodigo
@@ -14392,15 +14552,18 @@ expressions.
 
 Given a \monoespaco{if}, we first evaluate the boolean expression next
 to it. If true, the position for the pointer will be the colon after
-the expression. Otherwise, we walk over the tokens trying to find
-a \monoespaco{elseif}, \monoespaco{else} or \monoespaco{fi}. In the
-first case, we treat like we did with the \monoespaco{if}, checking
-and evaluating the boolean expression next to it to decide if we place
-the pointer in its colon. In the second case, we place the pointer in
-the colon next to \monoespaco{else}. And in the last case, we found
-the end of the compound statement and no true boolean expression. We
-place the pointer in the \monoespaco{fi}, and doing this, we skip all
-the statements inside the \monoespaco{if}.
+the expression and we will assume that all other \monoespaco{elseif}
+and \monoespaco{else} are false and should not be executed. Otherwise,
+the pointer will be set to the one stored in the \monoespaco{if}
+token, which was initialized by our lexer.
+
+If we find there a token \monoespaco{elseif}, we proceed as we did in
+the \monoespaco{if} case, checking the boolean expression.
+If we find a token \monoespaco{else}, we place the pointer in the
+colon next to \monoespaco{else}. And in the last case, we found the
+end of the compound statement and no true boolean expression. We place
+the pointer in the \monoespaco{fi}, and doing this, we skip all the
+statements inside the \monoespaco{if}.
 
 However, the code that we ignore and do not evaluate because it is
 inside a block with a false boolean expression in a conditional
@@ -14423,10 +14586,6 @@ The code that evaluates our \monoespaco{if} statement is:
 else if(begin -> type == TYPE_IF){
   struct generic_token *begin_bool, *end_bool;
   struct boolean_variable b;
-  int current_nesting_level;
-  // Beginning the nesting
-  begin_nesting_level(mf, cx, begin);
-  current_nesting_level = cx -> nesting_level;
   // Delimiting boolean expression
   begin_bool = begin -> next;
   end_bool = begin_bool;
@@ -14444,17 +14603,14 @@ else if(begin -> type == TYPE_IF){
     return true;
   }
   else{ // False: We skip code in this 'if'
-    struct generic_token *t = end_bool -> next;
-    while(t -> next != NULL){
-      if(t -> type == TYPE_FI && cx -> nesting_level == current_nesting_level){
+    struct generic_token *t = ((struct linked_token *) begin) -> link;
+    while(t != NULL){
+      if(t -> type == TYPE_FI){
         // We found the 'fi' corresponding to this 'if'
-        if(!end_nesting_level(mf, cx, t))
-          return false;
         *end = t;
         return true;
       }
-      else if(t -> type == TYPE_ELSE &&
-              cx -> nesting_level == current_nesting_level){
+      else if(t -> type == TYPE_ELSE){
         // We found the 'else' corresponding to this 'if'
         *end = t -> next;
         if((*end) -> type != TYPE_COLON){
@@ -14464,8 +14620,7 @@ else if(begin -> type == TYPE_IF){
         }
         return true;
       }
-      else if(t -> type == TYPE_ELSEIF &&
-              cx -> nesting_level == current_nesting_level){
+      else if(t -> type == TYPE_ELSEIF){
         // We found the 'elseif' corresponding to our 'if'
         begin_bool = t -> next;
         end_bool = begin_bool;
@@ -14478,15 +14633,7 @@ else if(begin -> type == TYPE_IF){
           return true;
         }
       }
-      // Other tokens that change our nesting level:
-      else if(t -> type == TYPE_IF || t -> type == TYPE_BEGINGROUP ||
-              t -> type == TYPE_BEGINCHAR || t -> type == TYPE_FOR)
-        begin_nesting_level(mf, cx, t);
-      else if(t -> type == TYPE_FI || t -> type == TYPE_ENDGROUP ||
-              t -> type == TYPE_ENDCHAR || t -> type == TYPE_ENDFOR)
-        if(!end_nesting_level(mf, cx, t))
-          return false;
-      t = t -> next;
+      t = ((struct linked_token *) t) -> next;
     }
   }
   RAISE_ERROR_UNFINISHED_STATEMENT(mf, cx, OPTIONAL(begin -> line),
@@ -14549,32 +14696,15 @@ our \monoespaco{ìf}:
 \iniciocodigo
 @<Statement: Compound@>+=
 else if(begin -> type == TYPE_ELSEIF || begin -> type == TYPE_ELSE){
-  int current_nesting_level;
   struct generic_token *t;
-  if(cx -> end_token_stack == NULL ||
-     cx -> end_token_stack -> type != TYPE_FI){
-    RAISE_ERROR_UNEXPECTED_TOKEN(mf, cx, OPTIONAL(begin -> line),
-                                 begin -> type);
-    return false;
-  }
-  current_nesting_level = cx -> nesting_level;
-  t = begin;
+  t = ((struct linked_token *) begin) -> link;
   while(t != NULL){
-    if(t -> type == TYPE_FI && cx -> nesting_level == current_nesting_level){
+    if(t -> type == TYPE_FI){
       // We found the 'fi' corresponding to our 'if'
-      if(!end_nesting_level(mf, cx, t))
-        return false;
       *end = t;
       return true;
     }
-    else if(t -> type == TYPE_IF || t -> type == TYPE_BEGINGROUP ||
-            t -> type == TYPE_BEGINCHAR || t -> type == TYPE_FOR)
-      begin_nesting_level(mf, cx, t);
-    else if(t -> type == TYPE_FI || t -> type == TYPE_ENDGROUP ||
-            t -> type == TYPE_ENDCHAR || t -> type == TYPE_ENDFOR)
-      if(!end_nesting_level(mf, cx, t))
-        return false;
-    t = t -> next;
+    t = ((struct linked_token *) t) -> link;
   }
   RAISE_ERROR_UNFINISHED_STATEMENT(mf, cx, OPTIONAL(begin -> line),
                                    TYPE_IF);
@@ -14584,15 +14714,12 @@ else if(begin -> type == TYPE_ELSEIF || begin -> type == TYPE_ELSE){
 \fimcodigo
 
 Finally, we also can find a \monoespaco{fi} in the beginning of a new
-statement to be evaluated. In this case, we lower the nesting level
-and mark as the end of our evaluated tokens this \monoespaco{fi}
-token:
+statement to be evaluated. In this case, we just ignore it and proceed
+to interpret what comes after it:
 
 \iniciocodigo
 @<Statement: Compound@>+=
 else if(begin -> type == TYPE_FI){
-  if(!end_nesting_level(mf, cx, begin))
-    return false;
   *end = begin;
   return true;
 }

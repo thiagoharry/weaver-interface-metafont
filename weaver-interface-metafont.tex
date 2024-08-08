@@ -1147,13 +1147,13 @@ quando ele terminar:
 \iniciocodigo
 @<Estrutura de Dados Locais (metafont.c)@>+=
 struct begin_loop_token{
-  int type;   // Deve ser igual a 'TYPE_FOR'
+  int type;   // 'TYPE_FOR', 'TYPE_IF', 'TYPE_ELSEIF' ou 'TYPE_ELSE'
   struct generic_token *next;
 #if defined(W_DEBUG_METAFONT)
   int line;
 #endif
   bool running;
-  float *control_var, increment, limit;
+  float *control_var;
   struct linked_token *end;
 };
 @
@@ -1163,8 +1163,10 @@ Há também alguns tokens simbólicos que precisam como informação
 adicional armazenar um ponteiro para outro token, seja ele qual for. É
 o caso do token que representa um \monoespaco{endfor} (fim de uma
 iteração): ele deve apontar para o começo da iteração de modo que seja
-eficiente voltar para o começo dela. Para tokens assim, usamos a
-seguinte estrutura de dados:
+eficiente voltar para o começo dela. Mas também ocorre com
+o \monoespaco{if}, \monoespaco{elseif} e \monoespaco{else}, que devem
+conter um ponteiro para o fim do código interno à sua condição. Para
+tokens assim, usamos a seguinte estrutura de dados:
 
 \iniciocodigo
 @<Estrutura de Dados Locais (metafont.c)@>+=
@@ -1517,9 +1519,8 @@ pertencem a uma dentre 12 famílias:
   @<Análise Léxica: Regra K@>
   @<Análise Léxica: Regra L@>
   // De acordo com conteúdo do buffer, gera o próximo token
+  @<Análise Léxica: Gera Token de Controle de Fluxo@>
   @<Análise Léxica: Gera Token Simbólico Reservado@>
-  @<Análise Léxica: Gera Token de Começo de Loop@>
-  @<Análise Léxica: Gera Token de Fim de Loop@>
   @<Análise Léxica: Gera Token Simbólico Genérico@>
 }
 @
@@ -1783,19 +1784,26 @@ cabeçalho:
 @
 \fimcodigo
 
-Se não for um token simbólico na lista de reservados, mas for um
-``for'', então estamos sim diante de uma palavra reservada e geramos
-um token especial de começo de loop para ele. Além disso, também
-geramos o token de finalização para o \monoespaco{endfor}, fazendo com
-que o token \monoespaco{for} possua um ponteiro
-para \monoespaco{endfor} e o \monoespaco{endfor} um ponteiro para o
-token que vem antes do \monoespaco{for}. Isso ajudará nosso
-interpretador a navegar de forma mais rápida diante das operações de
-controle de fluxo. O token do \monoespaco{endfor} é então guardado em
-uma pilha para ser usado depois.
+Os tokens que realizam controle de fluxo
+como \monoespaco{for}, \monoespaco{endfor}, \monoespaco{if}, \monoespaco{elseif},
+\monoespaco{else} e \monoespaco{fi} também são tokens formados por palavras
+reservadas. Mas eles terao precedência sobre os outros e a geração
+deles será um pouco diferente. Isso porque muitos destes tokens devem
+ter ponteiros inicializados que depois permitirão navegar mais
+facilmente pelo código caso eles mudem a ordem sequencial na qual os
+comandos da linguagem são interpretados.
+
+No caso do \monoespaco{for}, quando o geramos também geramos o token
+\monoespaco{endfor} correspondente, fazendo com que o
+token \monoespaco{for} possua um ponteiro para \monoespaco{endfor} e
+o \monoespaco{endfor} um ponteiro para o token que vem antes
+do \monoespaco{for}. Isso ajudará nosso interpretador a navegar de
+forma mais rápida diante das operações de controle de fluxo. O token
+do \monoespaco{endfor} é então guardado em uma pilha para ser usado
+depois.
 
 \iniciocodigo
-@<Análise Léxica: Gera Token de Começo de Loop@>=
+@<Análise Léxica: Gera Token de Controle de Fluxo@>=
 if(!strcmp(buffer, "for")){
   struct generic_token *previous_token = *last_token;
   struct linked_token *endfor_token;
@@ -1814,7 +1822,6 @@ if(!strcmp(buffer, "for")){
 #endif
   new_token -> running = false;
   new_token -> control_var = NULL;
-  new_token -> increment = new_token -> limit = NAN;
   if(*first_token == NULL)
     *first_token = *last_token = (struct generic_token *) new_token;
   else{
@@ -1851,7 +1858,7 @@ novo. Se não existir tal token, devemos gerar um erro (que definiremos
 posteriormente):
 
 \iniciocodigo
-@<Análise Léxica: Gera Token de Fim de Loop@>=
+@<Análise Léxica: Gera Token de Controle de Fluxo@>+=
 if(!strcmp(buffer, "endfor")){
   if(aux_stack == NULL || aux_stack -> type != TYPE_ENDFOR){
     free_token_list(*first_token);
@@ -1872,10 +1879,164 @@ if(!strcmp(buffer, "endfor")){
 @
 \fimcodigo
 
-Caso aconteça de terminarmos a análise léxica com
-algum \monoespaco{endfor} empilhado, isso significa que
-um \monoespaco{for} sem um \monoespaco{endfor} correspondente foi
-encontrado. Neste caso, só acusamos um erro (que definiremos depois):
+Se lemos um token \monoespaco{if}, da mesma forma, criaremos um
+token \monoespaco{fi} provisório e o empilharemos. Mas este será
+um \monoespaco{fi} temporário, não o que será depois inserido na lista
+de tokens que forma o programa. Isso porque este token de finalização,
+ao contrário de um \monoespaco{fi} comum, terá um ponteiro para
+o \monoespaco{if} que o gerou, e este ponteiro será atualizado para o
+próximo \monoespaco{elseif} e \monoespaco{else} no mesmo nível de
+aninhamento. Este ponteiro nos ajudará a atualizar o
+último \monoespaco{if}, \monoespaco{elseif} e \monoespaco{else} para
+apontarem para o próximo token de controle de fluxo condicional depois
+deles.
+
+Esta é então a criação de um \monoespaco{if}:
+
+\iniciocodigo
+@<Análise Léxica: Gera Token de Controle de Fluxo@>=
+if(!strcmp(buffer, "if")){
+  struct linked_token *if_token, *fi_token;
+  if_token = (struct linked_token *)
+               permanent_alloc(sizeof(struct linked_token));
+  if(if_token == NULL){
+    free_token_list(*first_token);
+    *first_token = *last_token = NULL;
+    RAISE_ERROR_NO_MEMORY(mf, NULL, line);
+    return;
+  }
+  if_token -> type = TYPE_IF;
+  if_token -> next = NULL;
+#if defined(W_DEBUG_METAFONT)
+  if_token -> line = line;
+#endif
+  if_token -> link = NULL;
+  if(*first_token == NULL)
+    *first_token = *last_token = (struct generic_token *) if_token;
+  else{
+    (*last_token) -> next = (struct generic_token *) if_token;
+    *last_token = (struct generic_token *) if_token;
+  }
+  fi_token = (struct linked_token *)
+               temporary_alloc(sizeof(struct linked_token));
+  if(fi_token == NULL){
+    free_token_list(*first_token);
+    *first_token = *last_token = NULL;
+    RAISE_ERROR_NO_MEMORY(mf, NULL, line);
+    return;
+  }
+  fi_token -> link = (struct generic_token *) if_token;
+  fi_token -> type = TYPE_FI;
+  if(aux_stack == NULL){
+    aux_stack = fi_token;
+    fi_token -> next = NULL;
+  }
+  else{
+    fi_token -> next = (struct generic_token *) aux_stack;
+    aux_stack = fi_token;
+  }
+  continue;
+}
+@
+\fimcodigo
+
+Se encontrarmos um \monoespaco{elseif} ou um \monoespaco{else} no
+mesmo nível de aninhamento, consultamos o ponteiro do \monoespaco{fi}
+empilhado, fazemos com que o token encontrado nele (que deve ser
+um \monoespaco{if} ou um \monoespaco{elseif}) aponte para
+o \monoespaco{elseif} ou \monoespaco{else} atual, criamos um novo
+token para o novo \monoespaco{elseif} ou \monoespaco{else} a ser
+inserido no programa e atualizamos o ponteiro do \monoespaco{fi} para
+que aponte para o token recém-criado:
+
+\iniciocodigo
+@<Análise Léxica: Gera Token de Controle de Fluxo@>+=
+if(!strcmp(buffer, "elseif") || !strcmp(buffer, "else")){
+  struct linked_token *new_token;
+  if(aux_stack == NULL || aux_stack -> type != TYPE_FI ||
+     aux_stack -> link -> type == TYPE_ELSE){
+    free_token_list(*first_token);
+    *first_token = *last_token = NULL;
+    RAISE_ERROR_UNEXPECTED_TOKEN(mf, NULL, line,
+                                (buffer[4] == 'i')?TYPE_ELSEIF:TYPE_ELSE);
+    return;
+  }
+  new_token = (struct linked_token *)
+                permanent_alloc(sizeof(struct linked_token));
+  if(new_token == NULL){
+    free_token_list(*first_token);
+    *first_token = *last_token = NULL;
+    RAISE_ERROR_NO_MEMORY(mf, NULL, line);
+    return;
+  }
+  ((struct linked_token *) (aux_stack -> link)) -> link =
+                                            (struct generic_token *) new_token;
+  if(buffer[4] == 'i')
+    new_token -> type = TYPE_ELSEIF;
+  else
+    new_token -> type = TYPE_ELSE;
+  new_token -> next = NULL;
+#if defined(W_DEBUG_METAFONT)
+  new_token -> line = line;
+#endif
+  new_token -> link = NULL;
+  if(*first_token == NULL)
+    *first_token = *last_token = (struct generic_token *) new_token;
+  else{
+    (*last_token) -> next = (struct generic_token *) new_token;
+    *last_token = (struct generic_token *) new_token;
+  }
+  aux_stack -> link = (struct generic_token *) new_token;
+  continue;
+}
+@
+\fimcodigo
+
+Finalmente, ao encontrar um \monoespaco{fi}, devemos remover da pilha
+o token \monoespaco{fi} que contém um link para o
+último \monoespaco{if}, \monoespaco{elseif} ou \monoespaco{else}. Mas
+antes inicializando o ponteiro de ligação do token referenciado por
+tal link:
+
+\iniciocodigo
+@<Análise Léxica: Gera Token de Controle de Fluxo@>+=
+if(!strcmp(buffer, "fi")){
+  struct generic_token *new_token;
+  if(aux_stack == NULL || aux_stack -> type != TYPE_FI){
+    free_token_list(*first_token);
+    *first_token = *last_token = NULL;
+    RAISE_ERROR_UNEXPECTED_TOKEN(mf, NULL, OPTIONAL(line), TYPE_FI);
+    return;
+  }
+  new_token = (struct generic_token *)
+                permanent_alloc(sizeof(struct generic_token));
+  if(new_token == NULL){
+    free_token_list(*first_token);
+    *first_token = *last_token = NULL;
+    RAISE_ERROR_NO_MEMORY(mf, NULL, line);
+    return;
+  }
+  ((struct linked_token *) aux_stack -> link) -> link = new_token;
+  new_token -> type = TYPE_FI;
+  new_token -> next = NULL;
+#if defined(W_DEBUG_METAFONT)
+  new_token -> line = line;
+#endif
+  (*last_token) -> next = (struct generic_token *) new_token;
+  *last_token = (struct generic_token *) new_token;
+  struct linked_token *tmp = aux_stack;
+  aux_stack = (struct linked_token *) aux_stack -> next;
+  if(temporary_free != NULL)
+    temporary_free(tmp);
+  continue;
+}
+@
+\fimcodigo
+
+Caso aconteça de terminarmos a análise léxica com algum token de
+controle de fluxo empilhado, isso significa que um \monoespaco{for}
+ou \monoespaco{if} foi inicializado, mas não terminado. Neste caso, só
+acusamos um erro (que definiremos depois):
 
 \iniciocodigo
 @<Análise Léxica: Detecção Final de Erros@>=
@@ -14602,30 +14763,19 @@ expressões booleanas.
 
 Basicamente, diante de um \monoespaco{if}, primeiro avaliamos a
 expressão booleana diante dele. Se ela for verdadeira, posicionamos o
-ponteiro para o próximo dois pontos (``:'') encontrado. Se não, então
-percorremos os próximos tokens tentando encontrar o
-próximo \monoespaco{elseif} ou \monoespaco{else}. No caso de
-um \monoespaco{elseif}, novamente avaliamos sua expressão booleana
-para saber se devemos colocar o ponteiro diante do código de seu
-corpo. Já no caso de um \monoespaco{else}, sempre devemos colocar o
-ponteiro diante de seu corpo. E se não encontrarmos nem
+ponteiro para o próximo dois pontos (``:'') encontrado e assumiremos
+que todos os outros \monoespaco{elseif} e \monoespaco{else} não devem
+ser executados. Se não, posicionamos o ponteiro para o endereço
+armazenado no próprio token \monoespaco{if} e que foi inicializado
+durante a análise léxica, quando os tokens foram gerados.
+
+No caso de um \monoespaco{elseif}, novamente avaliamos sua expressão
+booleana e nos comportamos exatamente como no caso
+do \monoespaco{if}. Já no caso de um \monoespaco{else}, sempre devemos
+colocar o ponteiro diante de seu corpo. E se não encontrarmos nem
 um \monoespaco{else}, e nem um \monoespaco{elseif} onde a expressão
 booleana é verdadeira, então pulamos a declaração condicional,
-colocando o ponteiro de fim no \monoespaco{fi}.
-
-Entretanto, mesmo o código que iremos ignorar por estar dentro de um
-bloco condicional que não deve ser executado, deve passar por um
-mínimo de checagem para que erros de sintaxe não sejam ignorados. Por
-exemplo, pode haver um \monoespaco{endgroup} ou \monoespaco{endchar}
-solto, sem que qualquer uma destas declarações compostas tenha sido
-iniciada com um \monoespaco{begingroup} ou \monoespaco{beginchar}
-correspondente. Esse tipo de erro pode ser um sintoma de que
-o \monoespaco{if} foi finalizado incorretamente e por isso não devemos
-ignorar tais erros. À medida que percorremos código que não deve ser
-executado por corresponder à uma expressão falsa de um \monoespaco{if}
-ou \monoespaco{elseif}, devemos fazer uma checagem ao passarmos por
-tokens que aumentam ou diminuem o nível de aninhamento para garantir
-que eles estão corretos.
+colocando o ponteiro de fim no próprio \monoespaco{fi}.
 
 O código que trata então um \monoespaco{if} é:
 
@@ -14634,10 +14784,6 @@ O código que trata então um \monoespaco{if} é:
 else if(begin -> type == TYPE_IF){
   struct generic_token *begin_bool, *end_bool;
   struct boolean_variable b;
-  int current_nesting_level;
-  // Iniciando o aninhamento
-  begin_nesting_level(mf, cx, begin);
-  current_nesting_level = cx -> nesting_level;
   // Delimitando a expressão booleana
   begin_bool = begin -> next;
   end_bool = begin_bool;
@@ -14655,17 +14801,14 @@ else if(begin -> type == TYPE_IF){
     return true;
   }
   else{ // Falso: pulamos o código no 'if'
-    struct generic_token *t = end_bool -> next;
-    while(t -> next != NULL){
-      if(t -> type == TYPE_FI && cx -> nesting_level == current_nesting_level){
+    struct generic_token *t = ((struct linked_token *) begin) -> link;
+    while(t != NULL){
+      if(t -> type == TYPE_FI){
         // Achamos o 'fi' correspondente ao nosso 'if'
-        if(!end_nesting_level(mf, cx, t))
-          return false;
         *end = t;
         return true;
       }
-      else if(t -> type == TYPE_ELSE &&
-              cx -> nesting_level == current_nesting_level){
+      else if(t -> type == TYPE_ELSE){
         // Achamos o 'else' correspondente ao nosso 'if'
         *end = t -> next;
         if((*end) -> type != TYPE_COLON){
@@ -14675,8 +14818,7 @@ else if(begin -> type == TYPE_IF){
         }
         return true;
       }
-      else if(t -> type == TYPE_ELSEIF &&
-              cx -> nesting_level == current_nesting_level){
+      else if(t -> type == TYPE_ELSEIF){
         // Achamos um 'elseif' correspondente ao nosos 'if'
         begin_bool = t -> next;
         end_bool = begin_bool;
@@ -14689,15 +14831,7 @@ else if(begin -> type == TYPE_IF){
           return true;
         }
       }
-      // Outros tokens que mudam nível de aninhamento
-      else if(t -> type == TYPE_IF || t -> type == TYPE_BEGINGROUP ||
-              t -> type == TYPE_BEGINCHAR || t -> type == TYPE_FOR)
-        begin_nesting_level(mf, cx, t);
-      else if(t -> type == TYPE_FI || t -> type == TYPE_ENDGROUP ||
-              t -> type == TYPE_ENDCHAR || t -> type == TYPE_ENDFOR)
-        if(!end_nesting_level(mf, cx, t))
-          return false;
-      t = t -> next;
+      t = ((struct linked_token *) t) -> next;
     }
   }
   RAISE_ERROR_UNFINISHED_STATEMENT(mf, cx, OPTIONAL(begin -> line),
@@ -14762,32 +14896,15 @@ em que estamos:
 \iniciocodigo
 @<Instrução: Composta@>+= 
 else if(begin -> type == TYPE_ELSEIF || begin -> type == TYPE_ELSE){
-  int current_nesting_level;
   struct generic_token *t;
-  if(cx -> end_token_stack == NULL ||
-     cx -> end_token_stack -> type != TYPE_FI){
-    RAISE_ERROR_UNEXPECTED_TOKEN(mf, cx, OPTIONAL(begin -> line),
-                                begin -> type);
-    return false;
-  }
-  current_nesting_level = cx -> nesting_level;
-  t = begin;
+  t = ((struct linked_token *) begin) -> link;
   while(t != NULL){
-    if(t -> type == TYPE_FI && cx -> nesting_level == current_nesting_level){
+    if(t -> type == TYPE_FI){
       // Achamos o 'fi' correspondente ao nosso 'if'
-      if(!end_nesting_level(mf, cx, t))
-        return false;
       *end = t;
       return true;
     }
-    else if(t -> type == TYPE_IF || t -> type == TYPE_BEGINGROUP ||
-            t -> type == TYPE_BEGINCHAR || t -> type == TYPE_FOR)
-      begin_nesting_level(mf, cx, t);
-    else if(t -> type == TYPE_FI || t -> type == TYPE_ENDGROUP ||
-            t -> type == TYPE_ENDCHAR || t -> type == TYPE_ENDFOR)
-      if(!end_nesting_level(mf, cx, t))
-        return false;
-    t = t -> next;
+    t = ((struct linked_token *) t) -> link;
   }
   RAISE_ERROR_UNFINISHED_STATEMENT(mf, cx, OPTIONAL(begin -> line),
                                    TYPE_IF);
@@ -14797,15 +14914,12 @@ else if(begin -> type == TYPE_ELSEIF || begin -> type == TYPE_ELSE){
 \fimcodigo
 
 Finalmente, nós podemos também encontrar um \monoespaco{fi} no começo
-de declaração a ser avaliada. Neste caso, nós apenas diminuimos o
-nível de aninhamento e marcamos o fim do que avaliamos para o próprio
-token \monoespaco{fi}:
+de declaração a ser avaliada. Neste caso, nós apenas a ignoramos e
+seguimos adiante para interpretar o que vem depois dela:
 
 \iniciocodigo
 @<Instrução: Composta@>+=
 else if(begin -> type == TYPE_FI){
-  if(!end_nesting_level(mf, cx, begin))
-    return false;
   *end = begin;
   return true;
 }
