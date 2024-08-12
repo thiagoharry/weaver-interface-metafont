@@ -1261,11 +1261,13 @@ Agora a função que fará a análise léxica. Ela receberá como argumento
 a estrutura da meta-fonte (cujos detalhes ainda vamos definir) e uma
 string com caminho para arquivo com código-fonte METAFONT. Ela
 produzirá uma lsita de tokens e armazenará no ponteiro indicado por
-seus dois últimos argumentos o primeiro e o último token lido.
+seus dois últimos argumentos o primeiro e o último token lido. A
+função retornará verdadeiro se nenhum erro ocorrer, e falo caso
+contrário.
 
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>=
-void lexer(struct metafont *mf, char *path, struct generic_token **first_token,
+bool lexer(struct metafont *mf, char *path, struct generic_token **first_token,
            struct generic_token **last_token){
   struct linked_token *aux_stack = NULL;
   FILE *fp;
@@ -1274,8 +1276,10 @@ void lexer(struct metafont *mf, char *path, struct generic_token **first_token,
   *first_token = NULL;
   *last_token = NULL;
   fp = fopen(path, "r");
-  if(fp == NULL)
-    return;
+  if(fp == NULL){
+    RAISE_ERROR_FAILED_OPENING_FILE(mf, NULL, 0, path);
+    return false;
+  }
   while((c = fgetc(fp)) != EOF){
     char next_char = fgetc(fp);
     ungetc(next_char, fp);
@@ -1294,10 +1298,11 @@ void lexer(struct metafont *mf, char *path, struct generic_token **first_token,
     free_token_list(first_token);
     *first_token = NULL;
     *last_token = NULL;
-    return;
+    return false;
   }
   @<Análise Léxica: Detecção Final de Erros@>
   fclose(fp);
+  return true;
 }
 @
 \fimcodigo 
@@ -1367,7 +1372,7 @@ if((c == '.' && isdigit(next_char)) || isdigit(c)){
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
     RAISE_ERROR_NO_MEMORY(mf, NULL, line); // Vamos definir erros na Seção 5.2.
-    return;
+    return false;
   }
   new_token -> type = TYPE_NUMERIC;
   new_token -> next = NULL;
@@ -1421,7 +1426,7 @@ if(c == 34){ // 34: ASCII para aspas duplas
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
     RAISE_ERROR_NO_MEMORY(mf, NULL, line);
-    return;
+    return false;
   }
   new_token -> type = TYPE_STRING;
   new_token -> next = NULL;
@@ -1445,7 +1450,7 @@ if(c == 34){ // 34: ASCII para aspas duplas
       permanent_free(new_token);
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
-    return;
+    return false;
   }
   if(*first_token == NULL)
     *first_token = *last_token = (struct generic_token *) new_token;
@@ -1471,7 +1476,7 @@ if(c == '(' || c == ')' || c == ',' || c == ';'){
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
     RAISE_ERROR_NO_MEMORY(mf, NULL, line);
-    return;
+    return false;
   }
   if(c == '(')
     new_token -> type = TYPE_OPEN_PARENTHESIS;
@@ -1757,7 +1762,7 @@ dependendo de sua posição na lista:
       free_token_list(*first_token);
       *first_token = *last_token = NULL;
       RAISE_ERROR_NO_MEMORY(mf, NULL, line);
-      return;
+      return false;
     }
     new_token -> type = token_type;
     new_token -> next = NULL;
@@ -1814,7 +1819,7 @@ if(!strcmp(buffer, "for")){
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
     RAISE_ERROR_NO_MEMORY(mf, NULL, line);
-    return;
+    return false;
   }
   new_token -> type = TYPE_FOR;
   new_token -> next = NULL;
@@ -1835,7 +1840,7 @@ if(!strcmp(buffer, "for")){
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
     RAISE_ERROR_NO_MEMORY(mf, NULL, line);
-    return;
+    return false;
   }
   endfor_token -> link = (struct generic_token *) previous_token;
   new_token -> end = endfor_token;
@@ -1865,7 +1870,7 @@ if(!strcmp(buffer, "endfor")){
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
     RAISE_ERROR_UNEXPECTED_TOKEN(mf, NULL, OPTIONAL(line), TYPE_ENDFOR);
-    return;
+    return false;
   }
   struct linked_token *new_token = aux_stack;
   aux_stack = (struct linked_token *) aux_stack -> next;
@@ -1904,7 +1909,7 @@ if(!strcmp(buffer, "if")){
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
     RAISE_ERROR_NO_MEMORY(mf, NULL, line);
-    return;
+    return false;
   }
   if_token -> type = TYPE_IF;
   if_token -> next = NULL;
@@ -1924,7 +1929,7 @@ if(!strcmp(buffer, "if")){
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
     RAISE_ERROR_NO_MEMORY(mf, NULL, line);
-    return;
+    return false;
   }
   fi_token -> link = (struct generic_token *) if_token;
   fi_token -> type = TYPE_FI;
@@ -1960,7 +1965,7 @@ if(!strcmp(buffer, "elseif") || !strcmp(buffer, "else")){
     *first_token = *last_token = NULL;
     RAISE_ERROR_UNEXPECTED_TOKEN(mf, NULL, line,
                                 (buffer[4] == 'i')?TYPE_ELSEIF:TYPE_ELSE);
-    return;
+    return false;
   }
   new_token = (struct linked_token *)
                 permanent_alloc(sizeof(struct linked_token));
@@ -1968,7 +1973,7 @@ if(!strcmp(buffer, "elseif") || !strcmp(buffer, "else")){
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
     RAISE_ERROR_NO_MEMORY(mf, NULL, line);
-    return;
+    return false;
   }
   ((struct linked_token *) (aux_stack -> link)) -> link =
                                             (struct generic_token *) new_token;
@@ -2007,7 +2012,7 @@ if(!strcmp(buffer, "fi")){
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
     RAISE_ERROR_UNEXPECTED_TOKEN(mf, NULL, OPTIONAL(line), TYPE_FI);
-    return;
+    return false;
   }
   new_token = (struct generic_token *)
                 permanent_alloc(sizeof(struct generic_token));
@@ -2015,7 +2020,7 @@ if(!strcmp(buffer, "fi")){
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
     RAISE_ERROR_NO_MEMORY(mf, NULL, line);
-    return;
+    return false;
   }
   ((struct linked_token *) aux_stack -> link) -> link = new_token;
   new_token -> type = TYPE_FI;
@@ -2055,14 +2060,14 @@ if(!strcmp(buffer, "beginchar")){
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
     RAISE_ERROR_NO_MEMORY(mf, NULL, line);
-    return;
+    return false;
   }
   while(endchar_token != NULL){
     if(endchar_token -> type == TYPE_ENDCHAR){ // Sem 'beginchar' aninhados
       free_token_list(*first_token);
       *first_token = *last_token = NULL;
       RAISE_ERROR_UNEXPECTED_TOKEN(mf, NULL, line, TYPE_BEGINCHAR);
-      return;
+      return false;
     }
     endchar_token = (struct linked_token *) (endchar_token -> next);
   }
@@ -2084,7 +2089,7 @@ if(!strcmp(buffer, "beginchar")){
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
     RAISE_ERROR_NO_MEMORY(mf, NULL, line);
-    return;
+    return false;
   }
   endchar_token -> link = (struct generic_token *) beginchar_token;
   endchar_token -> type = TYPE_ENDCHAR;
@@ -2113,7 +2118,7 @@ if(!strcmp(buffer, "endchar")){
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
     RAISE_ERROR_UNEXPECTED_TOKEN(mf, NULL, OPTIONAL(line), TYPE_ENDCHAR);
-    return;
+    return false;
   }
   new_token = (struct generic_token *)
                 permanent_alloc(sizeof(struct generic_token));
@@ -2121,7 +2126,7 @@ if(!strcmp(buffer, "endchar")){
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
     RAISE_ERROR_NO_MEMORY(mf, NULL, line);
-    return;
+    return false;
   }
   ((struct linked_token *) aux_stack -> link) -> link = new_token;
   new_token -> type = TYPE_ENDCHAR;
@@ -2153,7 +2158,7 @@ if(aux_stack != NULL){
   *first_token = *last_token = NULL;
   RAISE_ERROR_MISSING_TOKEN(mf, NULL, OPTIONAL(aux_stack -> link -> line),
                            aux_stack -> type);
-  return;
+  return false;
 }
 @
 \fimcodigo
@@ -2174,7 +2179,7 @@ if(buffer[0] != '\0'){
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
     RAISE_ERROR_NO_MEMORY(mf, NULL, line);
-    return;
+    return false;
   }
   new_token -> type = TYPE_SYMBOLIC;
   new_token -> next = NULL;
@@ -2503,13 +2508,15 @@ void _Wprint_metafont_error(struct metafont *mf){
 
 Para adicionar novos tipos de erro, basta começarmos definindo os seus
 tipos, o que acabará dando um código numérico para ele. Por exemplo,
-para os casos de erro por não termos memória, por encontrarmos um caractere
-inválido no analisador léxico e por termos começado e não terminado
-uma string, podemos adicionar os 3 tipos abaixo:
+para os casos de erro por não termos memória, por encontrarmos um
+caractere inválido no analisador léxico, por termos começado e não
+terminado uma string ou por não termos conseguido abrir um arquivo,
+podemos adicionar os 4 tipos abaixo:
 
 \iniciocodigo
 @<Tipos de Erros@>=
 ERROR_NO_MEMORY, ERROR_INVALID_CHAR, ERROR_UNCLOSED_STRING,
+ERROR_FAILED_OPENING_FILE,
 @
 \fimcodigo
 
@@ -2559,8 +2566,8 @@ caractere em questão como um inteiro:
 @
 \fimcodigo
 
-E finalmente, quando estamos com uma string não-finalizada, nós
-armazenamos a string em questão:
+Quando estamos com uma string não-finalizada, nós armazenamos a string
+em questão:
 
 \iniciocodigo
 @<Macros Locais (metafont.c)@>+=
@@ -2572,7 +2579,20 @@ armazenamos a string em questão:
 @
 \fimcodigo
 
-Para imprimir uma mensagem de diagnóstico para os três erros
+Quando falhamos em abrir um arquivo, também armazenamos o nome do
+arquivo como string:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_FAILED_OPENING_FILE(mf, cx, line, str) {\
+  if(!mf -> errno){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_FAILED_OPENING_FILE);\
+    mf -> errno_str = (char *) permanent_alloc(strlen(str)+1);\
+    memcpy(mf -> errno_str, str, sizeof(str)+1);}}
+@
+\fimcodigo
+
+Para imprimir uma mensagem de diagnóstico para os quatro erros
 definidos, usamos:
 
 \iniciocodigo
@@ -2589,6 +2609,10 @@ case ERROR_UNCLOSED_STRING:
   fprintf(stderr, "%s:%s Unclosed string \"%s\".", mf -> file,
           line_number, mf -> errno_str);
   break;
+case ERROR_FAILED_OPENING_FILE:
+  fprintf(stderr, "%s:%s Failed opening file \"%s\".", mf -> file,
+          line_number, mf -> errno_str);
+  break;  
 @
 \fimcodigo
 
@@ -19351,7 +19375,6 @@ definida, caso em que não usaremos a técnica.  Por fim, a caneta atual
 @<Instrução: Composta@>+=
 else if(begin -> type == TYPE_BEGINCHAR){
   DECLARE_NESTING_CONTROL();
-  begin_nesting_level(mf, cx, begin);
   struct generic_token *t, *begin_expr, *end_expr;
   struct string_token *str;
   struct numeric_variable width, height, depth;
@@ -19512,7 +19535,6 @@ de \monoespaco{currentpicture}:
 else if(begin -> type == TYPE_ENDCHAR){
   struct picture_variable *currentpicture =
                                         &(mf -> internal_picture_variables[0]);
-  end_nesting_level(mf, cx, begin);
   cx -> current_glyph -> width = round(currentpicture -> width);
   cx -> current_glyph -> depth = round(mf -> current_depth);
   cx -> current_glyph -> height = round(currentpicture -> height -
