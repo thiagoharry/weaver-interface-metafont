@@ -1164,15 +1164,18 @@ adicional armazenar um ponteiro para outro token, seja ele qual for. É
 o caso do token que representa um \monoespaco{endfor} (fim de uma
 iteração): ele deve apontar para o começo da iteração de modo que seja
 eficiente voltar para o começo dela. Mas também ocorre com
-o \monoespaco{if}, \monoespaco{elseif}, \monoespaco{else} e
-\monoespaco{beginchar}, que devem conter um ponteiro para o token
-que encerra o código interno à eles. Para tokens assim, usamos a
-seguinte estrutura de dados:
+o \monoespaco{if}, \monoespaco{elseif}, \monoespaco{else},
+\monoespaco{beginchar} e \monoespaco{shipit},
+que devem conter um ponteiro para outro token de modo a facilitar o
+deslocamento pelo código durante a interpretação. Para tokens assim,
+usamos a seguinte estrutura de dados:
 
 \iniciocodigo
 @<Estrutura de Dados Locais (metafont.c)@>+=
 struct linked_token{
-  int type;//'TYPE_ENDFOR'/'TYPE_IF'/'TYPE_ELSEIF'/'TYPE_ELSE'/'TYPE_BEGINCHAR'
+  //'TYPE_ENDFOR'/'TYPE_IF'/'TYPE_ELSEIF'/'TYPE_ELSE'/'TYPE_BEGINCHAR'/
+  //'TYPE_SHIPIT':
+  int type;
   struct generic_token *next;
 #if defined(W_DEBUG_METAFONT)
   int line;
@@ -2056,7 +2059,6 @@ if(!strcmp(buffer, "beginchar")){
   beginchar_token = (struct linked_token *)
                       permanent_alloc(sizeof(struct linked_token));
   if(beginchar_token ==  NULL){
-    printf("ERRO AQUI\n");
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
     RAISE_ERROR_NO_MEMORY(mf, NULL, line);
@@ -2101,6 +2103,49 @@ if(!strcmp(buffer, "beginchar")){
     endchar_token -> next = (struct generic_token *) aux_stack;
     aux_stack = endchar_token;
   }
+  continue;
+}
+@
+\fimcodigo
+
+Depois de um \monoespaco{beginchar}, mas antes de
+um \monoespaco{enchar}, opcionalmente podemos encontrar um
+token \monoespaco{shipit}. Se ele aparecer sem que haja
+um \monoespaco{beginchar} aberto, isso é um erro. Caso contrário, ele
+deve ser gerado e deve ter armazenado dentro dele um ponteiro para
+o \monoespaco{beginchar} ativo:
+
+\iniciocodigo
+@<Análise Léxica: Gera Token de Controle de Fluxo@>+=
+if(!strcmp(buffer, "shipit")){
+  struct linked_token *shipit_token, *aux_token = aux_stack;
+  shipit_token = (struct linked_token *)
+                   permanent_alloc(sizeof(struct linked_token));
+  if(shipit_token ==  NULL){
+    free_token_list(*first_token);
+    *first_token = *last_token = NULL;
+    RAISE_ERROR_NO_MEMORY(mf, NULL, line);
+    return false;
+  }
+  while(aux_token != NULL){
+    if(aux_token -> type == TYPE_ENDCHAR)
+      break;
+    aux_token = (struct linked_token *) (aux_token -> next);
+  }
+  if(aux_token == NULL){ // 'shipit' sem um 'beginchar':
+    free_token_list(*first_token);
+    *first_token = *last_token = NULL;
+    RAISE_ERROR_UNEXPECTED_TOKEN(mf, NULL, OPTIONAL(line), TYPE_SHIPIT);
+    return false;
+  }
+  shipit_token -> type = TYPE_SHIPIT;
+  shipit_token -> next = NULL;
+#if defined(W_DEBUG_METAFONT)
+  shipit_token -> line = line;
+#endif
+  shipit_token -> link = aux_token -> link; // 'shipit' aponta para 'beginchar'
+  (*last_token) -> next = (struct generic_token *) shipit_token;
+  *last_token = (struct generic_token *) shipit_token;
   continue;
 }
 @
@@ -2921,15 +2966,15 @@ aumenta esse nível em 1 e cada fim de instrução composta
 e \monoespaco{endfor}) diminui o nível em 1. Também devemos saber qual
 o token que criou o último nível de aninhamento caso estejamos
 aninhados em uma instrução composta e devemos armazenar uma cópia do
-token esperado que o finalizará em uma pilha. Desta forma, saberemos
-se uma instrução composta está sendo finalizada pelo token
-correspondente. Declaramos o nível de aninhamento atual e a pilha de
+token esperado que o finalizará em uma pilha. Esta cópia deve possuir
+um link para o começo da instrução composta caso seja
+necessário. Declaramos o nível de aninhamento atual e a pilha de
 tokens esperados de finalização:
 
 \iniciocodigo
 @<Atributos (struct context)@>=
   int nesting_level;
-  struct generic_token *end_token_stack;
+  struct linked_token *end_token_stack;
 @
 \fimcodigo
 
@@ -2968,14 +3013,14 @@ A implementação da primeira função:
 @<Funções Auxiliares Locais (metafont.c)@>+=
 bool begin_nesting_level(struct metafont *mf, struct context *cx,
                          struct generic_token *tok){
-  struct generic_token *end_token;
-  end_token = (struct generic_token *)
-                    temporary_alloc(sizeof(struct generic_token));
+  struct linked_token *end_token;
+  end_token = (struct linked_token *)
+                    temporary_alloc(sizeof(struct linked_token));
   if(end_token == NULL){
     RAISE_ERROR_NO_MEMORY(mf, cx, OPTIONAL(tok -> line));
     return false;
   }
-  // Somente 3 tipos de tokens serão passados para esta função:
+  // Somente 4 tipos de tokens serão passados para esta função:
   switch(tok -> type){
   case TYPE_BEGINGROUP:
     end_token -> type = TYPE_ENDGROUP;
@@ -2992,11 +3037,12 @@ bool begin_nesting_level(struct metafont *mf, struct context *cx,
   default:
     return false;
   }
+  end_token -> link = tok;
 #if defined(W_DEBUG_METAFONT)
   end_token -> line = tok -> line;
 #endif
   cx -> nesting_level ++;
-  end_token -> next = cx -> end_token_stack;
+  end_token -> next = (struct generic_token *) (cx -> end_token_stack);
   cx -> end_token_stack = end_token;
   return true;
 }
@@ -3009,7 +3055,7 @@ E a implementação da segunda função:
 @<Funções Auxiliares Locais (metafont.c)@>+=
 bool end_nesting_level(struct metafont *mf, struct context *cx,
                        struct generic_token *tok){
-  struct generic_token *end_tok = cx -> end_token_stack;
+  struct linked_token *end_tok = cx -> end_token_stack;
   if(end_tok == NULL){
     RAISE_ERROR_UNEXPECTED_TOKEN(mf, cx, OPTIONAL(tok -> line), tok -> type);
     return false;
@@ -3020,7 +3066,7 @@ bool end_nesting_level(struct metafont *mf, struct context *cx,
     return false;
   }
   cx -> nesting_level --;
-  cx -> end_token_stack = end_tok -> next;
+  cx -> end_token_stack = (struct linked_token *) (end_tok -> next);
   if(temporary_free != NULL)
     temporary_free(end_tok);
   return true;
@@ -3130,8 +3176,8 @@ existente na pilha de tokens de finalização esperados:
 @<Finalização (struct context)@>=
 if(temporary_free != NULL){
   while(cx -> end_token_stack != NULL){
-    struct generic_token *end_tok = cx -> end_token_stack;
-    cx -> end_token_stack = end_tok -> next;
+    struct linked_token *end_tok = cx -> end_token_stack;
+    cx -> end_token_stack = (struct linked_token *) (end_tok -> next);
     temporary_free(end_tok);
   }  
 }
@@ -15120,6 +15166,7 @@ else if(begin -> type == TYPE_FOR){
   struct begin_loop_token *for_token = (struct begin_loop_token *) begin;
   struct generic_token *current_token = begin, *begin_expr, *end_expr;
   if(!(for_token -> running)){
+    begin_nesting_level(mf, cx, begin);
     @<Interação: Prepara Iteração@>
   }
   @<Interação: Checa Condição@>
@@ -15285,6 +15332,8 @@ token ``\monoespaco{until}'' e pelo token ``\monoespaco{:}'':
     // Interromper loop:
     for_token -> running = false;
     *end = (struct generic_token *) for_token -> end;
+    if(!end_nesting_level(mf, cx, *end))
+      return false;
     return true;
   }
   else{
@@ -19378,6 +19427,7 @@ else if(begin -> type == TYPE_BEGINCHAR){
   struct generic_token *t, *begin_expr, *end_expr;
   struct string_token *str;
   struct numeric_variable width, height, depth;
+  begin_nesting_level(mf, cx, begin);
   // Primeiro obtemos o glifo atual:
   t = begin -> next;
   t = t -> next;
@@ -19535,6 +19585,8 @@ de \monoespaco{currentpicture}:
 else if(begin -> type == TYPE_ENDCHAR){
   struct picture_variable *currentpicture =
                                         &(mf -> internal_picture_variables[0]);
+  if(!end_nesting_level(mf, cx, begin))
+    return false;
   cx -> current_glyph -> width = round(currentpicture -> width);
   cx -> current_glyph -> depth = round(mf -> current_depth);
   cx -> current_glyph -> height = round(currentpicture -> height -
@@ -19715,6 +19767,153 @@ bool _Wrender_glyph(struct metafont *mf, char *glyph,
 @
 \fimcodigo
 
+\secao{15. O Comando \monoespaco{shipit}}
+
+Na linguagem METAFONT original, para que qualquer caractere fosse
+renderizado, era necessário usar a macro \monoespaco{shipit} ou o
+comando \monoespaco{shipout} passando uma imagem como parâmetro. Na
+linguagem WeaveFont, isso não é necesário, pois temos o comando
+composto \monoespaco{beginchar} reconhecido como uma primitiva da
+linguagem. No METAFONT original, o \monoespaco{beginchar} não era uma
+primitiva, mas sim uma macro, e isso impedia que a renderização pudesse
+ocorrer de maneira automática.
+
+Mas ao contrário da linguagem METAFONT, o WeaveFont produz
+renderizações em tempo real. E por causa disso, pode haver diferenças
+em como queremos tratar a imagem renderizada. Tipicamente, ao
+produzirmos um caractere, vamos querer armazenar em cache sua imagem
+para que possamos usá-la várias vezes, sem que precisemos interpretar
+novamente o seu código. Renderizar um texto seria muito mais lento se
+a cada nova letra tivéssemos que interpretar novamente código
+WeaveFont para produzir novamente o desenho.
+
+Mas há ocasiões em que queremos renderizar algo temporariamente. Por
+exemplo, caso tenhamos produzido uma fonte tipográfica em que cada
+letra é única, tendo seus parâmetros modificados aleatoriamente cada
+vez que produzimos um novo caractere. Desta forma, mesmo que um mesmo
+caractere apareça várias vezes, ele será ligeiramente diferente cada
+vez que aparece.
+
+Podemos também usar WeaveFont para criar animações vetoriais. Uma
+forma de fazer isso é renderizar um mesmo caractere várias vezes. Se
+ele foi projetado para ser uma animação, cada execução irá
+corresponder a um novo quadro.
+
+O que determina se um glifo precisa ser renderizado ou não é o seu
+atributo \monoespaco{need\_rendering}. Este atributo é sempre
+inicializado como verdadeiro e também se torna verdadeiro se uma
+variável global muda. Ele se torna falso somente se encontramos um
+caractere \monoespaco{endchar}. Vamos então usar um outro comando
+diferente de \monoespaco{endchar} que também vai encerrar a
+renderização, mas ele não irá ajustar como falso o atributo
+\monoespaco{need\_rendering}. Fora isso, ele se comportará exatamente
+da mesma forma como um \monoespaco{endchar}, exceto por ele poder
+estar aninhado dentro de outros comandos compostos como
+um \monoespaco{if}. Escolheremos o comando \monoespaco{shipit} para
+isso, que tem a seguinte gramática:
+
+\alinhaverbatim
+<Comando> -> ... |<Comando 'shipit'> | ...
+<Comando 'shipit'> -> shipit
+\alinhanormal
+
+Vamos adicionar então o token correspondente e a palavra reservada
+para o \monoespaco{shipit}:
+
+\iniciocodigo
+@<WEAVEFONT: Definição de Token Simbólico@>+=
+TYPE_SHIPIT,   // O token simbólico 'shipit'
+@
+\fimcodigo
+
+\iniciocodigo
+@<Lista de Palavras Reservadas@>+=
+"shipit",
+@
+\fimcodigo
+
+Ao encontrar tal comando, encerramos o desenho atual como se
+tivéssemos encontrado um \monoespaco{endchar} válido, exceto que não
+mudamos a sua flag \monoespaco{need\_rendering}. Ajustamos também o
+ponteiro de finalização para o próximo \monoespaco{endchar}, que
+obtemos consultando o seu ponteiro no \monoespaco{beginchar} ativo:
+
+\iniciocodigo
+@<Instrução: Comando@>=
+else if(begin -> type == TYPE_SHIPIT){
+  struct picture_variable *currentpicture;
+  if(begin -> next == NULL || begin -> next -> type != TYPE_SEMICOLON){
+    RAISE_ERROR_UNEXPECTED_TOKEN(mf, cx, OPTIONAL(begin -> line),
+                                 (begin -> next == NULL)?TYPE_INVALID_TOKEN:
+                                 begin -> next -> type);
+    return false;
+  }
+  currentpicture = &(mf -> internal_picture_variables[0]);
+  cx -> current_glyph -> texture = currentpicture -> texture;
+  cx -> current_glyph -> width = round(currentpicture -> width);
+  cx -> current_glyph -> depth = round(mf -> current_depth);
+  cx -> current_glyph -> height = round(currentpicture -> height -
+                                        mf -> current_depth);
+  cx -> current_glyph -> texture = currentpicture -> texture;
+#ifndef W_WEAVEFONT_DISABLE_MULTISAMPLE
+  cx -> current_glyph -> width /= 2;
+  cx -> current_glyph -> depth /= 2;
+  cx -> current_glyph -> height /= 2;
+#endif
+  currentpicture -> width = -1;
+  currentpicture -> height = -1;
+  currentpicture -> texture = 0;
+  { // Voltar o nível de aninhamento para anterior ao 'beginchar':
+    struct linked_token *aux = cx -> end_token_stack;
+    while(aux != NULL && aux -> type != TYPE_ENDCHAR){
+      if(aux -> type == TYPE_ENDFOR){ // Loop deve ser desativado:
+        struct begin_loop_token *loop = (struct begin_loop_token *) aux -> link;
+        loop -> running = false;
+      }
+      end_nesting_level(mf, cx, (struct generic_token *) aux);
+      aux = cx -> end_token_stack;
+    }
+    *end = ((struct linked_token *) (aux -> link)) -> link;
+    end_nesting_level(mf, cx, (struct generic_token *) aux);
+  }
+  return true;
+}
+@
+\fimcodigo
+
+Algo relevante sobre o comando \monoespaco{shipit} é que torna-se
+responsabilidade do programador apagar da placa de vídeo a textura
+produzida por ele, e que deve sr retornada por uma função
+como \monoespaco{\_Wrender\_glyph}. Ou o programador deve saber se o
+glifo que ele acabou de renderizar usa o \monoespaco{shipit}, ou então
+ele deve conferir após a renderização o valor do
+atributo \monoespaco{need\_rendering} para saber como tratar a textura.
+
+\secao{16. O Comando \monoespaco{renderchar}}
+
+Muitas vezes um glifo tipográfico é formado pela junção de outros
+glifos. Por exemplo, o glifo ``\$'' pode ser visto como um glifo ``S''
+com um traço vertical adicionado. Em alguns sistemas de escrita, tais
+composições são ainda mais comuns. Por exemplo, em logogramas chineses
+podemos encontrar caracteres que são radicais que formam outros
+caracteres. Os quais, por sua vez, podem ser a base de vários outros
+também. Um exemplo são os logogramas abaixo que são: ``rén'' (pessoa),
+``dá'' (grande), ``ti{\accent22 a}n'' (céu), ``Wù'' (um sobrenome
+comum), e ``yú'' (prazer):
+
+\imagem{images/chinese.eps}
+
+Nem sempre é adequado, mas algumas vezes um caractere pode ser
+diretamente estendido de outro existente, o que torna mais fácil e
+rápido definir uma fonte composta por muitos glifos. Para isso,
+fornecemos o comando \monoespaco{renderchar}, cuja gramática pode ser
+vista abaixo:
+
+\alinhaverbatim
+<Comando> -> ... |<Comando 'renderchar'> | ...
+<Comando 'renderchar'> -> renderchar <String> between <Expressão de Par>
+                          and <Expressão de Par>
+\alinhanormal
 
 \secao{Referências}
 

@@ -1,0 +1,18 @@
+numeric weight, counter;
+
+counter = 0;
+
+beginchar("A", 9, 9, 0);
+  pickup pensquare;
+  numeric i;
+  draw (w/2, 0)--(w/2, h);
+  if counter > 0:
+    draw (0, h/2)--(w, h/2);
+  fi
+  counter = counter + 1;
+  for i = 1 step 1 until 1:
+    weight = totalweight currentpicture;
+    shipit;
+  endfor;
+  weight = 0; % This should not be executed, otherwise the test will fail.
+endchar;
