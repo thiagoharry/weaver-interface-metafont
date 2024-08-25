@@ -61,81 +61,92 @@ beginchar("#", (0.579+0.158*(weight-1))*size*pt, 0.668*size*pt, 0);
   draw top ((0.595+0.01*(weight-1)) * w, 0) -- bot ((0.75+0.01*(weight-1)) * w, h);
 endchar;
 
+% beginchar("💰", (0.517+0.057*(weight-1)+0.01*italic+0.015*italic*(weight-1))*size*pt,
+%     0.745*size*pt, 0.0875*size*pt);
+%   pair p0, p1, p2, p3, p4, p5, p6;
+%   path s;
+%   transform t;
+%   t = identity xscaled w yscaled (h+d);
+%   pickup pencircle xscaled ((0.177+0.106*(weight-1)) * w) yscaled ((0.11+0.05*(weight-1)) * (h+d));
+%   p1 = top (0.5*w, 0);
+%   p5 = bot (w/2, h-d);
+%   p0 = rt (0, ypart p1 + 0.194 * (ypart p5 - ypart p1));
+%   p2 = lft ((1.0-0.06*italic)*w, ypart p1 + 0.261 * (ypart p5 - ypart p1));
+%   p3 = (w/2, ypart p1 + 0.5 * (ypart p5 - ypart p1));
+%   p4 = rt ((0.0136+0.0833*italic) * w, ypart p5 - 0.261 * (ypart p5 - ypart p1));
+%   p6 = lft ((0.94+0.06*italic)*w, ypart p5 - (0.129+0.05*italic) * (ypart p5 - ypart p1));
+%   s = p0 .. controls
+%     (xpart p0 + (0.13630967632850244 * (xpart p1 - xpart p0)),
+%       ypart p0 + (0.6173523106060608 * (ypart p1 - ypart p0)))
+%     and
+%     (xpart p0 + (0.5636998115942029 * (xpart p1 - xpart p0)),
+%       ypart p0 + (0.9484581136363636 * (ypart p1 - ypart p0)))
+%     .. p1 .. controls
+%     (xpart p1 + (0.46980877419354844 * (xpart p2 - xpart p1)),
+%       ypart p1 + (0.006359894409937952 * (ypart p2 - ypart p1)))
+%     and
+%     (xpart p1 + (0.9765995714285713 * (xpart p2 - xpart p1)),
+%       ypart p1 + (0.2860573416149067 * (ypart p2 - ypart p1)))
+%     .. p2 .. controls
+%     (xpart p2 - (0.05262555760368663 * (xpart p3 - xpart p2)),
+%       ypart p2 + (0.6083389146341461 * (ypart p3 - ypart p2)))
+%     and
+%     (xpart p2 + (0.6820850737327186 * (xpart p3 - xpart p2)),
+%       ypart p2 + (0.9178271951219512 * (ypart p3 - ypart p2)))
+%     .. p3 .. controls
+%     (xpart p3 + (0.38497423979591844 * (xpart p4 - xpart p3)),
+%       ypart p3 + (0.11381301369862977 * (ypart p4 - ypart p3)))
+%     and
+%     (xpart p3 + (1.0201843469387757 * (xpart p4 - xpart p3)),
+%       ypart p3 + (0.20611376027397257 * (ypart p4 - ypart p3)))
+%     .. p4 .. controls
+%     (xpart p4 - (0.029447223350253814 * (xpart p5 - xpart p4)),
+%       ypart p4 + (0.8799830354609937 * (ypart p5 - ypart p4)))
+%     and
+%     (xpart p4 + (0.6673211421319798 * (xpart p5 - xpart p4)),
+%       ypart p4 + (0.9891482411347523 * (ypart p5 - ypart p4)))
+%     .. p5 .. controls
+%     (xpart p5 + (0.3219223015873017 * (xpart p6 - xpart p5)),
+%       ypart p5 - (0.0033624895833345245 * (ypart p6 - ypart p5)))
+%     and
+%     (xpart p5 + (0.7415597460317461 * (xpart p6 - xpart p5)),
+%       ypart p5 - (0.02329800777599504 * (ypart p6 - ypart p5)))
+%     .. p6;
+%   draw s;
+%   path semicircle;
+%   pen eraser;
+%   semicircle =   (0.5, 0)
+%   .. controls (0.5, 0.13261) and (0.44733, 0.2598) ..
+%   (0.35356, 0.35356)
+%   .. controls (0.2598, 0.44733) and (0.13261, 0.5) ..
+%   (0, 0.5);
+%   semicircle = semicircle & semicircle rotated 90 -- (0.5, 0) & cycle;
+%   eraser = makepen(semicircle);
+%   pickup eraser rotated 16.21+(3.3*(weight-1))-(0.85*italic)
+%     xscaled ((0.19+0.106*(weight-1)) * w)
+%     yscaled ((0.13+0.05*(weight-1)) * (h+d));
+%   erase (point 0 of s);
+%   pickup eraser rotated 196.21+(3.3*(weight-1))-(0.85*italic)
+%     xscaled ((0.19+0.106*(weight-1)) * w)
+%     yscaled ((0.13+0.05*(weight-1)) * (h+d));
+%   erase (point 6 of s);
+%   pair p7, p8;
+%   pickup pensquare scaled ((0.08+0.025*(weight-1)-0.02*italic) * (h+d));
+%   p7 = bot ((0.5-0.152*italic)*w, -d);
+%   p8 = top ((0.5+0.152*italic)*w, h);
+%   draw p7--p8;
+% endchar;
+
 beginchar("$", (0.517+0.057*(weight-1)+0.01*italic+0.015*italic*(weight-1))*size*pt,
     0.745*size*pt, 0.0875*size*pt);
-  pair p0, p1, p2, p3, p4, p5, p6;
-  path s;
-  transform t;
-  t = identity xscaled w yscaled (h+d);
-  pickup pencircle xscaled ((0.177+0.106*(weight-1)) * w) yscaled ((0.11+0.05*(weight-1)) * (h+d));
-  p1 = top (0.5*w, 0);
-  p5 = bot (w/2, h-d);
-  p0 = rt (0, ypart p1 + 0.194 * (ypart p5 - ypart p1));
-  p2 = lft ((1.0-0.06*italic)*w, ypart p1 + 0.261 * (ypart p5 - ypart p1));
-  p3 = (w/2, ypart p1 + 0.5 * (ypart p5 - ypart p1));
-  p4 = rt ((0.0136+0.0833*italic) * w, ypart p5 - 0.261 * (ypart p5 - ypart p1));
-  p6 = lft ((0.94+0.06*italic)*w, ypart p5 - (0.129+0.05*italic) * (ypart p5 - ypart p1));
-  s = p0 .. controls
-    (xpart p0 + (0.13630967632850244 * (xpart p1 - xpart p0)),
-      ypart p0 + (0.6173523106060608 * (ypart p1 - ypart p0)))
-    and
-    (xpart p0 + (0.5636998115942029 * (xpart p1 - xpart p0)),
-      ypart p0 + (0.9484581136363636 * (ypart p1 - ypart p0)))
-    .. p1 .. controls
-    (xpart p1 + (0.46980877419354844 * (xpart p2 - xpart p1)),
-      ypart p1 + (0.006359894409937952 * (ypart p2 - ypart p1)))
-    and
-    (xpart p1 + (0.9765995714285713 * (xpart p2 - xpart p1)),
-      ypart p1 + (0.2860573416149067 * (ypart p2 - ypart p1)))
-    .. p2 .. controls
-    (xpart p2 - (0.05262555760368663 * (xpart p3 - xpart p2)),
-      ypart p2 + (0.6083389146341461 * (ypart p3 - ypart p2)))
-    and
-    (xpart p2 + (0.6820850737327186 * (xpart p3 - xpart p2)),
-      ypart p2 + (0.9178271951219512 * (ypart p3 - ypart p2)))
-    .. p3 .. controls
-    (xpart p3 + (0.38497423979591844 * (xpart p4 - xpart p3)),
-      ypart p3 + (0.11381301369862977 * (ypart p4 - ypart p3)))
-    and
-    (xpart p3 + (1.0201843469387757 * (xpart p4 - xpart p3)),
-      ypart p3 + (0.20611376027397257 * (ypart p4 - ypart p3)))
-    .. p4 .. controls
-    (xpart p4 - (0.029447223350253814 * (xpart p5 - xpart p4)),
-      ypart p4 + (0.8799830354609937 * (ypart p5 - ypart p4)))
-    and
-    (xpart p4 + (0.6673211421319798 * (xpart p5 - xpart p4)),
-      ypart p4 + (0.9891482411347523 * (ypart p5 - ypart p4)))
-    .. p5 .. controls
-    (xpart p5 + (0.3219223015873017 * (xpart p6 - xpart p5)),
-      ypart p5 - (0.0033624895833345245 * (ypart p6 - ypart p5)))
-    and
-    (xpart p5 + (0.7415597460317461 * (xpart p6 - xpart p5)),
-      ypart p5 - (0.02329800777599504 * (ypart p6 - ypart p5)))
-    .. p6;
-  draw s;
-  path semicircle;
-  pen eraser;
-  semicircle =   (0.5, 0)
-  .. controls (0.5, 0.13261) and (0.44733, 0.2598) ..
-  (0.35356, 0.35356)
-  .. controls (0.2598, 0.44733) and (0.13261, 0.5) ..
-  (0, 0.5);
-  semicircle = semicircle & semicircle rotated 90 -- (0.5, 0) & cycle;
-  eraser = makepen(semicircle);
-  pickup eraser rotated 16.21+(3.3*(weight-1))-(0.85*italic)
-    xscaled ((0.19+0.106*(weight-1)) * w)
-    yscaled ((0.13+0.05*(weight-1)) * (h+d));
-  erase (point 0 of s);
-  pickup eraser rotated 196.21+(3.3*(weight-1))-(0.85*italic)
-    xscaled ((0.19+0.106*(weight-1)) * w)
-    yscaled ((0.13+0.05*(weight-1)) * (h+d));
-  erase (point 6 of s);
+  renderchar "S" between (0, 0) and (w, h-d);
   pair p7, p8;
   pickup pensquare scaled ((0.08+0.025*(weight-1)-0.02*italic) * (h+d));
   p7 = bot ((0.5-0.152*italic)*w, -d);
   p8 = top ((0.5+0.152*italic)*w, h);
   draw p7--p8;
 endchar;
+
 
 beginchar("%", (0.852+0.08*(weight-1)+0.025*italic)*size*pt, 0.68*size*pt, 0);
   path circle;
@@ -1081,4 +1092,75 @@ beginchar("P", 200, 150, 0);
   draw (0,0);
   pickup pencircle scaled 2;
   draw concave;
+endchar;
+
+beginchar("S", (0.517+0.057*(weight-1)+0.01*italic+0.015*italic*(weight-1))*size*pt,
+    0.6575*size*pt, 0);
+  pair p0, p1, p2, p3, p4, p5, p6;
+  path s;
+  transform t;
+  t = identity xscaled w yscaled (h+d);
+  pickup pencircle xscaled ((0.177+0.106*(weight-1)) * w) yscaled ((0.11+0.05*(weight-1)) * (h+d));
+  p1 = top (0.5*w, 0);
+  p5 = bot (w/2, h);
+  p0 = rt (0, ypart p1 + 0.194 * (ypart p5 - ypart p1));
+  p2 = lft ((1.0-0.06*italic)*w, ypart p1 + 0.261 * (ypart p5 - ypart p1));
+  p3 = (w/2, ypart p1 + 0.5 * (ypart p5 - ypart p1));
+  p4 = rt ((0.0136+0.0833*italic) * w, ypart p5 - 0.261 * (ypart p5 - ypart p1));
+  p6 = lft ((0.94+0.06*italic)*w, ypart p5 - (0.140+0.05*italic) * (ypart p5 - ypart p1));
+  s = p0 .. controls
+    (xpart p0 + (0.13630967632850244 * (xpart p1 - xpart p0)),
+      ypart p0 + (0.6173523106060608 * (ypart p1 - ypart p0)))
+    and
+    (xpart p0 + (0.5636998115942029 * (xpart p1 - xpart p0)),
+      ypart p0 + (0.9484581136363636 * (ypart p1 - ypart p0)))
+    .. p1 .. controls
+    (xpart p1 + (0.46980877419354844 * (xpart p2 - xpart p1)),
+      ypart p1 + (0.006359894409937952 * (ypart p2 - ypart p1)))
+    and
+    (xpart p1 + (0.9765995714285713 * (xpart p2 - xpart p1)),
+      ypart p1 + (0.2860573416149067 * (ypart p2 - ypart p1)))
+    .. p2 .. controls
+    (xpart p2 - (0.05262555760368663 * (xpart p3 - xpart p2)),
+      ypart p2 + (0.6083389146341461 * (ypart p3 - ypart p2)))
+    and
+    (xpart p2 + (0.6820850737327186 * (xpart p3 - xpart p2)),
+      ypart p2 + (0.9178271951219512 * (ypart p3 - ypart p2)))
+    .. p3 .. controls
+    (xpart p3 + (0.38497423979591844 * (xpart p4 - xpart p3)),
+      ypart p3 + (0.11381301369862977 * (ypart p4 - ypart p3)))
+    and
+    (xpart p3 + (1.0201843469387757 * (xpart p4 - xpart p3)),
+      ypart p3 + (0.20611376027397257 * (ypart p4 - ypart p3)))
+    .. p4 .. controls
+    (xpart p4 - (0.029447223350253814 * (xpart p5 - xpart p4)),
+      ypart p4 + (0.8799830354609937 * (ypart p5 - ypart p4)))
+    and
+    (xpart p4 + (0.6673211421319798 * (xpart p5 - xpart p4)),
+      ypart p4 + (0.9891482411347523 * (ypart p5 - ypart p4)))
+    .. p5 .. controls
+    (xpart p5 + (0.3219223015873017 * (xpart p6 - xpart p5)),
+      ypart p5 - (0.0033624895833345245 * (ypart p6 - ypart p5)))
+    and
+    (xpart p5 + (0.7415597460317461 * (xpart p6 - xpart p5)),
+      ypart p5 - (0.02329800777599504 * (ypart p6 - ypart p5)))
+    .. p6;
+  draw s;
+  path semicircle;
+  pen eraser;
+  semicircle =   (0.5, 0)
+  .. controls (0.5, 0.13261) and (0.44733, 0.2598) ..
+  (0.35356, 0.35356)
+  .. controls (0.2598, 0.44733) and (0.13261, 0.5) ..
+  (0, 0.5);
+  semicircle = semicircle & semicircle rotated 90 -- (0.5, 0) & cycle;
+  eraser = makepen(semicircle);
+  pickup eraser rotated 16.21+(3.3*(weight-1))-(0.85*italic)
+    xscaled ((0.19+0.106*(weight-1)) * w)
+    yscaled ((0.13+0.05*(weight-1)) * (h+d));
+  erase (point 0 of s);
+  pickup eraser rotated 196.21+(3.3*(weight-1))-(0.85*italic)
+    xscaled ((0.19+0.106*(weight-1)) * w)
+    yscaled ((0.13+0.05*(weight-1)) * (h+d));
+  erase (point 6 of s);
 endchar;

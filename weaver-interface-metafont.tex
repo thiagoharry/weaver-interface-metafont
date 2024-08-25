@@ -1164,8 +1164,8 @@ adicional armazenar um ponteiro para outro token, seja ele qual for. É
 o caso do token que representa um \monoespaco{endfor} (fim de uma
 iteração): ele deve apontar para o começo da iteração de modo que seja
 eficiente voltar para o começo dela. Mas também ocorre com
-o \monoespaco{if}, \monoespaco{elseif}, \monoespaco{else},
-\monoespaco{beginchar} e \monoespaco{shipit},
+o \monoespaco{if}, \monoespaco{elseif}, \monoespaco{else} e
+\monoespaco{beginchar},
 que devem conter um ponteiro para outro token de modo a facilitar o
 deslocamento pelo código durante a interpretação. Para tokens assim,
 usamos a seguinte estrutura de dados:
@@ -1173,8 +1173,7 @@ usamos a seguinte estrutura de dados:
 \iniciocodigo
 @<Estrutura de Dados Locais (metafont.c)@>+=
 struct linked_token{
-  //'TYPE_ENDFOR'/'TYPE_IF'/'TYPE_ELSEIF'/'TYPE_ELSE'/'TYPE_BEGINCHAR'/
-  //'TYPE_SHIPIT':
+  //'TYPE_ENDFOR'/'TYPE_IF'/'TYPE_ELSEIF'/'TYPE_ELSE'/'TYPE_BEGINCHAR':
   int type;
   struct generic_token *next;
 #if defined(W_DEBUG_METAFONT)
@@ -1432,6 +1431,7 @@ if(c == 34){ // 34: ASCII para aspas duplas
     return false;
   }
   new_token -> type = TYPE_STRING;
+  new_token -> glyph = NULL;
   new_token -> next = NULL;
 #if defined(W_DEBUG_METAFONT)
   new_token -> line = line;
@@ -2103,49 +2103,6 @@ if(!strcmp(buffer, "beginchar")){
     endchar_token -> next = (struct generic_token *) aux_stack;
     aux_stack = endchar_token;
   }
-  continue;
-}
-@
-\fimcodigo
-
-Depois de um \monoespaco{beginchar}, mas antes de
-um \monoespaco{enchar}, opcionalmente podemos encontrar um
-token \monoespaco{shipit}. Se ele aparecer sem que haja
-um \monoespaco{beginchar} aberto, isso é um erro. Caso contrário, ele
-deve ser gerado e deve ter armazenado dentro dele um ponteiro para
-o \monoespaco{beginchar} ativo:
-
-\iniciocodigo
-@<Análise Léxica: Gera Token de Controle de Fluxo@>+=
-if(!strcmp(buffer, "shipit")){
-  struct linked_token *shipit_token, *aux_token = aux_stack;
-  shipit_token = (struct linked_token *)
-                   permanent_alloc(sizeof(struct linked_token));
-  if(shipit_token ==  NULL){
-    free_token_list(*first_token);
-    *first_token = *last_token = NULL;
-    RAISE_ERROR_NO_MEMORY(mf, NULL, line);
-    return false;
-  }
-  while(aux_token != NULL){
-    if(aux_token -> type == TYPE_ENDCHAR)
-      break;
-    aux_token = (struct linked_token *) (aux_token -> next);
-  }
-  if(aux_token == NULL){ // 'shipit' sem um 'beginchar':
-    free_token_list(*first_token);
-    *first_token = *last_token = NULL;
-    RAISE_ERROR_UNEXPECTED_TOKEN(mf, NULL, OPTIONAL(line), TYPE_SHIPIT);
-    return false;
-  }
-  shipit_token -> type = TYPE_SHIPIT;
-  shipit_token -> next = NULL;
-#if defined(W_DEBUG_METAFONT)
-  shipit_token -> line = line;
-#endif
-  shipit_token -> link = aux_token -> link; // 'shipit' aponta para 'beginchar'
-  (*last_token) -> next = (struct generic_token *) shipit_token;
-  *last_token = (struct generic_token *) shipit_token;
   continue;
 }
 @
@@ -3790,7 +3747,7 @@ da meta-fonte:
 
 \iniciocodigo
 @<Atributos (struct metafont)@>+=
-void *internal_numeric_variables;
+struct numeric_variable *internal_numeric_variables;
 @
 \fimcodigo
 
@@ -6867,7 +6824,7 @@ E a mensagem de diagnóstico é:
 @<Imprime Mensagem de Erro@>+=
 case ERROR_UNKNOWN_EXPRESSION:
   fprintf(stderr, "%s:%s Unrecognizable %s expression.", mf -> file,
-          line_number, list_of_keywords[mf -> errno_int - 8]);
+          line_number, list_of_keywords[mf -> errno_int - 10]);
   break;
 @
 \fimcodigo
@@ -18539,6 +18496,7 @@ inicializa se não estiver:
     texture = mf ->
            internal_picture_variables[INTERNAL_PICTURE_CURRENTPICTURE].texture;
     glGenFramebuffers(1, &currentpicture_fb);
+    glBindTexture(GL_TEXTURE_2D, texture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -19015,7 +18973,7 @@ struct _glyph{
   int italic_correction;
   struct kerning *kern;
   GLuint texture;
-  bool need_rendering;
+  bool need_rendering, is_being_rendered;
 };
 #define INITIALIZE_GLYPH(a) {a.begin = NULL; \
                             a.end = NULL; \
@@ -19026,6 +18984,7 @@ struct _glyph{
                             a.kern = NULL; \
                             a.texture = 0; \
                             a.need_rendering = true; \
+                            a.is_being_rendered = false; \
                             }
 @
 \fimcodigo
@@ -19432,6 +19391,11 @@ else if(begin -> type == TYPE_BEGINCHAR){
   t = begin -> next;
   t = t -> next;
   str = (struct string_token *) t;
+  if(str -> type != TYPE_STRING){
+    RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL(begin -> line), TYPE_STRING,
+                              str -> type);
+    return false;
+  }
   cx -> current_glyph = str -> glyph;
   memset(cx -> current_character, 0, 5);
   memcpy(cx -> current_character, str -> value, 4);
@@ -19734,6 +19698,7 @@ bool _Wrender_glyph(struct metafont *mf, char *glyph,
     return false;
   }
   if(current -> need_rendering){
+    current -> is_being_rendered = true;
     cx = init_context(mf);
     if(cx  == NULL){
       MUTEX_SIGNAL(mf -> mutex);
@@ -19744,6 +19709,7 @@ bool _Wrender_glyph(struct metafont *mf, char *glyph,
       MUTEX_SIGNAL(mf -> mutex);
       return false;
     }
+    current -> is_being_rendered = false;
   }
   *texture = current -> texture;
   *width = current -> width;
@@ -19832,11 +19798,26 @@ TYPE_SHIPIT,   // O token simbólico 'shipit'
 @
 \fimcodigo
 
-Ao encontrar tal comando, encerramos o desenho atual como se
-tivéssemos encontrado um \monoespaco{endchar} válido, exceto que não
-mudamos a sua flag \monoespaco{need\_rendering}. Ajustamos também o
-ponteiro de finalização para o próximo \monoespaco{endchar}, que
-obtemos consultando o seu ponteiro no \monoespaco{beginchar} ativo:
+
+Se encontrarmos esse comando em modo de carregamento, isso significa
+que ele está foram de um \monoespaco{beginchar} e isso é um erro:
+
+\iniciocodigo
+@<Instrução: Comando@>=
+else if(begin -> type == TYPE_SHIPIT && mf -> loading){
+  RAISE_ERROR_UNEXPECTED_TOKEN(mf, cx, OPTIONAL(begin -> line),
+                               TYPE_SHIPIT);
+  return false;
+}
+@
+\fimcodigo
+
+Ao encontrar tal comando, se não estivermos em modo de carregamento,
+encerramos o desenho atual como se tivéssemos encontrado
+um \monoespaco{endchar} válido, exceto que não mudamos a sua
+flag \monoespaco{need\_rendering}. Ajustamos também o ponteiro de
+finalização para o próximo \monoespaco{endchar}, que obtemos
+consultando o seu ponteiro no \monoespaco{beginchar} ativo:
 
 \iniciocodigo
 @<Instrução: Comando@>=
@@ -19914,6 +19895,362 @@ vista abaixo:
 <Comando 'renderchar'> -> renderchar <String> between <Expressão de Par>
                           and <Expressão de Par>
 \alinhanormal
+
+O que requer suporte para o token e palavra reservada \monoespaco{between}:
+
+\iniciocodigo
+@<WEAVEFONT: Definição de Token Simbólico@>+=
+TYPE_RENDERCHAR,  // O token simbólico 'renderchar'
+TYPE_BETWEEN,     // O token simbólico 'between'
+@
+\fimcodigo
+
+\iniciocodigo
+@<Lista de Palavras Reservadas@>+=
+"renderchar", "between",
+@
+\fimcodigo
+
+Se este comando for encontrado em modo de carregamento, isso é um
+erro. Quando estamos neste modo, não sabemos ainda se o caractere em
+questão será definido ou não:
+
+\iniciocodigo
+@<Instrução: Comando@>=
+else if(begin -> type == TYPE_RENDERCHAR && mf -> loading){
+  RAISE_ERROR_UNEXPECTED_TOKEN(mf, cx, OPTIONAL(begin -> line),
+                               TYPE_RENDERCHAR);
+  return false;
+}
+@
+\fimcodigo
+
+Já se não estivermos em modo de carregamento, este comando irá: (1)
+obter o glifo pedido, renderizando-o caso ele ainda não tenha sido
+renderizado, e (2) desenhará o glifo na textura do caractere atual,
+usando as expressões de pares para delimitar onde desenhá-lo:
+
+\iniciocodigo
+@<Instrução: Comando@>=
+else if(begin -> type == TYPE_RENDERCHAR){
+  struct _glyph *glyph;
+  struct string_token *str;
+  struct pair_variable p1, p2;
+  @<Renderchar: Obter Glifo@>
+  @<Renderchar: Renderizar Glifo@>
+  return true;
+}
+@
+\fimcodigo
+
+Primeiro nos certificamos que existe uma string após
+o \monoespaco{renderchar}. Se não existir, é um erro. Se existir,
+usamos ela para obter o glifo a ser desenhado:
+
+\iniciocodigo
+@<Renderchar: Obter Glifo@>=
+{
+  str = (struct string_token *) (begin -> next);
+  if(str == NULL){
+    RAISE_ERROR_MISSING_TOKEN(mf, cx, OPTIONAL(begin -> line),
+                              TYPE_STRING);
+    return false;
+  }
+  if(str -> type != TYPE_STRING){
+    RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL(begin -> line), TYPE_STRING,
+                              str -> type);
+    return false;
+  }
+  if(str -> glyph != NULL)
+    glyph = str -> glyph;
+  else{
+    glyph = get_glyph(mf, (unsigned char *) (str -> value), false);
+    if(glyph == NULL){
+      RAISE_ERROR_UNKNOWN_GLYPH(mf, cx, OPTIONAL(str -> line), str -> value);
+      return false;
+    }
+    str -> glyph = glyph;
+  }
+}
+@
+\fimcodigo
+
+Pode ser que a renderização de um primeiro caractere dependa de um
+segunda, que por sua vez dependa de um terceiro e quarto. Isso não é
+um problema. O que não podemos permitir que aconteça é que a
+renderização de um caractere dependa de sua própria
+renderização. Recursividade não deve ser permitida
+no \monoespaco{renderchar}. Detectamos isso no código abaixo:
+
+\iniciocodigo
+@<Renderchar: Obter Glifo@>+=
+if(glyph -> is_being_rendered){
+  RAISE_ERROR_RECURSIVE_RENDERCHAR(mf, cx, OPTIONAL(str -> line),
+                                   str -> value);
+  return false;
+}
+@
+\fimcodigo
+
+Finalmente, se o caractere invocado pelo \monoespaco{renderchar} não
+foi ainda renderizado, nós o renderizamos:
+
+\iniciocodigo
+@<Renderchar: Obter Glifo@>+=
+if(glyph -> need_rendering){
+  struct context *new_cx;
+  @<'renderchar': Salva 'currentpicture' e 'currentpen'@>
+  glyph -> is_being_rendered = true;
+  new_cx = init_context(mf);
+  if(new_cx == NULL){
+    RAISE_ERROR_NO_MEMORY(mf, cx, OPTIONAL(str -> line));
+    return false;
+  }
+  if(!eval_list_of_statements(mf, new_cx, glyph -> begin, glyph -> end)){
+    destroy_context(mf, new_cx);
+    return false;
+  }
+  glyph -> is_being_rendered = false;
+  destroy_context(mf, new_cx);
+  @<'renderchar': Restaura 'currentpicture' e 'currentpen'@>
+}
+@
+\fimcodigo
+
+Antes de renderizar um outro caractere, devemos salvar a imagem e
+caneta da nossa imagem atual, pois tais valores serão sobrescritos
+pela próxima renderização:
+
+\iniciocodigo
+@<'renderchar': Salva 'currentpicture' e 'currentpen'@>=
+struct picture_variable current_picture;
+int current_depth;
+struct pen_variable current_pen;
+float pen_lft, pen_rt, pen_top, pen_bot;
+GLuint currentpicture_fb_bkp;
+float w, h, d;
+w = mf -> internal_numeric_variables[INTERNAL_NUMERIC_W].value;
+h = mf -> internal_numeric_variables[INTERNAL_NUMERIC_H].value;
+d = mf -> internal_numeric_variables[INTERNAL_NUMERIC_D].value;
+memcpy(&current_picture, &(mf -> internal_picture_variables[0]),
+       sizeof(struct picture_variable));
+mf -> internal_picture_variables[0].width = -1;
+mf -> internal_picture_variables[0].height = -1;
+mf -> internal_picture_variables[0].texture = 0;
+current_depth = mf -> current_depth;
+memcpy(&current_pen, &(mf -> internal_pen_variables[0]),
+       sizeof(struct pen_variable));
+pen_lft = mf -> pen_lft;
+pen_rt = mf -> pen_rt;
+pen_top = mf -> pen_top;
+pen_bot = mf -> pen_bot;
+currentpicture_fb_bkp = currentpicture_fb;
+@
+\fimcodigo
+
+E depois de terminar a outra renderização, devemos restaurar tais valores:
+
+\iniciocodigo
+@<'renderchar': Restaura 'currentpicture' e 'currentpen'@>=
+memcpy(&(mf -> internal_picture_variables[0]), &current_picture,
+       sizeof(struct picture_variable));
+mf -> current_depth = current_depth;
+memcpy(&(mf -> internal_pen_variables[0]), &current_pen,
+       sizeof(struct pen_variable));
+mf -> pen_lft = pen_lft;
+mf -> pen_rt = pen_rt;
+mf -> pen_top = pen_top;
+mf -> pen_bot = pen_bot;
+currentpicture_fb = currentpicture_fb_bkp;
+mf -> internal_numeric_variables[INTERNAL_NUMERIC_W].value = w;
+mf -> internal_numeric_variables[INTERNAL_NUMERIC_H].value = h;
+mf -> internal_numeric_variables[INTERNAL_NUMERIC_D].value = d;
+@
+\fimcodigo
+
+O comando \monoespaco{renderchar} requer então os seguintes novos
+tipos de erro:
+
+\iniciocodigo
+@<Tipos de Erros@>+=
+ERROR_UNKNOWN_GLYPH, ERROR_RECURSIVE_RENDERCHAR,
+@
+\fimcodigo
+
+Que podem ser gerados pelas seguintes macros, que devem armazenar o
+glifo que apresentou problemas:
+
+\iniciocodigo
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_UNKNOWN_GLYPH(mf, cx, line, str) {\
+  if(!mf -> errno){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNKNOWN_GLYPH);\
+    mf -> errno_str = (char *) permanent_alloc(strlen(str)+1);\
+    memcpy(mf -> errno_str, str, strlen(str)+1);}}
+#define RAISE_ERROR_RECURSIVE_RENDERCHAR(mf, cx, line, str) {\
+  if(!mf -> errno){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_RECURSIVE_RENDERCHAR);\
+    mf -> errno_str = (char *) permanent_alloc(strlen(str)+1);\
+    memcpy(mf -> errno_str, str, strlen(str)+1);}}
+@
+\fimcodigo
+
+E esta é a mensagem de erro impressa para tais erros:
+
+\iniciocodigo
+@<Imprime Mensagem de Erro@>+=
+case ERROR_UNKNOWN_GLYPH:
+  fprintf(stderr, "%s:%s Cannot render unknown glyph \"%s\".", mf -> file,
+          line_number, mf -> errno_str);
+  break;
+case ERROR_RECURSIVE_RENDERCHAR:
+  fprintf(stderr, "%s:%s Recursive 'renderchar' in glyph \"%s\".", mf -> file,
+          line_number, mf -> errno_str);
+  break;
+@
+\fimcodigo
+
+Agora para renderizar o glifo, devemos identificar onde exatamente na
+textura da imagem atual devemos colocá-lo. Para isso, devemos obter a
+primeira expressão de par, delimitada por \monoespaco{between}
+e \monoespaco{and} e armazenar seu resultado:
+
+\iniciocodigo
+@<Renderchar: Renderizar Glifo@>=
+{
+  DECLARE_NESTING_CONTROL();
+  struct generic_token *begin_expr, *end_expr;
+  begin_expr = str -> next;
+  if(begin_expr == NULL || begin_expr -> type != TYPE_BETWEEN){
+    RAISE_ERROR_MISSING_TOKEN(mf, NULL, OPTIONAL(begin -> line),
+                             TYPE_BETWEEN);
+    if(glyph -> need_rendering) // Rendered with 'shipit'
+      glDeleteTextures(1, &(glyph -> texture));
+    return false;
+  }
+  begin_expr = begin_expr -> next;
+  if(begin_expr -> type == TYPE_AND || begin_expr -> next == NULL){
+    RAISE_ERROR_MISSING_EXPRESSION(mf, cx, OPTIONAL(begin_expr -> line),
+                                  TYPE_T_PAIR);
+    if(glyph -> need_rendering) // Rendered with 'shipit'
+      glDeleteTextures(1, &(glyph -> texture));
+    return false;
+  }
+  end_expr = begin_expr;
+  while(end_expr != NULL && end_expr -> next != NULL){
+    COUNT_NESTING(end_expr);
+    if(IS_NOT_NESTED() && end_expr -> next -> type == TYPE_AND)
+      break;
+    end_expr = end_expr -> next;
+  }
+  if(end_expr == NULL || end_expr -> next == NULL){
+    RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(begin_expr -> line),
+                                  TYPE_T_PAIR);
+    if(glyph -> need_rendering) // Rendered with 'shipit'
+      glDeleteTextures(1, &(glyph -> texture));
+    return false;                              
+  }
+  if(!eval_pair_expression(mf, cx, begin_expr, end_expr, &p1)){
+    if(glyph -> need_rendering) // Rendered with 'shipit'
+      glDeleteTextures(1, &(glyph -> texture));
+    return false;
+  }
+  begin_expr = end_expr -> next -> next;
+  if(begin_expr -> type == TYPE_SEMICOLON || begin_expr -> next == NULL){
+    RAISE_ERROR_MISSING_EXPRESSION(mf, cx, OPTIONAL(begin_expr -> line),
+                                  TYPE_T_PAIR);
+    if(glyph -> need_rendering) // Rendered with 'shipit'
+      glDeleteTextures(1, &(glyph -> texture));
+    return false;
+  }
+  end_expr = begin_expr;
+  while(end_expr != NULL && end_expr -> next != NULL){
+    COUNT_NESTING(end_expr);
+    if(IS_NOT_NESTED() && end_expr -> next -> type == TYPE_SEMICOLON)
+      break;
+    end_expr = end_expr -> next;
+  }
+  if(end_expr == NULL || end_expr -> next == NULL){
+    RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(begin_expr -> line),
+                                  TYPE_T_PAIR);
+    if(glyph -> need_rendering) // Rendered with 'shipit'
+      glDeleteTextures(1, &(glyph -> texture));
+    return false;                              
+  }
+  if(!eval_pair_expression(mf, cx, begin_expr, end_expr, &p2)){
+    if(glyph -> need_rendering) // Rendered with 'shipit'
+      glDeleteTextures(1, &(glyph -> texture));
+    return false;
+  }
+}
+@
+\fimcodigo
+
+Se a imagem não for sofrer nenhuma transformação, esperamos que o
+primeiro par seja a coordenada do canto inferior esquerdo de onde
+renderizaremos o glifo e o segundo par seja a coordenada do canto
+superior direito. Isso implicaria que necessariamente ambas as
+coordenadas do primeiro par devem ser menores que as do segundo.
+
+Se isso não for verdade, assumiremos que a imagem deve passar por uma
+transformação. Se a coordenada $x$ do primeiro par for maior que a do
+segundo, a imagem deverá ser espelhada horizontalmente. Se a
+coordenada $y$ do primeiro par for maior, então a imagem será
+espelhada verticalmente. Isso funciona simplesmente multiplicando por
+-1 as posições relevantes da matriz que usaremos na renderização:
+
+\iniciocodigo
+@<Renderchar: Renderizar Glifo@>+=
+{
+  float gl_matrix[9];
+  float width, height, depth;
+  float current_width, current_height, current_depth;
+  current_width = mf -> internal_numeric_variables[INTERNAL_NUMERIC_W].value;
+  current_height = mf -> internal_numeric_variables[INTERNAL_NUMERIC_H].value +
+                 mf -> internal_numeric_variables[INTERNAL_NUMERIC_D].value;
+  current_depth = mf -> internal_numeric_variables[INTERNAL_NUMERIC_D].value;
+  INITIALIZE_IDENTITY_MATRIX(gl_matrix);
+  if(p1.x > p2.x){
+    width = p1.x - p2.x;
+    gl_matrix[0] = - (width / current_width);
+    gl_matrix[6] = ((p2.x + width / 2) / current_width) - 0.5;
+  }
+  else{
+    width = p2.x - p1.x;
+    gl_matrix[0] = (width / current_width);
+    gl_matrix[6] = ((p1.x + width / 2) / current_width) - 0.5;
+  }
+  if(p1.y > p2.y){
+    height = p1.y - p2.y;
+    depth = glyph -> depth * (height / (glyph -> height));
+    gl_matrix[4] = - (height + depth) / current_height;
+    gl_matrix[7] = ((p2.y - depth / 2 + height / 2) / current_height) - 0.5;
+  }
+  else{
+    height = p2.y - p1.y;
+    depth = glyph -> depth * (height / (glyph -> height));
+    gl_matrix[4] = (height + depth) / current_height;
+    gl_matrix[7] = ((p1.y + current_depth - depth / 2 + height / 2) /
+                     current_height) - 0.5;
+  }
+  @<Prepara 'currentpicture' para Desenho@>
+  glColorMask(true, true, true, true);
+  glViewport(0, 0, current_width, current_height);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo);
+  glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *) 0);
+  glEnableVertexAttribArray(0);
+  glUseProgram(program);
+  glUniformMatrix3fv(uniform_matrix, 1, true, gl_matrix);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, glyph -> texture);
+  glUniform1i(uniform_texture, 0);
+  glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+  glBindTexture(GL_TEXTURE_2D, 0);
+  if(glyph -> need_rendering) // Rendered with 'shipit'
+    glDeleteTextures(1, &(glyph -> texture));
+}
+@
+\fimcodigo
 
 \secao{Referências}
 
