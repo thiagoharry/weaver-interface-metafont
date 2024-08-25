@@ -19702,7 +19702,7 @@ It may be that the rendering of a first character depends on a second,
 which in turn depends on a third and fourth. This is not a
 problem. What we cannot allow to happen is that the rendering of a
 character depends on its own rendering. Recursion should not be
-allowed in \monospace{renderchar}. We detect this in the code below:
+allowed in \monoespaco{renderchar}. We detect this in the code below:
 
 \iniciocodigo
 @<Renderchar: Get Glyph@>+=
@@ -19715,7 +19715,7 @@ glyph -> is_being_rendered = true;
 @
 \fimcodigo
 
-Finally, if the character invoked by \monospace{renderchar} has not
+Finally, if the character invoked by \monoespaco{renderchar} has not
 yet been rendered, we render it:
 
 \iniciocodigo
@@ -19836,8 +19836,8 @@ case ERROR_RECURSIVE_RENDERCHAR:
 
 Now to render the glyph, we must identify where exactly in the texture
 of the current image we should place it. To do this, we must obtain
-the pair expressions: the first one delimited by \monospace{between}
-and \monospace{and} and the second one delimited between this
+the pair expressions: the first one delimited by \monoespaco{between}
+and \monoespaco{and} and the second one delimited between this
 same \monoespaco{and} and the end of expression:
 
 \iniciocodigo
