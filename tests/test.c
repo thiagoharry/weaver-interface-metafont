@@ -2365,9 +2365,9 @@ void test_shipit_command(void){
   GLuint glyph = 0;
   int width = 0, height = 0, depth = -1, italcorr = -1, kerning = -1;
   double w1, w2;
-  mf = init_metafont("tests/shipit_statement.mf");
+  mf = init_metafont("tests/strange_font.mf");
   cx = init_context(mf);
-  lexer(mf,  "tests/shipit_statement.mf", &first, &last);
+  lexer(mf,  "tests/strange_font.mf", &first, &last);
   ret = eval_program(mf, cx, first, last);
   if(!ret)
     _Wprint_metafont_error(mf);
@@ -2390,6 +2390,34 @@ void test_shipit_command(void){
   glDeleteTextures(1, &glyph);
   assert("Testing correctness of 'shipit' command",
 	 ret && w1 == 18.0 && w2 == 35.0);
+  free_token_list(first);
+  destroy_context(mf, cx);
+  _Wdestroy_metafont(mf);
+}
+
+void test_renderchar_command(void){
+  struct generic_token *first, *last;
+  struct metafont *mf;
+  struct context *cx;
+  bool ret;
+  struct named_variable *w;
+  struct numeric_variable *numeric_w;
+  GLuint glyph = 0;
+  int width = 0, height = 0, depth = -1, italcorr = -1, kerning = -1;
+  mf = init_metafont("tests/strange_font.mf");
+  cx = init_context(mf);
+  lexer(mf,  "tests/strange_font.mf", &first, &last);
+  ret = eval_program(mf, cx, first, last);
+  if(!ret)
+    _Wprint_metafont_error(mf);
+  w = (struct named_variable *) mf -> named_variables;
+  numeric_w = (struct numeric_variable *) w -> var;
+  ret = _Wrender_glyph(mf, "I", NULL, &glyph, &width, &height,
+		       &depth, &italcorr, &kerning);
+  if(!ret)
+    _Wprint_metafont_error(mf);
+  assert("Testing 'renderchar' command", ret &&
+	 ALMOST_EQUAL(numeric_w -> value, 6127.651855));
   free_token_list(first);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
@@ -2425,6 +2453,7 @@ int main(int argc, char **argv){
   test_pen_rendering();
   test_prime_computing();
   test_shipit_command();
+  test_renderchar_command();
   test_opengl();
   imprime_resultado();
   _Wfinish_weavefont();

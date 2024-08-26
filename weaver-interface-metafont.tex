@@ -20212,7 +20212,7 @@ espelhada verticalmente. Isso funciona simplesmente multiplicando por
   INITIALIZE_IDENTITY_MATRIX(gl_matrix);
   if(p1.x > p2.x){
     width = p1.x - p2.x;
-    gl_matrix[0] = - (width / current_width);
+    gl_matrix[0] = -(width / current_width);
     gl_matrix[6] = ((p2.x + width / 2) / current_width) - 0.5;
   }
   else{
@@ -20234,6 +20234,9 @@ espelhada verticalmente. Isso funciona simplesmente multiplicando por
                      current_height) - 0.5;
   }
   @<Prepara 'currentpicture' para Desenho@>
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  glBlendEquation(GL_FUNC_ADD);
   glColorMask(true, true, true, true);
   glViewport(0, 0, current_width, current_height);
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -20246,6 +20249,7 @@ espelhada verticalmente. Isso funciona simplesmente multiplicando por
   glUniform1i(uniform_texture, 0);
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
   glBindTexture(GL_TEXTURE_2D, 0);
+  glDisable(GL_BLEND);
   if(glyph -> need_rendering) // Rendered with 'shipit'
     glDeleteTextures(1, &(glyph -> texture));
 }

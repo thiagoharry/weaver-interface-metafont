@@ -651,7 +651,7 @@
 #define RAISE_ERROR_INVALID_DIMENSION_GLYPH(mf, cx, line) {\
   RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INVALID_DIMENSION_GLYPH);}
 /*:693*//*716:*/
-#line 19808 "weaver-interface-metafont_en.tex"
+#line 19807 "weaver-interface-metafont_en.tex"
 
 #define RAISE_ERROR_UNKNOWN_GLYPH(mf, cx, line, str) {\
   if(!mf -> errno){\
@@ -1043,7 +1043,7 @@ ERROR_DUPLICATE_GLYPH,ERROR_MALFORMED_STATEMENT,ERROR_NESTED_BEGINCHAR,
 
 ERROR_INVALID_DIMENSION_GLYPH,
 /*:692*//*715:*/
-#line 19799 "weaver-interface-metafont_en.tex"
+#line 19798 "weaver-interface-metafont_en.tex"
 
 ERROR_UNKNOWN_GLYPH,ERROR_RECURSIVE_RENDERCHAR,
 /*:715*/
@@ -4266,14 +4266,13 @@ RAISE_ERROR_RECURSIVE_RENDERCHAR(mf,cx,OPTIONAL(str->line),
 str->value);
 return false;
 }
-glyph->is_being_rendered= true;
 /*:711*//*712:*/
-#line 19722 "weaver-interface-metafont_en.tex"
+#line 19721 "weaver-interface-metafont_en.tex"
 
 if(glyph->need_rendering){
 struct context*new_cx;
 /*713:*/
-#line 19748 "weaver-interface-metafont_en.tex"
+#line 19747 "weaver-interface-metafont_en.tex"
 
 struct picture_variable current_picture;
 int current_depth;
@@ -4298,7 +4297,7 @@ pen_top= mf->pen_top;
 pen_bot= mf->pen_bot;
 currentpicture_fb_bkp= currentpicture_fb;
 /*:713*/
-#line 19725 "weaver-interface-metafont_en.tex"
+#line 19724 "weaver-interface-metafont_en.tex"
 
 glyph->is_being_rendered= true;
 new_cx= init_context(mf);
@@ -4313,7 +4312,7 @@ return false;
 glyph->is_being_rendered= false;
 destroy_context(mf,new_cx);
 /*714:*/
-#line 19777 "weaver-interface-metafont_en.tex"
+#line 19776 "weaver-interface-metafont_en.tex"
 
 memcpy(&(mf->internal_picture_variables[0]),&current_picture,
 sizeof(struct picture_variable));
@@ -4329,14 +4328,14 @@ mf->internal_numeric_variables[INTERNAL_NUMERIC_W].value= w;
 mf->internal_numeric_variables[INTERNAL_NUMERIC_H].value= h;
 mf->internal_numeric_variables[INTERNAL_NUMERIC_D].value= d;
 /*:714*/
-#line 19738 "weaver-interface-metafont_en.tex"
+#line 19737 "weaver-interface-metafont_en.tex"
 
 }
 /*:712*/
 #line 19662 "weaver-interface-metafont_en.tex"
 
 /*718:*/
-#line 19844 "weaver-interface-metafont_en.tex"
+#line 19843 "weaver-interface-metafont_en.tex"
 
 {
 DECLARE_NESTING_CONTROL();
@@ -4406,7 +4405,7 @@ return false;
 }
 }
 /*:718*//*719:*/
-#line 19930 "weaver-interface-metafont_en.tex"
+#line 19929 "weaver-interface-metafont_en.tex"
 
 {
 float gl_matrix[9];
@@ -4473,8 +4472,11 @@ else
 glBindFramebuffer(GL_FRAMEBUFFER,currentpicture_fb);
 }
 /*:661*/
-#line 19963 "weaver-interface-metafont_en.tex"
+#line 19962 "weaver-interface-metafont_en.tex"
 
+glEnable(GL_BLEND);
+glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+glBlendEquation(GL_FUNC_ADD);
 glColorMask(true,true,true,true);
 glViewport(0,0,current_width,current_height);
 glBindBuffer(GL_ARRAY_BUFFER,vbo);
@@ -4487,6 +4489,7 @@ glBindTexture(GL_TEXTURE_2D,glyph->texture);
 glUniform1i(uniform_texture,0);
 glDrawArrays(GL_TRIANGLE_FAN,0,4);
 glBindTexture(GL_TEXTURE_2D,0);
+glDisable(GL_BLEND);
 if(glyph->need_rendering)
 glDeleteTextures(1,&(glyph->texture));
 }
@@ -12491,7 +12494,7 @@ fprintf(stderr,
 "non-positive height+depth.",mf->file,line_number);
 break;
 /*:694*//*717:*/
-#line 19825 "weaver-interface-metafont_en.tex"
+#line 19824 "weaver-interface-metafont_en.tex"
 
 case ERROR_UNKNOWN_GLYPH:
 fprintf(stderr,"%s:%s Cannot render unknown glyph \"%s\".",mf->file,

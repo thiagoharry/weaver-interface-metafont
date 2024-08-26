@@ -19711,7 +19711,6 @@ if(glyph -> is_being_rendered){
                                    str -> value);
   return false;
 }
-glyph -> is_being_rendered = true;
 @
 \fimcodigo
 
@@ -19961,6 +19960,9 @@ use in the rendering:
                      current_height) - 0.5;
   }
   @<Prepare 'currentpicture' for Drawing@>
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  glBlendEquation(GL_FUNC_ADD);
   glColorMask(true, true, true, true);
   glViewport(0, 0, current_width, current_height);
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -19973,6 +19975,7 @@ use in the rendering:
   glUniform1i(uniform_texture, 0);
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
   glBindTexture(GL_TEXTURE_2D, 0);
+  glDisable(GL_BLEND);
   if(glyph -> need_rendering) // Rendered with 'shipit'
     glDeleteTextures(1, &(glyph -> texture));
 }

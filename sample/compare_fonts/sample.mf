@@ -1080,18 +1080,12 @@ beginchar("O", (0.63+0.065*(weight-1)+0.058*italic-0.009*italic*(weight-1))*size
 endchar;
 
 beginchar("P", 200, 150, 0);
-  pen p;
-  path concave;
-  if weight < 1.5:
-    concave = (389, 197)..(284, 118)..(318, 59)..(250, 5)..(140, 23)..(177, 70)..(123, 87)..(66, 40)..(25, 107)..(58, 145)..(29, 198)..(159, 202)..(122, 299)..(253, 247)..(226, 163)..cycle;
-  else:
-    concave = (389, 197)--(284, 118)--(318, 59)..(250, 5)--(140, 23)--(177, 70)--(123, 87)--(66, 40)--(25, 107)--(58, 145)--(29, 198)--(159, 202)--(122, 299)--(253, 247)--(226, 163)--cycle;
-  fi;
-  p = makepen(concave);
-  pickup p;
-  draw (0,0);
-  pickup pencircle scaled 2;
-  draw concave;
+  renderchar "1" between (0.25*w, 0.5*h) and (0.75*w, h);
+  %weight = totalweight currentpicture; % Expected: 18.0
+  renderchar "1" between (0.75*w, 0.5*h) and (0.25*w, h);
+  %weight = totalweight currentpicture; % Expected: ???
+  renderchar "1" between (0.25*w, 0.5*h) and (0.75*w, 0);
+  renderchar "1" between (0.75*w, 0.5*h) and (0.25*w, 0);
 endchar;
 
 beginchar("S", (0.517+0.057*(weight-1)+0.01*italic+0.015*italic*(weight-1))*size*pt,

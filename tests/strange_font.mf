@@ -1,0 +1,60 @@
+numeric weight, counter;
+
+counter = 0;
+
+beginchar("A", 9, 9, 0);
+  pickup pensquare;
+  numeric i;
+  draw (w/2, 0)--(w/2, h);
+  if counter > 0:
+    draw (0, h/2)--(w, h/2);
+  fi
+  counter = counter + 1;
+  for i = 1 step 1 until 1:
+    weight = totalweight currentpicture;
+    shipit;
+  endfor;
+  weight = 0; % This should not be executed, otherwise the test will fail.
+endchar;
+
+beginchar("I", 100, 100, 0);
+  renderchar "1" between (0.25*w, 0.5*h) and (0.75*w, h);
+  %weight = totalweight currentpicture; % Expected: 2471.380859
+  renderchar "1" between (0.75*w, 0.5*h) and (0.25*w, h);
+  %weight = totalweight currentpicture; % Expected: 3713.825928
+  renderchar "1" between (0.25*w, 0.5*h) and (0.75*w, 0);
+  %weight = totalweight currentpicture; % Expected: 5535.206543
+  renderchar "1" between (0.75*w, 0.5*h) and (0.25*w, 0);
+  weight = totalweight currentpicture; % Expected: 6127.651855
+endchar
+
+beginchar("1", 100, 100, 0);
+  pair p1, p2, p3;
+  pickup pensquare xscaled 0.13*h;
+  p1 = lft (w, 0);
+  p3 = lft (w, h);
+  p2 = (0.8)[p1, p3];
+  draw p1 -- p2;
+  pickup pensquare yscaled (0.12)*h;
+  draw rt (0, 0.8*h) -- p2;
+  p2 = p2 + (0.065*h, 0);
+  pickup pensquare xscaled 0.1*h ;
+  draw lft p2 -- lft (w, h);
+  pickup pensquare xscaled 0.1h yscaled 0.03h;
+  p1 = rt bot (w-0.1*h, h);
+  p2 = rt bot (0, 0.86*h);
+  path p;
+  p =
+    p1 .. controls
+    (xpart p1 + (0.110926 * (xpart p2 - xpart p1)),
+      ypart p1 + (1.088190 * (ypart p2 - ypart p1)))
+    and
+    (xpart p1 + (0.679659 * (xpart p2 - xpart p1)),
+      ypart p1 + (0.951881 * (ypart p2 - ypart p1)))
+    .. p2;
+  draw p;
+  pen eraser;
+  eraser = makepen((w, h)--(w, 0)--(0.065w+w, 0)--cycle);
+  pickup eraser;
+  erase (0,0);
+endchar;
