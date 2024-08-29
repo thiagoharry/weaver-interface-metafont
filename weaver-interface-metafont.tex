@@ -5642,7 +5642,26 @@ com a qual iremos escrever e desenhar. A outra será uma caneta de
 formato perfeitamente quadrado que estará já inicializada à disposição
 do usuário e que deixamos já alocada para fins de melhor performance.
 
-Tais variáveis serão armazenadas na estrutura Metafont:
+A variável \monoespaco{currentpen} será especial: ela será como uma
+variável global. Mas o seu estado entre diferentes execuções de código
+WeaveFont não será salvo: cada vez que executamos novamente um
+determinado código, é como se esta variável tivesse sido novamente
+reinicializada. Além disso, iremos armazenar informações sobre ela que
+não armazenamos para as outras canetas: a sua maior e menor coordenada
+$x$, assim como a sua maior e menor coordenada $y$. Essa variável não
+ficará junto com as outras: ela não estará guardada na
+estrutura \monoespaco{metafont} que representa a fonte, mas na
+estrutura que representa o nosso contexto de execução:
+
+\iniciocodigo
+@<Atributos (struct context)@>+=
+struct pen_variable *currentpen;
+@
+\fimcodigo
+
+Já a variável de caneta quadrada, que será chamada
+de \monoespaco{pensquare} será tratada como uma variável interna
+típica:
 
 \iniciocodigo
 @<Atributos (struct metafont)@>+=
@@ -5650,50 +5669,57 @@ struct pen_variable *internal_pen_variables;
 @
 \fimcodigo
 
-Na inicialização iremos alocar espaço para ambas e inicializaremos
-elas. A variável \monoespaco{currentpen} por padrão começará sendo uma
-caneta vazia e a \monoespaco{pensquare} será um quadrado de lado
-1.
+A variável \monoespaco{currentpen} é inicializada como uma caneta
+vazia:
+
+\iniciocodigo
+@<Inicialização (struct context)@>+=
+cx -> currentpen = (struct pen_variable *)
+                     permanent_alloc(sizeof(struct pen_variable));
+if(cx -> currentpen == NULL){
+  RAISE_ERROR_NO_MEMORY(mf, NULL, 0);
+  return NULL;
+}
+cx -> currentpen -> format = NULL;
+cx -> currentpen -> type = TYPE_T_PEN;
+cx -> currentpen -> flags = FLAG_NULL;
+cx -> currentpen -> referenced = NULL;
+cx -> currentpen -> gl_vbo = 0;
+cx -> currentpen -> indices = 0;
+cx -> currentpen -> permanent = true;
+INITIALIZE_IDENTITY_MATRIX(cx -> currentpen -> gl_matrix);
+@
+\fimcodigo
+
+Já variáveis internas precisam ter o seu espaço alocado. E a caneta
+quadrada será inicializada como uma caneta quadrada de lado 1:
 
 \iniciocodigo
 @<Inicialização (struct metafont)@>+=
 mf -> internal_pen_variables = (struct pen_variable *)
-                                 permanent_alloc(2 * sizeof(struct pen_variable));
+                                 permanent_alloc(1 * sizeof(struct pen_variable));
 if(mf -> internal_pen_variables == NULL){
   if(permanent_free != NULL)
     permanent_free(mf);
   return NULL;
 }
-mf -> internal_pen_variables[0].format = NULL; // A caneta 'currentpen'
+mf -> internal_pen_variables[0].format = NULL; // A caneta 'pensquare'
 mf -> internal_pen_variables[0].type = TYPE_T_PEN;
-mf -> internal_pen_variables[0].flags = FLAG_NULL;
+mf -> internal_pen_variables[0].flags = FLAG_CONVEX | FLAG_STRAIGHT |
+                                        FLAG_SQUARE;
 mf -> internal_pen_variables[0].referenced = NULL;
 mf -> internal_pen_variables[0].gl_vbo = 0;
-mf -> internal_pen_variables[0].indices = 0;
+mf -> internal_pen_variables[0].indices = 4;
 mf -> internal_pen_variables[0].permanent = true;
-mf -> internal_pen_variables[1].format = NULL; // A caneta 'pensquare'
-mf -> internal_pen_variables[1].type = TYPE_T_PEN;
-mf -> internal_pen_variables[1].flags = FLAG_CONVEX | FLAG_STRAIGHT |
-                                        FLAG_SQUARE;
-mf -> internal_pen_variables[1].referenced = NULL;
-mf -> internal_pen_variables[1].gl_vbo = 0;
-mf -> internal_pen_variables[1].indices = 4;
-mf -> internal_pen_variables[1].permanent = true;
-{ // Inicializando a matriz de transformação de ambas
-  int j;
-  for(j = 0; j < 2; j ++)
-    INITIALIZE_IDENTITY_MATRIX(mf -> internal_pen_variables[j].gl_matrix);
-}
+INITIALIZE_IDENTITY_MATRIX(mf -> internal_pen_variables[0].gl_matrix);
 @
 \fimcodigo
 
-As seguintes macros nos permitirão acessar mais fácil a posição de
-cada variável interna:
+As seguintes macros nos permitirão acessar mais fácil a posição da variável interna:
 
 \iniciocodigo
 @<Macros Locais (metafont.c)@>+=
-#define INTERNAL_PEN_CURRENTPEN 0
-#define INTERNAL_PEN_PENSQUARE  1
+#define INTERNAL_PEN_PENSQUARE  0
 @
 \fimcodigo
 
@@ -5703,23 +5729,38 @@ internas:
 \iniciocodigo
 @<Finalização (struct metafont)@>+=
 if(permanent_free != NULL){
-  if(mf -> internal_pen_variables[1].format != NULL){
-    permanent_free(mf -> internal_pen_variables[1].format -> points);
-    permanent_free(mf -> internal_pen_variables[1].format);
+  if(mf -> internal_pen_variables[0].format != NULL){
+    permanent_free(mf -> internal_pen_variables[0].format -> points);
+    permanent_free(mf -> internal_pen_variables[0].format);
   }
   permanent_free(mf -> internal_pen_variables);
 }
 @
 \fimcodigo
 
+E também devemos desalocar a \monoespaco{currentpen} após encerrar um
+contexto de execução:
+
+\iniciocodigo
+@<Finalização (struct context)@>+=
+if(temporary_free != NULL){
+  if(cx -> currentpen -> format != NULL){
+    temporary_free(cx -> currentpen -> format -> points);
+    temporary_free(cx -> currentpen -> format);
+  }
+  temporary_free(cx -> currentpen);
+}
+@
+\fimcodigo
+
+
 E ao ler um código-fonte, devemos ajustar corretamente os ponteiros
-das variáveis que apontam para tais variáveis internas:
+das variáveis que apontam para tais variáveis internas (não fazemos
+isso com a \monoespaco{currentpen} pois ela será tratada de maneira
+diferente):
 
 \iniciocodigo
 @<Preenche Ponteiro para Variável Interna@>=
-else if(!strcmp(buffer, "currentpen"))
-  new_token -> var =
-          &(mf -> internal_pen_variables[INTERNAL_PEN_CURRENTPEN]);
 else if(!strcmp(buffer, "pensquare"))
   new_token -> var =
           &(mf -> internal_pen_variables[INTERNAL_PEN_PENSQUARE]);
@@ -5736,13 +5777,13 @@ caneta nula:
 
 \iniciocodigo
 @<Finalizando Caneta Local 'pen'@>=
-if(mf -> internal_pen_variables[INTERNAL_PEN_CURRENTPEN].referenced == pen){
-  mf -> internal_pen_variables[INTERNAL_PEN_CURRENTPEN].format = NULL;
-  mf -> internal_pen_variables[INTERNAL_PEN_CURRENTPEN].type = TYPE_T_PEN;
-  mf -> internal_pen_variables[INTERNAL_PEN_CURRENTPEN].flags = FLAG_NULL;
-  mf -> internal_pen_variables[INTERNAL_PEN_CURRENTPEN].referenced = NULL;
-  mf -> internal_pen_variables[INTERNAL_PEN_CURRENTPEN].gl_vbo = 0;
-  mf -> internal_pen_variables[INTERNAL_PEN_CURRENTPEN].indices = 0;
+if(cx -> currentpen -> referenced == pen){
+  cx -> currentpen -> format = NULL;
+  cx -> currentpen -> type = TYPE_T_PEN;
+  cx -> currentpen -> flags = FLAG_NULL;
+  cx -> currentpen -> referenced = NULL;
+  cx -> currentpen -> gl_vbo = 0;
+  cx -> currentpen -> indices = 0;
 }
 @
 \fimcodigo
@@ -5973,9 +6014,14 @@ else if(begin -> type ==  TYPE_SYMBOLIC){
       return false;
     }
     if(var -> var == NULL){
-      RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, OPTIONAL(var -> line),
-                                      var -> value);
-      return false;
+      // Variáveis como 'currentpen' e 'currentpicture' são especiais:
+      if(!strcmp(var -> value, "currentpen"))
+        var -> var = (void *) cx -> currentpen;
+      else{
+        RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, OPTIONAL(var -> line),
+                                        var -> value);
+        return false;
+      }
     }
     number_of_variables ++;
     if(type == 0)
@@ -11420,7 +11466,7 @@ else if(type == TYPE_T_PEN){
     return false;
   var = (struct symbolic_token *) begin;
   for(i = 0; i < number_of_variables; i ++){
-    if(!assign_pen_variable(mf, (struct pen_variable *) var -> var,
+    if(!assign_pen_variable(mf, cx, (struct pen_variable *) var -> var,
                             &result))
       return false;
     var = (struct symbolic_token *) (var -> next);
@@ -11438,7 +11484,7 @@ A declaração da função que faz a atribuição:
 
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
-bool assign_pen_variable(struct metafont *mf,
+bool assign_pen_variable(struct metafont *mf, struct context *cx,
                          struct pen_variable *target,
                          struct pen_variable *source);
 @
@@ -11448,7 +11494,7 @@ E a sua implementação:
 
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
-bool assign_pen_variable(struct metafont *mf,
+bool assign_pen_variable(struct metafont *mf, struct context *cx,
                          struct pen_variable *target,
                          struct pen_variable *source){
   void *(*alloc)(size_t);
@@ -11480,8 +11526,8 @@ bool assign_pen_variable(struct metafont *mf,
   target -> referenced = NULL;
   // Se estamos atribuindo para 'currentpen', devemos retriangular a caneta.
   // Conforme descreveremos na Seção 10.
-  if(target == &(mf -> internal_pen_variables[INTERNAL_PEN_CURRENTPEN]))
-    triangulate_pen(mf, target, target -> gl_matrix);
+  if(target == cx -> currentpen)
+    triangulate_pen(mf, cx, target, target -> gl_matrix);
   return true;
 }
 @
@@ -11878,8 +11924,12 @@ matriz da variável que aponta pela matriz obtida copiada.
 struct symbolic_token *v = (struct symbolic_token *) begin;
 struct pen_variable *content = v -> var, *to_copy = v -> var;
 if(content == NULL){
-  RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, OPTIONAL(v -> line), v -> value);
-  return false;
+  if(!strcmp(v -> value, "currentpen"))
+    content = cx -> currentpen;
+  else{
+    RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, OPTIONAL(v -> line), v -> value);
+    return false;
+  }
 }
 if(content -> type != TYPE_T_PEN){
   RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, OPTIONAL(v -> line), v -> value, 
@@ -15366,22 +15416,22 @@ esquerdo da imagem, sem que a caneta saia para fora da imagem. Tal
 tipo de controle requer que saibamos o tamanho da caneta. Por isso
 vamos ter que armazenar internamente os
 valores \monoespaco{pen\_lft}, \monoespaco{pen\_rt}, \monoespaco{pen\_top}
-e \monoespaco{pen\_bot}. Como estes valores são sempre referentes
-à \monoespaco{currentpen}, uma variável com escopo global, vamos
-armazenar ela no \monoespaco{struct metafont}:
+e \monoespaco{pen\_bot}. Estes valores ficarão armazenados em nosso
+contexto de execução:
 
 \iniciocodigo
-@<Atributos (struct metafont)@>+=
+@<Atributos (struct context)@>+=
 float pen_lft, pen_rt, pen_top, pen_bot;
 @
 \fimcodigo
 
 Estes valores são inicializados como zero porque
-a \monoespaco{currentpen} começa como uma \monoespaco{nullpen}:
+a \monoespaco{currentpen} começa como uma \monoespaco{nullpen} em cada
+contexto de execução:
 
 \iniciocodigo
-@<Inicialização (struct metafont)@>+=
-mf -> pen_lft = mf -> pen_rt = mf -> pen_top = mf -> pen_bot = 0.0;
+@<Inicialização (struct context)@>+=
+cx -> pen_lft = cx -> pen_rt = cx -> pen_top = cx -> pen_bot = 0.0;
 @
 \fimcodigo
 
@@ -15435,10 +15485,10 @@ atualizar seus pontos de extremidade:
 \iniciocodigo
 @<Macros Locais (metafont.c)@>+=
 #define UPDATE_PEN_EXTREMITIES() {\
-  mf -> pen_lft = _min_x;\
-  mf -> pen_rt = _max_x;\
-  mf -> pen_top = _max_y;\
-  mf -> pen_bot = _min_y;\
+  cx -> pen_lft = _min_x;\
+  cx -> pen_rt = _max_x;\
+  cx -> pen_top = _max_y;\
+  cx -> pen_bot = _min_y;\
 }
 @
 \fimcodigo
@@ -15456,8 +15506,8 @@ ser usada para obter os pontos de extremidade para esta caneta:
 
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
-void pencircular_extremity_points(struct metafont *mf, float *matrix,
-                                  bool fullcircle);
+void pencircular_extremity_points(struct metafont *mf, struct context *cx,
+                                  float *matrix, bool fullcircle);
 @
 \fimcodigo
 
@@ -15571,8 +15621,8 @@ obtém os pontos de extremidade de uma caneta redonda:
 
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
-void pencircular_extremity_points(struct metafont *mf, float *matrix,
-                                  bool fullcircle){
+void pencircular_extremity_points(struct metafont *mf, struct context *cx,
+                                  float *matrix, bool fullcircle){
   DECLARE_PEN_EXTREMITIES();
   int i, index[4] = {0, 3, 4, 1};
   for(i = 0; i < 2; i ++){ // i=0 computa eixo x, i=1 computa eixo y
@@ -15655,8 +15705,8 @@ Bézier:
 
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
-void path_extremity_points(struct metafont *mf, struct path_variable *p,
-                           float *matrix);
+void path_extremity_points(struct metafont *mf, struct context *cx,
+                           struct path_variable *p, float *matrix);
 @
 \fimcodigo
 
@@ -15688,8 +15738,8 @@ correspondente:
 
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
-void path_extremity_points(struct metafont *mf, struct path_variable *p,
-                           float *matrix){
+void path_extremity_points(struct metafont *mf, struct context *cx,
+                           struct path_variable *p, float *matrix){
   int i, j, length = p -> length;
   DECLARE_PEN_EXTREMITIES();
   for(i = 0; i < length; i ++){
@@ -15864,8 +15914,8 @@ A função que fará a triangulação é:
 
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
-bool triangulate_pen(struct metafont *mf, struct pen_variable *pen,
-                     float *transform_matrix);
+bool triangulate_pen(struct metafont *mf, struct context *cx,
+                     struct pen_variable *pen, float *transform_matrix);
 @
 \fimcodigo
 
@@ -15873,8 +15923,8 @@ E a sua implementação é:
 
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
-bool triangulate_pen(struct metafont *mf, struct pen_variable *pen,
-                     float *transform_matrix){
+bool triangulate_pen(struct metafont *mf, struct context *cx,
+                     struct pen_variable *pen, float *transform_matrix){
   @<Triangulação: Caneta Nula@>
   @<Triangulação: Caneta Quadrada@>
   @<Triangulação: Polígono Convexo@>
@@ -16064,13 +16114,13 @@ if((pen -> flags & FLAG_CIRCULAR) || (pen -> flags & FLAG_SEMICIRCULAR)){
   float radius;
   GLsizei size;
   // Obter pontos de extremidade:
-  pencircular_extremity_points(mf, transform_matrix,
+  pencircular_extremity_points(mf, cx, transform_matrix,
                                (pen -> flags & FLAG_CIRCULAR));
   // Checando resolução (raio):
   {
     float side1, side2;
-    side1 = fabs(mf -> pen_rt - mf -> pen_lft);
-    side2 = fabs(mf -> pen_top - mf -> pen_bot);
+    side1 = fabs(cx -> pen_rt - cx -> pen_lft);
+    side2 = fabs(cx -> pen_top - cx -> pen_bot);
     radius = ((side1 >= side2)?(side1):(side2))/ 2.0;
   }
   // Só retriangula se raio for maior que resolução já triangulada:
@@ -16167,7 +16217,7 @@ if((pen -> flags & FLAG_CONVEX)){
   bool counterclockwise = is_pen_counterclockwise(pen);
   int i, number_of_vertices = 1;
   // Obtém pontos de extremidade:
-  path_extremity_points(mf, pen -> format, transform_matrix);
+  path_extremity_points(mf, cx, pen -> format, transform_matrix);
 
 
   for(i = 0; i < pen -> format -> length - 1; i ++){
@@ -18101,22 +18151,22 @@ else if(begin -> type == TYPE_PICKUP){
                                 next_token -> type);
     return false;
   }
-  if(mf -> internal_pen_variables[0].gl_vbo != 0)
-    glDeleteBuffers(1, &(mf -> internal_pen_variables[0].gl_vbo));
+  if(cx -> currentpen -> gl_vbo != 0)
+    glDeleteBuffers(1, &(cx -> currentpen -> gl_vbo));
   if(next_token -> type == TYPE_NULLPEN){
-    mf -> internal_pen_variables[0].flags = FLAG_NULL;
-    mf -> internal_pen_variables[0].referenced = NULL;
-    mf -> internal_pen_variables[0].gl_vbo = 0;
+    cx -> currentpen -> flags = FLAG_NULL;
+    cx -> currentpen -> referenced = NULL;
+    cx -> currentpen -> gl_vbo = 0;
   }
   else if(next_token -> type == TYPE_PENCIRCLE){
-    mf -> internal_pen_variables[0].flags = FLAG_CONVEX | FLAG_CIRCULAR;
-    mf -> internal_pen_variables[0].referenced = NULL;
-    mf -> internal_pen_variables[0].gl_vbo = 0;
+    cx -> currentpen -> flags = FLAG_CONVEX | FLAG_CIRCULAR;
+    cx -> currentpen -> referenced = NULL;
+    cx -> currentpen -> gl_vbo = 0;
   }
   else if(next_token -> type == TYPE_PENSEMICIRCLE){
-    mf -> internal_pen_variables[0].flags = FLAG_CONVEX | FLAG_SEMICIRCULAR;
-    mf -> internal_pen_variables[0].referenced = NULL;
-    mf -> internal_pen_variables[0].gl_vbo = 0;
+    cx -> currentpen -> flags = FLAG_CONVEX | FLAG_SEMICIRCULAR;
+    cx -> currentpen -> referenced = NULL;
+    cx -> currentpen -> gl_vbo = 0;
   }
   else{
     struct symbolic_token *symbol = ((struct symbolic_token *) next_token);
@@ -18137,9 +18187,9 @@ else if(begin -> type == TYPE_PICKUP){
                                          symbol -> value);
       return false;
     }
-    mf -> internal_pen_variables[0].referenced = var;
+    cx -> currentpen -> referenced = var;
   }
-  INITIALIZE_IDENTITY_MATRIX(mf -> internal_pen_variables[0].gl_matrix);
+  INITIALIZE_IDENTITY_MATRIX(cx -> currentpen -> gl_matrix);
   @<Comando 'pickup': Continuação@>
   return true;
 }
@@ -18187,16 +18237,15 @@ while(next_token != end_expression){
   case TYPE_ROTATED:
     if(!eval_numeric_expression(mf, cx, begin_subexpr, end_subexpr, &a))
       return false;
-    TRANSFORM_ROTATE(mf -> internal_pen_variables[0].gl_matrix,
-                     a.value * 0.0174533);
+    TRANSFORM_ROTATE(cx -> currentpen -> gl_matrix, a.value * 0.0174533);
     break;
   case TYPE_SCALED:
     if(!eval_numeric_expression(mf, cx, begin_subexpr, end_subexpr, &a))
       return false;
-    TRANSFORM_SCALE(mf -> internal_pen_variables[0].gl_matrix, a.value);
+    TRANSFORM_SCALE(cx -> currentpen -> gl_matrix, a.value);
     // Curved pens need retriangulation if the size increase:
-    if(mf -> internal_pen_variables[0].referenced){
-      struct pen_variable *v = mf -> internal_pen_variables[0].referenced;
+    if(cx -> currentpen -> referenced){
+      struct pen_variable *v = cx -> currentpen -> referenced;
       if(v -> gl_vbo != 0 && a.value > 1.0 && !(v -> flags & FLAG_STRAIGHT)){
         glDeleteBuffers(1, &(v -> gl_vbo));
         v -> gl_vbo = 0;
@@ -18206,15 +18255,15 @@ while(next_token != end_expression){
   case TYPE_SHIFTED:
     if(!eval_pair_expression(mf, cx, begin_subexpr, end_subexpr, &p))
       return false;
-    TRANSFORM_SHIFT(mf -> internal_pen_variables[0].gl_matrix, p.x, p.y);
+    TRANSFORM_SHIFT(cx -> currentpen -> gl_matrix, p.x, p.y);
     break;
   case TYPE_SLANTED:
     if(!eval_numeric_expression(mf, cx, begin_subexpr, end_subexpr, &a))
       return false;
-    TRANSFORM_SLANT(mf -> internal_pen_variables[0].gl_matrix, a.value);
+    TRANSFORM_SLANT(cx -> currentpen -> gl_matrix, a.value);
     // Slant non-circular curved pens always require retriangulation:
-    if(mf -> internal_pen_variables[0].referenced){
-      struct pen_variable *v = mf -> internal_pen_variables[0].referenced;
+    if(cx -> currentpen -> referenced){
+      struct pen_variable *v = cx -> currentpen -> referenced;
       if(v -> gl_vbo != 0 && a.value > 1.0 && !(v -> flags & FLAG_STRAIGHT) &&
          !(v -> flags & FLAG_CIRCULAR)){
         glDeleteBuffers(1, &(v -> gl_vbo));
@@ -18225,10 +18274,10 @@ while(next_token != end_expression){
   case TYPE_XSCALED:
     if(!eval_numeric_expression(mf, cx, begin_subexpr, end_subexpr, &a))
       return false;
-    TRANSFORM_SCALE_X(mf -> internal_pen_variables[0].gl_matrix, a.value);
+    TRANSFORM_SCALE_X(cx -> currentpen -> gl_matrix, a.value);
     // Curved pens need retriangulation if the size increase:
-    if(mf -> internal_pen_variables[0].referenced){
-      struct pen_variable *v = mf -> internal_pen_variables[0].referenced;
+    if(cx -> currentpen -> referenced){
+      struct pen_variable *v = cx -> currentpen -> referenced;
       if(v -> gl_vbo != 0 && a.value > 1.0 && !(v -> flags & FLAG_STRAIGHT)){
         glDeleteBuffers(1, &(v -> gl_vbo));
         v -> gl_vbo = 0;
@@ -18238,10 +18287,10 @@ while(next_token != end_expression){
   case TYPE_YSCALED:
     if(!eval_numeric_expression(mf, cx, begin_subexpr, end_subexpr, &a))
       return false;
-    TRANSFORM_SCALE_Y(mf -> internal_pen_variables[0].gl_matrix, a.value);
+    TRANSFORM_SCALE_Y(cx -> currentpen -> gl_matrix, a.value);
     // Curved pens need retriangulation if the size increase:
-    if(mf -> internal_pen_variables[0].referenced){
-      struct pen_variable *v = mf -> internal_pen_variables[0].referenced;
+    if(cx -> currentpen -> referenced){
+      struct pen_variable *v = cx -> currentpen -> referenced;
       if(v -> gl_vbo != 0 && a.value > 1.0 && !(v -> flags & FLAG_STRAIGHT)){
         glDeleteBuffers(1, &(v -> gl_vbo));
         v -> gl_vbo = 0;
@@ -18251,10 +18300,10 @@ while(next_token != end_expression){
   case TYPE_ZSCALED:
     if(!eval_pair_expression(mf, cx, begin_subexpr, end_subexpr, &p))
       return false;
-    TRANSFORM_SCALE_Z(mf -> internal_pen_variables[0].gl_matrix, p.x, p.y);
+    TRANSFORM_SCALE_Z(cx -> currentpen -> gl_matrix, p.x, p.y);
     // Curved pens need retriangulation in this case:
-    if(mf -> internal_pen_variables[0].referenced){
-      struct pen_variable *v = mf -> internal_pen_variables[0].referenced;
+    if(cx -> currentpen -> referenced){
+      struct pen_variable *v = cx -> currentpen -> referenced;
       if(v -> gl_vbo != 0 && a.value > 1.0 && !(v -> flags & FLAG_STRAIGHT)){
         glDeleteBuffers(1, &(v -> gl_vbo));
         v -> gl_vbo = 0;
@@ -18264,10 +18313,10 @@ while(next_token != end_expression){
   case TYPE_TRANSFORMED:
     if(!eval_transform_expression(mf, cx, begin_subexpr, end_subexpr, &t))
       return false;
-    MATRIX_MULTIPLICATION(mf -> internal_pen_variables[0].gl_matrix, t.value);
+    MATRIX_MULTIPLICATION(cx -> currentpen -> gl_matrix, t.value);
     // Curved pens need retriangulation in this case:
-    if(mf -> internal_pen_variables[0].referenced){
-      struct pen_variable *v = mf -> internal_pen_variables[0].referenced;
+    if(cx -> currentpen -> referenced){
+      struct pen_variable *v = cx -> currentpen -> referenced;
       if(v -> gl_vbo != 0 && a.value > 1.0 && !(v -> flags & FLAG_STRAIGHT)){
         glDeleteBuffers(1, &(v -> gl_vbo));
         v -> gl_vbo = 0;
@@ -18297,20 +18346,18 @@ transformação, a passamos para a função que fará a triangulação:
 @<Comando 'pickup': Continuação@>+=
 {
   float final_transform_matrix[9];
-  if(mf -> internal_pen_variables[0].referenced == NULL){
-    memcpy(final_transform_matrix, mf -> internal_pen_variables[0].gl_matrix,
+  if(cx -> currentpen -> referenced == NULL){
+    memcpy(final_transform_matrix, cx -> currentpen -> gl_matrix,
            9 * sizeof(float));
-    if(!triangulate_pen(mf, &(mf -> internal_pen_variables[0]),
-                        final_transform_matrix))
+    if(!triangulate_pen(mf, cx, cx -> currentpen, final_transform_matrix))
       return false;
   }
   else{
     memcpy(final_transform_matrix,
-           mf -> internal_pen_variables[0].referenced -> gl_matrix,
-           9 * sizeof(float));
+           cx -> currentpen -> referenced -> gl_matrix, 9 * sizeof(float));
     MATRIX_MULTIPLICATION(final_transform_matrix,
-                          mf -> internal_pen_variables[0].gl_matrix);
-    if(!triangulate_pen(mf, mf -> internal_pen_variables[0].referenced,
+                          cx -> currentpen -> gl_matrix);
+    if(!triangulate_pen(mf, cx, cx -> currentpen -> referenced,
                         final_transform_matrix))
       return false;
   }
@@ -18365,7 +18412,7 @@ else if(begin -> type == TYPE_BOT){
                                 begin -> next,
                         end, result))
     return false;
-  result -> y += mf -> pen_bot;
+  result -> y += cx -> pen_bot;
   return true;
 }
 @
@@ -18382,7 +18429,7 @@ else if(begin -> type == TYPE_TOP){
                                 begin -> next,
                         end, result))
     return false;
-  result -> y += mf -> pen_top;
+  result -> y += cx -> pen_top;
   return true;
 }
 @
@@ -18402,7 +18449,7 @@ else if(begin -> type == TYPE_LFT){
                                 begin -> next,
                         end, result))
     return false;
-  result -> x += mf -> pen_lft;
+  result -> x += cx -> pen_lft;
   return true;
 }
 @
@@ -18420,7 +18467,7 @@ else if(begin  -> type == TYPE_RT){
                                 begin -> next,
                         end, result))
     return false;
-  result -> x += mf -> pen_rt;
+  result -> x += cx -> pen_rt;
   return true;
 }
 @
@@ -18704,7 +18751,7 @@ bool drawing_commands(struct metafont *mf, struct context *cx,
                       struct path_variable *path, unsigned int flags){
   int i, j;
   float transform_matrix[9];
-  struct pen_variable *currentpen = &(mf -> internal_pen_variables[0]);
+  struct pen_variable *currentpen = cx -> currentpen;
   struct picture_variable *currentpicture =
                                         &(mf -> internal_picture_variables[0]);
   // Preparar a caneta, a imagem de destino e parâmetros OpenGL
@@ -19486,17 +19533,6 @@ else if(begin -> type == TYPE_BEGINCHAR){
       temporary_free(data);
     @<Gera nova 'currentpicture'@>
   }
-  { // Inicializando currentpen = nullpen:
-    mf -> internal_pen_variables[0].format = NULL; // A caneta 'currentpen'
-    mf -> internal_pen_variables[0].type = TYPE_T_PEN;
-    mf -> internal_pen_variables[0].flags = FLAG_NULL;
-    mf -> internal_pen_variables[0].referenced = NULL;
-    if(mf -> internal_pen_variables[0].gl_vbo != 0)
-      glDeleteBuffers(1, &(mf -> internal_pen_variables[0].gl_vbo));
-    mf -> internal_pen_variables[0].gl_vbo = 0;
-    mf -> internal_pen_variables[0].indices = 0;
-    mf -> pen_lft = mf -> pen_rt = mf -> pen_top = mf -> pen_bot = 0.0;
-  }
   return true;
 }
 @
@@ -20025,8 +20061,6 @@ pela próxima renderização:
 @<'renderchar': Salva 'currentpicture' e 'currentpen'@>=
 struct picture_variable current_picture;
 int current_depth;
-struct pen_variable current_pen;
-float pen_lft, pen_rt, pen_top, pen_bot;
 GLuint currentpicture_fb_bkp;
 float w, h, d;
 w = mf -> internal_numeric_variables[INTERNAL_NUMERIC_W].value;
@@ -20038,12 +20072,6 @@ mf -> internal_picture_variables[0].width = -1;
 mf -> internal_picture_variables[0].height = -1;
 mf -> internal_picture_variables[0].texture = 0;
 current_depth = mf -> current_depth;
-memcpy(&current_pen, &(mf -> internal_pen_variables[0]),
-       sizeof(struct pen_variable));
-pen_lft = mf -> pen_lft;
-pen_rt = mf -> pen_rt;
-pen_top = mf -> pen_top;
-pen_bot = mf -> pen_bot;
 currentpicture_fb_bkp = currentpicture_fb;
 @
 \fimcodigo
@@ -20055,12 +20083,6 @@ E depois de terminar a outra renderização, devemos restaurar tais valores:
 memcpy(&(mf -> internal_picture_variables[0]), &current_picture,
        sizeof(struct picture_variable));
 mf -> current_depth = current_depth;
-memcpy(&(mf -> internal_pen_variables[0]), &current_pen,
-       sizeof(struct pen_variable));
-mf -> pen_lft = pen_lft;
-mf -> pen_rt = pen_rt;
-mf -> pen_top = pen_top;
-mf -> pen_bot = pen_bot;
 currentpicture_fb = currentpicture_fb_bkp;
 mf -> internal_numeric_variables[INTERNAL_NUMERIC_W].value = w;
 mf -> internal_numeric_variables[INTERNAL_NUMERIC_H].value = h;
