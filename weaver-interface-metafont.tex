@@ -5848,67 +5848,47 @@ if(v -> type == TYPE_T_PICTURE){
 \fimcodigo
 
 Existirá uma variável interna de imagem no Weaver Metafont chamada
-de \monoespaco{currentpicture}. No início de todo programa esta
-variável estará pré-declarada. Para criar uma lista de variáveis
-internas de imagem, a declaramos na estrutura Metafont:
+de \monoespaco{currentpicture}. Mas assim como
+a \monoespaco{currentpen}, esta variável será especial: será
+reinicializada em cada contexto de execução. Será uma imagem nova cada
+vez que um novo caractere será renderizado.
 
 \iniciocodigo
-@<Atributos (struct metafont)@>+=
-struct picture_variable *internal_picture_variables;
+@<Atributos (struct context)@>+=
+struct picture_variable *currentpicture;
 @
 \fimcodigo
 
-E na inicialização deixamos a variável \monoespaco{currentpicture}
-declarada, mas deixada como não-inicializada:
+E na inicialização de cada execução, deixamos a
+variável \monoespaco{currentpicture} declarada, mas deixada como
+não-inicializada:
 
 \iniciocodigo
-@<Inicialização (struct metafont)@>+=
-mf -> internal_picture_variables = (struct picture_variable *)
-                                   permanent_alloc(sizeof(struct picture_variable));
-if(mf -> internal_picture_variables == NULL){
-  if(permanent_free != NULL)
-    permanent_free(mf);
+@<Inicialização (struct context)@>+=
+cx -> currentpicture = (struct picture_variable *)
+                         temporary_alloc(sizeof(struct picture_variable));
+if(cx -> currentpicture == NULL){
+  RAISE_ERROR_NO_MEMORY(mf, NULL, 0);
   return NULL;
 }
-// A imagem 'currentpicture':
-mf -> internal_picture_variables[0].type = TYPE_T_PICTURE;
-mf -> internal_picture_variables[0].width = -1;
-mf -> internal_picture_variables[0].height = -1;
-mf -> internal_picture_variables[0].texture = 0;
+cx -> currentpicture -> type = TYPE_T_PICTURE;
+cx -> currentpicture -> width = -1;
+cx -> currentpicture -> height = -1;
+cx -> currentpicture -> texture = 0;
 @
 \fimcodigo
 
-Para deixar consistente com as outras variáveis internas, criamos esta
-macro para nos referir à posição dela:
 
-\iniciocodigo
-@<Macros Locais (metafont.c)@>+=
-#define INTERNAL_PICTURE_CURRENTPICTURE 0
-@
-\fimcodigo
-
-No momento em que chegar a hora de desalocar as variáveis internas,
+No momento em que chegar a hora de desalocar o contexto de execução,
 devemos eliminar a textura dela também caso ela tenha sido
 inicializada:
 
 \iniciocodigo
-@<Finalização (struct metafont)@>+=
-if(mf -> internal_picture_variables[0].texture != 0)
-  glDeleteTextures(1, &(mf -> internal_picture_variables[0].texture));
-if(permanent_free != NULL)
-  permanent_free(mf -> internal_picture_variables);
-@
-\fimcodigo
-
-E à medida que lemos um código fonte, devemos ajustar corretamente as
-variáveis chamadas ``\monoespaco{currentpicture}'' para apontar para a
-variável interna:
-
-\iniciocodigo
-@<Preenche Ponteiro para Variável Interna@>=
-else if(!strcmp(buffer, "currentpicture"))
-  new_token -> var =
-          &(mf -> internal_picture_variables[INTERNAL_PICTURE_CURRENTPICTURE]);
+@<Finalização (struct context)@>+=
+if(cx -> currentpicture -> texture != 0)
+  glDeleteTextures(1, &(cx -> currentpicture -> texture));
+if(temporary_free != NULL)
+  temporary_free(cx -> currentpicture);
 @
 \fimcodigo
 
@@ -6013,15 +5993,15 @@ else if(begin -> type ==  TYPE_SYMBOLIC){
                                 TYPE_SYMBOLIC, var -> type);
       return false;
     }
+    // Variáveis como 'currentpen' e 'currentpicture' são especiais:
+    if(!strcmp(var -> value, "currentpen"))
+      var -> var = (void *) cx -> currentpen;
+    else if(!strcmp(var -> value, "currentpicture"))
+      var -> var = (void *) cx -> currentpicture;
     if(var -> var == NULL){
-      // Variáveis como 'currentpen' e 'currentpicture' são especiais:
-      if(!strcmp(var -> value, "currentpen"))
-        var -> var = (void *) cx -> currentpen;
-      else{
-        RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, OPTIONAL(var -> line),
-                                        var -> value);
-        return false;
-      }
+      RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, OPTIONAL(var -> line),
+                                      var -> value);
+      return false;
     }
     number_of_variables ++;
     if(type == 0)
@@ -12450,14 +12430,13 @@ else if(type == TYPE_T_PICTURE){
       pic -> texture = result.texture;
       pic -> type = TYPE_T_PICTURE;
       // Se atribuindo para 'currentpicture', precisamos de código adicional
-      if(pic ==
-         &(mf -> internal_picture_variables[INTERNAL_PICTURE_CURRENTPICTURE])){
+      if(pic == cx -> currentpicture){
         // O código abaixo será definido na Subseção 11.2:
         @<Gera nova 'currentpicture'@>
       }
     }
     else 
-      assign_picture_variable(mf, (struct picture_variable *) var -> var,
+      assign_picture_variable(mf, cx, (struct picture_variable *) var -> var,
                               &result);
     var = (struct symbolic_token *) (var -> next);
     var = (struct symbolic_token *) (var -> next);
@@ -12756,7 +12735,7 @@ texturas:
 
 \iniciocodigo
 @<Declaração de Função Local (metafont.c)@>+=
-bool assign_picture_variable(struct metafont *mf,
+bool assign_picture_variable(struct metafont *mf, struct context *cx,
                              struct picture_variable *target,
                              struct picture_variable *source);
 @
@@ -12766,7 +12745,7 @@ E a sua implementação:
 
 \iniciocodigo
 @<Funções Auxiliares Locais (metafont.c)@>+=
-bool assign_picture_variable(struct metafont *mf,
+bool assign_picture_variable(struct metafont *mf, struct context *cx,
                              struct picture_variable *target,
                              struct picture_variable *source){
   GLuint temporary_framebuffer;
@@ -12787,8 +12766,7 @@ bool assign_picture_variable(struct metafont *mf,
   glBindTexture(GL_TEXTURE_2D, 0);
   glBindFramebuffer(GL_FRAMEBUFFER, previous_framebuffer);
   glDeleteFramebuffers(1, &temporary_framebuffer);
-  if(target ==
-         &(mf -> internal_picture_variables[INTERNAL_PICTURE_CURRENTPICTURE])){
+  if(target == cx -> currentpicture){
     // O código abaixo será definido na Subseção 11.2:
     @<Gera nova 'currentpicture'@>
   }
@@ -13522,6 +13500,8 @@ float identity_matrix[9] = {1.0, 0.0, 0.0,
                              0.0, 0.0, 1.0};
 struct symbolic_token *v = (struct symbolic_token *) begin;
 struct picture_variable *content = v -> var;
+if(!strcmp(v -> value, "currentpicture"))
+  content = cx -> currentpicture;
 if(content == NULL){
   RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, OPTIONAL(v -> line), v -> value);
   return false;
@@ -18536,12 +18516,9 @@ inicializa se não estiver:
   if(currentpicture_fb == 0){
     int width, height;
     GLuint texture;
-    width = mf ->
-             internal_picture_variables[INTERNAL_PICTURE_CURRENTPICTURE].width;
-    height = mf ->
-            internal_picture_variables[INTERNAL_PICTURE_CURRENTPICTURE].height;
-    texture = mf ->
-           internal_picture_variables[INTERNAL_PICTURE_CURRENTPICTURE].texture;
+    width = cx -> currentpicture -> width;
+    height = cx -> currentpicture -> height;
+    texture = cx -> currentpicture -> texture;
     glGenFramebuffers(1, &currentpicture_fb);
     glBindTexture(GL_TEXTURE_2D, texture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -18752,8 +18729,7 @@ bool drawing_commands(struct metafont *mf, struct context *cx,
   int i, j;
   float transform_matrix[9];
   struct pen_variable *currentpen = cx -> currentpen;
-  struct picture_variable *currentpicture =
-                                        &(mf -> internal_picture_variables[0]);
+  struct picture_variable *currentpicture = cx -> currentpicture;
   // Preparar a caneta, a imagem de destino e parâmetros OpenGL
   if(currentpen -> referenced != NULL){
     memcpy(transform_matrix, currentpen -> referenced -> gl_matrix,
@@ -19488,7 +19464,7 @@ else if(begin -> type == TYPE_BEGINCHAR){
     unsigned char *data;
     struct numeric_variable *vars;
     size_t size;
-    struct picture_variable *pic = &(mf -> internal_picture_variables[0]);
+    struct picture_variable *pic = cx -> currentpicture;
      if(pic -> texture != 0)
        glDeleteTextures(1, &(pic -> texture));
      vars = ((struct numeric_variable *) mf -> internal_numeric_variables);
@@ -19583,8 +19559,7 @@ de \monoespaco{currentpicture}:
 \iniciocodigo
 @<Instrução: Composta@>+=
 else if(begin -> type == TYPE_ENDCHAR){
-  struct picture_variable *currentpicture =
-                                        &(mf -> internal_picture_variables[0]);
+  struct picture_variable *currentpicture = cx -> currentpicture;
   if(!end_nesting_level(mf, cx, begin))
     return false;
   cx -> current_glyph -> width = round(currentpicture -> width);
@@ -19865,7 +19840,7 @@ else if(begin -> type == TYPE_SHIPIT){
                                  begin -> next -> type);
     return false;
   }
-  currentpicture = &(mf -> internal_picture_variables[0]);
+  currentpicture = cx -> currentpicture;
   cx -> current_glyph -> texture = currentpicture -> texture;
   cx -> current_glyph -> width = round(currentpicture -> width);
   cx -> current_glyph -> depth = round(mf -> current_depth);
@@ -20059,18 +20034,12 @@ pela próxima renderização:
 
 \iniciocodigo
 @<'renderchar': Salva 'currentpicture' e 'currentpen'@>=
-struct picture_variable current_picture;
 int current_depth;
 GLuint currentpicture_fb_bkp;
 float w, h, d;
 w = mf -> internal_numeric_variables[INTERNAL_NUMERIC_W].value;
 h = mf -> internal_numeric_variables[INTERNAL_NUMERIC_H].value;
 d = mf -> internal_numeric_variables[INTERNAL_NUMERIC_D].value;
-memcpy(&current_picture, &(mf -> internal_picture_variables[0]),
-       sizeof(struct picture_variable));
-mf -> internal_picture_variables[0].width = -1;
-mf -> internal_picture_variables[0].height = -1;
-mf -> internal_picture_variables[0].texture = 0;
 current_depth = mf -> current_depth;
 currentpicture_fb_bkp = currentpicture_fb;
 @
@@ -20080,8 +20049,6 @@ E depois de terminar a outra renderização, devemos restaurar tais valores:
 
 \iniciocodigo
 @<'renderchar': Restaura 'currentpicture' e 'currentpen'@>=
-memcpy(&(mf -> internal_picture_variables[0]), &current_picture,
-       sizeof(struct picture_variable));
 mf -> current_depth = current_depth;
 currentpicture_fb = currentpicture_fb_bkp;
 mf -> internal_numeric_variables[INTERNAL_NUMERIC_W].value = w;
