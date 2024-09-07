@@ -5632,7 +5632,6 @@ if(v -> type == TYPE_T_PEN){
 }
 @
 
-
 Além das variáveis de caneta definidas pelo usuário, iremos suportar a
 existência de duas outras variáveis interna de caneta. Uma delas será
 chamada de \monoespaco{currentpen} e irá representar a caneta atual
@@ -5650,7 +5649,6 @@ $x$, assim como a sua maior e menor coordenada $y$. Essa variável não
 ficará junto com as outras: ela não estará guardada na
 estrutura \monoespaco{metafont} que representa a fonte, mas na
 estrutura que representa o nosso contexto de execução:
-
 
 @<Atributos (struct context)@>+=
 struct pen_variable *currentpen;
@@ -18488,36 +18486,32 @@ definimos as operações sobre variáveis do tipo imagem. Em boa parte
 das operações, nós criamos um framebuffer novo, salvamos o framebuffer
 anterior, mudamos para o novo, renderizamos, apagamos o framebuffer
 novo e voltamos ao antigo. Para a \monoespaco{currentpicture}, ao
-invés disso, vamos manter uma variável armazenando seu framebuffer:
+invés disso, vamos manter uma variável armazenando seu framebuffer
+para não termos que criá-lo e destruí-lo o tempo todo:
 
-
-@<Variáveis Locais (metafont.c)@>+=
-static GLuint currentpicture_fb;
+@<Atributos (struct context)@>+=
+GLuint currentpicture_fb;
 @
-
 
 A qual é inicializada como zero:
-
-
-@<Inicialização WEAVEFONT@>+=
-currentpicture_fb = 0;
+  
+@<Inicialização (struct context)@>+=
+cx -> currentpicture_fb = 0;
 @
-
 
 Antes de renderizar para \monoespaco{currentpicture}, devemos executar
 o código abaixo que checa se o framebuffer está inicializado, e o
 inicializa se não estiver:
 
-
 @<Prepara 'currentpicture' para Desenho@>=
 {
-  if(currentpicture_fb == 0){
+  if(cx -> currentpicture_fb == 0){
     int width, height;
     GLuint texture;
     width = cx -> currentpicture -> width;
     height = cx -> currentpicture -> height;
     texture = cx -> currentpicture -> texture;
-    glGenFramebuffers(1, &currentpicture_fb);
+    glGenFramebuffers(1, &(cx -> currentpicture_fb));
     glBindTexture(GL_TEXTURE_2D, texture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -18525,7 +18519,7 @@ inicializa se não estiver:
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
                  GL_UNSIGNED_BYTE, NULL);
-    glBindFramebuffer(GL_FRAMEBUFFER, currentpicture_fb);
+    glBindFramebuffer(GL_FRAMEBUFFER, cx -> currentpicture_fb);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
                            texture, 0);
     if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
@@ -18534,10 +18528,9 @@ inicializa se não estiver:
     }
   }
   else
-    glBindFramebuffer(GL_FRAMEBUFFER, currentpicture_fb);
+    glBindFramebuffer(GL_FRAMEBUFFER, cx -> currentpicture_fb);
 }
 @
-
 
 Se por algum motivo nós mudarmos a nossa \monoespaco{currentpicture}
 para outra imagem, devemos remover o framebuffer anterior:
@@ -18545,12 +18538,12 @@ para outra imagem, devemos remover o framebuffer anterior:
 
 @<Gera nova 'currentpicture'@>=
 {
-  if(currentpicture_fb != 0){
+  if(cx -> currentpicture_fb != 0){
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
-    glDeleteFramebuffers(1, &currentpicture_fb);
+    glDeleteFramebuffers(1, &(cx -> currentpicture_fb));
   }
-  currentpicture_fb = 0;
+  cx -> currentpicture_fb = 0;
 }
 @
 
@@ -20026,27 +20019,20 @@ Antes de renderizar um outro caractere, devemos salvar a imagem e
 caneta da nossa imagem atual, pois tais valores serão sobrescritos
 pela próxima renderização:
 
-
 @<'renderchar': Salva 'currentpicture' e 'currentpen'@>=
-GLuint currentpicture_fb_bkp;
 float w, h, d;
 w = mf -> internal_numeric_variables[INTERNAL_NUMERIC_W].value;
 h = mf -> internal_numeric_variables[INTERNAL_NUMERIC_H].value;
 d = mf -> internal_numeric_variables[INTERNAL_NUMERIC_D].value;
-currentpicture_fb_bkp = currentpicture_fb;
 @
-
 
 E depois de terminar a outra renderização, devemos restaurar tais valores:
 
-
 @<'renderchar': Restaura 'currentpicture' e 'currentpen'@>=
-currentpicture_fb = currentpicture_fb_bkp;
 mf -> internal_numeric_variables[INTERNAL_NUMERIC_W].value = w;
 mf -> internal_numeric_variables[INTERNAL_NUMERIC_H].value = h;
 mf -> internal_numeric_variables[INTERNAL_NUMERIC_D].value = d;
 @
-
 
 O comando \monoespaco{renderchar} requer então os seguintes novos
 tipos de erro:

@@ -18220,21 +18220,19 @@ several operations over picture variables. In several of them, we
 created a new framebuffer, stored the previous framebuffer, changed to
 the new framebuffer, rendered, erased the new framebuffer and changed
 to the old one. But for the \monoespaco{currentpicture} framebuffer,
-we will keep a single variable to store it:
+we will keep a single variable to store it, so that we do not need to
+create and destroy it all the time:
 
 
-@<Local Variables (metafont.c)@>+=
-static GLuint currentpicture_fb;
+@<Attributes (struct context)@>+=
+GLuint currentpicture_fb;
 @
-
 
 Which is initialized as zero:
 
-
-@<WEAVEFONT Initialization@>+=
-currentpicture_fb = 0;
+@<Initialization (struct context)@>+=
+cx -> currentpicture_fb = 0;
 @
-
 
 Before rendering to \monoespaco{currentpicture}, we should execute the
 following code to check if the framebuffer is initialized and if not,
@@ -18243,13 +18241,13 @@ initializes it:
 
 @<Prepare 'currentpicture' for Drawing@>=
 {
-  if(currentpicture_fb == 0){
+  if(cx -> currentpicture_fb == 0){
     int width, height;
     GLuint texture;
     width = cx -> currentpicture -> width;
     height = cx -> currentpicture -> height;
     texture = cx -> currentpicture -> texture;
-    glGenFramebuffers(1, &currentpicture_fb);
+    glGenFramebuffers(1, &(cx -> currentpicture_fb));
     glBindTexture(GL_TEXTURE_2D, texture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -18257,7 +18255,7 @@ initializes it:
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
                  GL_UNSIGNED_BYTE, NULL);
-    glBindFramebuffer(GL_FRAMEBUFFER, currentpicture_fb);
+    glBindFramebuffer(GL_FRAMEBUFFER, cx -> currentpicture_fb);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
                            texture, 0);
     if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
@@ -18266,7 +18264,7 @@ initializes it:
     }
   }
   else
-    glBindFramebuffer(GL_FRAMEBUFFER, currentpicture_fb);
+    glBindFramebuffer(GL_FRAMEBUFFER, cx -> currentpicture_fb);
 }
 @
 
@@ -18277,12 +18275,12 @@ of \monoespaco{currentpicture}, we must remove the old framebuffer:
 
 @<Create new 'currentpicture'@>=
 {
-  if(currentpicture_fb != 0){
+  if(cx -> currentpicture_fb != 0){
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
-    glDeleteFramebuffers(1, &currentpicture_fb);
+    glDeleteFramebuffers(1, &(cx -> currentpicture_fb));
   }
-  currentpicture_fb = 0;
+  cx -> currentpicture_fb = 0;
 }
 @
 
@@ -19749,12 +19747,10 @@ the next rendering:
 
 
 @<'renderchar': Save 'currentpicture' e 'currentpen'@>=
-GLuint currentpicture_fb_bkp;
 float w, h, d;
 w = mf -> internal_numeric_variables[INTERNAL_NUMERIC_W].value;
 h = mf -> internal_numeric_variables[INTERNAL_NUMERIC_H].value;
 d = mf -> internal_numeric_variables[INTERNAL_NUMERIC_D].value;
-currentpicture_fb_bkp = currentpicture_fb;
 @
 
 
@@ -19762,7 +19758,6 @@ And after finishing the other rendering, we should restore such values:
 
 
 @<'renderchar': Restore 'currentpicture' e 'currentpen'@>=
-currentpicture_fb = currentpicture_fb_bkp;
 mf -> internal_numeric_variables[INTERNAL_NUMERIC_W].value = w;
 mf -> internal_numeric_variables[INTERNAL_NUMERIC_H].value = h;
 mf -> internal_numeric_variables[INTERNAL_NUMERIC_D].value = d;
