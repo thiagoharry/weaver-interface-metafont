@@ -1,6 +1,6 @@
 % Testing some drawing commands
 
-picture a, b, c, d, e, f, g;
+picture a, b, c, D, e, f, g;
 numeric wa, wb, wc, wd, we, wf, wg;
 pair pa1, pa2, pb1, pb2, pd1, pd2, pe1, pe2, pf1, pf2, pg1, pg2, ph1, ph2;
 pen p;
@@ -48,8 +48,8 @@ pd2 = bot rt (0, 0);
 
 draw (6, 6);
 
-d = currentpicture;
-wd = totalweight d;
+D = currentpicture;
+wd = totalweight D;
 
 % Replacing the circular pen with a similar pen built from a path
 currentpicture = nullpicture(12, 12);

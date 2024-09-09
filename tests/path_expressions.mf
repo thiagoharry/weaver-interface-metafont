@@ -4,7 +4,7 @@
 path p1, p2, p3, p4, p5, p6, p7, p8, p9, p10;
 path quartercircle, halfcircle, fullcircle;
 path unitsquare;
-path a, b, c, d, e, f, g, h, i, j, k, l;
+path a, b, c, D, e, f, g, H, i, j, k, l;
 numeric n;
 pair q, r, s;
 path m, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12;
@@ -32,7 +32,7 @@ fullcircle = halfcircle & halfcircle rotated 180 & cycle;
 unitsquare = (0, 0)--(1, 0)--(1, 1)--(0, 1)--cycle;
 a = (0, 0){(1, 0)} .. {(0, 1)} (10, 10);
 b = (0, 0){(1, 0)} ..{(0, 1)}(2, 2) ..{(1,0)}(3, 2) .. cycle;
-d = (0, 0) .. (2, 2){(0, 1)} ..{(1,0)}(3, 2) .. {(1, 0)}cycle;
+D = (0, 0) .. (2, 2){(0, 1)} ..{(1,0)}(3, 2) .. {(1, 0)}cycle;
 c = (0, 0) .. (2, 2) .. controls (3, 4) and (2, 3) .. cycle;
 e = (0, 0) .. controls (3, 4) and (2, 3) .. (2, 2) .. cycle;
 f = (0, 0){(1, 0)} .. tension 0.75 and 4 .. {(0, 1)}(2, 2);
@@ -41,7 +41,7 @@ f = (0, 0){(1, 0)} .. tension 0.75 and 4 .. {(0, 1)}(2, 2);
 % Or without 'atleast': (0,0)..controls(-0.11848,0.59238)and(-0.5875,1)..(0,1);
 g = (0, 0){(-1, 5)} .. tension atleast 0.75 .. {(5, 0)}(0, 1);
 
-h = reverse halfcircle;
+H = reverse halfcircle;
 i = subpath (-2, 5) of g; % This makes i = g
 j = subpath (-1, 3) of e; % Erases cyclic nature, creates bigger path
 k = subpath (10, -15) of halfcircle; % Generates 'reverse halfcircle'

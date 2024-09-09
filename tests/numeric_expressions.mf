@@ -1,17 +1,17 @@
 % To test numeric expressions
 % This program should work and be accepted.
 
-numeric a, b, c, d, e, f, g, h;
+numeric a, b, c, D, e, f, g, H;
 picture pic;
 
 a = xpart (1,2,3,4,5,6);
 b = ypart (1,2,3,4,5,6);
 c = xxpart (1,2,3,4,5,6);
-d = xypart (1,2,3,4,5,6);
+D = xypart (1,2,3,4,5,6);
 e = yxpart (1,2,3,4,5,6);
 f = yypart (1,2,3,4,5,6);
 pic = nullpicture (5, 6);
 g = width pic;
-h = height pic;
+H = height pic;
 
 
