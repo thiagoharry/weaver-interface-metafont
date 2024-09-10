@@ -2949,11 +2949,13 @@ And then we add them to the list of keywords:
 
 When a variable is declared, we need to do two things:
 
-1) If the variable do not exist in the current nesting level, we
-should allocate a new structure to store its content. If it already
-exist in the current nesting level, an error is returned. A default
-value depending of its type if stored in the variable. But it should
-not be used before being initialized.
+1) We should allocate a new structure to store its content.  The
+variable cannot have the same name than any reserved keyword nor
+should have the same name than some special variables like:
+\monoespaco{w}, \monoespaco{h}, \monoespaco{d},
+\monoespaco{currentpicture} ou \monoespaco{currentpen}. Otherwise, we
+raise an error. A default value depending of its type if stored in the
+variable, but it should not be used before being initialized.
 
 2) We iterate over the following tokens in the list of tokens until
 the end of the list or until the current nesting level ends. When we
@@ -3092,6 +3094,14 @@ else if(begin -> type >= TYPE_T_BOOLEAN && begin -> type <= TYPE_T_NUMERIC){
                                variable -> type);
       return false;
     }
+    if(!strcmp(variable -> value, "w") || !strcmp(variable -> value, "h") ||
+       !strcmp(variable -> value, "d") ||
+       !strcmp(variable -> value, "currentpen") ||
+       !strcmp(variable -> value, "currentpicture")){
+         RAISE_ERROR_SPECIAL_NAME(mf, cx, OPTIONAL(variable -> line),
+                               variable -> value);
+         return false;
+    }
     @<Insert Declared Variable@>
     if(variable != (struct symbolic_token *) *end)
       variable = (struct symbolic_token *) (variable -> next);
@@ -3115,21 +3125,31 @@ else if(begin -> type >= TYPE_T_BOOLEAN && begin -> type <= TYPE_T_NUMERIC){
 }
 @
 
-If the user tries to give an invalid name for the variable (a reserved
-keyword), the following error is raised:
+If the user chooses a reserved keyword as the variable name, this is
+an invalid name error. If the name is the same than some also reserved
+special variables, this is a special name error. Both errors are very
+similar, only the type of information associated to them are a little
+different:
 
 @<Types of Error@>+=
-ERROR_INVALID_NAME,
+ERROR_INVALID_NAME, ERROR_SPECIAL_NAME,
 @
 
-Wen we raise this error, we store what kind of token we found instead
-of a symbolic token:
+Wen we raise these errors, in the first case, we store what kind of
+token we found instead of a symbolic token. In the second case, we
+store the string with the forbidden name for our variable:
 
 @<Local Macros (metafont.c)@>+=
 #define RAISE_ERROR_INVALID_NAME(mf, cx, line, token_type) {\
   if(!mf -> errno){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INVALID_NAME);\
     mf -> errno_int = token_type;}}
+#define RAISE_ERROR_SPECIAL_NAME(mf, cs, line, var_name) {\
+  if(!mf -> errno){\
+    size_t _s = strlen(var_name);\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_SPECIAL_NAME);\
+    mf -> errno_str = (char *) permanent_alloc(_s+1);\
+    memcpy(mf -> errno_str, var_name, _s+1);}}
 @
 
 And if the user asks what went wrong, we print an error message:
@@ -3142,6 +3162,10 @@ case ERROR_INVALID_NAME:
           ((mf -> errno_int < 8)?
           (token_names_not_in_list_of_keywords[mf -> errno_int]):
           (list_of_keywords[mf -> errno_int - 8])));
+  break;
+case ERROR_SPECIAL_NAME:
+  fprintf(stderr, "%s:%s Variable '%s' is special and you cannot shadow its "
+          "definition.", mf -> file, line_number, mf -> errno_str);
   break;
 @
 

@@ -3031,11 +3031,13 @@ E adicionamos todos à lista de palavras reservadas:
 
 Quando uma variável é declarada, devemos fazer duas coisas:
 
-1) Se a variável não existir no nível de aninhamento atual, devemos
-alocar uma estrutura da memória para armazenar seu conteúdo. Se ela já
-existir, um erro é gerado. A variável é inicialmente preenchida com um
-valor padrão que depende de seu tipo. Ela não poderá ser usada antes
-de ser inicializada.
+1) Devemos alocar uma estrutura da memória para armazenar seu
+conteúdo. A variável não pode ter seu nome conflitando com algumas
+variáveis especiais da linguagem como: \monoespaco{w}, \monoespaco{h},
+\monoespaco{d}, \monoespaco{currentpicture} ou
+\monoespaco{currentpen}. Se for o caso, geramos um erro.A variável é
+inicialmente preenchida com um valor padrão que depende de seu
+tipo. Ela não poderá ser usada antes de ser inicializada.
 
 2) Devemos percorrer a lista de tokens e procurar por ocorrências
 desta variável mais adiante no mesmo nível de aninhamento, ou em
@@ -3175,6 +3177,14 @@ else if(begin -> type >= TYPE_T_BOOLEAN && begin -> type <= TYPE_T_NUMERIC){
                               variable -> type);
       return false;
     }
+    if(!strcmp(variable -> value, "w") || !strcmp(variable -> value, "h") ||
+       !strcmp(variable -> value, "d") ||
+       !strcmp(variable -> value, "currentpen") ||
+       !strcmp(variable -> value, "currentpicture")){
+         RAISE_ERROR_SPECIAL_NAME(mf, cx, OPTIONAL(variable -> line),
+                               variable -> value);
+         return false;
+    }
     @<Insere Variável Declarada@>
     if(variable != (struct symbolic_token *) *end)
       variable = (struct symbolic_token *) (variable -> next);
@@ -3198,21 +3208,32 @@ else if(begin -> type >= TYPE_T_BOOLEAN && begin -> type <= TYPE_T_NUMERIC){
 }
 @
 
-Se alguém tentar dar um nome inválido para a variável (uma palavra
-reservada da linguagem) o seguinte erro é gerado:
+Se alguém tentar dar um nome de palavra reservada da linguagem para
+uma variável, geramos um erro de nome inválido. Se usar o mesmo nome
+que as variáveis especiais, geramos erro de nome especial. Ambos os
+erros são parecidos, apenas o tipo de informação associada à eles muda
+ligeiramente:
 
 @<Tipos de Erros@>+=
-ERROR_INVALID_NAME,
+ERROR_INVALID_NAME, ERROR_SPECIAL_NAME,
 @
 
-Quando geramos este erro, armazenamos o tipo de token que encontramos
-no lugar de um simbólico, que tentou nomear a variável:
+Quando geramos este erro, no primeiro caso, armazenamos o tipo de
+token que encontramos no lugar de um simbólico, que tentou nomear a
+variável. No segundo caso, armazenamos uma string com o nome da
+variável reservada:
 
 @<Macros Locais (metafont.c)@>+=
 #define RAISE_ERROR_INVALID_NAME(mf, cx, line, token_type) {\
   if(!mf -> errno){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INVALID_NAME);\
     mf -> errno_int = token_type;}}
+#define RAISE_ERROR_SPECIAL_NAME(mf, cs, line, var_name) {\
+  if(!mf -> errno){\
+    size_t _s = strlen(var_name);\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_SPECIAL_NAME);\
+    mf -> errno_str = (char *) permanent_alloc(_s+1);\
+    memcpy(mf -> errno_str, var_name, _s+1);}}
 @
 
 E se o usuário perguntar o quê deu errado, imprimimos uma mensagem de erro:
@@ -3225,6 +3246,10 @@ case ERROR_INVALID_NAME:
           ((mf -> errno_int < 8)?
           (token_names_not_in_list_of_keywords[mf -> errno_int]):
           (list_of_keywords[mf -> errno_int - 8])));
+  break;
+case ERROR_SPECIAL_NAME:
+  fprintf(stderr, "%s:%s Variable '%s' is special and you cannot shadow its "
+          "definition.", mf -> file, line_number, mf -> errno_str);
   break;
 @
 
