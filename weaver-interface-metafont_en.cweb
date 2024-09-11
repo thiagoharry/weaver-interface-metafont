@@ -3367,15 +3367,19 @@ floating-point number.
 
 However, besides the variables declared by the users, we will have
 some additional internal variables. They always will be present and do
-not need to be declared. We have exactly six internal numeric
-variables: \monoespaco{pt}, \monoespaco{cm}, \monoespaco{mm}, \monoespaco{w},
-\monoespaco{h} and \monoespaco{d}. Basically the first three
-will store how many pixels correspond to 1pt, 1cm and 1mm
-respectively. The next three will store the width, height and depth of
-some glyph that we are rendering, or will store zero when we are not
-rendering something.
+not need to be declared. We have exactly ten internal numeric
+variables: \monoespaco{pt}, \monoespaco{cm}, \monoespaco{mm},
+\monoespaco{color\_r}, \monoespaco{color\_g}, \monoespaco{color\_b},
+\monoespaco{color\_a}, \monoespaco{w}, \monoespaco{h} and
+\monoespaco{d}. Basically the first three will store how many pixels
+correspond to 1pt, 1cm and 1mm respectively. The next four will store
+the default color used to render our glyphs. Each one correspond to a
+different color channel: red, green, blue and alpha
+(transparency). The next three will store the width, height and depth
+of some glyph that we are rendering, or will store zero when we are
+not rendering something.
 
-The first three of such internal numeric variables will be declared in
+The first seven of such internal numeric variables will be declared in
 the meta-font struct:
 
 @<Attributes (struct metafont)@>+=
@@ -3389,21 +3393,26 @@ bound to the context of which character we are rendering (if any):
 struct numeric_variable *internal_numeric_variables;
 @
        
-During the initialization we will allocate space for the three
+During the initialization we will allocate space for the seven
 first variables and fill their values:
 
 @<Initialization (struct metafont)@>+=
 mf -> internal_numeric_variables =
-             permanent_alloc(3 * sizeof(struct numeric_variable));
+             permanent_alloc(7 * sizeof(struct numeric_variable));
 ((struct numeric_variable *) mf -> internal_numeric_variables)[0].value =
    ((double) dpi) / 72.0; // 1in = 72 pt
 ((struct numeric_variable *) mf -> internal_numeric_variables)[1].value =
    ((double) dpi) / 2.54; // 1in = 2.54cm
 ((struct numeric_variable *) mf -> internal_numeric_variables)[2].value =
    ((double) dpi) / 25.4; // 1in = 25.4mm
+// Default color: (0, 0, 0, 1) (black opaque)
+((struct numeric_variable *) mf -> internal_numeric_variables)[3].value = 0.0;
+((struct numeric_variable *) mf -> internal_numeric_variables)[4].value = 0.0;
+((struct numeric_variable *) mf -> internal_numeric_variables)[5].value = 0.0;
+((struct numeric_variable *) mf -> internal_numeric_variables)[3].value = 1.0;
 {
   int i;
-  for(i = 0; i < 3; i ++){
+  for(i = 0; i < 7; i ++){
     ((struct numeric_variable *)
       mf -> internal_numeric_variables)[i].type = TYPE_T_NUMERIC;
     ((struct numeric_variable *)
@@ -3439,6 +3448,10 @@ variables more easily:
 #define INTERNAL_NUMERIC_PT 0
 #define INTERNAL_NUMERIC_CM 1
 #define INTERNAL_NUMERIC_MM 2
+#define INTERNAL_NUMERIC_R  3
+#define INTERNAL_NUMERIC_G  4
+#define INTERNAL_NUMERIC_B  5
+#define INTERNAL_NUMERIC_A  6
 #define INTERNAL_NUMERIC_W  0
 #define INTERNAL_NUMERIC_H  1
 #define INTERNAL_NUMERIC_D  2
@@ -3480,6 +3493,26 @@ else if(!strcmp(buffer, "mm")){
   new_token -> var =
           &(((struct numeric_variable *)
                 mf -> internal_numeric_variables)[INTERNAL_NUMERIC_MM]);
+}
+else if(!strcmp(buffer, "color_r")){
+  new_token -> var =
+          &(((struct numeric_variable *)
+                mf -> internal_numeric_variables)[INTERNAL_NUMERIC_R]);
+}
+else if(!strcmp(buffer, "color_g")){
+  new_token -> var =
+          &(((struct numeric_variable *)
+                mf -> internal_numeric_variables)[INTERNAL_NUMERIC_G]);
+}
+else if(!strcmp(buffer, "color_b")){
+  new_token -> var =
+          &(((struct numeric_variable *)
+                mf -> internal_numeric_variables)[INTERNAL_NUMERIC_B]);
+}
+else if(!strcmp(buffer, "color_a")){
+  new_token -> var =
+          &(((struct numeric_variable *)
+                mf -> internal_numeric_variables)[INTERNAL_NUMERIC_A]);
 }
 @
 
