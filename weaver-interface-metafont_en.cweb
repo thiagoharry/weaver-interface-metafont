@@ -214,6 +214,8 @@
 10.4. Operators \monoespaco{bot}, \monoespaco{top}, \monoespaco{lft},
 \monoespaco{rt}\indice{XX}
 
+XX. The \monoespaco{pickcolor} Command \indice{XX}
+
 11. The \monoespaco{draw} and \monoespaco{erase} Command\indice{XX}
 
 11.1. Preparing Framebuffer \indice{XX}
@@ -16895,6 +16897,95 @@ else if(begin -> type == TYPE_RT){
     return false;
   result -> x += cx -> pen_rt;
   return true;
+}
+@
+
+\secao{XX. The \monoespaco{pickcolor} Command}
+
+The default color used by WeaveFont is defined by the global variables
+\monoespaco{color\_r}, \monoespaco{color\_g}, \monoespaco{color\_b},
+and \monoespaco{color\_a}. However, when we are rendering a single
+glyph, we can change the color used in our renderings
+temporarily. This is because our struct context also has its own copy
+of the values ​​of these variables:
+
+@<Attributes (struct context)@>+=
+  float color[4];
+@
+
+When the context structure is crerated, these variables are
+initialized with the same value stored in the corresponding global
+internal variable:
+
+@<Initialization (struct context)@>+=
+cx -> color[0] = mf ->internal_numeric_variables[INTERNAL_NUMERIC_R].value;
+cx -> color[1] = mf ->internal_numeric_variables[INTERNAL_NUMERIC_G].value;
+cx -> color[2] = mf ->internal_numeric_variables[INTERNAL_NUMERIC_B].value;
+cx -> color[3] = mf ->internal_numeric_variables[INTERNAL_NUMERIC_A].value;
+@
+
+To change locally in the context the color values, we can use the
+command \monoespaco{pickcolor}, whose grammar is described below:
+
+\alinhaverbatim
+<Command> -> <'draw' Command> | <'erase' Command> | ...
+<'draw' Command> -> draw <Path Expression>
+\alinhanormal
+
+Which requires a new reserved keyword:
+
+@<WEAVEFONT: Symbolic Token Definition@>+=
+TYPE_PICKCOLOR,  // Symbolic token 'pickcolor'
+@
+
+@<List of Keywords@>+=
+"pickcolor",
+@
+
+The interpretation of the \monoespaco{pickcolor} command is intuitive:
+each numeric expression represents a value in the closed interval
+between 0 and 1 (rounded to the nearest value in the interval if it is
+not in it) and which is assigned respectively to the red, green, blue
+and alpha (transparency) channels.
+
+@<Statement: Command@>=
+else if(begin -> type == TYPE_PICKCOLOR){
+  struct numeric_variable result;
+  int i;
+  DECLARE_NESTING_CONTROL();
+  struct generic_token *begin_expr, *end_expr;
+  begin_expr = begin -> next; 
+  if(begin_expr == NULL || begin_expr -> type != TYPE_OPEN_PARENTHESIS){
+    RAISE_ERROR_MISSING_TOKEN(mf, cx, OPTIONAL(begin_expr -> line), TYPE_COMMA);
+    return false;
+  }
+  begin_expr = begin_expr -> next;
+  for(i = 0; i < 4; i ++){
+    end_expr = begin_expr;
+    if(end_expr == NULL || end_expr -> type == TYPE_COMMA ||
+       end_expr -> type == TYPE_CLOSE_PARENTHESIS){
+      RAISE_ERROR_MISSING_EXPRESSION(mf, cx, OPTIONAL(end_expr -> line), 
+                                     TYPE_T_NUMERIC);
+      return false;
+    }
+    while(end_expr != NULL){
+      COUNT_NESTING(end_expr);
+      if(IS_NOT_NESTED() && end_expr -> next != NULL && 
+         ((i < 3 && end_expr -> next -> type == TYPE_COMMA) ||
+          (i == 3 && end_expr -> next -> type == TYPE_CLOSE_PARENTHESIS)))
+        break;
+      end_expr = end_expr -> next;  
+    }
+    if(end_expr == NULL){
+      RAISE_ERROR_MISSING_EXPRESSION(mf, cx, OPTIONAL(end_expr -> line), 
+                                     TYPE_T_NUMERIC);
+      return false;
+    }
+    if(!eval_numeric_expression(mf, cx, begin_expr, end_expr, &result))
+      return false;
+    cx -> color[i] = result.value;
+    begin_expr = end_expr -> next -> next;
+  }
 }
 @
 

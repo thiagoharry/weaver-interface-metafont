@@ -229,6 +229,8 @@ Imagens Vazias \indice{XX}
 10.4. Os Operadores \monoespaco{bot}, \monoespaco{top}, \monoespaco{lft},
 \monoespaco{rt} \indice{XX}
 
+XX. O Comando \monoespaco{pickcolor} \indice{XX}
+
 11. O Comando \monoespaco{draw} e \monoespaco{erase} \indice{XX}
 
 11.1. Preparando o Framebuffer \indice{XX}
@@ -17193,6 +17195,100 @@ else if(begin  -> type == TYPE_RT){
     return false;
   result -> x += cx -> pen_rt;
   return true;
+}
+@
+
+\secao{XX. O Comando \monoespaco{pickcolor}}
+
+A cor padrão usada por WeaveFont é definida pelas variáveis globais
+\monoespaco{color\_r}, \monoespaco{color\_g}, \monoespaco{color\_b} e
+\monoespaco{color\_a}. Entretanto, quando estamos renderizando um
+único glifo, podemos mudar a cor usada em nossos desenhos
+temporariamente. Isso porque a nossa estrutura de contexto
+\monoespaco{struct context} também possui sua própria cópia dos
+valores destas variáveis:
+
+@<Atributos (struct context)@>+=
+  float color[4];
+@
+
+Quando a estrutura de contexto é criada, o valor das cores é copiado
+da variável global:
+
+@<Inicialização (struct context)@>+=
+cx -> color[0] = mf ->internal_numeric_variables[INTERNAL_NUMERIC_R].value;
+cx -> color[1] = mf ->internal_numeric_variables[INTERNAL_NUMERIC_G].value;
+cx -> color[2] = mf ->internal_numeric_variables[INTERNAL_NUMERIC_B].value;
+cx -> color[3] = mf ->internal_numeric_variables[INTERNAL_NUMERIC_A].value;
+@
+
+Mas os valores destas cores pode ser mudado dentro do contexto. Para
+isso podemos usar o comando \monoespaco{pickcolor} cuaj gramática é
+descrita abaixo:
+
+\alinhaverbatim
+<Comando> -> <Comando 'pickcolor'> | ...
+<Comando 'pickcolor'> -> pickcolor ( <Expressão Numérica> ,
+                                     <Expressão Numérica> ,
+				     <Expressão Numérica> ,
+				     <Expressão Numérica> )
+\alinhanormal
+
+O qual requer uma palavra reservada nova:
+
+@<WEAVEFONT: Definição de Token Simbólico@>+=
+TYPE_PICKCOLOR,   // O token simbólico 'pickcolor'
+@
+
+@<Lista de Palavras Reservadas@>+=
+"pickcolor",
+@
+
+A interpretação do comando \monoespaco{pickcolor} é intuitiva: cada
+expressão numérica representa um valor no intervalo fechado entre 0 e
+1 (arredondado para o valor mais próximo do intervalo se não estiver
+nele) e que é atribuido respectivamente aos canais vermelho, verde,
+azul e alfa (transparência).
+
+
+@<Instrução: Comando@>+=
+else if(begin -> type == TYPE_PICKCOLOR){
+  struct numeric_variable result;
+  int i;
+  DECLARE_NESTING_CONTROL();
+  struct generic_token *begin_expr, *end_expr;
+  begin_expr = begin -> next; 
+  if(begin_expr == NULL || begin_expr -> type != TYPE_OPEN_PARENTHESIS){
+    RAISE_ERROR_MISSING_TOKEN(mf, cx, OPTIONAL(begin_expr -> line), TYPE_COMMA);
+    return false;
+  }
+  begin_expr = begin_expr -> next;
+  for(i = 0; i < 4; i ++){
+    end_expr = begin_expr;
+    if(end_expr == NULL || end_expr -> type == TYPE_COMMA ||
+       end_expr -> type == TYPE_CLOSE_PARENTHESIS){
+      RAISE_ERROR_MISSING_EXPRESSION(mf, cx, OPTIONAL(end_expr -> line), 
+                                     TYPE_T_NUMERIC);
+      return false;
+    }
+    while(end_expr != NULL){
+      COUNT_NESTING(end_expr);
+      if(IS_NOT_NESTED() && end_expr -> next != NULL && 
+         ((i < 3 && end_expr -> next -> type == TYPE_COMMA) ||
+          (i == 3 && end_expr -> next -> type == TYPE_CLOSE_PARENTHESIS)))
+        break;
+      end_expr = end_expr -> next;  
+    }
+    if(end_expr == NULL){
+      RAISE_ERROR_MISSING_EXPRESSION(mf, cx, OPTIONAL(end_expr -> line), 
+                                     TYPE_T_NUMERIC);
+      return false;
+    }
+    if(!eval_numeric_expression(mf, cx, begin_expr, end_expr, &result))
+      return false;
+    cx -> color[i] = result.value;
+    begin_expr = end_expr -> next -> next;
+  }
 }
 @
 
