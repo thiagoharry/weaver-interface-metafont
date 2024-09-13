@@ -3411,7 +3411,7 @@ mf -> internal_numeric_variables =
 ((struct numeric_variable *) mf -> internal_numeric_variables)[3].value = 0.0;
 ((struct numeric_variable *) mf -> internal_numeric_variables)[4].value = 0.0;
 ((struct numeric_variable *) mf -> internal_numeric_variables)[5].value = 0.0;
-((struct numeric_variable *) mf -> internal_numeric_variables)[3].value = 1.0;
+((struct numeric_variable *) mf -> internal_numeric_variables)[6].value = 1.0;
 {
   int i;
   for(i = 0; i < 7; i ++){
@@ -16986,6 +16986,7 @@ else if(begin -> type == TYPE_PICKCOLOR){
     cx -> color[i] = result.value;
     begin_expr = end_expr -> next -> next;
   }
+  return true;
 }
 @
 
@@ -17417,7 +17418,8 @@ void drawpoint(struct metafont *mf, struct context *cx,
   else{
     glUseProgram(pen_program);
     glUniformMatrix3fv(pen_uniform_matrix, 1, true, gl_matrix);
-    glUniform4f(pen_uniform_color, 0.0, 0.0, 0.0, 1.0);
+    glUniform4f(pen_uniform_color, cx -> color[0], cx -> color[1], 
+                cx -> color[2], cx -> color[3]);
   }
   glEnableVertexAttribArray(0);
   if(pen -> flags & FLAG_CONVEX)

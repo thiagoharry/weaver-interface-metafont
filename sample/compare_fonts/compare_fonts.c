@@ -1,5 +1,5 @@
 //#include "metafont.c"
-#include <ft2build.h>
+#include <freetype2/ft2build.h>
 #include FT_FREETYPE_H
 #include FT_GLYPH_H
 #include <stdio.h>

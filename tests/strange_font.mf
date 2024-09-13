@@ -17,6 +17,13 @@ beginchar("A", 9, 9, 0);
   weight = 0; % This should not be executed, otherwise the test will fail.
 endchar;
 
+beginchar("B", 10, 10, 0);
+  pickup pencircle scaled w;
+  pickcolor(1, 0, 0, 1);
+  draw (w/2, h/2);
+  weight = totalweight currentpicture;
+endchar
+
 beginchar("I", 100, 100, 0);
   renderchar "1" between (0.25*w, 0.5*h) and (0.75*w, h);
   %weight = totalweight currentpicture; % Expected: 2471.380859

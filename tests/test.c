@@ -2418,6 +2418,13 @@ void test_renderchar_command(void){
     _Wprint_metafont_error(mf);
   assert("Testing 'renderchar' command", ret &&
 	 ALMOST_EQUAL(numeric_w -> value, 6127.651855));
+  ret = _Wrender_glyph(mf, "B", NULL, &glyph, &width, &height,
+		       &depth, &italcorr, &kerning);
+  if(!ret)
+    _Wprint_metafont_error(mf);
+  // If black, numeric_w -> value is 316.0
+  // If red, as instructed in the code, should be 221.516006
+  assert("Testing 'pickcolor' command", ret && numeric_w -> value < 222.0);
   free_token_list(first);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
