@@ -6765,9 +6765,9 @@ if(begin -> type == TYPE_SYMBOLIC){
   struct symbolic_token *var_token = ((struct symbolic_token *) begin);
   struct numeric_variable *var;
   if(!strcmp(var_token -> value, "w"))
-    var = &(cx -> internal_numeric_variables[INTERNAL_NUMERIC_H]);
-  else if(!strcmp(var_token -> value, "h"))
     var = &(cx -> internal_numeric_variables[INTERNAL_NUMERIC_W]);
+  else if(!strcmp(var_token -> value, "h"))
+    var = &(cx -> internal_numeric_variables[INTERNAL_NUMERIC_H]);
   else if(!strcmp(var_token -> value, "d"))
     var = &(cx -> internal_numeric_variables[INTERNAL_NUMERIC_D]);
   else
