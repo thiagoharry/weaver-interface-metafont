@@ -8413,7 +8413,7 @@ next token to check if we have a ``$\{$''. If not, there is no first
 direction specifier.  If so, then we delimit it until finding the
 closing ``$\}$'':
 
-@<Path Expression: Delimit Join Tokens@>+=
+@<Path Expression: Delimit Join Tokens@>=
 begin_d = end_z1 -> next;
 if(begin_d -> type != TYPE_OPEN_BRACES){ // No specifier
   begin_d = NULL;
@@ -8592,7 +8592,7 @@ position. Otherwise, we conclude that the path is not cyclical and
 interpret $z_1$ in a similar way that we interpreted the first point
 $z_0$:
 
-@<Path Expression: Interpret Join Extremities@>+=
+@<Path Expression: Interpret Join Extremities@>=
 if(begin_z2 == end_z2 && begin_z2 -> type == TYPE_CYCLE){ // Found 'cycle'
   struct path_points *p = result -> points;
   // The first point may be inside a subpath:
@@ -8904,7 +8904,7 @@ z0 ..  z1 .. {u-z2}z2 .. controls u and v ..z3
 We deal with this case when we read explicit control points in the
 joining:
 
-@<Path Expression: Found Explicit Control Points@>+=
+@<Path Expression: Found Explicit Control Points@>=
 if(z0_point != NULL && z0_point -> format == PROVISIONAL_FORMAT &&
    isnan(z0_point -> prov.dir2_y)){
   z0_point -> prov.dir2_x = z1_point -> point.u_x - z1_point -> point.x;
@@ -8972,7 +8972,7 @@ case we should check is the two joining points occupy the same place
 raise an error. If so, we join both paths removing the first copy of
 the point where the join is happening.
 
-@<Path Expression: Interpret the Join@>+=
+@<Path Expression: Interpret the Join@>=
 if(begin_j == end_j && begin_j -> type == TYPE_AMPERSAND){
   double dif_x = z1_point -> prov.x - z2_point -> prov.x;
   double dif_y = z1_point -> prov.y - z2_point -> prov.y;
@@ -17246,15 +17246,6 @@ bool drawing_commands(struct metafont *mf, struct context *cx,
   else
     memcpy(transform_matrix, currentpen -> gl_matrix, 9 * sizeof(float));
   @<Prepare 'currentpicture' for Drawing@>
-  glEnable(GL_BLEND);
-  if(flags & ERASE_FLAG){
-    glBlendFunc(GL_ONE, GL_ONE);
-    glBlendEquationSeparate(GL_MAX, GL_FUNC_REVERSE_SUBTRACT);
-  }
-  else{
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glBlendEquation(GL_FUNC_ADD);
-  }
   // Drawing loop
   for(i = 0; i < path -> length - 1; i ++){
     int distance = 0;
@@ -17287,8 +17278,6 @@ bool drawing_commands(struct metafont *mf, struct context *cx,
   if(path -> length == 1)
     drawpoint(mf, cx, currentpen, currentpicture, path -> points[0].point.x,
               path -> points[0].point.y, transform_matrix, flags & ERASE_FLAG);
-  // Finalization
-  glDisable(GL_BLEND);
   return true;
 }
 @
@@ -18264,7 +18253,7 @@ else if(begin -> type == TYPE_SHIPIT){
   if(begin -> next == NULL || begin -> next -> type != TYPE_SEMICOLON){
     RAISE_ERROR_UNEXPECTED_TOKEN(mf, cx, OPTIONAL(begin -> line),
                                  (begin -> next == NULL)?TYPE_INVALID_TOKEN:
-                                 begin -> next -> line);
+                                 begin -> next -> type);
     return false;
   }
   currentpicture = cx -> currentpicture;

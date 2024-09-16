@@ -236,17 +236,9 @@ beginchar("&", (0.657+0.02*(weight-1)-0.045*italic)*size*pt,
       ypart p7 + (0.589757 * (ypart p8 - ypart p7)))
     .. p8;
   draw p;
-  path semicircle;
-  pen eraser;
-  semicircle =   (0.5, 0)
-  .. controls (0.5, 0.13261) and (0.44733, 0.2598) ..
-  (0.35356, 0.35356)
-  .. controls (0.2598, 0.44733) and (0.13261, 0.5) ..
-  (0, 0.5);
-  semicircle = semicircle & semicircle rotated 90 -- (0.5, 0) & cycle;
-  eraser = makepen(semicircle);
-  pickup eraser scaled (0.14+0.05*(weight-1))*h;
-  erase p8;
+  pickup pensemicircle scaled (0.13+0.05*(weight-1)-0.01*italic*(weight-1))*1.1*h;
+  pickcolor(1, 1, 1, 0);
+  draw p8;
 endchar;
 
 beginchar("'", (0.0825+0.0625*(weight-1))*size*pt, 0.667*size*pt, -(0.445-0.0125*(weight-1))*size*pt);
@@ -453,6 +445,7 @@ beginchar("1", (0.265+0.04*(weight-1)+0.035*italic+0.02*italic*(weight-1))*size*
   pen eraser;
   eraser = makepen((w, h)--(w, 0)--(0.065w +w - 0.5w * italic, 0)--cycle);
   pickup eraser;
+  pickcolor(1, 1, 1, 0);
   erase (0,0);
 endchar;
 

@@ -2424,7 +2424,9 @@ void test_renderchar_command(void){
     _Wprint_metafont_error(mf);
   // If black, numeric_w -> value is 316.0
   // If red, as instructed in the code, should be 221.516006
-  assert("Testing 'pickcolor' command", ret && numeric_w -> value < 222.0);
+  // Setting the alpha to 0.5 produces next to half this value: 111.192345
+  assert("Testing 'pickcolor' command", ret && numeric_w -> value < 112.0 &&
+	 numeric_w -> value > 110.0);
   free_token_list(first);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);

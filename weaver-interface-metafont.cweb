@@ -17550,15 +17550,6 @@ bool drawing_commands(struct metafont *mf, struct context *cx,
   else
     memcpy(transform_matrix, currentpen -> gl_matrix, 9 * sizeof(float));
   @<Prepara 'currentpicture' para Desenho@>
-  glEnable(GL_BLEND);
-  if(flags & ERASE_FLAG){
-    glBlendFunc(GL_ONE, GL_ONE);
-    glBlendEquationSeparate(GL_MAX, GL_FUNC_REVERSE_SUBTRACT);
-  }
-  else{
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glBlendEquation(GL_FUNC_ADD);
-  }
   // Loop de desenho
   for(i = 0; i < path -> length - 1; i ++){
     int distance = 0;
@@ -17591,8 +17582,6 @@ bool drawing_commands(struct metafont *mf, struct context *cx,
   if(path -> length == 1)
     drawpoint(mf, cx, currentpen, currentpicture, path -> points[0].point.x,
               path -> points[0].point.y, transform_matrix, flags & ERASE_FLAG);
-  // Finalização
-  glDisable(GL_BLEND);
   return true;
 }
 @
@@ -17731,7 +17720,6 @@ void drawpoint(struct metafont *mf, struct context *cx,
     glDrawArrays(GL_TRIANGLE_FAN, 0, pen -> indices);
   else
     glDrawArrays(GL_TRIANGLES, 0, pen -> indices);
-  
 }
 @
 

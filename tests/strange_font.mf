@@ -19,7 +19,7 @@ endchar;
 
 beginchar("B", 10, 10, 0);
   pickup pencircle scaled w;
-  pickcolor(1, 0, 0, 1);
+  pickcolor(1, 0, 0, 0.5);
   draw (w/2, h/2);
   weight = totalweight currentpicture;
 endchar
@@ -60,8 +60,4 @@ beginchar("1", 100, 100, 0);
       ypart p1 + (0.951881 * (ypart p2 - ypart p1)))
     .. p2;
   draw p;
-  pen eraser;
-  eraser = makepen((w, h)--(w, 0)--(0.065w+w, 0)--cycle);
-  pickup eraser;
-  erase (0,0);
 endchar;

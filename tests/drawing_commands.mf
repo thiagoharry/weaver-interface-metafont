@@ -32,9 +32,7 @@ b = currentpicture;
 wb = totalweight b;
 
 % Drawing the same square, but erasing
-
 erase (1, 1) -- (4, 1) -- (4, 4) -- (1, 4) -- cycle;
-
 c = currentpicture;
 wc = totalweight c;
 
