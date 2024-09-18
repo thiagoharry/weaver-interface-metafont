@@ -3461,17 +3461,19 @@ algumas variáveis internas numéricas próprias. Elas sempre estarão
 presentes e não precisam ser declaradas. Temos dez delas que são
 numéricas: \monoespaco{pt}, \monoespaco{cm}, \monoespaco{mm},
 \monoespaco{color\_r}, \monoespaco{color\_g}, \monoespaco{color\_b},
-\monoespaco{color\_a}, \monoespaco{w}, \monoespaco{h} e
-\monoespaco{d}. Basicamente as três primeiras irão armazenar quantos
-pixels correspondem a 1pt, 1cm e 1mm respectivamente. As próximas
-quatro vão armazenar a cor padrão com a qual renderizaremoz nossas
-imagens. Elas correspondem a um valor entre 0 e 1 correspondente aos
-canais das cores vermelho, verde, azul e alfa (transparência),
-respectivamente. As próximas três irão armazenar a largura, altura e
-profundidade de um novo glifo caso estejamos renderizando algum no
-momento. Nos demais casos, elas conterão zero.
+\monoespaco{color\_a}, \monoespaco{monospace}, \monoespaco{w},
+\monoespaco{h} e \monoespaco{d}. Basicamente as três primeiras irão
+armazenar quantos pixels correspondem a 1pt, 1cm e 1mm
+respectivamente. A próxima indica se estamos renderizando caracteres
+em monoespaço ou não. As próximas quatro vão armazenar a cor padrão
+com a qual renderizaremoz nossas imagens. Elas correspondem a um valor
+entre 0 e 1 correspondente aos canais das cores vermelho, verde, azul
+e alfa (transparência), respectivamente. As próximas três irão
+armazenar a largura, altura e profundidade de um novo glifo caso
+estejamos renderizando algum no momento. Nos demais casos, elas
+conterão zero.
 
-As sete primeiras de tais  variáveis numéricas internas serão
+As oito primeiras de tais  variáveis numéricas internas serão
 armazenadas na estrutura da meta-fonte:
 
 @<Atributos (struct metafont)@>+=
@@ -3491,7 +3493,7 @@ preenchemos:
 
 @<Inicialização (struct metafont)@>+=
 mf -> internal_numeric_variables =
-             permanent_alloc(7 * sizeof(struct numeric_variable));
+             permanent_alloc(8 * sizeof(struct numeric_variable));
 ((struct numeric_variable *) mf -> internal_numeric_variables)[0].value =
    ((double) dpi) / 72.0; // 1in = 72 pt
 ((struct numeric_variable *) mf -> internal_numeric_variables)[1].value =
@@ -3503,9 +3505,11 @@ mf -> internal_numeric_variables =
 ((struct numeric_variable *) mf -> internal_numeric_variables)[4].value = 0.0;
 ((struct numeric_variable *) mf -> internal_numeric_variables)[5].value = 0.0;
 ((struct numeric_variable *) mf -> internal_numeric_variables)[6].value = 1.0;
+// Por padrão, a fonte não começa sendo monoespaço:
+((struct numeric_variable *) mf -> internal_numeric_variables)[7].value = 0.0;
 {
   int i;
-  for(i = 0; i < 7; i ++){
+  for(i = 0; i < 8; i ++){
     ((struct numeric_variable *)
       mf -> internal_numeric_variables)[i].type = TYPE_T_NUMERIC;
     ((struct numeric_variable *)
@@ -3538,16 +3542,17 @@ Criamos as seguintes macros para acessar cada uma destas variáveis
 mais facilmente:
 
 @<Macros Locais (metafont.c)@>+=
-#define INTERNAL_NUMERIC_PT 0
-#define INTERNAL_NUMERIC_CM 1
-#define INTERNAL_NUMERIC_MM 2
-#define INTERNAL_NUMERIC_R  3
-#define INTERNAL_NUMERIC_G  4
-#define INTERNAL_NUMERIC_B  5
-#define INTERNAL_NUMERIC_A  6
-#define INTERNAL_NUMERIC_W  0
-#define INTERNAL_NUMERIC_H  1
-#define INTERNAL_NUMERIC_D  2
+#define INTERNAL_NUMERIC_PT   0
+#define INTERNAL_NUMERIC_CM   1
+#define INTERNAL_NUMERIC_MM   2
+#define INTERNAL_NUMERIC_R    3
+#define INTERNAL_NUMERIC_G    4
+#define INTERNAL_NUMERIC_B    5
+#define INTERNAL_NUMERIC_A    6
+#define INTERNAL_NUMERIC_MONO 7
+#define INTERNAL_NUMERIC_W    0
+#define INTERNAL_NUMERIC_H    1
+#define INTERNAL_NUMERIC_D    2
 @
 
 Para finalizar a estrutura metafont, devemos desalocar tais variáveis
@@ -3605,6 +3610,11 @@ else if(!strcmp(buffer, "color_a")){
   new_token -> var =
           &(((struct numeric_variable *)
                 mf -> internal_numeric_variables)[INTERNAL_NUMERIC_A]);
+}
+else if(!strcmp(buffer, "monospace")){
+  new_token -> var =
+          &(((struct numeric_variable *)
+                mf -> internal_numeric_variables)[INTERNAL_NUMERIC_MONO]);
 }
 @
 
@@ -17822,7 +17832,7 @@ int number_of_glyphs;
 
 O número 332 comporta a quantidade de diferentes blocos Unicode
 existentes (327) mais algumas regiões adicionais que não são usadas
-pelo Unicode no momento, mas podemvir a ser no futuro. Cada bloco
+pelo Unicode no momento, mas podem vir a ser no futuro. Cada bloco
 potencialmente armazena de 1 a milhares de diferentes glifos
 relacionados entre si, tipicamente pertencentes a um mesmo sistema de
 escrita. Inicialmente, todos estes blocos serão inicializados como
