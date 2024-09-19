@@ -2427,6 +2427,10 @@ void test_renderchar_command(void){
   // Setting the alpha to 0.5 produces next to half this value: 111.192345
   assert("Testing 'pickcolor' command", ret && numeric_w -> value < 112.0 &&
 	 numeric_w -> value > 110.0);
+  ret = _Wwrite_numeric_variable(mf, "monospace", 1.0);
+  ret = _Wrender_glyph(mf, "1", NULL, &glyph, &width, &height,
+		       &depth, &italcorr, &kerning);
+  assert("Testing monospace glyphs", ret && width == 200);
   free_token_list(first);
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);

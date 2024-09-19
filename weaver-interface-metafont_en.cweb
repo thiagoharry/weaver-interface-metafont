@@ -216,6 +216,8 @@
 
 XX. The \monoespaco{pickcolor} Command \indice{XX}
 
+XX. The \monoespaco{monowidth} Command \indice{XX}
+
 11. The \monoespaco{draw} and \monoespaco{erase} Command\indice{XX}
 
 11.1. Preparing Framebuffer \indice{XX}
@@ -14051,6 +14053,7 @@ else if(begin -> type == TYPE_ENDFOR){
 }
 @
 
+
 \secao{11. The \monoespaco{pickup} Command}
 
 Npw we can begin defining our first command. The syntax for
@@ -16999,6 +17002,65 @@ else if(begin -> type == TYPE_PICKCOLOR){
 }
 @
 
+\secao{XX. The \monoespaco{monowidth} Command}
+
+If a typeface is set to have a monospace version, where all characters
+must have exactly the same width, it is useful to use the
+\monospace{monowidth} command to be defined here to choose what this
+width is. If during the rendering of a glyph the internal numeric
+variable \monospace{monospace} is greater than zero, then the width of
+the character will be calculated according to the numeric expression
+defined by the \monospace{monowidth} command, instead of using the
+particular expression of that specific glyph.
+
+The syntax for \monoespaco{monowidth} command is:
+
+\alinhaverbatim
+<Command> -> ... | <'monowidth' Command> | ...
+<'monowidth' Command> -> monowidth <Numeric Expression>
+\alinhanormal
+
+Which requires a new tokenn type and reserved keyword:
+
+@<WEAVEFONT: Symbolic Token Definition@>+=
+TYPE_MONOWIDTH,  // Symbolic token 'monowidth'
+@
+
+@<List of Keywords@>+=
+"monowidth",
+@
+
+The numeric expression associated with the \monoespaco{monowidth}
+command is not executed at the time it is encountered. Instead, the
+pointer to the beginning and end of such an expression is simply
+stored by the following pointers in the font structure:
+
+@<Attributes (struct metafont)@>+=
+void *mono_expr_begin, *mono_expr_end;
+@
+
+The pointers  are initialized as null:
+
+@<Inicialização (struct metafont)@>+=
+mf -> mono_expr_begin = mf -> mono_expr_end = NULL;
+@
+
+And interpret the command do not involve evaluating the numeric
+expression, but storing it in the pointer to evaluate later, when
+rendering glyphs in monospace mode:
+
+@<Statement: Command@>+=
+else if(begin -> type == TYPE_MONOWIDTH){
+  if(begin == *end){
+    RAISE_ERROR_MISSING_EXPRESSION(mf, cx, OPTIONAL(begin -> line), TYPE_T_NUMERIC);
+    return false;
+  }
+  mf -> mono_expr_begin = begin -> next;
+  mf -> mono_expr_end = *end;
+  return true;
+}
+@
+
 \secao{12. The \monoespaco{draw} and \monoespaco{erase} Command}
 
 Finally we can begin specifying two of the most important command in
@@ -17894,7 +17956,14 @@ else if(begin -> type == TYPE_BEGINCHAR){
     end_expr = t;
     t = t -> next;
   } while(!IS_NOT_NESTED() || t -> type != TYPE_COMMA);
-  if(!eval_numeric_expression(mf, cx, begin_expr, end_expr, &width))
+  // Getting width: either monospace or normal:
+  if(mf -> internal_numeric_variables[INTERNAL_NUMERIC_MONO].value > 0.0 &&
+     mf -> mono_expr_begin != NULL){
+    if(!eval_numeric_expression(mf, cx, mf -> mono_expr_begin, mf -> mono_expr_end,
+                                &width))
+      return false;
+  }
+  else if(!eval_numeric_expression(mf, cx, begin_expr, end_expr, &width))
     return false;
   if(width.value <= 0.0){
     RAISE_ERROR_INVALID_DIMENSION_GLYPH(mf, cx, OPTIONAL(begin -> line));
@@ -18047,35 +18116,48 @@ bool _Wwrite_numeric_variable(struct metafont *mf, char *name, float value);
 float _Wread_numeric_variable(struct metafont *mf, char *name);
 @
 
-This function will change the given global variable assigning the
-given value to it and also will mark all glyphs as needing to be
-rendered again. If a numeric global variable with such name does not
-exist, the function returns false. Otherwise, it returns true:
+This function will change the given global or internal variable
+assigning the given value to it and also will mark all glyphs as
+needing to be rendered again. If a numeric global variable with such
+name does not exist, the function returns false. Otherwise, it returns
+true:
 
 @<API Functions Definition (metafont.c)@>+=
 bool _Wwrite_numeric_variable(struct metafont *mf, char *name, float value){
-  struct named_variable *var = (struct named_variable *) mf -> named_variables;
-  while(var != NULL){
-    if(!strcmp(name, var -> name)){
-      struct numeric_variable *n = (struct numeric_variable *) var -> var;
-      if(n -> type != TYPE_T_NUMERIC)
-        return false;
-      n -> value = value;
-      {
-        int i, j;
-        for(i = 0; i < 332; i ++){
-          struct _glyph *g = mf -> glyphs[i];
-          int size = ((i == 0)?(greatest_point[0] + 1):
-                               (greatest_point[i] - greatest_point[i - 1]));
-          if(g != NULL){
-            for(j = 0; j < size; j ++)
-                g[j].need_rendering = true;
-          }
-        }
+  int i;
+  bool updated = false;
+  char *internal_vars[] = {"pt", "cm", "mm", "color_r", "color_g", "color_b",
+                           "color_a", "monospace", NULL};
+  for(i = 0; internal_vars[i] != NULL; i ++)
+  if(!strcmp(name, internal_vars[i])){
+    mf -> internal_numeric_variables[i].value = value;
+    updated = true;
+  }
+  if(!updated){
+    struct named_variable *var = (struct named_variable *) mf -> named_variables;
+    while(var != NULL){
+      if(!strcmp(name, var -> name)){
+        struct numeric_variable *n = (struct numeric_variable *) var -> var;
+        if(n -> type != TYPE_T_NUMERIC)
+          return false;
+        n -> value = value;
+	updated = true;
       }
-      return true;
+      var = var -> next;
     }
-    var = var -> next;
+  }
+  if(updated){
+    int j;
+    for(i = 0; i < 332; i ++){
+      struct _glyph *g = mf -> glyphs[i];
+      int size = ((i == 0)?(greatest_point[0] + 1):
+                           (greatest_point[i] - greatest_point[i - 1]));
+      if(g != NULL){
+        for(j = 0; j < size; j ++)
+          g[j].need_rendering = true;
+      }
+    }
+    return true;
   }
   return false;
 }

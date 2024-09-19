@@ -2,6 +2,8 @@ numeric weight, counter;
 
 counter = 0;
 
+monowidth 200;
+
 beginchar("A", 9, 9, 0);
   pickup pensquare;
   numeric i;
