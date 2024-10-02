@@ -76,6 +76,8 @@
 
 2.2. Mutexes and Critical Sections \indice{11}
 
+2.3 Dealing with Errors \indice{XX}
+
 3. Initialization and Finalization \indice{12}
 
 4. Lexer \indice{13}
@@ -234,11 +236,15 @@ XX. The \monoespaco{monowidth} Command \indice{XX}
 
 References \indice{XX}
 
+Appendix A: Handling Errors \indice{XX}
+
+A.1. ERROR\_NO\_MEMORY \indice{XX}
+
 \secao{1. Introduction}
 
 The first description language for typographical fonts was
 METAFONT. It was created on 1984 by Donald Knuth and differs from
-other formats for allowing a designer to create different fonts merely
+*other formats for allowing a designer to create different fonts merely
 by changing basic parameters in the base description of the font. This
 way, a designer should not create a single typographic font, but a
 meta-font from which new fonts could be obtained changing these basic
@@ -877,6 +883,37 @@ other processes use it:
 #endif
 @
 
+\secao{2.3. Dealing with Errors}
+
+Most of the functions defined here receive as input a metafont struct
+representing the font being rendered and a context struct with
+information about the execution. Furthermore, they usually return true
+if the execution is successful and false otherwise. Some functions may
+follow the different convention of returning a pointer if they are
+successful and returning NULL otherwise.
+
+If an error is encountered, we must immediately stop running the code
+and return false. If an invoked function returns false indicating an
+error, the function that called it must also stop execution. In
+addition, we must mark within the metafont structure that an error
+has occurred, filling in additional information that will allow a
+diagnostic message to be printed later if the user so desires.
+
+The act of filling in the error information in the metafont struct
+will be done with the help of macros. Some examples of macros can be
+\monoespaco{RAISE\_NO\_MEMORY} or
+\monoespaco{RAISE\_ERROR\_FAILED\_OPENING\_FILE}. Almost all error
+macros will receive as input the metafont structure (to fill in data
+about the error), either a context struct or NULL (in case they need
+to read additional information about the execution) and optionally the
+line number where the error was found. Depending on the error, more
+information can be placed in the macro.
+
+To avoid having to define many different types of errors in detail in
+the body of the text, thus taking the focus away from the algorithms
+and logic being implemented, we will define the errors and their
+macros only in Appendix A.
+
 \secao{3. Initialization and Finalization}
 
 First we will define the initialization function. What it will do is
@@ -1156,8 +1193,15 @@ bool lexer(struct metafont *mf, char *path, struct generic_token **first_token,
     @<Lexer: Rule 4@>
     @<Lexer: Rule 5@>
     @<Lexer: Rule 6@>
-    // No rule applied: error
-    RAISE_ERROR_INVALID_CHAR(mf, NULL, line, c);
+    {
+      // No rule applied: error
+      char unknown_char[5];
+      memset(unknown_char, 0, 5);
+      unknown_char[0] = c;
+      fgets(&(unknown_char[1]), 4, fp);
+      RAISE_ERROR_INVALID_CHAR(mf, NULL, line, unknown_char);
+      return false;
+    }
     free_token_list(first_token);
     *first_token = NULL;
     *last_token = NULL;
@@ -1450,7 +1494,7 @@ else if(c == '\\' || c == '/' || c == '*'){
 }
 @
 
-f) Opening brackets
+f) Question and exclamation marks.
 
 @<Lexer: Rule F@>=
 else if(c == '?' || c == '!'){
@@ -2168,101 +2212,7 @@ mf -> loading = false;
 
 \subsecao{5.2. Handling Errors}
 
-When there are errors in a WEAVEFONT source code, no image or
-typographical meta-font will be created. However, the programmer
-should have means to discover what was wrong to solve the problem. For
-this, we will add in the struct for each meta-font additional data for
-error handling and diagnostic:
 
-@<Attributes (struct metafont)@>=
-  int errno, errno_line; // Error code and error line
-  char errno_character[5]; // Character being rendered during error
-  char *errno_str; // String with additional info
-  int errno_int; // Integer with additional info
-@
-
-The idea is that if no error is raised, all the above variables will
-be zero or NULL. Therefore, during initialization, we set these values
-to zero:
-
-@<Initialization (struct metafont)@>=
-mf -> errno = mf -> errno_line = 0;
-mf -> errno_character[0] = '\0';
-mf -> errno_str = NULL;
-mf -> errno_int = 0;
-@
-
-As long as the first error is raised, the value of \monoespaco{errno}
-will change to reflect the found error nature. If we are counting the
-lines in our source code (which is true if the
-macro \monoespaco{W\_DEBUG\_METAFONT} is defined), then the line where
-the error happened also will be stored in \monoespaco{errno\_line}. If
-more information must be passed, depending on error nature, we can use
-the other variables to store some additional string or an integer.
-
-Only the first error found in a meta-font source code will be
-stored. If there are more errors, they will be ignored. All functions
-that execute WEAVEFONT source code return a boolean value. If no
-errors were found they return true; and if an error was found they
-return false.
-
-The different errors will be stored here:
-
-@<Local Data Structures (metafont.c)@>+=
-enum { // Types of error
-  ERROR_NO_ERROR = 0,
-  // All the different types of error that will be defined:
-  @<Types of Error@>
-  // And a last one that we hope that won't be used: unknown error
-  ERROR_UNKNOWN
-};
-@
-
-Given all the code that we defined until now, there are three
-different types of error. Our memory allocation could fail when we
-create a new token, context or any other auxiliary structure. Or our
-lexer found an unsupported character in the source code. Or we began
-defining a string with an opening double quote, but did not close it
-until the end of line.
-
-We will not worry here with errors outside the scope of lexical and
-syntactic errors. For example, if an user tries to initialize a
-meta-font with a file that does not exist, then the font never will be
-created and we will have no lexical or syntactic errors.
-
-As it is hard for an user dealing with all different errors when
-reading the \monoespaco{errno} variable, a function will be exported
-to print in the screen a message with error dignastic:
-
-@<API Functions Definition (metafont.c)@>+=
-void _Wprint_metafont_error(struct metafont *mf){
-  char *line_number;
-  // First we try to create a string with the error line number.
-  // With this formula we compute its max size:
-  int str_size = 128;
-  //int str_size = (int)((ceil(log10(mf -> errno_line))+1)*sizeof(char));
-  line_number = (char *) temporary_alloc(str_size);
-  // But if we have no line number, we keep the string empty:
-  if(mf -> errno_line == 0)
-    line_number[0] = '\0';
-  else
-    sprintf(line_number, "%d: ", mf -> errno_line);
-  switch(mf -> errno){
-  case ERROR_NO_ERROR:
-    fprintf(stderr, "%s:%s No errors.\n", mf -> file, line_number);
-    break;
-  @<Print Error Message@>
-  default:
-    fprintf(stderr, "%s:%s Unknown error.\n", mf -> file, line_number);
-  }
-  if(mf -> errno_character[0] != '\0')
-    fprintf(stderr, " (while rendering '%s')\n", mf -> errno_character);
-  else
-    fprintf(stderr, "\n");
-  if(temporary_free != NULL)
-    temporary_free(line_number);
-}
-@
 
 To add new types of error, we place their names in the error enum,
 which will create an error code for the new type. For example, for the
@@ -2271,7 +2221,7 @@ we have an unclosed string or when we faiil to open a file, we could
 add the following 4 types:
 
 @<Types of Error@>=
-ERROR_NO_MEMORY, ERROR_INVALID_CHAR, ERROR_UNCLOSED_STRING,
+ERROR_UNCLOSED_STRING,
 ERROR_FAILED_OPENING_FILE,
 @
 
@@ -2281,15 +2231,6 @@ either zero or the line number where the error was found and all
 errors are identified by their numeric code. The following macro is
 the generic code that all errrors execute when are raised:
 
-@<Local Macros (metafont.c)@>+=
-#define RAISE_GENERIC_ERROR(mf, cx, line, error_code) {\
-  struct context *_cx = cx;\
-  if(!mf -> errno){\
-    mf -> errno = error_code;\
-    mf -> errno_line = line;\
-    if(cx != NULL && _cx -> current_character[0] != '\0')\
-      memcpy(mf -> errno_character, _cx -> current_character, 5);}}
-@
 
 The difference between all different errors is that they could store
 different data in variables \monoespaco{errno\_int}
@@ -2299,20 +2240,10 @@ errors do not store anything in these variables.
 The error for insufficient memory, for example, is one of those that
 do not store any other specific information:
 
-@<Local Macros (metafont.c)@>+=
-#define RAISE_ERROR_NO_MEMORY(mf, cx, line) {\
-  RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NO_MEMORY);}
-@
 
 If we have an unsupported character, the raised error store the
 character value at \monoespaco{errno\_int}:
 
-@<Local Macros (metafont.c)@>+=
-#define RAISE_ERROR_INVALID_CHAR(mf, cx, line, char) {\
-  if(!mf -> errno){\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INVALID_CHAR);\
-    mf -> errno_int = char;}}
-@
 
 And finally, when raising the error for an unclosed string, we store
 the string:
@@ -2339,14 +2270,6 @@ To print an error message with diagnostics in the standard error
 output for each one of the four types of errors, we use the code:
 
 @<Print Error Message@>=
-case ERROR_NO_MEMORY:
-  fprintf(stderr, "%s:%s Not enough memory for allocation.", mf -> file,
-          line_number);
-  break;
-case ERROR_INVALID_CHAR:
-  fprintf(stderr, "%s:%s Unsupported character in source code: '%x'.",
-          mf -> file, line_number, (unsigned) mf -> errno_int);
-  break;
 case ERROR_UNCLOSED_STRING:
   fprintf(stderr, "%s:%s Unclosed string \"%s\".", mf -> file,
           line_number, mf -> errno_str);
@@ -2386,13 +2309,6 @@ zero. This will not cause an error, even if the variable given as
 argument is not defined when the debug macro is not defined. The macro
 is:
 
-@<Local Macros (metafont.c)@>+=
-#if defined(W_DEBUG_METAFONT)
-#define OPTIONAL(x) x
-#else
-#define OPTIONAL(x) 0
-#endif
-@
 
 \subsecao{5.3. Splitting List of Statements in Individual Statements}
 
@@ -17006,11 +16922,11 @@ else if(begin -> type == TYPE_PICKCOLOR){
 
 If a typeface is set to have a monospace version, where all characters
 must have exactly the same width, it is useful to use the
-\monospace{monowidth} command to be defined here to choose what this
+\monoespaco{monowidth} command to be defined here to choose what this
 width is. If during the rendering of a glyph the internal numeric
-variable \monospace{monospace} is greater than zero, then the width of
+variable \monoespaco{monospace} is greater than zero, then the width of
 the character will be calculated according to the numeric expression
-defined by the \monospace{monowidth} command, instead of using the
+defined by the \monoespaco{monowidth} command, instead of using the
 particular expression of that specific glyph.
 
 The syntax for \monoespaco{monowidth} command is:
@@ -17687,18 +17603,18 @@ static struct _glyph *get_glyph(struct metafont *mf, unsigned char *c,
   // UTF-8 -> UTF-32
   if(c[0] < 128)
     code_point = c[0];
-  else if(c[0] >= 192 && c[0] <= 223 && c[1] >= 128 && c[1] <= 159){
+  else if(c[0] >= 192 && c[0] <= 223 && c[1] >= 128 && c[1] <= 191){
     code_point = c[1] - 128;
     code_point += (c[0] - 192) * 64;
   }
-  else if(c[0] >= 224 && c[0] <= 239 && c[1] >= 128 && c[1] <= 159 &&
-          c[2] >= 128 && c[2] <= 159){
+  else if(c[0] >= 224 && c[0] <= 239 && c[1] >= 128 && c[1] <= 191 &&
+          c[2] >= 128 && c[2] <= 191){
     code_point = c[2] - 128;
     code_point += (c[1] - 128) * 64;
     code_point += (c[0] - 224) * 4096;
   }
-  else if(c[0] >= 240 && c[0] <= 247 && c[1] >= 128 && c[1] <= 159 &&
-          c[2] >= 128 && c[2] <= 159 && c[3] >= 128 && c[3] <= 159){
+  else if(c[0] >= 240 && c[0] <= 247 && c[1] >= 128 && c[1] <= 191 &&
+          c[2] >= 128 && c[2] <= 191 && c[3] >= 128 && c[3] <= 191){
     code_point = c[3] - 128;
     code_point += (c[2] - 128) * 64;
     code_point += (c[1] - 128) * 4096;
@@ -18712,5 +18628,287 @@ Springer Science \& Business Media.}
 
 \referencia{Knuth, D. E. (1989) ``The METAFONT book'', Addison-Wesley
  Longsman Publishing Co., Inc}
+
+\secao{Appendix A: Handling Errors}
+
+When there are errors in a WEAVEFONT source code, no image or
+typographical meta-font will be created. However, the programmer
+should have means to discover what was wrong to solve the problem. For
+this, we will add in the struct for each meta-font additional data for
+error handling and diagnostic:
+
+@<Attributes (struct metafont)@>+=
+  int errno, errno_line; // Error code and error line
+  char errno_character[5]; // Character being rendered during error
+  char *errno_str; // String with additional info
+  int errno_int; // Integer with additional info
+@
+
+The idea is that if no error is raised, all the above variables will
+be zero or NULL. Therefore, during initialization, we set these values
+to zero:
+
+@<Initialization (struct metafont)@>+=
+mf -> errno = mf -> errno_line = 0;
+mf -> errno_character[0] = '\0';
+mf -> errno_str = NULL;
+mf -> errno_int = 0;
+@
+
+As long as the first error is raised, the value of \monoespaco{errno}
+will change to reflect the found error nature. If we are counting the
+lines in our source code (which is true if the
+macro \monoespaco{W\_DEBUG\_METAFONT} is defined), then the line where
+the error happened also will be stored in \monoespaco{errno\_line}. If
+more information must be passed, depending on error nature, we can use
+the other variables to store some additional string or an integer.
+
+Only the first error found in a meta-font source code will be
+stored. If there are more errors, they will be ignored. All functions
+that execute WEAVEFONT source code return a boolean value. If no
+errors were found they return true; and if an error was found they
+return false.
+
+The different errors will be stored here:
+
+@<Local Data Structures (metafont.c)@>+=
+enum { // Types of error
+  ERROR_NO_ERROR = 0,
+  // All the different types of error that will be defined:
+  @<Types of Error@>
+  // And a last one that we hope that won't be used: unknown error
+  ERROR_UNKNOWN
+};
+@
+
+There are several different things that could go wrong causing
+errors. Our memory allocation could fail when we create a new token,
+context or any other auxiliary structure. Or our lexer found an
+unsupported character in the source code. Or we began defining a
+string with an opening double quote, but did not close it until the
+end of line.
+
+As it is hard for an user dealing with all different errors when
+reading the \monoespaco{errno} variable and other information stored
+about it, a function will be exported to print in the screen a message
+with error dignastic:
+
+@<API Functions Definition (metafont.c)@>+=
+void _Wprint_metafont_error(struct metafont *mf){
+  char *line_number;
+  // First we try to create a string with the error line number.
+  // With this formula we compute its max size:
+  int str_size = 128;
+  //int str_size = (int)((ceil(log10(mf -> errno_line))+1)*sizeof(char));
+  line_number = (char *) temporary_alloc(str_size);
+  // But if we have no line number, we keep the string empty:
+  if(mf -> errno_line == 0)
+    line_number[0] = '\0';
+  else
+    sprintf(line_number, "%d: ", mf -> errno_line);
+  switch(mf -> errno){
+  case ERROR_NO_ERROR:
+    fprintf(stderr, "%s:%s No errors.\n", mf -> file, line_number);
+    break;
+  @<Print Error Message@>
+  default:
+    fprintf(stderr, "%s:%s Unknown error.\n", mf -> file, line_number);
+  }
+  if(mf -> errno_character[0] != '\0')
+    fprintf(stderr, " (while rendering '%s')\n", mf -> errno_character);
+  else
+    fprintf(stderr, "\n");
+  if(temporary_free != NULL)
+    temporary_free(line_number);
+}
+@
+
+Each subsection in this appendix will list and define a different type
+of error, how it is raised by its corresponding macro, its error
+messafe and some examples of what could cause it.
+
+Several different errors will use the macro below as part of the
+definition for their own macros. The macro below stores generic
+information important for all types of error: the error code, the line
+where it was found, which character (glyph) was being rendered at the
+moment, if any:
+
+@<Local Macros (metafont.c)@>+=
+#define RAISE_GENERIC_ERROR(mf, cx, line, error_code) {\
+  struct context *_cx = cx;\
+  if(!mf -> errno){\
+    mf -> errno = error_code;\
+    mf -> errno_line = line;\
+    if(cx != NULL && _cx -> current_character[0] != '\0')\
+      memcpy(mf -> errno_character, _cx -> current_character, 5);}}
+@
+
+As not always we will have information about the line where the error
+happened (this information is stored only in debug mode), this macro
+will help us to consider this information optional:
+
+@<Local Macros (metafont.c)@>+=
+#if defined(W_DEBUG_METAFONT)
+#define OPTIONAL(x) x
+#else
+#define OPTIONAL(x) 0
+#endif
+@
+
+\subsecao{A.X. ERROR\_INVALID\_CHAR}
+
+@<Types of Error@>=
+ERROR_INVALID_CHAR,
+@
+
+The WeaveFont lexical analyzer works by following a series of rules
+depending on the type of character it encounters. This is what allows
+it to interpret \monoespaco{2cm} as a two-token construction equivalent
+to \monoespaco{2*cm}, and to interpret \monoespaco{cm2} as being formed
+by a single token.
+
+For this, it classifies the different types of characters into
+families and types. But not all characters belong to a family and are
+used in WeaveFont code. For example, characters like ``ç'' have no
+classification and cannot be used unless they are part of a
+string. Therefore, they cannot be part of variable names or anything
+like that. WeaveFont restricts the use of non-ASCII characters in its
+language. The only characters that can be used outside of strings and
+comments are:
+
+\alinhaverbatim
+.%0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ
+"(),;_><=:|'\\+-/*?!#&@@$^~[]{}
+\alinhanormal
+
+If an unsupported character if found in any part of the code, this
+error will be raised. Due to the error nature, the only part where
+this error can be raised is in our lexer code.
+
+When the error is raised, we must store which unsupported character
+was found:
+
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_INVALID_CHAR(mf, cx, line, str) {\
+  if(!mf -> errno){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INVALID_CHAR);\
+    mf -> errno_str = (char *) permanent_alloc(5);\
+    memcpy(mf -> errno_str, str, 4);\
+    mf -> errno_str[4] = '\0';}}
+@
+
+We should print a corresponding error message telling us which
+character was found that caused the problem. This requires
+interpreting the UTF-8 encoding to find out whether we have a
+character that occupies one, two, three or four bytes. Knowing this,
+we can print the character in the error message and also indicate its
+numerical representation:
+
+
+@<Print Error Message@>=
+case ERROR_INVALID_CHAR:
+{
+  uint32_t code_point;
+  if((unsigned char) mf -> errno_str[0] < 128){
+    code_point = (unsigned char) mf -> errno_str[0];
+    mf -> errno_str[1] = '\0';
+  }
+  else if((unsigned char) mf -> errno_str[0] >= 192 &&
+          (unsigned char) mf -> errno_str[0] <= 223 &&
+          (unsigned char) mf -> errno_str[1] >= 128 &&
+          (unsigned char) mf -> errno_str[1] <= 191){
+    code_point = (unsigned char) mf -> errno_str[1] - 128;
+    code_point += ((unsigned char) mf -> errno_str[0] - 192) * 64;
+    mf -> errno_str[2] = '\0';
+  }
+  else if((unsigned char) mf -> errno_str[0] >= 224 && 
+          (unsigned char) mf -> errno_str[0] <= 239 &&
+          (unsigned char) mf -> errno_str[1] >= 128 &&
+	  (unsigned char) mf -> errno_str[1] <= 191 &&
+          (unsigned char) mf -> errno_str[2] >= 128 &&
+	  (unsigned char) mf -> errno_str[2] <= 191){
+    code_point = (unsigned char) mf -> errno_str[2] - 128;
+    code_point += ((unsigned char) mf -> errno_str[1] - 128) * 64;
+    code_point += ((unsigned char) mf -> errno_str[0] - 224) * 4096;
+    mf -> errno_str[3] = '\0';
+  }
+  else if((unsigned char) mf -> errno_str[0] >= 240 &&
+          (unsigned char) mf -> errno_str[0] <= 247 &&
+          (unsigned char) mf -> errno_str[1] >= 128 &&
+	  (unsigned char) mf -> errno_str[1] <= 191 &&
+          (unsigned char) mf -> errno_str[2] >= 128 &&
+	  (unsigned char) mf -> errno_str[2] <= 191 &&
+	  (unsigned char) mf -> errno_str[3] >= 128 &&
+	  (unsigned char) mf -> errno_str[3] <= 191){
+    code_point = (unsigned char) mf -> errno_str[3] - 128;
+    code_point += ((unsigned char) mf -> errno_str[2] - 128) * 64;
+    code_point += ((unsigned char) mf -> errno_str[1] - 128) * 4096;
+    code_point += ((unsigned char) mf -> errno_str[0] - 240) * 262144;
+    mf -> errno_str[4] = '\0';
+  }
+  else{
+    fprintf(stderr, "%s:%s Invalid UTF-8 character in source code: '%s'.",
+            mf -> file, line_number, mf -> errno_str);
+    break;
+  }
+  fprintf(stderr, "%s:%s Unsupported UTF-8 character in source code: '%s' (U+%06X).",
+          mf -> file, line_number, mf -> errno_str, code_point);
+  break;
+}
+@
+
+
+\subsecao{A.X. ERROR\_NO\_MEMORY}
+
+@<Types of Error@>+=
+ERROR_NO_MEMORY,
+@
+
+The library defined here to interpret WeaveFont code gets during
+initialization allocation functions, which could be the standard
+\monoespaco{malloc} function or any other custom allocator. If we get
+NULL after running the allocator, this means that we could not get
+more memory. And in this case, we raise this error.
+
+This error could happen in almost any part of the code. It is not
+caused by any syntax error in the language. It can be caused by
+external factors. But it also could be caused by memory leaks due to
+poor or questionable WeaveFont code. For example:
+
+\alinhacodigo
+numeric i, j;
+path p;
+j = 0;
+p = (0, 0);
+for i = 0 step 0 until 1:
+  j = j + 1;
+  p = p .. (j, j*j);
+endfor
+\alinhanormal
+
+The above code creates an infinite loop (perhaps because a logical
+error in the code?) and in each iteration, it increases a path, adding
+another extremity point. No matter how much memory you have, at some
+point the loop above will exhaust it all.
+
+When we detect this error, we use the macro below to raise it. The
+macro just runs the code to store the default information needed by
+any error:
+
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_NO_MEMORY(mf, cx, line) {\
+  RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NO_MEMORY);}
+@
+
+This is the error message that we will print if the user asks what
+went wrong:
+
+@<Print Error Message@>=
+case ERROR_NO_MEMORY:
+  fprintf(stderr, "%s:%s Not enough memory for allocation.", mf -> file,
+          line_number);
+  break;
+@
+
 
 \fim

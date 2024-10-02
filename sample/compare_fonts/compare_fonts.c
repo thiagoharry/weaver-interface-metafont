@@ -360,6 +360,10 @@ int main(int argc, char **argv){
     fprintf(stderr, "ERROR loading sample.mf.\n");
     return 1;
   }
+  if(mf -> errno){
+    _Wprint_metafont_error(mf);
+    return 1;
+  }
   end = (float)clock()/CLOCKS_PER_SEC;
   elapsed = end - start;
   printf("WEAVEFONT font loaded in %f seconds (CPU time)\n", elapsed);

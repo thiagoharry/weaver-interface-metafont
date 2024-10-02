@@ -90,6 +90,8 @@
 
 2.2. Mutexes e Seções Críticas \indice{11}
 
+2.3. Lidando com Erros \indice{XX}
+
 3. Inicialização e Finalização \indice{12}
 
 4. Analisador Léxico \indice{12}
@@ -101,8 +103,6 @@
 5. Programas WEAVEFONT \indice{24}
 
 5.1. Executando Programas \indice{24}
-
-5.2. Lidando com Erros \indice{27}
 
 5.3. Separando Lista de Instruções em Instruções Individuais \indice{30}
 
@@ -248,6 +248,10 @@ XX. O Comando \monoespaco{monowidth} \indice{XX}
 13. Funções de API para Usar as Fontes \indice{XX}
 
 Referências \indice{XX}
+
+Apêndice A: Tratamento de Erros \indice XX
+
+A.1. ERROR\_NO\_MEMORY \indice{XX}
 
 \secao{1. Introdução}
 
@@ -922,6 +926,38 @@ Mutex, podemos liberar ele com o código abaixo:
 #endif
 @
 
+\secao{2.3. Lidando com Erros}
+
+Boa parte das funções que são definidas aqui recebem como entrada uma
+estrutura da metafonte sendo renderizada e uma estrutura do contexto
+de execução. Além disso, elas constumam retornar verdadeiro caso a
+execução seja bem-sucedida e falsa caso contrário. Algumas funções
+podem seguir a convenção diferente de retornar um ponteiro se forem
+bem-sucedidas e retornar NULL caso contrário.
+
+Caso um erro seja encontrado, devemos interromper imediatamente o
+nosso código e retornar falso. Se uma função invocada retornar falso
+indicando erro, a função que a chamou também deve interromper a
+execução. Além disso, devemos marcar dentro da estrutura da metafonte
+que um erro ocorreu, preenchendo informações adicionais que permitirão
+posteriormente que uma mensagem de diagnóstico seja impressa se o
+usuário assim desejar.
+
+O ato de preencher as informações sobre o erro na estrutura da fonte
+será feita com a ajuda de macros. Alguns exemplos de macros podem ser
+\monoespaco{RAISE\_NO\_MEMORY} ou
+\monoespaco{RAISE\_ERROR\_FAILED\_OPENING\_FILE}. Quase todas as
+macros de erros irão receber como entrada a estrutura da fonte (para
+preencherem ali dados sobre o erro), informações de contexto ou NULL
+(caso precisem ler informações adicionais sobre a execução) e
+opcionalmente o número da linha em que o erro foi encontrado. A
+depender do erro, mais informações podem ser colocadas na macro.
+
+Para evitar ter que definirminuciosamente muitos tipos diferentes de
+erro no corpo do texto, tirqndo assim o foco dos algoritmos e da
+lógica sendo implementada, vamos definir os erros e suas macros apenas
+no Apêndice A.
+
 \secao{3. Inicialização e Finalização}
 
 Primeiro vamos definir a função de inicialização. O que ela fará será
@@ -1211,8 +1247,15 @@ bool lexer(struct metafont *mf, char *path, struct generic_token **first_token,
     @<Análise Léxica: Regra 4@>
     @<Análise Léxica: Regra 5@>
     @<Análise Léxica: Regra 6@>
-    // Nenhuma regra aplicada: erro. Definiremos erros na Subseção 5.2.
-    RAISE_ERROR_INVALID_CHAR(mf, NULL, line, c);
+    {
+      // Nenhuma regra aplicada: erro.
+      char unknown_char[5];
+      memset(unknown_char, 0, 5);
+      unknown_char[0] = c;
+      fgets(&(unknown_char[1]), 4, fp);
+      RAISE_ERROR_INVALID_CHAR(mf, NULL, line, unknown_char);
+      return false;
+    }
     free_token_list(first_token);
     *first_token = NULL;
     *last_token = NULL;
@@ -2229,108 +2272,6 @@ mf -> loading = false;
 
 \subsecao{5.2. Lidando com Erros}
 
-Quando erros existirem em um código-fonte WEAVEFONT, nenhuma imagem ou
-meta-fonte tipográfica pode ser gerada. Entretanto, o programador deve
-ter alguma forma de descobrir o quê deu errado para que o problema
-possa ser ajustado. Por causa disso, vamos adicionar à estrutura de
-cada meta-fonte variáveis que, em caso de erro, conterão um
-diagnóstico do quê aconteceu de errado:
-
-@<Atributos (struct metafont)@>=
-  int errno, errno_line; // Código de erro, linnha em que teve erro
-  char errno_character[5]; // Caractere sendo renderizado durante erro
-  char *errno_str; // Informações adicionais na forma de string
-  int errno_int; // INformações adicionais na forma de inteiro
-@
-
-A ideia é que caso nenhum erro aconteça, todas as variáveis acima
-serão igual a zero ou nulo. Então, quando inicializamos uma
-meta-fonte, precisamos inicializar estas variáveis com tais valores
-que indicam ausência de erro:
-
-@<Inicialização (struct metafont)@>=
-mf -> errno = mf -> errno_line = 0;
-mf -> errno_character[0] = '\0';
-mf -> errno_str = NULL;
-mf -> errno_int = 0;
-@
-
-A ideia é que tão logo o primeiro erro seja encontrado, o valor
-de \monoespaco{errno} deve mudar para algo que indique a natureza do
-erro encontrado. Caso estejamos contando o número de linhas no código
-(ou seja, quando a macro \monoespaco{W\_DEBUG\_METAFONT} estiver
-definida), então a linha onde o erro ocorreu deve ser armazenada
-em \monoespaco{errno\_line}. E se mais informação precisam ser
-indicadas para que o erro possa ser descrito com mais precisão, então
-usaremos o ponteiro logo abaixo e o faremos apontar para uma string
-relevante. Ou armazenaresmo algum número que explique o erro
-em \monoespaco{errno\_int}.
-
-Somente o primeiro erro encontrado em cada meta-fonte deve ser
-armazenado. Se houverem mais, eles devem ser ignorados. Todas as
-funções que executam código WEAVEFONT devem retornar um valor
-booleano. Caso nenhum erro tenha ocorrido, retrona-se verdadeiro. Já
-em caso de erros, retorna-se falso.
-
-Os diferentes tipos de erros serão armazenados aqui:
-
-@<Estrutura de Dados Locais (metafont.c)@>+=
-enum { // Tipos de Erros
-  ERROR_NO_ERROR = 0,
-  // Os diferentes tipos que serão definidos:
-  @<Tipos de Erros@>
-  // E um último que esperamos nunca usar: indica erro desconhecido
-  ERROR_UNKNOWN
-};
-@
-
-Dado o código que definimos até agora, somente três tipos de erro
-podem ocorrer. Podemos ficar sem memória quando estamos alocando um
-token, um contexto ou qualquer outra estrutura auxiliar da qual
-precisamos. Ou podemos ter encontrado um símbolo completamente
-não-suportado em nosso analisador léxico. Ou ainda podemos ter
-começado uma string e não terminado.
-
-Não vamos nos preocupar com erros como quando um usuário passa um
-arquivo de código-fonte que não existe para inicializar uma
-meta-fonte. Neste caso, a fonte não será inicializada e não haverá
-código algum. Os tipos de erro que nos interessa aqui são erros
-léxicos e de sintaxe encontrados na linguagem.
-
-Pode ser difícil para um usuário ter que lembrar todos os tipos de
-erros para analisar corretamente esta informação. Por causa disso, uma
-função será exportada para imprimir na tela uma mensagem
-diagnosticando o erro encontrado:
-
-@<Definição de Funções da API (metafont.c)@>+=
-void _Wprint_metafont_error(struct metafont *mf){
-  char *line_number;
-  // Primeiro tentamos gerar uma string com o número de linha onde teve erro.
-  // Assim é como podemos calcular o tamanho desta string:
-  int str_size = 128;
-  line_number = (char *) temporary_alloc(str_size);
-  // Mas se não temos um número de linha, só deixamos a string vazia:
-  if(mf -> errno_line == 0)
-    line_number[0] = '\0';
-  else
-    sprintf(line_number, "%d: ", mf -> errno_line);
-  switch(mf -> errno){
-  case ERROR_NO_ERROR:
-    fprintf(stderr, "%s:%s No errors.", mf -> file, line_number);
-    break;
-  @<Imprime Mensagem de Erro@>
-  default:
-    fprintf(stderr, "%s:%s Unknown error.", mf -> file, line_number);
-  }
-  if(mf -> errno_character[0] != '\0'){
-    fprintf(stderr, " (while rendering '%s')\n", mf -> errno_character);
-  }
-  else
-    fprintf(stderr, "\n");
-  if(temporary_free != NULL)
-    temporary_free(line_number);
-}
-@
 
 Para adicionar novos tipos de erro, basta começarmos definindo os seus
 tipos, o que acabará dando um código numérico para ele. Por exemplo,
@@ -2340,7 +2281,7 @@ terminado uma string ou por não termos conseguido abrir um arquivo,
 podemos adicionar os 4 tipos abaixo:
 
 @<Tipos de Erros@>=
-ERROR_NO_MEMORY, ERROR_INVALID_CHAR, ERROR_UNCLOSED_STRING,
+ERROR_UNCLOSED_STRING,
 ERROR_FAILED_OPENING_FILE,
 @
 
@@ -2351,15 +2292,6 @@ número da linha onde teve o erro e todos os erros tem seu tipo
 identificado por um código numérico. A seguinte macro genérica é o
 código que todo erro produzido executa no momento que é gerado:
 
-@<Macros Locais (metafont.c)@>+=
-#define RAISE_GENERIC_ERROR(mf, cx, line, error_code) {\
-  struct context *_cx = cx;\
-  if(!mf -> errno){\
-    mf -> errno = error_code;\
-    mf -> errno_line = line;\
-    if(cx != NULL && _cx -> current_character[0] != '\0')\
-      memcpy(mf -> errno_character, _cx -> current_character, 5);}}
-@
 
 A única coisa mais específica é que cada tipo de erro diferente pode
 querer armazenar diferentes tipos de informações adicionais nas
@@ -2369,20 +2301,10 @@ erros que não armazenam nada nelas.
 O erro de memória insuficiente é um dos casos em que nada mais é
 armazenado:
 
-@<Macros Locais (metafont.c)@>+=
-#define RAISE_ERROR_NO_MEMORY(mf, cx, line) {\
-  RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NO_MEMORY);}
-@
 
 No caso de termos um caractere não suportado, este erro armazena o
 caractere em questão como um inteiro:
 
-@<Macros Locais (metafont.c)@>+=
-#define RAISE_ERROR_INVALID_CHAR(mf, cx, line, char) {\
-  if(!mf -> errno){\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INVALID_CHAR);\
-    mf -> errno_int = char;}}
-@
 
 Quando estamos com uma string não-finalizada, nós armazenamos a string
 em questão:
@@ -2410,14 +2332,6 @@ Para imprimir uma mensagem de diagnóstico para os quatro erros
 definidos, usamos:
 
 @<Imprime Mensagem de Erro@>=
-case ERROR_NO_MEMORY:
-  fprintf(stderr, "%s:%s Not enough memory for allocation.", mf -> file,
-          line_number);
-  break;
-case ERROR_INVALID_CHAR:
-  fprintf(stderr, "%s:%s Unsupported character in source code: '%x'.",
-          mf -> file, line_number, (unsigned) mf -> errno_int);
-  break;
 case ERROR_UNCLOSED_STRING:
   fprintf(stderr, "%s:%s Unclosed string \"%s\".", mf -> file,
           line_number, mf -> errno_str);
@@ -2456,13 +2370,6 @@ valor que passarmos. Como isso será uma macro, podemos até passar
 variáveis que não existem fora do modo de depuração, que isso não
 gerará um erro, já que neste caso tais variáveis são removidas:
 
-@<Macros Locais (metafont.c)@>+=
-#if defined(W_DEBUG_METAFONT)
-#define OPTIONAL(x) x
-#else
-#define OPTIONAL(x) 0
-#endif
-@
 
 \subsecao{5.3. Separando Lista de Instruções em Instruções Individuais}
 
@@ -2632,7 +2539,7 @@ TYPE_ENDCHAR,               // O token simbólico 'endchar'
 
 E adicionamos eles à nossa lista de palavras reservadas:
 
-@<Lista de Palavras Reservadas@>+=
+@<Lista de Palavras Reservadas@>=
 "begingroup", "endgroup", "if", "fi", "beginchar", "endchar",
 @
 
@@ -17312,7 +17219,7 @@ else if(begin -> type == TYPE_PICKCOLOR){
 
 Caso uma fonte tipográfica seja configurada para ter uma versão
 monoespaço, onde todos os caracteres devem ter exatamente a mesma
-largura, será útil usar o comando \monoespao{monowidth} a ser definido
+largura, será útil usar o comando \monoespaco{monowidth} a ser definido
 aqui para escolher qual é esta largura. Se durante a renderização de
 um glifo a variável numérica interna \monoespaco{monospace} for maior
 que zero, então a largura do caractere será calculado de acordo com a
@@ -17995,18 +17902,18 @@ static struct _glyph *get_glyph(struct metafont *mf, unsigned char *c,
   // UTF-8 -> UTF-32
   if(c[0] < 128)
     code_point = c[0];
-  else if(c[0] >= 192 && c[0] <= 223 && c[1] >= 128 && c[1] <= 159){
+  else if(c[0] >= 192 && c[0] <= 223 && c[1] >= 128 && c[1] <= 191){
     code_point = c[1] - 128;
     code_point += (c[0] - 192) * 64;
   }
-  else if(c[0] >= 224 && c[0] <= 239 && c[1] >= 128 && c[1] <= 159 &&
-          c[2] >= 128 && c[2] <= 159){
+  else if(c[0] >= 224 && c[0] <= 239 && c[1] >= 128 && c[1] <= 191 &&
+          c[2] >= 128 && c[2] <= 191){
     code_point = c[2] - 128;
     code_point += (c[1] - 128) * 64;
     code_point += (c[0] - 224) * 4096;
   }
-  else if(c[0] >= 240 && c[0] <= 247 && c[1] >= 128 && c[1] <= 159 &&
-          c[2] >= 128 && c[2] <= 159 && c[3] >= 128 && c[3] <= 159){
+  else if(c[0] >= 240 && c[0] <= 247 && c[1] >= 128 && c[1] <= 191 &&
+          c[2] >= 128 && c[2] <= 191 && c[3] >= 128 && c[3] <= 191){
     code_point = c[3] - 128;
     code_point += (c[2] - 128) * 64;
     code_point += (c[1] - 128) * 4096;
@@ -19024,6 +18931,299 @@ Springer Science \& Business Media.}
 
 \referencia{Knuth, D. E. (1989) ``The METAFONT book'', Addison-Wesley
  Longsman Publishing Co., Inc}
+
+
+\secao{Apêndice A: Tratamento de Erros}
+
+Quando erros existirem em um código-fonte WEAVEFONT, nenhuma imagem ou
+meta-fonte tipográfica pode ser gerada. Entretanto, o programador deve
+ter alguma forma de descobrir o quê deu errado para que o problema
+possa ser ajustado. Por causa disso, vamos adicionar à estrutura de
+cada meta-fonte variáveis que, em caso de erro, conterão um
+diagnóstico do quê aconteceu de errado:
+
+@<Atributos (struct metafont)@>+=
+  int errno, errno_line; // Código de erro, linnha em que teve erro
+  char errno_character[5]; // Caractere sendo renderizado durante erro
+  char *errno_str; // Informações adicionais na forma de string
+  int errno_int; // INformações adicionais na forma de inteiro
+@
+
+A ideia é que caso nenhum erro aconteça, todas as variáveis acima
+serão igual a zero ou nulo. Então, quando inicializamos uma
+meta-fonte, precisamos inicializar estas variáveis com tais valores
+que indicam ausência de erro:
+
+@<Inicialização (struct metafont)@>+=
+mf -> errno = mf -> errno_line = 0;
+mf -> errno_character[0] = '\0';
+mf -> errno_str = NULL;
+mf -> errno_int = 0;
+@
+
+A ideia é que tão logo o primeiro erro seja encontrado, o valor
+de \monoespaco{errno} deve mudar para algo que indique a natureza do
+erro encontrado. Caso estejamos contando o número de linhas no código
+(ou seja, quando a macro \monoespaco{W\_DEBUG\_METAFONT} estiver
+definida), então a linha onde o erro ocorreu deve ser armazenada
+em \monoespaco{errno\_line}. E se mais informação precisam ser
+indicadas para que o erro possa ser descrito com mais precisão, então
+usaremos o ponteiro logo abaixo e o faremos apontar para uma string
+relevante. Ou armazenaresmo algum número que explique o erro
+em \monoespaco{errno\_int}.
+
+Somente o primeiro erro encontrado em cada meta-fonte deve ser
+armazenado. Se houverem mais, eles devem ser ignorados. Todas as
+funções que executam código WEAVEFONT devem retornar um valor
+booleano. Caso nenhum erro tenha ocorrido, retrona-se verdadeiro. Já
+em caso de erros, retorna-se falso.
+
+Os diferentes tipos de erros serão armazenados aqui:
+
+@<Estrutura de Dados Locais (metafont.c)@>+=
+enum { // Tipos de Erros
+  ERROR_NO_ERROR = 0,
+  // Os diferentes tipos que serão definidos:
+  @<Tipos de Erros@>
+  // E um último que esperamos nunca usar: indica erro desconhecido
+  ERROR_UNKNOWN
+};
+@
+
+Há inúmeras coisas que podem dar errado e provocar erros. Podemos ficar
+sem memória quando estamos alocando um token, um contexto ou qualquer
+outra estrutura auxiliar da qual precisamos. Ou podemos ter encontrado
+um símbolo completamente não-suportado em nosso analisador léxico. Ou
+ainda podemos ter começado uma string e não terminado.
+
+Pode ser difícil para um usuário ter que lembrar todos os tipos de
+erros para analisar corretamente como sua informação é armazenada. Por
+causa disso, uma função será exportada para imprimir na tela uma
+mensagem diagnosticando o erro encontrado:
+
+@<Definição de Funções da API (metafont.c)@>+=
+void _Wprint_metafont_error(struct metafont *mf){
+  char *line_number;
+  // Primeiro tentamos gerar uma string com o número de linha onde teve erro.
+  // Assim é como podemos calcular o tamanho desta string:
+  int str_size = 128;
+  line_number = (char *) temporary_alloc(str_size);
+  // Mas se não temos um número de linha, só deixamos a string vazia:
+  if(mf -> errno_line == 0)
+    line_number[0] = '\0';
+  else
+    sprintf(line_number, "%d: ", mf -> errno_line);
+  switch(mf -> errno){
+  case ERROR_NO_ERROR:
+    fprintf(stderr, "%s:%s No errors.", mf -> file, line_number);
+    break;
+  @<Imprime Mensagem de Erro@>
+  default:
+    fprintf(stderr, "%s:%s Unknown error.", mf -> file, line_number);
+  }
+  if(mf -> errno_character[0] != '\0'){
+    fprintf(stderr, " (while rendering '%s')\n", mf -> errno_character);
+  }
+  else
+    fprintf(stderr, "\n");
+  if(temporary_free != NULL)
+    temporary_free(line_number);
+}
+@
+
+Cada subseção deste Apêndice irá listar e definir um diferente tipo de
+erro, como definimos a sua macro que o gera, a sua mensagem de erro, e
+exemplos de código que podem causá-lo.
+
+Muitos deles usarão a macro genérica abaixo como parte da definição de
+suas macros. A macro abaixo apenas armazena informações genéricas que
+são relevantes para todos os tipos de erro: o código de erro, a linha
+em que ele ocorreu, e qual caractere (glifo) estava sendo renderizado
+no momento, se é que algo estava sendo renderizado:
+
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_GENERIC_ERROR(mf, cx, line, error_code) {\
+  struct context *_cx = cx;\
+  if(!mf -> errno){\
+    mf -> errno = error_code;\
+    mf -> errno_line = line;\
+    if(cx != NULL && _cx -> current_character[0] != '\0')\
+      memcpy(mf -> errno_character, _cx -> current_character, 5);}}
+@
+
+Como nem sempre sabemos a linha de código em que o erro está (só temos
+esta informação em modo dde depuração), a macro abaixo vai nos ajudar
+a tratar tal informação como opcional:
+
+@<Macros Locais (metafont.c)@>+=
+#if defined(W_DEBUG_METAFONT)
+#define OPTIONAL(x) x
+#else
+#define OPTIONAL(x) 0
+#endif
+@
+
+\subsecao{A.X. ERROR\_INVALID\_CHAR}
+
+@<Tipos de Erros@>=
+ERROR_INVALID_CHAR,
+@
+
+O analizador léxico WeaveFont funciona seguindo uma série de regras
+dependendo do tipo de caractere que encontra. Isso é o que permite a
+ele interpretar \monoespaco{2cm} como uma construção de tois tokens
+equivalente a \monoespaco{2*cm}, e interpretar \monoespaco{cm2} como
+sendo formada por um token só.
+
+Para isso, ele classifica os diferentes tipos de caracteres em
+famílias e tipos. Mas nem todos os caracteres pertencem a alguma
+família e são usados em código WeaveFont. Por exemplo, caracteres como
+``ç'' não possuem qualquer classificação e não podem ser usados, a
+menos que façam parte de uma string. Sendo assim, eles não podem fazer
+parte de nomes de variáveis ou coisas assim. WeaveFont restringe o uso
+de caracteres que não percencem ao conjunto ASCII em sua linguagem. Os
+únicos caracteres que podem ser usados fora de strings e comentários
+são:
+
+\alinhaverbatim
+.%0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ
+"(),;_><=:|'\\+-/*?!#&@@$^~[]{}
+\alinhanormal
+
+Se um caractere não suportado for encontrado em qualquer parte do
+código, este erro será gerado. Devido à natureza deste erro, o único
+lugar em que encontramos este erro é no nosso analizador léxico.
+
+Quando o erro é gerado, devemos armazenar qual foi o caractere
+não-suportado que encontramos. Para isso, passamos os próximos 4 bytes
+à partir de onde tal caractere foi encontrado. Isso porque um
+caractere UTF-8 tem no máximo 4 bytes. O que fazemos então é alocar 5
+bytes para a string dedicada à informações sobre erros e copiamos os
+bytes lidos para lá, colocando uma marcação de fim da string na última
+posição:
+
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_INVALID_CHAR(mf, cx, line, str) {\
+  if(!mf -> errno){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INVALID_CHAR);\
+    mf -> errno_str = (char *) permanent_alloc(5);\
+    memcpy(mf -> errno_str, str, 4);\
+    mf -> errno_str[4] = '\0';}}
+@
+
+Devemos imprimir uma mensagem de erro correspondente dizendo qual o
+caractere encontrado que causou problemas. Isso requer interpretar a
+codificação UTF-8 para descobrir se temos um caractere que ocupa um,
+dois, três ou quatro bytes. Sabendo disso, podemos imprimir o
+caractere na mensagem de erro e também indicar sua representação numérica:
+
+@<Imprime Mensagem de Erro@>=
+case ERROR_INVALID_CHAR:
+{
+  uint32_t code_point;
+  if((unsigned char) mf -> errno_str[0] < 128){
+    code_point = (unsigned char) mf -> errno_str[0];
+    mf -> errno_str[1] = '\0';
+  }
+  else if((unsigned char) mf -> errno_str[0] >= 192 &&
+          (unsigned char) mf -> errno_str[0] <= 223 &&
+          (unsigned char) mf -> errno_str[1] >= 128 &&
+          (unsigned char) mf -> errno_str[1] <= 191){
+    code_point = (unsigned char) mf -> errno_str[1] - 128;
+    code_point += ((unsigned char) mf -> errno_str[0] - 192) * 64;
+    mf -> errno_str[2] = '\0';
+  }
+  else if((unsigned char) mf -> errno_str[0] >= 224 && 
+          (unsigned char) mf -> errno_str[0] <= 239 &&
+          (unsigned char) mf -> errno_str[1] >= 128 &&
+	  (unsigned char) mf -> errno_str[1] <= 191 &&
+          (unsigned char) mf -> errno_str[2] >= 128 &&
+	  (unsigned char) mf -> errno_str[2] <= 191){
+    code_point = (unsigned char) mf -> errno_str[2] - 128;
+    code_point += ((unsigned char) mf -> errno_str[1] - 128) * 64;
+    code_point += ((unsigned char) mf -> errno_str[0] - 224) * 4096;
+    mf -> errno_str[3] = '\0';
+  }
+  else if((unsigned char) mf -> errno_str[0] >= 240 &&
+          (unsigned char) mf -> errno_str[0] <= 247 &&
+          (unsigned char) mf -> errno_str[1] >= 128 &&
+	  (unsigned char) mf -> errno_str[1] <= 191 &&
+          (unsigned char) mf -> errno_str[2] >= 128 &&
+	  (unsigned char) mf -> errno_str[2] <= 191 &&
+	  (unsigned char) mf -> errno_str[3] >= 128 &&
+	  (unsigned char) mf -> errno_str[3] <= 191){
+    code_point = (unsigned char) mf -> errno_str[3] - 128;
+    code_point += ((unsigned char) mf -> errno_str[2] - 128) * 64;
+    code_point += ((unsigned char) mf -> errno_str[1] - 128) * 4096;
+    code_point += ((unsigned char) mf -> errno_str[0] - 240) * 262144;
+    mf -> errno_str[4] = '\0';
+  }
+  else{
+    fprintf(stderr, "%s:%s Invalid UTF-8 character in source code: '%s'.",
+            mf -> file, line_number, mf -> errno_str);
+    break;
+  }
+  fprintf(stderr, "%s:%s Unsupported UTF-8 character in source code: '%s' (U+%06X).",
+          mf -> file, line_number, mf -> errno_str, code_point);
+  break;
+}
+@
+
+\subsecao{A.X. ERROR\_NO\_MEMORY}
+
+@<Tipos de Erros@>+=
+ERROR_NO_MEMORY,
+@
+
+A biblioteca que implementamos aqui que interpreta código WeaveFont
+recebe em sua inicialização funções de alocação, que podem ser o
+\monoespaco{malloc} da biblioteca padrão, ou podem ser alocadores
+personalizados. Caso o alocador seja executado e retorne NULL, isso
+significa que não conseguimos memória suficiente. É quando geramos
+este erro.
+
+Ele pode ocorrer em praticamente qualquer parte do código. Ele não é
+causado porqualquer erro de sintaxe na linguagem. Sua causa pode ser
+devido a fatores externos. Contudo, eles também podem ser sintomas de
+vazamento de memória devido à práticas de programação questionáveis no
+programa WeaveFont. Por exemplo:
+
+\alinhacodigo
+numeric i, j;
+path p;
+j = 0;
+p = (0, 0);
+for i = 0 step 0 until 1:
+  j = j + 1;
+  p = p .. (j, j*j);
+endfor
+\alinhanormal
+
+O código acima cria um laço infinito (talvez devido a um erro lógico
+do usuário?) e a cada iteração aumenta o tamanho de um caminho,
+adicionando mais um ponto de extremidade nele. Por mais memória que se
+tenha, uma hora o laço acima irá exaurir toda ela.
+
+Quando detectamos tal erro, executamos a macro que o gera e que
+funciona apenas armazenando as informações padrão que todo erro
+precisa passar:
+
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_NO_MEMORY(mf, cx, line) {\
+  RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NO_MEMORY);}
+@
+
+Esta é a mensagem de erro que imprimimos caso o usuário pergunte o quê
+aconteceu.
+
+@<Imprime Mensagem de Erro@>=
+case ERROR_NO_MEMORY:
+  fprintf(stderr, "%s:%s Not enough memory for allocation.", mf -> file,
+          line_number);
+  break;
+@
+
+
 
 \fim
 
