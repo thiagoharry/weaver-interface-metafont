@@ -2281,7 +2281,6 @@ terminado uma string ou por não termos conseguido abrir um arquivo,
 podemos adicionar os 4 tipos abaixo:
 
 @<Tipos de Erros@>=
-ERROR_UNCLOSED_STRING,
 ERROR_FAILED_OPENING_FILE,
 @
 
@@ -2309,13 +2308,6 @@ caractere em questão como um inteiro:
 Quando estamos com uma string não-finalizada, nós armazenamos a string
 em questão:
 
-@<Macros Locais (metafont.c)@>+=
-#define RAISE_ERROR_UNCLOSED_STRING(mf, cx, line, str) {\
-  if(!mf -> errno){\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNCLOSED_STRING);\
-    mf -> errno_str = (char *) permanent_alloc(strlen(str)+1);\
-    memcpy(mf -> errno_str, str, sizeof(str)+1);}}
-@
 
 Quando falhamos em abrir um arquivo, também armazenamos o nome do
 arquivo como string:
@@ -2332,10 +2324,6 @@ Para imprimir uma mensagem de diagnóstico para os quatro erros
 definidos, usamos:
 
 @<Imprime Mensagem de Erro@>=
-case ERROR_UNCLOSED_STRING:
-  fprintf(stderr, "%s:%s Unclosed string \"%s\".", mf -> file,
-          line_number, mf -> errno_str);
-  break;
 case ERROR_FAILED_OPENING_FILE:
   fprintf(stderr, "%s:%s Failed opening file \"%s\".", mf -> file,
           line_number, mf -> errno_str);
@@ -19223,6 +19211,40 @@ case ERROR_NO_MEMORY:
   break;
 @
 
+\subsecao{A.X. ERROR\_UNCLOSED\_STRING}
+
+@<Tipos de Erros@>+=
+ERROR_UNCLOSED_STRING,
+@
+
+Este é um erro léxico que é gerado durante a criação de tokens, não
+durante a execução do código. Ele ocorre quando o código começa uma
+string com as aspas duplas, mas não a termina. Caso uma quebra de
+linha seja encontrada dentro de uma string, isso também configura uma
+string não terminada.
+
+Quando encontramos tal erro, nós copiamos o que seria a string
+não-terminada para que possamos apresentá-la se o usuário pedir uma
+mensagem de erro:
+
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_UNCLOSED_STRING(mf, cx, line, str) {\
+  if(!mf -> errno){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNCLOSED_STRING);\
+    mf -> errno_str = (char *) permanent_alloc(strlen(str)+1);\
+    memcpy(mf -> errno_str, str, sizeof(str)+1);}}
+@
+
+A mensagem de erro neste caso apenas informa a string incompleta
+encontrada e sua posição, na esperança de que isso seja o suficiente
+para que o usuário possa arrumar o problema:
+
+@<Imprime Mensagem de Erro@>=
+case ERROR_UNCLOSED_STRING:
+  fprintf(stderr, "%s:%s Unclosed string \"%s\".", mf -> file,
+          line_number, mf -> errno_str);
+  break;
+@
 
 
 \fim

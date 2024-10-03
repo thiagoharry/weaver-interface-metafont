@@ -2221,7 +2221,6 @@ we have an unclosed string or when we faiil to open a file, we could
 add the following 4 types:
 
 @<Types of Error@>=
-ERROR_UNCLOSED_STRING,
 ERROR_FAILED_OPENING_FILE,
 @
 
@@ -2248,13 +2247,7 @@ character value at \monoespaco{errno\_int}:
 And finally, when raising the error for an unclosed string, we store
 the string:
 
-@<Local Macros (metafont.c)@>+=
-#define RAISE_ERROR_UNCLOSED_STRING(mf, cx, line, str) {\
-  if(!mf -> errno){\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNCLOSED_STRING);\
-    mf -> errno_str = (char *) permanent_alloc(strlen(str)+1);\
-    memcpy(mf -> errno_str, str, strlen(str)+1);}}
-@
+
 
 When we fail opening a file, we also store as a string the filename:
 
@@ -2266,14 +2259,11 @@ When we fail opening a file, we also store as a string the filename:
     memcpy(mf -> errno_str, str, sizeof(str)+1);}}
 @
 
+
 To print an error message with diagnostics in the standard error
 output for each one of the four types of errors, we use the code:
 
 @<Print Error Message@>=
-case ERROR_UNCLOSED_STRING:
-  fprintf(stderr, "%s:%s Unclosed string \"%s\".", mf -> file,
-          line_number, mf -> errno_str);
-  break;
 case ERROR_FAILED_OPENING_FILE:
   fprintf(stderr, "%s:%s Failed opening file \"%s\".", mf -> file,
           line_number, mf -> errno_str);
@@ -18909,6 +18899,42 @@ case ERROR_NO_MEMORY:
           line_number);
   break;
 @
+
+\subsecao{A.X. ERROR\_UNCLOSED\_STRING}
+
+@<Types of Error@>+=
+ERROR_UNCLOSED_STRING,
+@
+
+This is a lexical error that is generated during token creation, not
+during code execution. It occurs when code begins a string with double
+quotes but does not end it. If a line break is found within a string,
+this also constitutes an unterminated string.
+
+When we encounter such an error, we copy what would be the
+unterminated string so that we can present it if the user requests an
+error message:
+
+
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_UNCLOSED_STRING(mf, cx, line, str) {\
+  if(!mf -> errno){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNCLOSED_STRING);\
+    mf -> errno_str = (char *) permanent_alloc(strlen(str)+1);\
+    memcpy(mf -> errno_str, str, sizeof(str)+1);}}
+@
+
+The error message in this case only reports the incomplete string
+found and its position, in the hope that this will be enough for the
+user to fix the problem:
+
+@<Print Error Message@>=
+case ERROR_UNCLOSED_STRING:
+  fprintf(stderr, "%s:%s Unclosed string \"%s\".", mf -> file,
+          line_number, mf -> errno_str);
+  break;
+@
+
 
 
 \fim
