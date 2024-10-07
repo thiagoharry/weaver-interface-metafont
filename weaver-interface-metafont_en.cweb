@@ -2210,96 +2210,6 @@ executed:
 mf -> loading = false;
 @
 
-\subsecao{5.2. Handling Errors}
-
-
-
-To add new types of error, we place their names in the error enum,
-which will create an error code for the new type. For example, for the
-error when we have no memory, when we find an invalid character, when
-we have an unclosed string or when we faiil to open a file, we could
-add the following 4 types:
-
-@<Types of Error@>=
-ERROR_FAILED_OPENING_FILE,
-@
-
-All errro code have some common elements. All them get a struct with a
-meta-font, an optional struct with the context, a numeric value equal
-either zero or the line number where the error was found and all
-errors are identified by their numeric code. The following macro is
-the generic code that all errrors execute when are raised:
-
-
-The difference between all different errors is that they could store
-different data in variables \monoespaco{errno\_int}
-and \monoespaco{errno\_str} depending on their type. And some type of
-errors do not store anything in these variables.
-
-The error for insufficient memory, for example, is one of those that
-do not store any other specific information:
-
-
-If we have an unsupported character, the raised error store the
-character value at \monoespaco{errno\_int}:
-
-
-And finally, when raising the error for an unclosed string, we store
-the string:
-
-
-
-When we fail opening a file, we also store as a string the filename:
-
-@<Local Macros (metafont.c)@>+=
-#define RAISE_ERROR_FAILED_OPENING_FILE(mf, cx, line, str) {\
-  if(!mf -> errno){\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_FAILED_OPENING_FILE);\
-    mf -> errno_str = (char *) permanent_alloc(strlen(str)+1);\
-    memcpy(mf -> errno_str, str, sizeof(str)+1);}}
-@
-
-
-To print an error message with diagnostics in the standard error
-output for each one of the four types of errors, we use the code:
-
-@<Print Error Message@>=
-case ERROR_FAILED_OPENING_FILE:
-  fprintf(stderr, "%s:%s Failed opening file \"%s\".", mf -> file,
-          line_number, mf -> errno_str);
-  break;
-@
-
-Notice that in the unclosed string error we copied the offending
-string to \monoespaco{errno\_str} after allocate space for this. This
-means that when we are finalizing our \monoespaco{struct metafont}, we
-need to check if there is something allocated there and disallocate if
-needed:
-
-@<Finalization (struct metafont)@>=
-if(mf -> errno_str != NULL && permanent_free != NULL)
-  permanent_free(mf -> errno_str);
-@
-
-The biggest problem with the error macros above is that they require
-as second argument the line where the error happened, or zero. If we
-have the error line, usually, it is stored in each token. But this
-information is lost and the line variable not even exist if the
-macro \monoespaco{W\_DEBUG\_METAFONT} is not defined. This means that
-when we raise an error, we should always check this macro to choose
-the correct second argument: the line in the token where the error was
-found or zero. But checking this all the time is a little verbose and
-unconfortable.
-
-To avoid this, we will define a new macro for optional variables that
-do not exist if the macro \monoespaco{W\_DEBUG\_METAFONT} is not
-defined. In this case, the macro just replace itself with the code
-received as argument. Otherwise, the macro replaces itself with
-zero. This will not cause an error, even if the variable given as
-argument is not defined when the debug macro is not defined. The macro
-is:
-
-
 \subsecao{5.3. Splitting List of Statements in Individual Statements}
 
 A list of statements is a possibly empty sequence of statements, which
@@ -2643,7 +2553,7 @@ the error variable:
 
 @<Local Macros (metafont.c)@>+=
 #define RAISE_ERROR_UNEXPECTED_TOKEN(mf, cx, line, tok) {\
-  if(!mf -> errno){\
+  if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNEXPECTED_TOKEN);\
     mf -> errno_int = tok;}}
 @
@@ -2656,7 +2566,7 @@ store as an integer with its numeric code:
 
 @<Local Macros (metafont.c)@>+=
 #define RAISE_ERROR_EXPECTED_FOUND(mf, cx, line, expected, found) {\
-  if(!mf -> errno){\
+  if(!mf -> err){\
     mf -> errno_int = found;\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_EXPECTED_FOUND);\
     if(expected >= 10){\
@@ -2795,7 +2705,7 @@ the unfinished compound statement:
 
 @<Local Macros (metafont.c)@>+=
 #define RAISE_ERROR_UNFINISHED_STATEMENT(mf, cx, line, statement) {\
-  if(!mf -> errno){\
+  if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNFINISHED_STATEMENT);\
     mf -> errno_int = statement;}}
 @
@@ -3051,11 +2961,11 @@ store the string with the forbidden name for our variable:
 
 @<Local Macros (metafont.c)@>+=
 #define RAISE_ERROR_INVALID_NAME(mf, cx, line, token_type) {\
-  if(!mf -> errno){\
+  if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INVALID_NAME);\
     mf -> errno_int = token_type;}}
 #define RAISE_ERROR_SPECIAL_NAME(mf, cs, line, var_name) {\
-  if(!mf -> errno){\
+  if(!mf -> err){\
     size_t _s = strlen(var_name);\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_SPECIAL_NAME);\
     mf -> errno_str = (char *) permanent_alloc(_s+1);\
@@ -5482,7 +5392,7 @@ that raises it:
 
 @<Local Macros (metafont.c)@>+=
 #define RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, line, name) {\
-  if(!mf -> errno){\
+  if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNDECLARED_VARIABLE);\
     mf -> errno_str = (char *) permanent_alloc(strlen(name)+1);\
     memcpy(mf -> errno_str, name, strlen(name)+1);}}
@@ -5534,7 +5444,7 @@ information about it. The expected type could be stored as an integer:
 
 @<Local Macros (metafont.c)@>+=
 #define RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, line, name, type, expected) {\
-  if(!mf -> errno){\
+  if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_WRONG_VARIABLE_TYPE);\
     VARIABLE_TO_STRING(name, type, mf -> errno_str);\
     mf -> errno_int = expected;}}
@@ -5572,7 +5482,7 @@ expression type when the error is raised:
 
 @<Local Macros (metafont.c)@>+=
 #define RAISE_ERROR_MISSING_EXPRESSION(mf, cx, line, type) {\
-  if(!mf -> errno){\
+  if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_MISSING_EXPRESSION);\
     mf -> errno_int = type;}}
 @
@@ -5753,11 +5663,11 @@ When raising this error, we store the unclosed delimiter as an integer
 
 @<Local Macros (metafont.c)@>+=
 #define RAISE_ERROR_UNCLOSED_DELIMITER(mf, cx, line, delimiter) {\
-  if(!mf -> errno){\
+  if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNCLOSED_DELIMITER);\
     mf -> errno_int = delimiter;}}
 #define RAISE_ERROR_UNOPENED_DELIMITER(mf, cx, line, delimiter) {\
-  if(!mf -> errno){\
+  if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNOPENED_DELIMITER);\
     mf -> errno_int = delimiter;}}
 @
@@ -5917,7 +5827,7 @@ When this happens, we store the offending negative number as a string:
 
 @<Local Macros (metafont.c)@>+=
 #define RAISE_ERROR_NEGATIVE_SQUARE_ROOT(mf, cx, line, number) {\
-  if(!mf -> errno){\
+  if(!mf -> err){\
     mf -> errno_str = (char *) permanent_alloc(64);\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NEGATIVE_SQUARE_ROOT);\
     snprintf(mf -> errno_str, 63, "%g", number);\
@@ -6146,7 +6056,7 @@ evaluating when we found an unrecognizable construction:
 
 @<Local Macros (metafont.c)@>+=
 #define RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, line, type) {\
-  if(!mf -> errno){\
+  if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNKNOWN_EXPRESSION);\
     mf -> errno_int = type;}}
 @
@@ -6221,7 +6131,7 @@ be unknown (is equal -1) or is some type which is not supported:
 
 @<Local Macros (metafont.c)@>+=
 #define RAISE_ERROR_UNKNOWN_EXPRESSION_TYPE(mf, cx, line, type) {\
-  if(!mf -> errno){\
+  if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNKNOWN_EXPRESSION_TYPE);\
     mf -> errno_int = type;}}
 @
@@ -6317,7 +6227,7 @@ that caused the problem to a string:
 
 @<Local Macros (metafont.c)@>+=
 #define RAISE_ERROR_NEGATIVE_LOGARITHM(mf, cx, line, number) {\
-  if(!mf -> errno){\
+  if(!mf -> err){\
     mf -> errno_str = (char *) permanent_alloc(64);\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NEGATIVE_LOGARITHM);\
     snprintf(mf -> errno_str, 63, "%g", number);\
@@ -6562,7 +6472,7 @@ When this error happens, we store the variable name to warn the user:
 
 @<Local Macros (metafont.c)@>+=
 #define RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, line, name) {\
-  if(!mf -> errno){\
+  if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNINITIALIZED_VARIABLE);\
     mf -> errno_str = (char *) permanent_alloc(strlen(name)+1);\
     memcpy(mf -> errno_str, name, strlen(name)+1);}}
@@ -6686,7 +6596,7 @@ found. It may be parenthesis, braces or brackets:
 
 @<Local Macros (metafont.c)@>+=
 #define RAISE_ERROR_EMPTY_DELIMITER(mf, cx, line, delimiter) {\
-  if(!mf -> errno){\
+  if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_EMPTY_DELIMITER);\
     mf -> errno_int = delimiter;}}
 @
@@ -9131,7 +9041,7 @@ if we are having problem in the first (0) or in the second (1) tension. The inva
 
 @<Local Macros (metafont.c)@>+=
 #define RAISE_ERROR_INVALID_TENSION(mf, cx, line, value, position) {\
-  if(!mf -> errno){\
+  if(!mf -> err){\
     mf -> errno_str = (char *) permanent_alloc(64);\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INVALID_TENSION);\
     snprintf(mf -> errno_str, 63, "%g", value);\
@@ -13661,7 +13571,7 @@ token in \monoespaco{mf -> errno\_int}:
 
 @<Local Macros (metafont.c)@>+=
 #define RAISE_ERROR_MISSING_TOKEN(mf, cx, line, tok) {\
-  if(!mf -> errno){\
+  if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_MISSING_TOKEN);\
     mf -> errno_int = tok;}}
 @
@@ -17761,12 +17671,12 @@ additional data need to be stored, as the error is self evident:
 
 @<Local Macros (metafont.c)@>+=
 #define RAISE_ERROR_DUPLICATE_GLYPH(mf, cx, line, glyph) {\
-  if(!mf -> errno){\
+  if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_DUPLICATE_GLYPH);\
     mf -> errno_str = (char *) permanent_alloc(strlen(glyph)+1);\
     memcpy(mf -> errno_str, glyph, strlen(glyph)+1);}}
 #define RAISE_ERROR_MALFORMED_STATEMENT(mf, cx, line, stat) {\
-  if(!mf -> errno){\
+  if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_MALFORMED_STATEMENT);\
     mf -> errno_int = stat;}}
 #define RAISE_ERROR_NESTED_BEGINCHAR(mf, cx, line) {\
@@ -18433,12 +18343,12 @@ glyph that presented problems:
 
 @<Local Macros (metafont.c)@>+=
 #define RAISE_ERROR_UNKNOWN_GLYPH(mf, cx, line, str) {\
-  if(!mf -> errno){\
+  if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNKNOWN_GLYPH);\
     mf -> errno_str = (char *) permanent_alloc(strlen(str)+1);\
     memcpy(mf -> errno_str, str, strlen(str)+1);}}
 #define RAISE_ERROR_RECURSIVE_RENDERCHAR(mf, cx, line, str) {\
-  if(!mf -> errno){\
+  if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_RECURSIVE_RENDERCHAR);\
     mf -> errno_str = (char *) permanent_alloc(strlen(str)+1);\
     memcpy(mf -> errno_str, str, strlen(str)+1);}}
@@ -18628,7 +18538,7 @@ this, we will add in the struct for each meta-font additional data for
 error handling and diagnostic:
 
 @<Attributes (struct metafont)@>+=
-  int errno, errno_line; // Error code and error line
+  int err, errno_line; // Error code and error line
   char errno_character[5]; // Character being rendered during error
   char *errno_str; // String with additional info
   int errno_int; // Integer with additional info
@@ -18639,7 +18549,7 @@ be zero or NULL. Therefore, during initialization, we set these values
 to zero:
 
 @<Initialization (struct metafont)@>+=
-mf -> errno = mf -> errno_line = 0;
+mf -> err = mf -> errno_line = 0;
 mf -> errno_character[0] = '\0';
 mf -> errno_str = NULL;
 mf -> errno_int = 0;
@@ -18652,6 +18562,15 @@ macro \monoespaco{W\_DEBUG\_METAFONT} is defined), then the line where
 the error happened also will be stored in \monoespaco{errno\_line}. If
 more information must be passed, depending on error nature, we can use
 the other variables to store some additional string or an integer.
+
+This means that if we allocated some string to help printing
+diagnostic messages, then we need to free the allocated memory during
+finalization:
+
+@<Finalization (struct metafont)@>=
+if(mf -> errno_str != NULL && permanent_free != NULL)
+  permanent_free(mf -> errno_str);
+@
 
 Only the first error found in a meta-font source code will be
 stored. If there are more errors, they will be ignored. All functions
@@ -18696,7 +18615,7 @@ void _Wprint_metafont_error(struct metafont *mf){
     line_number[0] = '\0';
   else
     sprintf(line_number, "%d: ", mf -> errno_line);
-  switch(mf -> errno){
+  switch(mf -> err){
   case ERROR_NO_ERROR:
     fprintf(stderr, "%s:%s No errors.\n", mf -> file, line_number);
     break;
@@ -18726,8 +18645,8 @@ moment, if any:
 @<Local Macros (metafont.c)@>+=
 #define RAISE_GENERIC_ERROR(mf, cx, line, error_code) {\
   struct context *_cx = cx;\
-  if(!mf -> errno){\
-    mf -> errno = error_code;\
+  if(!mf -> err){\
+    mf -> err = error_code;\
     mf -> errno_line = line;\
     if(cx != NULL && _cx -> current_character[0] != '\0')\
       memcpy(mf -> errno_character, _cx -> current_character, 5);}}
@@ -18744,6 +18663,46 @@ will help us to consider this information optional:
 #define OPTIONAL(x) 0
 #endif
 @
+
+\subsecao{A.X. ERROR\_FAILED\_OPENING\_FILE}
+
+@<Types of Error@>+=
+ERROR_FAILED_OPENING_FILE,
+@
+
+This error occurs when we try to read a file with source code that
+does not exist or cannot be read for some reason. To correctly report
+an error diagnostic message when we detect this type of error, we must
+store the name of the file we tried to open and the value of the
+\monoespaco{errno} variable:
+
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_FAILED_OPENING_FILE(mf, cx, line, str) {\
+  if(!mf -> err){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_FAILED_OPENING_FILE);\
+    mf -> errno_int = errno;\
+    mf -> errno_str = (char *) permanent_alloc(strlen(str)+1);\
+    memcpy(mf -> errno_str, str, sizeof(str)+1);}}
+@
+
+And when printing the error message we use this information to provide
+a diagnosis with the help of the \monoespaco{strerror} function
+applied to the saved value of \monoespaco{errno}:
+
+@<Imprime Mensagem de Erro@>=
+case ERROR_FAILED_OPENING_FILE:
+  fprintf(stderr, "%s:%s Failed opening file \"%s\":%s.", mf -> file,
+          line_number, mf -> errno_str, strerror(mf -> errno_int));
+  break;  
+@
+
+But this means that we need to include the header with
+\monoespaco{errno} support:
+
+@<Local Headers (metafont.c)@>+=
+#include <errno.h>
+@
+
 
 \subsecao{A.X. ERROR\_INVALID\_CHAR}
 
@@ -18780,7 +18739,7 @@ was found:
 
 @<Local Macros (metafont.c)@>+=
 #define RAISE_ERROR_INVALID_CHAR(mf, cx, line, str) {\
-  if(!mf -> errno){\
+  if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INVALID_CHAR);\
     mf -> errno_str = (char *) permanent_alloc(5);\
     memcpy(mf -> errno_str, str, 4);\
@@ -18918,7 +18877,7 @@ error message:
 
 @<Local Macros (metafont.c)@>+=
 #define RAISE_ERROR_UNCLOSED_STRING(mf, cx, line, str) {\
-  if(!mf -> errno){\
+  if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNCLOSED_STRING);\
     mf -> errno_str = (char *) permanent_alloc(strlen(str)+1);\
     memcpy(mf -> errno_str, str, sizeof(str)+1);}}
