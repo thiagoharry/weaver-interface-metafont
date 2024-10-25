@@ -1721,7 +1721,7 @@ if(!strcmp(buffer, "endfor")){
   if(aux_stack == NULL || aux_stack -> type != TYPE_ENDFOR){
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
-    RAISE_ERROR_UNEXPECTED_TOKEN(mf, NULL, OPTIONAL(line), TYPE_ENDFOR);
+    RAISE_ERROR_UNBALANCED_ENDING_TOKEN(mf, NULL, OPTIONAL(line), TYPE_ENDFOR);
     return false;
   }
   struct linked_token *new_token = aux_stack;
@@ -1810,8 +1810,8 @@ if(!strcmp(buffer, "elseif") || !strcmp(buffer, "else")){
      aux_stack -> link -> type == TYPE_ELSE){
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
-    RAISE_ERROR_UNEXPECTED_TOKEN(mf, NULL, line,
-                                 (buffer[4] == 'i')?TYPE_ELSEIF:TYPE_ELSE);
+    RAISE_ERROR_UNBALANCED_ENDING_TOKEN(mf, NULL, OPTIONAL(line),
+                                        (buffer[4] == 'i')?TYPE_ELSEIF:TYPE_ELSE);
     return false;
   }
   new_token = (struct linked_token *)
@@ -1856,7 +1856,7 @@ if(!strcmp(buffer, "fi")){
   if(aux_stack == NULL || aux_stack -> type != TYPE_FI){
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
-    RAISE_ERROR_UNEXPECTED_TOKEN(mf, NULL, OPTIONAL(line), TYPE_FI);
+    RAISE_ERROR_UNBALANCED_ENDING_TOKEN(mf, NULL, OPTIONAL(line), TYPE_FI);
     return false;
   }
   new_token = (struct generic_token *)
@@ -1958,7 +1958,7 @@ if(!strcmp(buffer, "endchar")){
   if(aux_stack == NULL || aux_stack -> type != TYPE_ENDCHAR){
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
-    RAISE_ERROR_UNEXPECTED_TOKEN(mf, NULL, OPTIONAL(line), TYPE_ENDCHAR);
+    RAISE_ERROR_UNBALANCED_ENDING_TOKEN(mf, NULL, OPTIONAL(line), TYPE_ENDCHAR);
     return false;
   }
   new_token = (struct generic_token *)
@@ -2407,29 +2407,7 @@ bool eval_statement(struct metafont *mf, struct context *cx,
 
 The above function will test if it is evaluating a simple or compound
 statement. If none of the above options is identified, then we should
-raise an error of unknown statement. First we will add this new type
-of error:
-
-@<Types of Error@>+=
-ERROR_UNKNOWN_STATEMENT,
-@
-
-And when raising this error, we store information about it:
-
-@<Local Macros (metafont.c)@>+=
-#define RAISE_ERROR_UNKNOWN_STATEMENT(mf, cx, line) {\
-  RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNKNOWN_STATEMENT);}
-@
-
-And if the user asks what went wrong, we print an error message:
-
-@<Print Error Message@>+=
-case ERROR_UNKNOWN_STATEMENT:
-  fprintf(stderr, "%s:%s Unknown statement. Perhaps you misspelled some "
-          "operator, forgot an assignment or placed a ';' in the wrong "
-          "place.", mf -> file, line_number);
-  break;
-@
+raise an error of unknown statement.
 
 Now let's deal with the compound statement. The first thing to recall
 is that it will be important for the language to know in which nesting
@@ -2571,11 +2549,9 @@ store as an integer with its numeric code:
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_EXPECTED_FOUND);\
     if(expected >= 10){\
       size_t _s = strlen(list_of_keywords[expected - 10]);\
-      mf -> errno_str = (char *) permanent_alloc(_s+1);\
       memcpy(mf -> errno_str, list_of_keywords[expected - 10], _s+1);\
     } else{\
       size_t _s = strlen(token_names_not_in_list_of_keywords[expected]);\
-      mf -> errno_str = (char *) permanent_alloc(_s+1);\
       memcpy(mf -> errno_str, \
              token_names_not_in_list_of_keywords[expected], _s+1);}}}
 @
@@ -2968,7 +2944,6 @@ store the string with the forbidden name for our variable:
   if(!mf -> err){\
     size_t _s = strlen(var_name);\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_SPECIAL_NAME);\
-    mf -> errno_str = (char *) permanent_alloc(_s+1);\
     memcpy(mf -> errno_str, var_name, _s+1);}}
 @
 
@@ -5394,7 +5369,6 @@ that raises it:
 #define RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, line, name) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNDECLARED_VARIABLE);\
-    mf -> errno_str = (char *) permanent_alloc(strlen(name)+1);\
     memcpy(mf -> errno_str, name, strlen(name)+1);}}
 @
 
@@ -5428,8 +5402,6 @@ variable \monoespaco{b}.
 
 @<Local Macros (metafont.c)@>+=
 #define VARIABLE_TO_STRING(name, type, str) {\
-  size_t _s = strlen(name) + 13;\
-  str = (char *) permanent_alloc(_s);\
   str[0] = '\0';\
   strcat(str, "<");\
   strcat(str, name);\
@@ -5828,10 +5800,9 @@ When this happens, we store the offending negative number as a string:
 @<Local Macros (metafont.c)@>+=
 #define RAISE_ERROR_NEGATIVE_SQUARE_ROOT(mf, cx, line, number) {\
   if(!mf -> err){\
-    mf -> errno_str = (char *) permanent_alloc(64);\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NEGATIVE_SQUARE_ROOT);\
-    snprintf(mf -> errno_str, 63, "%g", number);\
-    mf -> errno_str[63] = '\0';}}
+    snprintf(mf -> errno_str, 31, "%g", number);\
+    mf -> errno_str[31] = '\0';}}
 @
 
 And this is how we warn the user about this error:
@@ -6228,10 +6199,9 @@ that caused the problem to a string:
 @<Local Macros (metafont.c)@>+=
 #define RAISE_ERROR_NEGATIVE_LOGARITHM(mf, cx, line, number) {\
   if(!mf -> err){\
-    mf -> errno_str = (char *) permanent_alloc(64);\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NEGATIVE_LOGARITHM);\
-    snprintf(mf -> errno_str, 63, "%g", number);\
-    mf -> errno_str[63] = '\0';}}
+    snprintf(mf -> errno_str, 31, "%g", number);\
+    mf -> errno_str[31] = '\0';}}
 @
 
 And warn the user about the problem:
@@ -6474,7 +6444,6 @@ When this error happens, we store the variable name to warn the user:
 #define RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, line, name) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNINITIALIZED_VARIABLE);\
-    mf -> errno_str = (char *) permanent_alloc(strlen(name)+1);\
     memcpy(mf -> errno_str, name, strlen(name)+1);}}
 @
 
@@ -9042,10 +9011,9 @@ if we are having problem in the first (0) or in the second (1) tension. The inva
 @<Local Macros (metafont.c)@>+=
 #define RAISE_ERROR_INVALID_TENSION(mf, cx, line, value, position) {\
   if(!mf -> err){\
-    mf -> errno_str = (char *) permanent_alloc(64);\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INVALID_TENSION);\
-    snprintf(mf -> errno_str, 63, "%g", value);\
-    mf -> errno_str[63] = '\0';\
+    snprintf(mf -> errno_str, 31, "%g", value);\
+    mf -> errno_str[31] = '\0';\
     mf -> errno_int = position;}}
 @
 
@@ -17673,7 +17641,6 @@ additional data need to be stored, as the error is self evident:
 #define RAISE_ERROR_DUPLICATE_GLYPH(mf, cx, line, glyph) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_DUPLICATE_GLYPH);\
-    mf -> errno_str = (char *) permanent_alloc(strlen(glyph)+1);\
     memcpy(mf -> errno_str, glyph, strlen(glyph)+1);}}
 #define RAISE_ERROR_MALFORMED_STATEMENT(mf, cx, line, stat) {\
   if(!mf -> err){\
@@ -18345,12 +18312,10 @@ glyph that presented problems:
 #define RAISE_ERROR_UNKNOWN_GLYPH(mf, cx, line, str) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNKNOWN_GLYPH);\
-    mf -> errno_str = (char *) permanent_alloc(strlen(str)+1);\
     memcpy(mf -> errno_str, str, strlen(str)+1);}}
 #define RAISE_ERROR_RECURSIVE_RENDERCHAR(mf, cx, line, str) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_RECURSIVE_RENDERCHAR);\
-    mf -> errno_str = (char *) permanent_alloc(strlen(str)+1);\
     memcpy(mf -> errno_str, str, strlen(str)+1);}}
 @
 
@@ -18540,7 +18505,7 @@ error handling and diagnostic:
 @<Attributes (struct metafont)@>+=
   int err, errno_line; // Error code and error line
   char errno_character[5]; // Character being rendered during error
-  char *errno_str; // String with additional info
+  char errno_str[32]; // String with additional info
   int errno_int; // Integer with additional info
 @
 
@@ -18551,7 +18516,7 @@ to zero:
 @<Initialization (struct metafont)@>+=
 mf -> err = mf -> errno_line = 0;
 mf -> errno_character[0] = '\0';
-mf -> errno_str = NULL;
+memset(mf -> errno_str, 0, 32);
 mf -> errno_int = 0;
 @
 
@@ -18562,15 +18527,6 @@ macro \monoespaco{W\_DEBUG\_METAFONT} is defined), then the line where
 the error happened also will be stored in \monoespaco{errno\_line}. If
 more information must be passed, depending on error nature, we can use
 the other variables to store some additional string or an integer.
-
-This means that if we allocated some string to help printing
-diagnostic messages, then we need to free the allocated memory during
-finalization:
-
-@<Finalization (struct metafont)@>=
-if(mf -> errno_str != NULL && permanent_free != NULL)
-  permanent_free(mf -> errno_str);
-@
 
 Only the first error found in a meta-font source code will be
 stored. If there are more errors, they will be ignored. All functions
@@ -18664,6 +18620,99 @@ will help us to consider this information optional:
 #endif
 @
 
+When we print error diagnostics, it will also be important to have
+access to a function that, given a token, shows us its representation
+in string form. For most tokens, this is not difficult. Note that in
+\monoespaco{metafont.c}, we defined a list of reserved words
+identified by ``\monoespaco{\@$<$List of Reserved Words\@$>$}''. The
+order in which each reserved word was inserted in this list is the
+same order in which we defined the tokens. Except that the first
+reserved word we defined was ``\monoespaco{begingroup}'', when we had
+already defined some previous tokens. This means that if the token
+type is greater or equal than \monoespaco{TYPE\_BEGINGROUP}, we simply
+subtract this value from it and thus obtain the index corresponding to
+its reserved word. Using this rule, we can create an auxiliary
+function that produces token names from the token id number, and we
+can use this auxiliary function to help us defining a more general
+rule.
+
+To handle the simplest cases, receiving as arguments a token and a
+string to be filled (maximum size: 32), the functions would work like
+this:
+
+@<Local Function Declaration (metafont.c)@>+=
+void token_to_string(struct generic_token *tok, char *dst);
+void tokenid_to_string(int token_id, char *dst);
+@
+
+
+@<Auxiliary Local Functions (metafont.c)@>+=
+void token_to_string(struct generic_token *tok, char *dst){
+  @<token\_to\_string: More Complex Cases@>
+  tokenid_to_string(tok -> type, dst);
+  return;
+}
+void tokenid_to_string(int token_id, char *dst){
+  if(token_id >= TYPE_BEGINGROUP){
+    size_t len = strlen(list_of_keywords[token_id - TYPE_BEGINGROUP]);
+    memcpy(dst, list_of_keywords[token_id - TYPE_BEGINGROUP], len + 1);
+    return;
+  }
+}
+@
+
+The tokens with no reserved keywords are: \monoespaco{TYPE\_NUMERIC},
+\monoespaco{TYPE\_STRING}, \monoespaco{TYPE\_SYMBOLIC},
+\monoespaco{TYPE\_FOR} and \monoespaco{TYPE\_ENDFOR}.
+
+In the  case of numeric  tokens, we convert  them to string  using the
+standard library function \monoespaco{snprintf}:
+
+@<token\_to\_string: More Complex Cases@>=
+if(tok -> type == TYPE_NUMERIC){
+  snprintf(dst, 32, "%g", ((struct numeric_token *) tok) -> value);
+  return;
+}
+@
+
+In case of strings we copy their values, delimiting it with double
+quotes:
+
+@<token\_to\_string: More Complex Cases@>+=
+if(tok -> type == TYPE_STRING){
+  dst[0] = '"';
+  memcpy(&dst[1], ((struct string_token *) tok) -> value, 29);
+  strncat(dst, "\"", 2);
+  return;
+}
+@
+
+Symbolic tokens here are variable names. Dealing with them is like
+dealing with strings, but without delimiting with double quotes:
+
+@<token\_to\_string: More Complex Cases@>+=
+if(tok -> type == TYPE_SYMBOLIC){
+  memcpy(dst, ((struct symbolic_token *) tok) -> value, 32);
+  dst[31] = '\0';
+  return;
+}
+@
+
+And finally, in case of \monoespaco{for} and \monoespaco{endfor}, we
+manually fill the string with the token name:
+
+@<token\_to\_string: More Complex Cases@>+=
+if(tok -> type == TYPE_FOR){
+  memcpy(dst, "for", 4);
+  return;
+}
+if(tok -> type == TYPE_ENDFOR){
+  memcpy(dst, "endfor", 7);
+  return;
+}
+@
+
+
 \subsecao{A.X. ERROR\_FAILED\_OPENING\_FILE}
 
 @<Types of Error@>+=
@@ -18679,10 +18728,12 @@ store the name of the file we tried to open and the value of the
 @<Local Macros (metafont.c)@>+=
 #define RAISE_ERROR_FAILED_OPENING_FILE(mf, cx, line, str) {\
   if(!mf -> err){\
+    size_t _len = strlen(str) + 1;\
+    if(_len > 31) _len = 31;\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_FAILED_OPENING_FILE);\
     mf -> errno_int = errno;\
-    mf -> errno_str = (char *) permanent_alloc(strlen(str)+1);\
-    memcpy(mf -> errno_str, str, sizeof(str)+1);}}
+    memcpy(mf -> errno_str, str, _len);\
+    mf -> errno_str[31] = '\0';}}
 @
 
 And when printing the error message we use this information to provide
@@ -18741,7 +18792,6 @@ was found:
 #define RAISE_ERROR_INVALID_CHAR(mf, cx, line, str) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INVALID_CHAR);\
-    mf -> errno_str = (char *) permanent_alloc(5);\
     memcpy(mf -> errno_str, str, 4);\
     mf -> errno_str[4] = '\0';}}
 @
@@ -18859,6 +18909,41 @@ case ERROR_NO_MEMORY:
   break;
 @
 
+\subsecao{A.X. ERROR\_UNBALANCED\_ENDING\_TOKEN}
+
+@<Types of Error@>+=
+ERROR_UNBALANCED_ENDING_TOKEN,
+@
+
+This is an error, usually caught during lexical analysis, where a
+token that ends a compound statement (\monoespaco{elseif},
+\monoespaco{endif}, \monoespaco{endfor}, \monoespaco{endchar}) is
+found in a context where such a token was not supposed to be
+found. Either the beginning part of the compound statement was not
+found , or there is more than one unbalanced compound statement.
+
+If we find this error, we store the token id number from our
+unexpected closing token:
+
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_UNBALANCED_ENDING_TOKEN(mf, cx, line, tok) {\
+  if(!mf -> err){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNCLOSED_STRING);\
+    mf -> errno_int = tok;}}
+@
+
+And we print the following error message to war the user:
+
+@<Print Error Message@>=
+case ERROR_UNBALANCED_ENDING_TOKEN:
+  tokenid_to_string(mf -> errno_int, mf -> errno_str);
+  fprintf(stderr, "%s:%s Unexpected token \"%s\" found. You are trying to "
+          "close a compund command that were never opened or you have "
+	  "two or more unbalanced compound statements.", mf -> file,
+          line_number, mf -> errno_str);
+  break;
+@
+
 \subsecao{A.X. ERROR\_UNCLOSED\_STRING}
 
 @<Types of Error@>+=
@@ -18878,9 +18963,11 @@ error message:
 @<Local Macros (metafont.c)@>+=
 #define RAISE_ERROR_UNCLOSED_STRING(mf, cx, line, str) {\
   if(!mf -> err){\
+    size_t _len = strlen(str);\
+    if(_len > 32) _len = 32;\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNCLOSED_STRING);\
-    mf -> errno_str = (char *) permanent_alloc(strlen(str)+1);\
-    memcpy(mf -> errno_str, str, sizeof(str)+1);}}
+    memcpy(mf -> errno_str, str, _len);\
+    mf -> errno_str[31] = '\0';}}
 @
 
 The error message in this case only reports the incomplete string
@@ -18894,6 +18981,35 @@ case ERROR_UNCLOSED_STRING:
   break;
 @
 
+\subsecao{A.X. ERROR\_UNKNOWN\_STATEMENT}
+
+@<Types of Error@>+=
+ERROR_UNKNOWN_STATEMENT,
+@
+
+This is an error generated when we read a statement in the language,
+but we are not able to identify its type. We do not know if it is a
+compound statement, variable declaration, assignment or command.
+
+The error is too cryptic for us to be able to help the user much more
+or point out what is wrong, since we are unable to identify what the
+user intended to express. As we do not have much information about
+this error, it is generated in a very generic way:
+
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_UNKNOWN_STATEMENT(mf, cx, line) {\
+  RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNKNOWN_STATEMENT);}
+@
+
+And this is the print message if the user asks what went wrong:
+
+@<Print Error Message@>+=
+case ERROR_UNKNOWN_STATEMENT:
+  fprintf(stderr, "%s:%s Unknown statement. Perhaps you misspelled some "
+          "operator, forgot an assignment or placed a ';' in the wrong "
+          "place.", mf -> file, line_number);
+  break;
+@
 
 
 \fim
