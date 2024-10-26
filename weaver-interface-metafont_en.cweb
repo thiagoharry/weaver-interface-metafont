@@ -18560,17 +18560,13 @@ with error dignastic:
 
 @<API Functions Definition (metafont.c)@>+=
 void _Wprint_metafont_error(struct metafont *mf){
-  char *line_number;
+  char line_number[8];
   // First we try to create a string with the error line number.
-  // With this formula we compute its max size:
-  int str_size = 128;
-  //int str_size = (int)((ceil(log10(mf -> errno_line))+1)*sizeof(char));
-  line_number = (char *) temporary_alloc(str_size);
   // But if we have no line number, we keep the string empty:
   if(mf -> errno_line == 0)
     line_number[0] = '\0';
   else
-    sprintf(line_number, "%d: ", mf -> errno_line);
+    sprintf(line_number, "%d:", mf -> errno_line);
   switch(mf -> err){
   case ERROR_NO_ERROR:
     fprintf(stderr, "%s:%s No errors.\n", mf -> file, line_number);
@@ -18583,8 +18579,6 @@ void _Wprint_metafont_error(struct metafont *mf){
     fprintf(stderr, " (while rendering '%s')\n", mf -> errno_character);
   else
     fprintf(stderr, "\n");
-  if(temporary_free != NULL)
-    temporary_free(line_number);
 }
 @
 
@@ -18740,9 +18734,9 @@ And when printing the error message we use this information to provide
 a diagnosis with the help of the \monoespaco{strerror} function
 applied to the saved value of \monoespaco{errno}:
 
-@<Imprime Mensagem de Erro@>=
+@<Print Error Message@>=
 case ERROR_FAILED_OPENING_FILE:
-  fprintf(stderr, "%s:%s Failed opening file \"%s\":%s.", mf -> file,
+  fprintf(stderr, "%s:%s Failed opening file \"%s\": %s.", mf -> file,
           line_number, mf -> errno_str, strerror(mf -> errno_int));
   break;  
 @

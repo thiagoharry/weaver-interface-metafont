@@ -23,7 +23,7 @@
 
 #include <complex.h> 
 /*:158*//*731:*/
-#line 18753 "weaver-interface-metafont_en.cweb"
+#line 18747 "weaver-interface-metafont_en.cweb"
 
 #include <errno.h> 
 /*:731*/
@@ -622,7 +622,7 @@
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_RECURSIVE_RENDERCHAR);\
     memcpy(mf -> errno_str, str, strlen(str)+1);}}
 /*:712*//*720:*/
-#line 18601 "weaver-interface-metafont_en.cweb"
+#line 18595 "weaver-interface-metafont_en.cweb"
 
 #define RAISE_GENERIC_ERROR(mf, cx, line, error_code) {\
   struct context *_cx =  cx;\
@@ -632,17 +632,17 @@
     if(cx != NULL && _cx -> current_character[0] != '\0')\
       memcpy(mf -> errno_character, _cx -> current_character, 5);}}
 /*:720*//*721:*/
-#line 18615 "weaver-interface-metafont_en.cweb"
+#line 18609 "weaver-interface-metafont_en.cweb"
 
 #if defined(W_DEBUG_METAFONT)
 #define OPTIONAL(x) x
 #else
-#line 18619 "weaver-interface-metafont_en.cweb"
+#line 18613 "weaver-interface-metafont_en.cweb"
 #define OPTIONAL(x) 0
 #endif
-#line 18621 "weaver-interface-metafont_en.cweb"
+#line 18615 "weaver-interface-metafont_en.cweb"
 /*:721*//*729:*/
-#line 18728 "weaver-interface-metafont_en.cweb"
+#line 18722 "weaver-interface-metafont_en.cweb"
 
 #define RAISE_ERROR_FAILED_OPENING_FILE(mf, cx, line, str) {\
   if(!mf -> err){\
@@ -653,7 +653,7 @@
     memcpy(mf -> errno_str, str, _len);\
     mf -> errno_str[31] =  '\0';}}
 /*:729*//*733:*/
-#line 18791 "weaver-interface-metafont_en.cweb"
+#line 18785 "weaver-interface-metafont_en.cweb"
 
 #define RAISE_ERROR_INVALID_CHAR(mf, cx, line, str) {\
   if(!mf -> err){\
@@ -661,19 +661,19 @@
     memcpy(mf -> errno_str, str, 4);\
     mf -> errno_str[4] =  '\0';}}
 /*:733*//*736:*/
-#line 18897 "weaver-interface-metafont_en.cweb"
+#line 18891 "weaver-interface-metafont_en.cweb"
 
 #define RAISE_ERROR_NO_MEMORY(mf, cx, line) {\
   RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NO_MEMORY);}
 /*:736*//*739:*/
-#line 18928 "weaver-interface-metafont_en.cweb"
+#line 18922 "weaver-interface-metafont_en.cweb"
 
 #define RAISE_ERROR_UNBALANCED_ENDING_TOKEN(mf, cx, line, tok) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNCLOSED_STRING);\
     mf -> errno_int =  tok;}}
 /*:739*//*742:*/
-#line 18963 "weaver-interface-metafont_en.cweb"
+#line 18957 "weaver-interface-metafont_en.cweb"
 
 #define RAISE_ERROR_UNCLOSED_STRING(mf, cx, line, str) {\
   if(!mf -> err){\
@@ -683,7 +683,7 @@
     memcpy(mf -> errno_str, str, _len);\
     mf -> errno_str[31] =  '\0';}}
 /*:742*//*745:*/
-#line 18999 "weaver-interface-metafont_en.cweb"
+#line 18993 "weaver-interface-metafont_en.cweb"
 
 #define RAISE_ERROR_UNKNOWN_STATEMENT(mf, cx, line) {\
   RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNKNOWN_STATEMENT);}
@@ -1270,27 +1270,27 @@ ERROR_INVALID_DIMENSION_GLYPH,
 
 ERROR_UNKNOWN_GLYPH,ERROR_RECURSIVE_RENDERCHAR,
 /*:711*//*728:*/
-#line 18718 "weaver-interface-metafont_en.cweb"
+#line 18712 "weaver-interface-metafont_en.cweb"
 
 ERROR_FAILED_OPENING_FILE,
 /*:728*//*732:*/
-#line 18760 "weaver-interface-metafont_en.cweb"
+#line 18754 "weaver-interface-metafont_en.cweb"
 
 ERROR_INVALID_CHAR,
 /*:732*//*735:*/
-#line 18862 "weaver-interface-metafont_en.cweb"
+#line 18856 "weaver-interface-metafont_en.cweb"
 
 ERROR_NO_MEMORY,
 /*:735*//*738:*/
-#line 18914 "weaver-interface-metafont_en.cweb"
+#line 18908 "weaver-interface-metafont_en.cweb"
 
 ERROR_UNBALANCED_ENDING_TOKEN,
 /*:738*//*741:*/
-#line 18949 "weaver-interface-metafont_en.cweb"
+#line 18943 "weaver-interface-metafont_en.cweb"
 
 ERROR_UNCLOSED_STRING,
 /*:741*//*744:*/
-#line 18986 "weaver-interface-metafont_en.cweb"
+#line 18980 "weaver-interface-metafont_en.cweb"
 
 ERROR_UNKNOWN_STATEMENT,
 /*:744*/
@@ -2037,7 +2037,7 @@ float x,float y,float*matrix,bool erasing);
 static struct _glyph*get_glyph(struct metafont*mf,unsigned char*utf8,
 bool create_if_not_exist);
 /*:680*//*722:*/
-#line 18643 "weaver-interface-metafont_en.cweb"
+#line 18637 "weaver-interface-metafont_en.cweb"
 
 void token_to_string(struct generic_token*tok,char*dst);
 void tokenid_to_string(int token_id,char*dst);
@@ -12134,18 +12134,18 @@ INITIALIZE_GLYPH(mf->glyphs[block][i]);
 return&(mf->glyphs[block][index]);
 }
 /*:681*//*723:*/
-#line 18649 "weaver-interface-metafont_en.cweb"
+#line 18643 "weaver-interface-metafont_en.cweb"
 
 void token_to_string(struct generic_token*tok,char*dst){
 /*724:*/
-#line 18671 "weaver-interface-metafont_en.cweb"
+#line 18665 "weaver-interface-metafont_en.cweb"
 
 if(tok->type==TYPE_NUMERIC){
 snprintf(dst,32,"%g",((struct numeric_token*)tok)->value);
 return;
 }
 /*:724*//*725:*/
-#line 18681 "weaver-interface-metafont_en.cweb"
+#line 18675 "weaver-interface-metafont_en.cweb"
 
 if(tok->type==TYPE_STRING){
 dst[0]= '"';
@@ -12154,7 +12154,7 @@ strncat(dst,"\"",2);
 return;
 }
 /*:725*//*726:*/
-#line 18693 "weaver-interface-metafont_en.cweb"
+#line 18687 "weaver-interface-metafont_en.cweb"
 
 if(tok->type==TYPE_SYMBOLIC){
 memcpy(dst,((struct symbolic_token*)tok)->value,32);
@@ -12162,7 +12162,7 @@ dst[31]= '\0';
 return;
 }
 /*:726*//*727:*/
-#line 18704 "weaver-interface-metafont_en.cweb"
+#line 18698 "weaver-interface-metafont_en.cweb"
 
 if(tok->type==TYPE_FOR){
 memcpy(dst,"for",4);
@@ -12173,7 +12173,7 @@ memcpy(dst,"endfor",7);
 return;
 }
 /*:727*/
-#line 18651 "weaver-interface-metafont_en.cweb"
+#line 18645 "weaver-interface-metafont_en.cweb"
 
 tokenid_to_string(tok->type,dst);
 return;
@@ -12566,17 +12566,13 @@ return true;
 #line 18561 "weaver-interface-metafont_en.cweb"
 
 void _Wprint_metafont_error(struct metafont*mf){
-char*line_number;
+char line_number[8];
 
-
-int str_size= 128;
-
-line_number= (char*)temporary_alloc(str_size);
 
 if(mf->errno_line==0)
 line_number[0]= '\0';
 else
-sprintf(line_number,"%d: ",mf->errno_line);
+sprintf(line_number,"%d:",mf->errno_line);
 switch(mf->err){
 case ERROR_NO_ERROR:
 fprintf(stderr,"%s:%s No errors.\n",mf->file,line_number);
@@ -12801,8 +12797,15 @@ case ERROR_RECURSIVE_RENDERCHAR:
 fprintf(stderr,"%s:%s Recursive 'renderchar' in glyph \"%s\".",mf->file,
 line_number,mf->errno_str);
 break;
-/*:713*//*734:*/
-#line 18807 "weaver-interface-metafont_en.cweb"
+/*:713*//*730:*/
+#line 18737 "weaver-interface-metafont_en.cweb"
+
+case ERROR_FAILED_OPENING_FILE:
+fprintf(stderr,"%s:%s Failed opening file \"%s\": %s.",mf->file,
+line_number,mf->errno_str,strerror(mf->errno_int));
+break;
+/*:730*//*734:*/
+#line 18801 "weaver-interface-metafont_en.cweb"
 
 case ERROR_INVALID_CHAR:
 {
@@ -12854,14 +12857,14 @@ mf->file,line_number,mf->errno_str,code_point);
 break;
 }
 /*:734*//*737:*/
-#line 18905 "weaver-interface-metafont_en.cweb"
+#line 18899 "weaver-interface-metafont_en.cweb"
 
 case ERROR_NO_MEMORY:
 fprintf(stderr,"%s:%s Not enough memory for allocation.",mf->file,
 line_number);
 break;
 /*:737*//*740:*/
-#line 18937 "weaver-interface-metafont_en.cweb"
+#line 18931 "weaver-interface-metafont_en.cweb"
 
 case ERROR_UNBALANCED_ENDING_TOKEN:
 tokenid_to_string(mf->errno_int,mf->errno_str);
@@ -12871,14 +12874,14 @@ fprintf(stderr,"%s:%s Unexpected token \"%s\" found. You are trying to "
 line_number,mf->errno_str);
 break;
 /*:740*//*743:*/
-#line 18977 "weaver-interface-metafont_en.cweb"
+#line 18971 "weaver-interface-metafont_en.cweb"
 
 case ERROR_UNCLOSED_STRING:
 fprintf(stderr,"%s:%s Unclosed string \"%s\".",mf->file,
 line_number,mf->errno_str);
 break;
 /*:743*//*746:*/
-#line 19006 "weaver-interface-metafont_en.cweb"
+#line 19000 "weaver-interface-metafont_en.cweb"
 
 case ERROR_UNKNOWN_STATEMENT:
 fprintf(stderr,"%s:%s Unknown statement. Perhaps you misspelled some "
@@ -12886,7 +12889,7 @@ fprintf(stderr,"%s:%s Unknown statement. Perhaps you misspelled some "
 "place.",mf->file,line_number);
 break;
 /*:746*/
-#line 18578 "weaver-interface-metafont_en.cweb"
+#line 18574 "weaver-interface-metafont_en.cweb"
 
 default:
 fprintf(stderr,"%s:%s Unknown error.\n",mf->file,line_number);
@@ -12895,8 +12898,6 @@ if(mf->errno_character[0]!='\0')
 fprintf(stderr," (while rendering '%s')\n",mf->errno_character);
 else
 fprintf(stderr,"\n");
-if(temporary_free!=NULL)
-temporary_free(line_number);
 }
 /*:719*/
 #line 412 "weaver-interface-metafont_en.cweb"

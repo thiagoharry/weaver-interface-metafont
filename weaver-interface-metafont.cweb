@@ -18849,16 +18849,13 @@ mensagem diagnosticando o erro encontrado:
 
 @<Definição de Funções da API (metafont.c)@>+=
 void _Wprint_metafont_error(struct metafont *mf){
-  char *line_number;
+  char line_number[8];
   // Primeiro tentamos gerar uma string com o número de linha onde teve erro.
-  // Assim é como podemos calcular o tamanho desta string:
-  int str_size = 128;
-  line_number = (char *) temporary_alloc(str_size);
   // Mas se não temos um número de linha, só deixamos a string vazia:
   if(mf -> errno_line == 0)
     line_number[0] = '\0';
   else
-    sprintf(line_number, "%d: ", mf -> errno_line);
+    sprintf(line_number, "%d:", mf -> errno_line);
   switch(mf -> err){
   case ERROR_NO_ERROR:
     fprintf(stderr, "%s:%s No errors.", mf -> file, line_number);
@@ -18872,8 +18869,6 @@ void _Wprint_metafont_error(struct metafont *mf){
   }
   else
     fprintf(stderr, "\n");
-  if(temporary_free != NULL)
-    temporary_free(line_number);
 }
 @
 
@@ -19031,7 +19026,7 @@ aplicada sobre o valor salvo do \monoespaco{errno}:
 
 @<Imprime Mensagem de Erro@>=
 case ERROR_FAILED_OPENING_FILE:
-  fprintf(stderr, "%s:%s Failed opening file \"%s\":%s.", mf -> file,
+  fprintf(stderr, "%s:%s Failed opening file \"%s\": %s.", mf -> file,
           line_number, mf -> errno_str, strerror(mf -> errno_int));
   break;  
 @
@@ -19042,7 +19037,6 @@ variável \monoespaco{errno}:
 @<Cabeçalhos Locais (metafont.c)@>+=
 #include <errno.h>
 @
-
 
 \subsecao{A.X. ERROR\_INVALID\_CHAR}
 
@@ -19169,13 +19163,11 @@ vazamento de memória devido à práticas de programação questionáveis no
 programa WeaveFont. Por exemplo:
 
 \alinhacodigo
-numeric i, j;
+numeric i;
 path p;
-j = 0;
 p = (0, 0);
 for i = 0 step 0 until 1:
-  j = j + 1;
-  p = p .. (j, j*j);
+  p = p & p;
 endfor
 \alinhanormal
 

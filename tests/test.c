@@ -56,6 +56,15 @@ void assert(char *descricao, bool valor){
   }
 }
 
+// Faulty malloc stops working fter 1024 allocations:
+static int _faultycount = 0;
+void *faulty_malloc(size_t size){
+  _faultycount ++;
+  if(_faultycount > 1024)
+    return NULL;
+  return malloc(size);
+}
+
 // Random number function
 uint64_t my_rand(void){
   return 5;
@@ -2437,6 +2446,84 @@ void test_renderchar_command(void){
 }
 
 
+
+bool create_metafont(struct metafont **mf, struct context **cx, char *source){
+  FILE *fp;
+  struct generic_token *first, *last;
+  size_t ret, size;
+  *mf = NULL;
+  *cx = NULL;
+  fp = fopen("/tmp/test.mf", "w+");
+  if(fp == NULL)
+    return false;
+  size = strlen(source);
+  ret = fwrite(source, sizeof(char), size, fp);
+  fclose(fp);
+  if(ret < size)
+    return false;
+  *mf = init_metafont("/tmp/test.mf");
+  if(*mf == NULL)
+    return false;
+  *cx = init_context(*mf);
+  lexer(*mf,  "/tmp/test.mf", &first, &last);
+  return eval_program(*mf, *cx, first, last);
+}
+
+void test_errors(void){
+  char error_string[1024];
+  struct metafont *mf = NULL;
+  struct context *cx = NULL;
+  struct generic_token *first, *last;
+  // Error: No memory
+  setbuf(stderr, error_string);
+  _Wfinish_weavefont();
+  if(!_Winit_weavefont(faulty_malloc, free, malloc, free, my_rand, 2592)){
+    fprintf(stderr, "ERROR: Test cannot be done. Initialization failed.\n");
+    exit(1);
+  }
+  setbuf(stderr, error_string);
+  memset(error_string, 0, 1024);
+  create_metafont(&mf, &cx, "numeric i; path p; p = (0,0); for i = 0 step 0 until 1: p = p & p; endfor\n");
+  _Wprint_metafont_error(mf);
+  assert("Raising error if we have no memory",
+	 mf != NULL && mf -> err == ERROR_NO_MEMORY &&
+	 !strcmp(error_string, "/tmp/test.mf: Not enough memory for allocation.\n"));
+  destroy_context(mf, cx);
+  _Wdestroy_metafont(mf);
+  _Wfinish_weavefont();
+  if(!_Winit_weavefont(malloc, free, malloc, free, my_rand, 2592)){
+    fprintf(stderr, "ERROR: Test cannot be done. Initialization failed.\n");
+    exit(1);
+  }
+  // ERROR: File with source code not found
+  setbuf(stderr, error_string);
+  memset(error_string, 0, 1024);
+  mf = init_metafont("/tmp/ççç.mf");
+  if(mf != NULL)
+    cx = init_context(mf);
+  lexer(mf,  "/tmp/ççç.mf", &first, &last);
+  _Wprint_metafont_error(mf);
+  assert("Raising error when file not found", mf != NULL &&
+	 mf -> err == ERROR_FAILED_OPENING_FILE &&
+	 !strcmp(error_string, "/tmp/ççç.mf: Failed opening file \"/tmp/ççç.mf\": No such file or directory.\n"));
+  free_token_list(first);
+  destroy_context(mf, cx);
+  _Wdestroy_metafont(mf);
+  // Error: Invalid char in source code ('ç')
+  memset(error_string, 0, 1024);
+  setbuf(stderr, error_string);
+  create_metafont(&mf, &cx, "ç\n");
+  _Wprint_metafont_error(mf);
+  assert("Raising error when finding invalid character in source code",
+	 mf != NULL && mf -> err == ERROR_INVALID_CHAR &&
+	 !strcmp(error_string, "/tmp/test.mf:1: Unsupported UTF-8 character in source code: 'ç' (U+0000E7).\n"));
+  free_token_list(first);
+  destroy_context(mf, cx);
+  _Wdestroy_metafont(mf);
+  // End of error tests
+  setbuf(stderr, NULL);
+}
+
 void test_opengl(void){
   assert("No errors in OpenGL", glGetError() == GL_NO_ERROR);
 }
@@ -2467,6 +2554,7 @@ int main(int argc, char **argv){
   test_prime_computing();
   test_shipit_command();
   test_renderchar_command();
+  test_errors();
   test_opengl();
   imprime_resultado();
   _Wfinish_weavefont();
