@@ -2517,7 +2517,26 @@ void test_errors(void){
   assert("Raising error when finding invalid character in source code",
 	 mf != NULL && mf -> err == ERROR_INVALID_CHAR &&
 	 !strcmp(error_string, "/tmp/test.mf:1: Unsupported UTF-8 character in source code: 'ç' (U+0000E7).\n"));
-  free_token_list(first);
+  destroy_context(mf, cx);
+  _Wdestroy_metafont(mf);
+  // Error: Nested beginchar
+  memset(error_string, 0, 1024);
+  setbuf(stderr, error_string);
+  create_metafont(&mf, &cx, "beginchar beginchar endchar endchar\n");
+  _Wprint_metafont_error(mf);
+  assert("Raising error when finding nested 'beginchar's",
+	 mf != NULL && mf -> err == ERROR_NESTED_BEGINCHAR &&
+	 !strcmp(error_string, "/tmp/test.mf:1: You cannot nest 'beginchar' statements.\n"));
+  destroy_context(mf, cx);
+  _Wdestroy_metafont(mf);
+  // Error: Incomplete source code
+  memset(error_string, 0, 1024);
+  setbuf(stderr, error_string);
+  create_metafont(&mf, &cx, "numeric\n");
+  _Wprint_metafont_error(mf);
+  assert("Raising error if source ends in middle of statement",
+	 mf != NULL && mf -> err == ERROR_INCOMPLETE_SOURCE &&
+	 !strcmp(error_string, "/tmp/test.mf:1: Incomplete code. WeaveFont source code ended in middle of statement.\n"));
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
   // End of error tests

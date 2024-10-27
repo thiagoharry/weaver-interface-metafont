@@ -1899,7 +1899,6 @@ if(!strcmp(buffer, "beginchar")){
   beginchar_token = (struct linked_token *)
                       permanent_alloc(sizeof(struct linked_token));
   if(beginchar_token ==  NULL){
-    printf("ERRO AQUI\n");
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
     RAISE_ERROR_NO_MEMORY(mf, NULL, line);
@@ -1909,7 +1908,7 @@ if(!strcmp(buffer, "beginchar")){
     if(endchar_token -> type == TYPE_ENDCHAR){ // Error if nested 'beginchar'
       free_token_list(*first_token);
       *first_token = *last_token = NULL;
-      RAISE_ERROR_UNEXPECTED_TOKEN(mf, NULL, line, TYPE_BEGINCHAR);
+      RAISE_ERROR_NESTED_BEGINCHAR(mf, NULL, line);
       return false;
     }
     endchar_token = (struct linked_token *) (endchar_token -> next);
@@ -2884,6 +2883,10 @@ one variable being declared:
 else if(begin -> type >= TYPE_T_BOOLEAN && begin -> type <= TYPE_T_NUMERIC){
   int type = begin -> type;
   struct symbolic_token *variable = (struct symbolic_token *) (begin -> next);
+  if(variable == NULL){
+    RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, OPTIONAL(begin -> line));
+    return false;
+  }
   do{
     if(variable -> type != TYPE_SYMBOLIC){
       RAISE_ERROR_INVALID_NAME(mf, cx, OPTIONAL(variable -> line),
@@ -10163,9 +10166,14 @@ if(begin -> type == TYPE_POINT ||
                                TYPE_SEMICOLON, TYPE_OF);
     return false;
   }
-  if(of -> next == NULL || of == end){ // Expression ends after 'of':
-    RAISE_ERROR_UNEXPECTED_TOKEN(mf, cx, OPTIONAL(begin -> line),
-                                TYPE_SEMICOLON);
+  if(of -> next == NULL){ // Code ends after 'of'
+    RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, OPTIONAL(begin -> line));
+    return false;
+  }
+  if(of == end){ // Statement ends after 'of':
+    // TODO:
+    //RAISE_ERROR_UNEXPECTED_TOKEN(mf, cx, OPTIONAL(begin -> line),
+    //                            TYPE_SEMICOLON);
     return false;
   }
   begin_path = of -> next;
@@ -13670,8 +13678,7 @@ variable is found after the \monoespaco{for} token:
 {
   struct symbolic_token *var_token = (struct symbolic_token *)for_token -> next;
   if(var_token == NULL){
-    RAISE_ERROR_UNEXPECTED_TOKEN(mf, cx, OPTIONAL(var_token -> line),
-                                TYPE_SEMICOLON);
+    RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, OPTIONAL(var_token -> line));
     return false;
   }
   if(var_token -> type != TYPE_SYMBOLIC){
@@ -17629,7 +17636,7 @@ malformed (it's the first compound statement sufficiently complex to
 cause this error) and when we nest a \monoespaco{beginchar} inside another:
 
 @<Types of Error@>+=
-ERROR_DUPLICATE_GLYPH, ERROR_MALFORMED_STATEMENT, ERROR_NESTED_BEGINCHAR,
+ERROR_DUPLICATE_GLYPH, ERROR_MALFORMED_STATEMENT,
 @
 
 The macros that raise these errors in the first case must store the
@@ -17646,8 +17653,6 @@ additional data need to be stored, as the error is self evident:
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_MALFORMED_STATEMENT);\
     mf -> errno_int = stat;}}
-#define RAISE_ERROR_NESTED_BEGINCHAR(mf, cx, line) {\
-  RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NESTED_BEGINCHAR);}
 @
 
 Finally, this is the error message for each one of these errors:
@@ -17662,10 +17667,6 @@ case ERROR_MALFORMED_STATEMENT:
   fprintf(stderr,
           "%s:%s Malformed '%s' statement.", mf -> file, line_number,
           list_of_keywords[mf -> errno_int - 8]);
-  break;
-case ERROR_NESTED_BEGINCHAR:
-  fprintf(stderr,
-          "%s:%s Nested 'beginchar' statement.", mf -> file, line_number);
   break;
 @
 
@@ -18125,10 +18126,15 @@ the \monoespaco{beginchar} currently active:
 @<Statement: Command@>+=
 else if(begin -> type == TYPE_SHIPIT){
   struct picture_variable *currentpicture;
-  if(begin -> next == NULL || begin -> next -> type != TYPE_SEMICOLON){
-    RAISE_ERROR_UNEXPECTED_TOKEN(mf, cx, OPTIONAL(begin -> line),
-                                 (begin -> next == NULL)?TYPE_INVALID_TOKEN:
-                                 begin -> next -> type);
+  if(begin -> next == NULL){
+    RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, OPTIONAL(begin -> line));
+    return false;
+  }
+  if(begin -> next -> type != TYPE_SEMICOLON){
+    // TODO:
+    //RAISE_ERROR_UNEXPECTED_TOKEN(mf, cx, OPTIONAL(begin -> line),
+    //                             (begin -> next == NULL)?TYPE_INVALID_TOKEN:
+    //                             begin -> next);
     return false;
   }
   currentpicture = cx -> currentpicture;
@@ -18749,6 +18755,36 @@ But this means that we need to include the header with
 @
 
 
+\subsecao{A.X. ERROR\_INCOMPLETE\_SOURCE}
+
+@<Types of Error@>=
+ERROR_INCOMPLETE_SOURCE,
+@
+
+This error occurs whenever we are interpreting a simple statement, but
+the source code ends in the middle. It indicates that the WeaveFont
+program is incomplete, or the user has inadvertently added some
+additional characters to the end of the source code.
+
+We use the standard procedures when dealing with this error:
+
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, line) {\
+  if(!mf -> err){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INCOMPLETE_SOURCE);}}
+@
+
+And this is the error message for this error:
+
+@<Print Error Message@>=
+case ERROR_INCOMPLETE_SOURCE:
+  fprintf(stderr,
+          "%s:%s Incomplete code. WeaveFont source code ended in middle of statement.",
+	  mf -> file, line_number);
+  break;  
+@
+
+
 \subsecao{A.X. ERROR\_INVALID\_CHAR}
 
 @<Types of Error@>=
@@ -18850,6 +18886,33 @@ case ERROR_INVALID_CHAR:
 }
 @
 
+\subsecao{A.X. ERROR\_NESTED\_BEGINCHAR}
+
+@<Types of Error@>+=
+ERROR_NESTED_BEGINCHAR,
+@
+
+This error is raised when we have a \monoespaco{beginchar} statement
+nested another \monoespaco{beginchar} statement. This cannot happen
+and have no valid semantic meaning.
+
+THis is a very simple error, so we do not do nothing special besides
+the default error handling:
+
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_NESTED_BEGINCHAR(mf, cx, line) {\
+  RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NESTED_BEGINCHAR);}
+@
+
+And this is our error message when finding the error:
+
+@<Print Error Message@>=
+case ERROR_NESTED_BEGINCHAR:
+  fprintf(stderr,
+          "%s:%s You cannot nest 'beginchar' statements.", mf -> file, line_number);
+  break;
+@
+
 
 \subsecao{A.X. ERROR\_NO\_MEMORY}
 
@@ -18869,13 +18932,11 @@ external factors. But it also could be caused by memory leaks due to
 poor or questionable WeaveFont code. For example:
 
 \alinhacodigo
-numeric i, j;
+numeric i;
 path p;
-j = 0;
 p = (0, 0);
 for i = 0 step 0 until 1:
-  j = j + 1;
-  p = p .. (j, j*j);
+  p = p & p;
 endfor
 \alinhanormal
 
