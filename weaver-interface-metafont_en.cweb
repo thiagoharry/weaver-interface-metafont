@@ -2887,6 +2887,10 @@ else if(begin -> type >= TYPE_T_BOOLEAN && begin -> type <= TYPE_T_NUMERIC){
     RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, OPTIONAL(begin -> line));
     return false;
   }
+  if(begin == *end){
+    RAISE_ERROR_INCOMPLETE_STATEMENT(mf, cx, OPTIONAL(begin -> line));
+    return false;
+  }
   do{
     if(variable -> type != TYPE_SYMBOLIC){
       RAISE_ERROR_INVALID_NAME(mf, cx, OPTIONAL(variable -> line),
@@ -13480,10 +13484,14 @@ else if(begin -> type == TYPE_IF){
   // Delimiting boolean expression
   begin_bool = begin -> next;
   end_bool = begin_bool;
-  while(end_bool != *end && end_bool -> next -> type != TYPE_COLON)
+  while(end_bool != NULL && end_bool != *end && end_bool -> next -> type != TYPE_COLON)
     end_bool = end_bool -> next;
+  if(end_bool == NULL){
+    RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, OPTIONAL(begin -> line));
+    return false;
+  }
   if(end_bool == *end){
-    RAISE_ERROR_MISSING_TOKEN(mf, cx, OPTIONAL(begin -> line), TYPE_COLON);
+    RAISE_ERROR_INCOMPLETE_STATEMENT(mf, cx, OPTIONAL(begin -> line));
     return false;
   }
   // Evaluating boolean expression:
@@ -13504,7 +13512,7 @@ else if(begin -> type == TYPE_IF){
       else if(t -> type == TYPE_ELSE){
         // We found the 'else' corresponding to this 'if'
         *end = t -> next;
-        if((*end) -> type != TYPE_COLON){
+        if((*end) == NULL || (*end) -> type != TYPE_COLON){
           RAISE_ERROR_MISSING_TOKEN(mf, cx, OPTIONAL(begin -> line),
                                    TYPE_COLON);
           return false;
@@ -13515,8 +13523,13 @@ else if(begin -> type == TYPE_IF){
         // We found the 'elseif' corresponding to our 'if'
         begin_bool = t -> next;
         end_bool = begin_bool;
-        while(end_bool != *end && end_bool -> next -> type != TYPE_COLON)
+        while(end_bool != NULL && end_bool != *end &&
+	      end_bool -> next -> type != TYPE_COLON)
           end_bool = end_bool -> next;
+	if(end_bool == NULL){
+          RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, OPTIONAL(begin -> line));
+	  return false;
+        }
         if(!eval_boolean_expression(mf, cx, begin_bool, end_bool, &b))
           return false;
         if(b.value == 1){ // True: Code in 'elseif' must be evaluated
@@ -17574,14 +17587,14 @@ else if(begin -> type == TYPE_BEGINCHAR && mf -> loading){
   DECLARE_NESTING_CONTROL();
   struct _glyph *glyph;
   struct generic_token *t = begin -> next;
-  if(t -> type != TYPE_OPEN_PARENTHESIS || begin == *end){
+  if(t == NULL || t -> type != TYPE_OPEN_PARENTHESIS || begin == *end){
     RAISE_ERROR_MISSING_TOKEN(mf, cx, OPTIONAL(t -> line),
                               TYPE_OPEN_PARENTHESIS);
     return false;
   }
   if(t != *end)
     t = t -> next;
-  if(t -> type != TYPE_STRING){
+  if(t == NULL || t -> type != TYPE_STRING){
     RAISE_ERROR_MISSING_TOKEN(mf, cx, OPTIONAL(t -> line),
                               TYPE_STRING);
     return false;
@@ -18784,6 +18797,37 @@ case ERROR_INCOMPLETE_SOURCE:
   break;  
 @
 
+
+\subsecao{A.X. ERROR\_INCOMPLETE\_STATEMENT}
+
+@<Types of Error@>=
+ERROR_INCOMPLETE_STATEMENT,
+@
+
+This error happens when we are reading a statement, bu we find the end
+of the expression (a semicolon) before the statement is properly
+finished. This may happen if the user wrongly insert a semicolon in
+the middle of some statement, or if some reserved keyword in
+incorrectly placed in the statement.
+
+When we find this errror, we invoke the default error handling:
+
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_INCOMPLETE_STATEMENT(mf, cx, line) {\
+  if(!mf -> err){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INCOMPLETE_STATEMENT);}}
+@
+
+And our error message:
+
+@<Print Error Message@>=
+case ERROR_INCOMPLETE_STATEMENT:
+  fprintf(stderr,
+          "%s:%s Incomplete statement. You ended the statement with ';' before "
+	  "fully defining it.",
+	  mf -> file, line_number);
+  break;  
+@
 
 \subsecao{A.X. ERROR\_INVALID\_CHAR}
 

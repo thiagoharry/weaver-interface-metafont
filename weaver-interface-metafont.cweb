@@ -2942,6 +2942,10 @@ else if(begin -> type >= TYPE_T_BOOLEAN && begin -> type <= TYPE_T_NUMERIC){
     RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, OPTIONAL(begin -> line));
     return false;
   }
+  if(begin == *end){
+    RAISE_ERROR_INCOMPLETE_STATEMENT(mf, cx, OPTIONAL(begin -> line));
+    return false;
+  }
   do{
     if(variable -> type != TYPE_SYMBOLIC){
       RAISE_ERROR_INVALID_NAME(mf, cx, OPTIONAL(variable -> line),
@@ -13674,10 +13678,14 @@ else if(begin -> type == TYPE_IF){
   // Delimitando a expressão booleana
   begin_bool = begin -> next;
   end_bool = begin_bool;
-  while(end_bool != *end && end_bool -> next -> type != TYPE_COLON)
+  while(end_bool != NULL && end_bool != *end && end_bool -> next -> type != TYPE_COLON)
     end_bool = end_bool -> next;
+  if(end_bool == NULL){
+    RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, OPTIONAL(begin -> line));
+    return false;
+  }
   if(end_bool == *end){
-    RAISE_ERROR_MISSING_TOKEN(mf, cx, OPTIONAL(begin -> line), TYPE_COLON);
+    RAISE_ERROR_INCOMPLETE_STATEMENT(mf, cx, OPTIONAL(begin -> line));
     return false;
   }
   // Avaliando a expressão booleana:
@@ -13698,7 +13706,7 @@ else if(begin -> type == TYPE_IF){
       else if(t -> type == TYPE_ELSE){
         // Achamos o 'else' correspondente ao nosso 'if'
         *end = t -> next;
-        if((*end) -> type != TYPE_COLON){
+        if((*end) == NULL || (*end) -> type != TYPE_COLON){
           RAISE_ERROR_MISSING_TOKEN(mf, cx, OPTIONAL(begin -> line),
                                    TYPE_COLON);
           return false;
@@ -13709,8 +13717,13 @@ else if(begin -> type == TYPE_IF){
         // Achamos um 'elseif' correspondente ao nosos 'if'
         begin_bool = t -> next;
         end_bool = begin_bool;
-        while(end_bool != *end && end_bool -> next -> type != TYPE_COLON)
+        while(end_bool != NULL && end_bool != *end &&
+	      end_bool -> next -> type != TYPE_COLON)
           end_bool = end_bool -> next;
+	if(end_bool == NULL){
+          RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, OPTIONAL(begin -> line));
+	  return false;
+        }
         if(!eval_boolean_expression(mf, cx, begin_bool, end_bool, &b))
           return false;
         if(b.value == 1){ // Verdadeiro: código no 'elseif' deve ser avaliado
@@ -14040,9 +14053,6 @@ else if(begin -> type == TYPE_ENDFOR){
   return true;
 }
 @
-
-
-
 
 \secao{11. O Comando \monoespaco{pickup}}
 
@@ -17855,14 +17865,14 @@ else if(begin -> type == TYPE_BEGINCHAR && mf -> loading){
   DECLARE_NESTING_CONTROL();
   struct _glyph *glyph;
   struct generic_token *t = begin -> next;
-  if(t -> type != TYPE_OPEN_PARENTHESIS || begin == *end){
+  if(t == NULL || t -> type != TYPE_OPEN_PARENTHESIS || begin == *end){
     RAISE_ERROR_MISSING_TOKEN(mf, cx, OPTIONAL(t -> line),
                               TYPE_OPEN_PARENTHESIS);
     return false;
   }
   if(t != *end)
     t = t -> next;
-  if(t -> type != TYPE_STRING){
+  if(t == NULL || t -> type != TYPE_STRING){
     RAISE_ERROR_MISSING_TOKEN(mf, cx, OPTIONAL(t -> line),
                               TYPE_STRING);
     return false;
@@ -19067,6 +19077,37 @@ E esta é a mensagem de erro para este erro:
 case ERROR_INCOMPLETE_SOURCE:
   fprintf(stderr,
           "%s:%s Incomplete code. WeaveFont source code ended in middle of statement.",
+	  mf -> file, line_number);
+  break;  
+@
+
+\subsecao{A.X. ERROR\_INCOMPLETE\_STATEMENT}
+
+@<Tipos de Erros@>=
+ERROR_INCOMPLETE_STATEMENT,
+@
+
+Este erro ocorre quando estamos processando uma instrução, mas
+encontramos o final dela (um ponto-e-vírgula) antes dela ter sido
+realmente finalizada. Isso pode indicar que um ponto-e-vírgula foi
+inserido incorretamente no meio da expressão, ou que alguma palavra
+reservada foi usada incorretamente.
+
+Diante deste erro, invocamos o tratamento de erros padrão:
+
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_INCOMPLETE_STATEMENT(mf, cx, line) {\
+  if(!mf -> err){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INCOMPLETE_STATEMENT);}}
+@
+
+E a nossa mensagem de erro:
+
+@<Imprime Mensagem de Erro@>=
+case ERROR_INCOMPLETE_STATEMENT:
+  fprintf(stderr,
+          "%s:%s Incomplete statement. You ended the statement with ';' before "
+	  "fully defining it.",
 	  mf -> file, line_number);
   break;  
 @

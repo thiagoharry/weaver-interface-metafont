@@ -2539,6 +2539,16 @@ void test_errors(void){
 	 !strcmp(error_string, "/tmp/test.mf:1: Incomplete code. WeaveFont source code ended in middle of statement.\n"));
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
+  // Error: Incomplete statement
+  memset(error_string, 0, 1024);
+  setbuf(stderr, error_string);
+  create_metafont(&mf, &cx, "numeric;\n");
+  _Wprint_metafont_error(mf);
+  assert("Raising error for incomplete statements",
+	 mf != NULL && mf -> err == ERROR_INCOMPLETE_STATEMENT &&
+	 !strcmp(error_string, "/tmp/test.mf:1: Incomplete statement. You ended the statement with ';' before fully defining it.\n"));
+  destroy_context(mf, cx);
+  _Wdestroy_metafont(mf);
   // End of error tests
   setbuf(stderr, NULL);
 }
