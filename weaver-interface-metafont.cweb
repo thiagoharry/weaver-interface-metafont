@@ -2580,7 +2580,7 @@ bool end_nesting_level(struct metafont *mf, struct context *cx,
   }
   else if(end_tok-> type != tok -> type){
     RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL(tok -> line),
-                               end_tok -> type, tok -> type);
+                               end_tok -> type, tok);
     return false;
   }
   cx -> nesting_level --;
@@ -2591,35 +2591,7 @@ bool end_nesting_level(struct metafont *mf, struct context *cx,
 }
 @
 
-Dois erros diferentes podem ser detectados acima. Podemos ter o
-fechamento de uma instrução composta quando nenhuma instrução composta
-foi aberta ou achamos o fechamento de uma instrução, sendo que a
-última instrução que foi aberta era outra.
 
-@<Tipos de Erros@>+=
-ERROR_EXPECTED_FOUND,
-@
-
-O segundo tipo de erro é quando esperávamos encontrar um tipo de token
-simbólico, mas ao invés disso encontramos outro. Devemos então
-armazenar nas variáveis de erro qual o tipo de token que esperávamos e
-qual o tipo que achamos no lugar disso. O esperado terá seu tipo
-representado como string e o encontrado será armazenado como um
-inteiro com seu tipo:
-
-@<Macros Locais (metafont.c)@>+=
-#define RAISE_ERROR_EXPECTED_FOUND(mf, cx, line, expected, found) {\
-  if(!mf -> err){\
-    mf -> errno_int = found;\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_EXPECTED_FOUND);\
-    if(expected >= 10){\
-      size_t _s = strlen(list_of_keywords[expected - 10]);\
-      memcpy(mf -> errno_str, list_of_keywords[expected - 10], _s+1);\
-    } else{\
-      size_t _s = strlen(token_names_not_in_list_of_keywords[expected]);\
-      memcpy(mf -> errno_str, \
-             token_names_not_in_list_of_keywords[expected], _s+1);}}}
-@
 
 Na macro acima nós geramos a string correta para o tipo de token
 esperado porque cada tipo de token possui um código numérico
@@ -2643,15 +2615,6 @@ Já para imprimirmos uma mensagem de erro, fazemos o mesmo tipo de
 transformação, mas desta vez para converter para string o tipo de
 token que armazenamos como inteiro em \monoespaco{errno\_int}:
 
-@<Imprime Mensagem de Erro@>+=
-case ERROR_EXPECTED_FOUND:
-  fprintf(stderr, "%s:%s Expected '%s' token. Found '%s' token.",
-          mf -> file, line_number, mf -> errno_str,
-          ((mf -> errno_int < 8)?
-          (token_names_not_in_list_of_keywords[mf -> errno_int]):
-          (list_of_keywords[mf -> errno_int - 10])));
-  break;
-@
 
 Note que se um erro ocorrer ao interpretar código quando estamos no
 meio de uma função composta, nós podemos interromper a execução antes
@@ -2969,12 +2932,11 @@ else if(begin -> type >= TYPE_T_BOOLEAN && begin -> type <= TYPE_T_NUMERIC){
     }
     if(variable -> type != TYPE_COMMA){
       RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL(variable -> line),
-                                 TYPE_COMMA, variable -> type);
+                                 TYPE_COMMA, (struct generic_token *) variable);
       return false;
     }
     if(variable == (struct symbolic_token *) *end){ // Erro: Terminou com ','
-      RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL((*end) -> line),
-                                TYPE_SEMICOLON, TYPE_COMMA);
+      RAISE_ERROR_INCOMPLETE_STATEMENT(mf, cx, OPTIONAL((*end) -> line));
       return false;
     }
     variable = (struct symbolic_token *) (variable -> next);
@@ -5379,8 +5341,8 @@ else if(begin -> type ==  TYPE_SYMBOLIC){
   int number_of_variables = 0;
   do{
     if(var -> type != TYPE_SYMBOLIC){
-      RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL(var -> line),
-                                TYPE_SYMBOLIC, var -> type);
+      RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL(var -> line), TYPE_SYMBOLIC,
+                                 (struct generic_token *) var);
       return false;
     }
     // Variáveis como 'h', 'w', 'd', 'currentpen' e 
@@ -10342,19 +10304,12 @@ if(begin -> type == TYPE_POINT ||
     }
     end_num = end_num -> next;
   }
-  if(of == NULL){ // Não encontramos um 'of' antes do fim da expressão:
-    RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL(begin -> line),
-                               TYPE_SEMICOLON, TYPE_OF);
-    return false;
-  }
-  if(of -> next == NULL){ // Código termina após 'of'
+  if(of == NULL || of -> next == NULL){ // Código termina após 'of'
     RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, OPTIONAL(begin -> line));
     return false;
   }
   if(of == end){ // Expressão termina após 'of':
-    // TODO:
-    //RAISE_ERROR_UNEXPECTED_TOKEN(mf, cx, OPTIONAL(begin -> line),
-    //                            TYPE_SEMICOLON);
+    RAISE_ERROR_INCOMPLETE_STATEMENT(mf, cx, OPTIONAL(begin -> line));
     return false;
   }
   begin_path = of -> next;
@@ -13892,7 +13847,7 @@ numérica deve ser encontrada imediatamente após o \monoespaco{for}:
   }
   if(var_token -> type != TYPE_SYMBOLIC){
     RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL(var_token -> line),
-                              TYPE_SYMBOLIC, var_token -> type);
+                               TYPE_SYMBOLIC, (struct generic_token *) var_token);
     return false;
   }
   if(var_token -> var == NULL){
@@ -13925,7 +13880,7 @@ Depois da variável, devemos obter um token ``\monoespaco{=}'' ou
   if(current_token -> type != TYPE_ASSIGNMENT &&
      current_token -> type != TYPE_EQUAL){
     RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL(current_token -> line),
-                              TYPE_EQUAL, current_token -> type);
+                              TYPE_EQUAL, current_token);
     return false;
   }
 }
@@ -18016,7 +17971,7 @@ else if(begin -> type == TYPE_BEGINCHAR){
   str = (struct string_token *) t;
   if(str -> type != TYPE_STRING){
     RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL(begin -> line), TYPE_STRING,
-                              str -> type);
+                               (struct generic_token *) str);
     return false;
   }
   cx -> current_glyph = str -> glyph;
@@ -18424,10 +18379,7 @@ else if(begin -> type == TYPE_SHIPIT){
     return false;
   }
   if(begin -> next -> type != TYPE_SEMICOLON){
-    // TODO:
-    //RAISE_ERROR_UNEXPECTED_TOKEN(mf, cx, OPTIONAL(begin -> line),
-    //                             (begin -> next == NULL)?TYPE_INVALID_TOKEN:
-    //                             begin -> next);
+    RAISE_ERROR_UNFINISHED_STATEMENT(mf, cx, OPTIONAL(begin -> line), TYPE_SHIPIT);
     return false;
   }
   currentpicture = cx -> currentpicture;
@@ -18548,7 +18500,7 @@ usamos ela para obter o glifo a ser desenhado:
   }
   if(str -> type != TYPE_STRING){
     RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL(begin -> line), TYPE_STRING,
-                              str -> type);
+                               (struct generic_token *) str);
     return false;
   }
   if(str -> glyph != NULL)
@@ -18928,11 +18880,19 @@ tokens. Exceto que a primeira palavra reservada que definimos foi
 ``\monoespaco{begingroup}'', quando já tínhamos definido alguns tokens
 anteriores. Isso significa se o tipo de token for maior ou igual que
 \monoespaco{TYPE\_BEGINGROUP}, basta subtrair este menor valor dele e
-assim obtemos o índice correspondente à sua palavra reservada. Por
-meio desta regra, podemos fazer uma função auxiliar que produz uma
-string com o nome de um token dado o número representando o tipo de
-token e podemos usar tal função auxiliar para gerar nossa função mais
-geral.
+assim obtemos o índice correspondente à sua palavra reservada.
+
+Se o token for entre \monoespaco{TYPE\_FOR} e
+\monoespaco{TYPE\_SEMICOLON}, então ele não estará listado como
+palavra reservada. De qualquer forma, o token terá um nome único
+baseado somente em seu tipo. Por fim, tokens cuja identificação é
+menor, serão variáveis, strings e números. Descobrir a representação
+de tais tokens requer consultar a sua estrutura.
+
+Por meio destas regra, podemos fazer uma função auxiliar que produz
+uma string com o nome de um token dado o número representando o tipo
+de token e podemos usar tal função auxiliar para gerar nossa função
+mais geral.
 
 O tratamento dos casos mais simples, recebendo como argumento um token
 e uma string a ser preenchida (tamanho máximo: 32) funcionaria assim:
@@ -18949,18 +18909,43 @@ void token_to_string(struct generic_token *tok, char *dst){
   return;
 }
 void tokenid_to_string(int token_id, char *dst){
-  if(token_id >= TYPE_BEGINGROUP){
-    size_t len = strlen(list_of_keywords[token_id - TYPE_BEGINGROUP]);
-    memcpy(dst, list_of_keywords[token_id - TYPE_BEGINGROUP], len + 1);
-    return;
+  switch(token_id){
+    case TYPE_NUMERIC:
+      strcpy(dst, "<Numeric>");
+    break;
+    case TYPE_STRING:
+      strcpy(dst, "<String>");
+    break;
+    case TYPE_SYMBOLIC:
+      strcpy(dst, "<Variable>");
+    break;
+    case TYPE_FOR:
+      strcpy(dst, "for");
+    break;
+    case TYPE_ENDFOR:
+      strcpy(dst, "endfor");
+    break;
+    case TYPE_OPEN_PARENTHESIS:
+      dst[0] = '('; dst[1] = '\0';
+    break;
+    case TYPE_CLOSE_PARENTHESIS:
+      dst[0] = ')'; dst[1] = '\0';
+    break;
+    case TYPE_COMMA:
+      dst[0] = ','; dst[1] = '\0';
+    break;
+    case TYPE_SEMICOLON:
+      dst[0] = ';'; dst[1] = '\0';
+    break;
+    default:
+      if(token_id >= TYPE_BEGINGROUP){
+        size_t len = strlen(list_of_keywords[token_id - TYPE_BEGINGROUP]);
+        memcpy(dst, list_of_keywords[token_id - TYPE_BEGINGROUP], len + 1);
+        return;
+      }    
   }
 }
 @
-
-Os tokens que não tem palavras reservadas correspondentes são:
-\monoespaco{TYPE\_NUMERIC}, \monoespaco{TYPE\_STRING},
-\monoespaco{TYPE\_SYMBOLIC}, \monoespaco{TYPE\_FOR} e
-\monoespaco{TYPE\_ENDFOR}.
 
 No caso de tokens numéricos, convertemos eles para string usando a
 função da biblioteca padrão \monoespaco{snprintf}:
@@ -18996,19 +18981,40 @@ if(tok -> type == TYPE_SYMBOLIC){
 }
 @
 
-E finalmente, no caso de \monoespaco{for} e \monoespaco{endfor}, basta
-preencher diretamente o nome dos tokens:
 
-@<token\_to\_string: Casos Mais Complexos@>+=
-if(tok -> type == TYPE_FOR){
-  memcpy(dst, "for", 4);
-  return;
-}
-if(tok -> type == TYPE_ENDFOR){
-  memcpy(dst, "endfor", 7);
-  return;
-}
+\subsecao{A.X. ERROR\_EXPECTED\_FOUND}
+
+@<Tipos de Erros@>+=
+ERROR_EXPECTED_FOUND,
 @
+
+Este tipo de erro ocorre quando esperávamos encontrar um tipo de token
+em uma instrução, mas acabamos encontrando um outro tipo.
+
+Se isso ocorre, devemos armazenar como número a identificação do token
+que esperávamos encontrar e como string a representação do token
+encontrado:
+
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_EXPECTED_FOUND(mf, cx, line, expected, found) {\
+  if(!mf -> err){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_EXPECTED_FOUND);\
+    mf -> errno_int = expected;\
+    token_to_string(found, mf -> errno_str);}}
+@
+
+E com isso podemos produzir uma mensagem de erro informativa:
+
+@<Imprime Mensagem de Erro@>+=
+case ERROR_EXPECTED_FOUND:
+  char expected_name[32];
+  memset(expected_name, 0, 32);
+  tokenid_to_string(mf -> errno_int, expected_name);
+  fprintf(stderr, "%s:%s Expected '%s' token. Found '%s' instead.",
+          mf -> file, line_number, expected_name, mf -> errno_str);
+  break;
+@
+
 
 \subsecao{A.X. ERROR\_FAILED\_OPENING\_FILE}
 

@@ -2549,6 +2549,17 @@ void test_errors(void){
 	 !strcmp(error_string, "/tmp/test.mf:1: Incomplete statement. You ended the statement with ';' before fully defining it.\n"));
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
+  // Error: token different than expected
+  memset(error_string, 0, 1024);
+  setbuf(stderr, error_string);
+  create_metafont(&mf, &cx, "numeric aabaa of daaca;\n");
+  _Wprint_metafont_error(mf);
+  assert("Raising error for tokens different than expected",
+	 mf != NULL && mf -> err == ERROR_EXPECTED_FOUND &&
+	 !strcmp(error_string, "/tmp/test.mf:1: Expected ',' token. Found 'of' instead.\n"));
+  destroy_context(mf, cx);
+  _Wdestroy_metafont(mf);
+
   // End of error tests
   setbuf(stderr, NULL);
 }
