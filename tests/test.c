@@ -2568,7 +2568,17 @@ void test_errors(void){
 	 mf != NULL && mf -> err == ERROR_NO_PICKUP_PEN &&
 	 !strcmp(error_string, "/tmp/test.mf:1: After a 'pickup' command, you should use either a 'nullpen', 'pencircle', 'pensemicircle' or a pen variable.\n"));
   destroy_context(mf, cx);
-  _Wdestroy_metafont(mf);  
+  _Wdestroy_metafont(mf);
+  // Error: invalid variable name
+  memset(error_string, 0, 1024);
+  setbuf(stderr, error_string);
+  create_metafont(&mf, &cx, "numeric pickup;\n");
+  _Wprint_metafont_error(mf);
+  assert("Raising error for invalid variable name",
+	 mf != NULL && mf -> err == ERROR_INVALID_NAME &&
+	 !strcmp(error_string, "/tmp/test.mf:1: You can not use 'pickup' as a variable name: it is a reserved keyword.\n"));
+  destroy_context(mf, cx);
+  _Wdestroy_metafont(mf);
   // End of error tests
   setbuf(stderr, NULL);
 }

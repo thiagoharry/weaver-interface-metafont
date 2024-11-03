@@ -2885,18 +2885,14 @@ else if(begin -> type >= TYPE_T_BOOLEAN && begin -> type <= TYPE_T_NUMERIC){
     return false;
   }
   do{
-    if(variable -> type != TYPE_SYMBOLIC){
-      RAISE_ERROR_INVALID_NAME(mf, cx, OPTIONAL(variable -> line),
-                              variable -> type);
-      return false;
-    }
-    if(!strcmp(variable -> value, "w") || !strcmp(variable -> value, "h") ||
-       !strcmp(variable -> value, "d") ||
+    if(variable -> type != TYPE_SYMBOLIC || !strcmp(variable -> value, "w") ||
+       !strcmp(variable -> value, "h") || !strcmp(variable -> value, "d") ||
        !strcmp(variable -> value, "currentpen") ||
        !strcmp(variable -> value, "currentpicture")){
-         RAISE_ERROR_SPECIAL_NAME(mf, cx, OPTIONAL(variable -> line),
-                               variable -> value);
-         return false;
+      RAISE_ERROR_INVALID_NAME(mf, cx, OPTIONAL(variable -> line),
+			      (struct generic_token *) variable,
+			      variable -> type);
+      return false;
     }
     @<Insere Variável Declarada@>
     if(variable != (struct symbolic_token *) *end)
@@ -2918,50 +2914,6 @@ else if(begin -> type >= TYPE_T_BOOLEAN && begin -> type <= TYPE_T_NUMERIC){
   } while(variable != NULL);
   return true;
 }
-@
-
-Se alguém tentar dar um nome de palavra reservada da linguagem para
-uma variável, geramos um erro de nome inválido. Se usar o mesmo nome
-que as variáveis especiais, geramos erro de nome especial. Ambos os
-erros são parecidos, apenas o tipo de informação associada à eles muda
-ligeiramente:
-
-@<Tipos de Erros@>+=
-ERROR_INVALID_NAME, ERROR_SPECIAL_NAME,
-@
-
-Quando geramos este erro, no primeiro caso, armazenamos o tipo de
-token que encontramos no lugar de um simbólico, que tentou nomear a
-variável. No segundo caso, armazenamos uma string com o nome da
-variável reservada:
-
-@<Macros Locais (metafont.c)@>+=
-#define RAISE_ERROR_INVALID_NAME(mf, cx, line, token_type) {\
-  if(!mf -> err){\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INVALID_NAME);\
-    mf -> errno_int = token_type;}}
-#define RAISE_ERROR_SPECIAL_NAME(mf, cs, line, var_name) {\
-  if(!mf -> err){\
-    size_t _s = strlen(var_name);\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_SPECIAL_NAME);\
-    memcpy(mf -> errno_str, var_name, _s+1);}}
-@
-
-E se o usuário perguntar o quê deu errado, imprimimos uma mensagem de erro:
-
-@<Imprime Mensagem de Erro@>+=
-case ERROR_INVALID_NAME:
-  fprintf(stderr, "%s:%s You cannot name a variable with a reserved "
-          "word or with non-symbolic tokens. Found '%s' as variable "
-          "name.", mf -> file, line_number,
-          ((mf -> errno_int < 8)?
-          (token_names_not_in_list_of_keywords[mf -> errno_int]):
-          (list_of_keywords[mf -> errno_int - 8])));
-  break;
-case ERROR_SPECIAL_NAME:
-  fprintf(stderr, "%s:%s Variable '%s' is special and you cannot shadow its "
-          "definition.", mf -> file, line_number, mf -> errno_str);
-  break;
 @
 
 Criar e inserir uma variável no fragmento de código acima significa:
@@ -19208,6 +19160,52 @@ case ERROR_INVALID_CHAR:
           mf -> file, line_number, mf -> errno_str, code_point);
   break;
 }
+@
+
+\subsecao{A.X. ERROR\_INVALID\_NAME}
+
+@<Tipos de Erros@>+=
+ERROR_INVALID_NAME,
+@
+
+Este erro ocorre quando o usuário tenta dar para uma variável um nome
+não-suportado porque é o nome de uma palavra reservada, é o nome de
+uma variável especial que não pode ser sobrescrita ou então o nome
+corresponde a um token que não é simbólico. Quando este erro é
+invocado, deve-se passar qual o token não suportado que foi usado como
+nome de variável e também o seu tipo. De posse do token, armazenamos
+uma string com o seu nome:
+
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_INVALID_NAME(mf, cx, line, tok, type) {\
+  if(!mf -> err){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INVALID_NAME);\
+    token_to_string(tok, mf -> errno_str);\
+    mf -> errno_int = type;}}
+@
+
+De posse do nome do token e de seu tipo, podemos produzir uma mensagem
+de erro. A mensagem deve indicar o nome do token que não pôde ser
+usado como nome de variável, e deve indicar o motivo do por quê isso
+ocorreu. O motivo será escrito em uma string adicional:
+
+@<Imprime Mensagem de Erro@>+=
+case ERROR_INVALID_NAME:
+  char reason[128];
+  if(mf -> errno_int == TYPE_NUMERIC || mf -> errno_int == TYPE_STRING){
+    char type[16];
+    tokenid_to_string(mf -> errno_int, type);
+    sprintf(reason, "it is a %s", type);
+  }
+  else if(mf -> errno_int == TYPE_SYMBOLIC){
+    sprintf(reason,
+     "it's a special variable which cannot be shadowed by other declarations");
+  }
+  else
+    sprintf(reason, "it is a reserved keyword");
+  fprintf(stderr, "%s:%s You can not use '%s' as a variable name: %s.",
+          mf -> file, line_number, mf -> errno_str, reason);
+  break;
 @
 
 \subsecao{A.X. ERROR\_NESTED\_BEGINCHAR}
