@@ -5288,8 +5288,7 @@ else if(begin -> type ==  TYPE_SYMBOLIC){
     else if(!strcmp(var -> value, "currentpicture"))
       var -> var = (void *) cx -> currentpicture;
     if(var -> var == NULL){
-      RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, OPTIONAL(var -> line),
-                                      var -> value);
+      RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, OPTIONAL(var -> line), var);
       return false;
     }
     number_of_variables ++;
@@ -5345,7 +5344,7 @@ encontrar aqui alguns erros já definidos antes, mas há alguns novos
 como:
 
 @<Tipos de Erros@>+=
-ERROR_UNDECLARED_VARIABLE, ERROR_WRONG_VARIABLE_TYPE, ERROR_MISSING_EXPRESSION,
+ERROR_WRONG_VARIABLE_TYPE, ERROR_MISSING_EXPRESSION,
 @
 
 O primeiro erro tratado é um erro já declarado antes e ocorre quando
@@ -5359,29 +5358,7 @@ a = , = 3; % ERRO: esperava um nome de variável, obteve um ","
 
 Neste caso, um erro será gerado na segunda iteração do laço.
 
-O próximo erro que pode ocorrer é encontrarmos uma variável que não
-foi declarada na atribuição. Isso pode ocorrer com variáveis de
-qualquer posição no encadeamento. No exemplo acima, o erro seria
-gerado se a variável \monoespaco{a} não tivesse sido declarada. Este é
-um novo tipo de erro e vamos definir a macro que gera ele:
 
-@<Macros Locais (metafont.c)@>+=
-#define RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, line, name) {\
-  if(!mf -> err){\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNDECLARED_VARIABLE);\
-    memcpy(mf -> errno_str, name, strlen(name)+1);}}
-@
-
-Como armazenamos o nome da variável não declarada que encontremos,
-iremos usar esta informação para avisar o usuário que ela não está
-declarada, caso ele pergunte o quê deu errado:
-
-@<Imprime Mensagem de Erro@>+=
-case ERROR_UNDECLARED_VARIABLE:
-  fprintf(stderr, "%s:%s Variable '%s' was not declared.", mf -> file,
-          line_number, mf -> errno_str);
-  break;
-@
 
 O próximo erro detectado também é novo e pode ocorrer em código do
 tipo:
@@ -6440,7 +6417,7 @@ if(begin -> type == TYPE_SYMBOLIC){
     var = var_token -> var;
   if(var == NULL){
     RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, OPTIONAL(begin -> line),
-                                   var_token -> value);
+                                    var_token);
     return false;
   }
   if(var -> type != TYPE_T_NUMERIC){
@@ -7090,8 +7067,7 @@ if(tok -> type != TYPE_SYMBOLIC){
 }
 var = (struct pair_variable *) tok -> var;
 if(var == NULL){
-  RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, OPTIONAL(begin -> line),
-                                 tok -> value);
+  RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, OPTIONAL(begin -> line), tok);
   return false;
 }
 if(var -> type != TYPE_T_PAIR){
@@ -7767,7 +7743,7 @@ O caso mais simples é quando estamos só lendo uma variável:
 struct symbolic_token *v = (struct symbolic_token *) begin;
 struct transform_variable *content = v -> var;
 if(content == NULL){
-  RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, OPTIONAL(v -> line), v -> value);
+  RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, OPTIONAL(v -> line), v);
   return false;
 }
 if(content -> type != TYPE_T_TRANSFORM){
@@ -9988,8 +9964,7 @@ conteúdo da variável para ele:
   struct symbolic_token *v = (struct symbolic_token *) begin;
   struct path_variable *var = v -> var;
   if(var == NULL){
-    RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, OPTIONAL(begin -> line),
-                                   v -> value);
+    RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, OPTIONAL(begin -> line), v);
     return false;
   }
   if(((struct pair_variable *) var) -> type == TYPE_T_PAIR){
@@ -10716,7 +10691,7 @@ if(content == NULL){
   if(!strcmp(v -> value, "currentpen"))
     content = cx -> currentpen;
   else{
-    RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, OPTIONAL(v -> line), v -> value);
+    RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, OPTIONAL(v -> line), v);
     return false;
   }
 }
@@ -12187,7 +12162,7 @@ struct picture_variable *content = v -> var;
 if(!strcmp(v -> value, "currentpicture"))
   content = cx -> currentpicture;
 if(content == NULL){
-  RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, OPTIONAL(v -> line), v -> value);
+  RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, OPTIONAL(v -> line), v);
   return false;
 }
 if(content -> width == -1 && content -> height == -1){
@@ -13107,7 +13082,7 @@ bool eval_boolean_primary(struct metafont *mf, struct context *cx,
       struct boolean_variable *var = symbol -> var;
       if(var == NULL){
         RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, OPTIONAL(begin -> line),
-                                       symbol -> value);
+                                       symbol);
         return false;
       }
       if(var -> type != TYPE_T_BOOLEAN){
@@ -13779,7 +13754,7 @@ numérica deve ser encontrada imediatamente após o \monoespaco{for}:
   }
   if(var_token -> var == NULL){
     RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, OPTIONAL(var_token -> line),
-                                   var_token -> value);
+                                   var_token);
     return false;
   }
   control = var_token -> var;
@@ -16579,7 +16554,7 @@ else if(begin -> type == TYPE_PICKUP){
     struct pen_variable *var = (struct pen_variable *) (symbol -> var);
     if(var == NULL){
       RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, OPTIONAL(next_token -> line),
-                                      symbol -> value);
+                                      symbol);
       return false;
     }
     if(var -> type != TYPE_T_PEN){
@@ -18913,7 +18888,14 @@ neles:
 
 @<token\_to\_string: Casos Mais Complexos@>+=
 if(tok -> type == TYPE_SYMBOLIC){
-  memcpy(dst, ((struct symbolic_token *) tok) -> value, 32);
+  struct symbolic_token *symb = (struct symbolic_token *) tok;
+  size_t size = strlen(symb -> value);
+  if(size <= 31)
+    memcpy(dst, ((struct symbolic_token *) tok) -> value, size);
+  else{
+    memcpy(dst, ((struct symbolic_token *) tok) -> value, 28);
+    dst[28] = dst[29] = dst[30] = '.';
+  }
   dst[31] = '\0';
   return;
 }
@@ -19393,6 +19375,34 @@ case ERROR_UNCLOSED_STRING:
           line_number, mf -> errno_str);
   break;
 @
+
+\subsecao{A.X. ERROR\_UNDECLARED\_VARIABLE}
+
+@<Tipos de Erros@>+=
+ERROR_UNDECLARED_VARIABLE,
+@
+
+Este erro ocorre toda vez que alguém tenta usar uma variável que não
+foi declarada. Quando ele é gerado, devemos passar o nome da variável
+como argumento:
+
+
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, line, tok) {\
+  if(!mf -> err){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNDECLARED_VARIABLE);\
+    token_to_string((struct generic_token *) tok, mf -> errno_str);}}
+@
+
+E ao imprimir a mensagem de erro, indicamos o nome da variável não-declarada:
+
+@<Imprime Mensagem de Erro@>+=
+case ERROR_UNDECLARED_VARIABLE:
+  fprintf(stderr, "%s:%s Variable '%s' was not declared.", mf -> file,
+          line_number, mf -> errno_str);
+  break;
+@
+
 
 \subsecao{A.X. ERROR\_UNEXPECTED\_TOKEN}
 

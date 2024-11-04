@@ -2579,6 +2579,16 @@ void test_errors(void){
 	 !strcmp(error_string, "/tmp/test.mf:1: You can not use 'pickup' as a variable name: it is a reserved keyword.\n"));
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
+  // Error: variable not declared
+  memset(error_string, 0, 1024);
+  setbuf(stderr, error_string);
+  create_metafont(&mf, &cx, "undeclared = 5;\n");
+  _Wprint_metafont_error(mf);
+  assert("Raising error for undeclared variable",
+	 mf != NULL && mf -> err == ERROR_UNDECLARED_VARIABLE &&
+	 !strcmp(error_string, "/tmp/test.mf:1: Variable 'undeclared' was not declared.\n"));
+  destroy_context(mf, cx);
+  _Wdestroy_metafont(mf);
   // End of error tests
   setbuf(stderr, NULL);
 }
