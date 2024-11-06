@@ -5159,7 +5159,7 @@ else if(begin -> type == TYPE_SYMBOLIC){
       type = ((struct variable *) (var -> var)) -> type;
     else if(((struct variable *) (var -> var)) -> type != type){
       RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, OPTIONAL(var -> line),
-                                     var -> value, 
+                                     var, 
                                      ((struct variable *)(var -> var)) -> type,
                                      type);
       return false;
@@ -5208,7 +5208,7 @@ in a chained assignment. We can raise here some error types that were
 already defined, bu we also can produce entirely new errors like:
 
 @<Types of Error@>+=
-ERROR_WRONG_VARIABLE_TYPE, ERROR_MISSING_EXPRESSION,
+ERROR_MISSING_EXPRESSION,
 @
 
 The first possible error to be raised there was already previously
@@ -5255,23 +5255,8 @@ With this macro help, we can better represent as a string the
 offending variable in the error, giving the user all needed
 information about it. The expected type could be stored as an integer:
 
-@<Local Macros (metafont.c)@>+=
-#define RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, line, name, type, expected) {\
-  if(!mf -> err){\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_WRONG_VARIABLE_TYPE);\
-    VARIABLE_TO_STRING(name, type, mf -> errno_str);\
-    mf -> errno_int = expected;}}
-@
 
 And here we warn the user about what went wrong:
-
-@<Print Error Message@>+=
-case ERROR_WRONG_VARIABLE_TYPE:
-  fprintf(stderr, "%s:%s Found '%s', but a variable of type '%s' was expected.",
-          mf -> file, line_number, mf -> errno_str,
-          list_of_keywords[mf -> errno_int - 8]);
-  break;
-@
 
 The next error can happen only if we are in the first iteration. It
 happens if the first token is a variable name, but the second is not
@@ -6257,7 +6242,7 @@ if(begin -> type == TYPE_SYMBOLIC){
   }
   if(var -> type != TYPE_T_NUMERIC){
     RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, OPTIONAL(begin -> line),
-                                   var_token -> value, var -> type,
+                                   var_token, var -> type,
                                    TYPE_T_NUMERIC);
     return false;
   }
@@ -6904,7 +6889,7 @@ if(var == NULL){
 }
 if(var -> type != TYPE_T_PAIR){
   RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, OPTIONAL(begin -> line),
-                                  tok -> value, var -> type,
+                                  tok, var -> type,
                                   TYPE_T_PAIR);
   return false;
 }
@@ -11944,7 +11929,7 @@ if(content -> width == -1 && content -> height == -1){
   return false;
 }
 if(content -> type != TYPE_T_PICTURE){
-  RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, OPTIONAL(v -> line), v -> value, 
+  RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, OPTIONAL(v -> line), v, 
                                  ((struct variable *)(v -> var)) -> type,
                                  TYPE_T_PICTURE);
   return false;
@@ -12853,7 +12838,7 @@ bool eval_boolean_primary(struct metafont *mf, struct context *cx,
       }
       if(var -> type != TYPE_T_BOOLEAN){
         RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, OPTIONAL(begin -> line),
-                                       symbol -> value, var -> type,
+                                       symbol, var -> type,
                                        TYPE_T_BOOLEAN);
         return false;
       }
@@ -13532,7 +13517,7 @@ variable is found after the \monoespaco{for} token:
   control = var_token -> var;
   if(control -> type != TYPE_T_NUMERIC){
     RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, OPTIONAL(var_token -> line),
-                                   var_token -> value, control -> type,
+                                   var_token, control -> type,
                                    TYPE_T_NUMERIC);
     return false;
   }
@@ -16254,7 +16239,7 @@ else if(begin -> type == TYPE_PICKUP){
     }
     if(var -> type != TYPE_T_PEN){
       RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, OPTIONAL(next_token -> line),
-                                     symbol -> value, var -> type,
+                                     symbol, var -> type,
                                      TYPE_T_PEN);
       return false;
     }
@@ -19139,6 +19124,45 @@ case ERROR_UNKNOWN_STATEMENT:
   fprintf(stderr, "%s:%s Unknown statement. Perhaps you misspelled some "
           "operator, forgot an assignment or placed a ';' in the wrong "
           "place.", mf -> file, line_number);
+  break;
+@
+
+\subsecao{A.X. ERROR\_WRONG\_VARIABLE\_TYPE}
+
+@<Types of Error@>+=
+ERROR_WRONG_VARIABLE_TYPE,
+@
+
+This error occurs when we use a variable of one type when it was
+expected to be of another type. It occurs when we are going to perform
+an assignment between variables of different types or when a variable
+of one type occurs within an expression that required a variable of a
+different type. When this error is encountered, we must store the name
+of the wrong variable, its type and also the type that was expected in
+its place. Since in the C language an integer variable has at least 16
+bits, we use the first 8 bits to store the type of the variable found
+and the last 8 to store the expected type:
+
+
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, line, tok, type, expected) {\
+  if(!mf -> err){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_WRONG_VARIABLE_TYPE);\
+    token_to_string((struct generic_token *) tok, mf -> errno_str);\
+    mf -> errno_int = (type << 8) + expected;}}
+@
+
+Printing the error message requires converting the types to strings so
+that we can write them in the diagnostic message:
+
+@<Print Error Message@>+=
+case ERROR_WRONG_VARIABLE_TYPE:
+  char expected[32], found[32];
+  tokenid_to_string(mf -> errno_int & 255, expected);
+  tokenid_to_string(mf -> errno_int >> 8, found);
+  fprintf(stderr, "%s:%s Variable '%s' is a '%s' variable, but we expected a "
+          "'%s' variable.", mf -> file, line_number, mf -> errno_str,
+          found, expected);
   break;
 @
 

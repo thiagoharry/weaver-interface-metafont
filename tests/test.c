@@ -2589,6 +2589,18 @@ void test_errors(void){
 	 !strcmp(error_string, "/tmp/test.mf:1: Variable 'undeclared' was not declared.\n"));
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
+  // Error: wrong variable type
+  memset(error_string, 0, 1024);
+  setbuf(stderr, error_string);
+  create_metafont(&mf, &cx, "numeric a; picture b;\n"
+		  "b = nullpicture (10,10);\n"
+		  "a = 5 + b;");
+  _Wprint_metafont_error(mf);
+  assert("Raising error for variable with wrong type",
+	 mf != NULL && mf -> err == ERROR_WRONG_VARIABLE_TYPE &&
+	 !strcmp(error_string, "/tmp/test.mf:3: Variable 'b' is a 'picture' variable, but we expected a 'numeric' variable.\n"));
+  destroy_context(mf, cx);
+  _Wdestroy_metafont(mf);  
   // End of error tests
   setbuf(stderr, NULL);
 }

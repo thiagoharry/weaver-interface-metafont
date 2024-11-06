@@ -5296,7 +5296,7 @@ else if(begin -> type ==  TYPE_SYMBOLIC){
       type = ((struct variable *) (var -> var)) -> type;
     else if(((struct variable *) (var -> var)) -> type != type){
       RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, OPTIONAL(var -> line),
-                                     var -> value, 
+                                     var, 
                                      ((struct variable *)(var -> var)) -> type,
                                      type);
       return false;
@@ -5344,7 +5344,7 @@ encontrar aqui alguns erros já definidos antes, mas há alguns novos
 como:
 
 @<Tipos de Erros@>+=
-ERROR_WRONG_VARIABLE_TYPE, ERROR_MISSING_EXPRESSION,
+ERROR_MISSING_EXPRESSION,
 @
 
 O primeiro erro tratado é um erro já declarado antes e ocorre quando
@@ -5393,23 +5393,9 @@ erro, usando uma string para indicar tanto o nome como tipo da
 variável incorreta encontrada. O tipo esperado podemos armazenar como
 um inteiro ao gerar o erro:
 
-@<Macros Locais (metafont.c)@>+=
-#define RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, line, name, type, expected) {\
-  if(!mf -> err){\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_WRONG_VARIABLE_TYPE);\
-    VARIABLE_TO_STRING(name, type, mf -> errno_str);\
-    mf -> errno_int = expected;}}
-@
 
 E aqui avisamos ao usuário o quê deu errado:
 
-@<Imprime Mensagem de Erro@>+=
-case ERROR_WRONG_VARIABLE_TYPE:
-  fprintf(stderr, "%s:%s Found '%s', but a variable of type '%s' was expected.",
-          mf -> file, line_number, mf -> errno_str,
-          list_of_keywords[mf -> errno_int - 10]);
-  break;
-@
 
 O próximo erro ocorre somente quando estamos na primeira iteração. O
 primeiro token é um nome de variável, mas o próximo não é
@@ -6422,7 +6408,7 @@ if(begin -> type == TYPE_SYMBOLIC){
   }
   if(var -> type != TYPE_T_NUMERIC){
     RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, OPTIONAL(begin -> line),
-                                   var_token -> value, var -> type,
+                                   var_token, var -> type,
                                    TYPE_T_NUMERIC);
     return false;
   }
@@ -7072,7 +7058,7 @@ if(var == NULL){
 }
 if(var -> type != TYPE_T_PAIR){
   RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, OPTIONAL(begin -> line),
-                                  tok -> value, var -> type,
+                                  tok, var -> type,
                                   TYPE_T_PAIR);
   return false;
 }
@@ -7748,7 +7734,7 @@ if(content == NULL){
 }
 if(content -> type != TYPE_T_TRANSFORM){
   RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, OPTIONAL(v -> line),
-                                 v -> value, content -> type,
+                                 v, content -> type,
                                  TYPE_T_TRANSFORM);
   return false;
 }
@@ -9996,7 +9982,7 @@ conteúdo da variável para ele:
     return recursive_copy_points(mf, cx, temporary_alloc, &result, var, false);
   }
   else{
-    RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, OPTIONAL(v -> line), v -> value,
+    RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, OPTIONAL(v -> line), v,
                                    var -> type, TYPE_T_PATH);
     return false;
   }
@@ -10696,7 +10682,7 @@ if(content == NULL){
   }
 }
 if(content -> type != TYPE_T_PEN){
-  RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, OPTIONAL(v -> line), v -> value, 
+  RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, OPTIONAL(v -> line), v, 
                                  ((struct variable *)(v -> var)) -> type,
                                  TYPE_T_PEN);
   return false;
@@ -12170,7 +12156,7 @@ if(content -> width == -1 && content -> height == -1){
   return false;
 }
 if(content -> type != TYPE_T_PICTURE){
-  RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, OPTIONAL(v -> line), v -> value, 
+  RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, OPTIONAL(v -> line), v, 
                                  ((struct variable *)(v -> var)) -> type,
                                  TYPE_T_PICTURE);
   return false;
@@ -13087,7 +13073,7 @@ bool eval_boolean_primary(struct metafont *mf, struct context *cx,
       }
       if(var -> type != TYPE_T_BOOLEAN){
         RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, OPTIONAL(begin -> line),
-                                       symbol -> value, var -> type,
+                                       symbol, var -> type,
                                        TYPE_T_BOOLEAN);
         return false;
       }
@@ -13760,7 +13746,7 @@ numérica deve ser encontrada imediatamente após o \monoespaco{for}:
   control = var_token -> var;
   if(control -> type != TYPE_T_NUMERIC){
     RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, OPTIONAL(var_token -> line),
-                                   var_token -> value, control -> type,
+                                   var_token, control -> type,
                                    TYPE_T_NUMERIC);
     return false;
   }
@@ -16559,7 +16545,7 @@ else if(begin -> type == TYPE_PICKUP){
     }
     if(var -> type != TYPE_T_PEN){
       RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, OPTIONAL(next_token -> line),
-                                     symbol -> value, var -> type,
+                                     symbol, var -> type,
                                      TYPE_T_PEN);
       return false;
     }
@@ -19468,7 +19454,46 @@ case ERROR_UNKNOWN_STATEMENT:
   break;
 @
 
+\subsecao{A.X. ERROR\_WRONG\_VARIABLE\_TYPE}
+
+@<Tipos de Erros@>+=
+ERROR_WRONG_VARIABLE_TYPE,
+@
+
+Este erro ocorre quando usamos uma variável de um tipo quando
+esperava-se que a variável fôsse de outro tipo. Ele ocorre quando
+formos realizar uma atribuição entre variáveis de tipos diferentes ou
+então quando uma variável de um tipo ocorre dentro de uma expressão
+que requeria uma variável de tipo diferente. Quando este erro é
+encontrado, devemos armazenar o nome da variável com problema, o seu
+tipo e também qual era o tipo que esperávaos no lugar. Como na
+linguagem C uma variável inteira tem no mínimo 16 bits, usamos os 8
+primeiros bits para armazenar o tipo da variável encontrada e os 8
+últimos para armazenar o tipo esperado:
+
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, line, tok, type, expected) {\
+  if(!mf -> err){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_WRONG_VARIABLE_TYPE);\
+    token_to_string((struct generic_token *) tok, mf -> errno_str);\
+    mf -> errno_int = (type << 8) + expected;}}
+@
+
+Para imprimir a mensagem de erro, apenas temos que converter os tipos
+para strings de modo a formular a mensagem de erro:
+
+@<Imprime Mensagem de Erro@>+=
+case ERROR_WRONG_VARIABLE_TYPE:
+  char expected[32], found[32];
+  tokenid_to_string(mf -> errno_int & 255, expected);
+  tokenid_to_string(mf -> errno_int >> 8, found);
+  fprintf(stderr, "%s:%s Variable '%s' is a '%s' variable, but we expected a "
+          "'%s' variable.", mf -> file, line_number, mf -> errno_str,
+          found, expected);
+  break;
+@
+
 
 \fim
 
-*
+o*
