@@ -2600,6 +2600,16 @@ void test_errors(void){
 	 mf != NULL && mf -> err == ERROR_WRONG_VARIABLE_TYPE &&
 	 !strcmp(error_string, "/tmp/test.mf:3: Variable 'b' is a 'picture' variable, but we expected a 'numeric' variable.\n"));
   destroy_context(mf, cx);
+  _Wdestroy_metafont(mf);
+  // ERROR: Missing expression
+  memset(error_string, 0, 1024);
+  setbuf(stderr, error_string);
+  create_metafont(&mf, &cx, "numeric a;\na =;");
+  _Wprint_metafont_error(mf);
+  assert("Raising error for missing expressions",
+	 mf != NULL && mf -> err == ERROR_MISSING_EXPRESSION &&
+	 !strcmp(error_string, "/tmp/test.mf:2: Missing 'numeric' expression.\n"));
+  destroy_context(mf, cx);
   _Wdestroy_metafont(mf);  
   // End of error tests
   setbuf(stderr, NULL);

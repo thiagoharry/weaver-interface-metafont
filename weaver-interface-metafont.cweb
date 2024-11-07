@@ -5309,14 +5309,14 @@ else if(begin -> type ==  TYPE_SYMBOLIC){
       RAISE_ERROR_UNKNOWN_STATEMENT(mf, cx, OPTIONAL(begin -> line));
       return false;
     }
-    if(var != (struct symbolic_token *) end)
+    if(var != (struct symbolic_token *) *end)
       var = (struct symbolic_token *) (var -> next);
     else
       var = NULL;
   } while(var != NULL && (var -> next -> type == TYPE_EQUAL ||
                           var -> next -> type == TYPE_ASSIGNMENT));
   if(var == NULL){
-    RAISE_ERROR_MISSING_EXPRESSION(mf, cx, OPTIONAL(var -> line), type);
+    RAISE_ERROR_MISSING_EXPRESSION(mf, cx, OPTIONAL(begin -> line), type);
     return false;
   }
   begin_expression = (struct generic_token *) var;
@@ -5334,105 +5334,6 @@ else if(begin -> type ==  TYPE_SYMBOLIC){
 O código de atribuição acima será executado sempre que o primeiro
 token de uma instrução for um nome de variável. Isso só ocorre em um
 programa válido quando estamos prestes a fazer uma atribuição.
-
-O código foca-se primariamente em lidar com erros. O
-laço \monoespaco{do...while} acima serve basicamente para verificar se
-o lado esquerdo da atribuição está correto. O invariante do laço é que
-no começo de cada iteração, temos \monoespaco{var} apontando para um
-token que é a próxima variável de uma atribuição encadeada. Podemos
-encontrar aqui alguns erros já definidos antes, mas há alguns novos
-como:
-
-@<Tipos de Erros@>+=
-ERROR_MISSING_EXPRESSION,
-@
-
-O primeiro erro tratado é um erro já declarado antes e ocorre quando
-estamos em uma série de atribuições encadeadas, mas um dos tokens que
-deveria ser um nome de variável, não é. Por exemplo:
-
-\alinhaverbatim
-numeric a;
-a = , = 3; % ERRO: esperava um nome de variável, obteve um ","
-\alinhanormal
-
-Neste caso, um erro será gerado na segunda iteração do laço.
-
-
-
-O próximo erro detectado também é novo e pode ocorrer em código do
-tipo:
-
-\alinhaverbatim
-numeric a;
-picture b;
-a = b = 3; % ERRO: Variáveis de tipos diferentes na mesma atribuição
-\alinhanormal
-
-Para este tipo de erro, devemos informar ao usuário o nome da variável
-com tipo diferente do esperado, o tipo dela e qual o tipo que
-esperávamos no lugar disso. São três informações diferentes. Mas as
-duas primeiras podem ser representadas juntas. A macro abaixo gera a
-representação na forma de string de um token de nome de variável
-declarado. No exemplo acima, a representação do token \monoespaco{b}
-seria ``\monoespaco{<b:picture>}''. A macro que nos ajuda a montar tal
-representação é:
-
-@<Macros Locais (metafont.c)@>+=
-#define VARIABLE_TO_STRING(name, type, str) {\
-  str[0] = '\0';\
-  strcat(str, "<");\
-  strcat(str, name);\
-  strcat(str, ":");\
-  strcat(str, list_of_keywords[type - 8]);\
-  strcat(str, ">");}
-@
-
-Com ajuda desta macro, podemos representar melhor informações sobre o
-erro, usando uma string para indicar tanto o nome como tipo da
-variável incorreta encontrada. O tipo esperado podemos armazenar como
-um inteiro ao gerar o erro:
-
-
-E aqui avisamos ao usuário o quê deu errado:
-
-
-O próximo erro ocorre somente quando estamos na primeira iteração. O
-primeiro token é um nome de variável, mas o próximo não é
-um \monoespaco{=} nem um \monoespaco{:=}. Neste caso pode ter ocorrido
-que o usuário esqueceu de colocar a atribuição. Ou pode ser que ele
-tentou digitar algum outro comando, mas errou o nome durante a
-digitação. Neste caso é difícil produzir uma mensagem de erro útil, já
-que a causa pode ser duas coisas bem diferentes. Por isso apenas
-geramos um erro de instrução desconhecida.
-
-E finalmente, o último erro detectado no código acima, que só é
-percebido depois que o laço se encerrar, acontece quando temos uma
-atribuição incompleta como em:
-
-\alinhaverbatim
-numeric a;
-a=;
-\alinhanormal
-
-Neste caso, o usuário esqueceu de colocar uma expressão. E devemos
-armazenar o tipo de expressão esperada para avisar o usuário:
-
-@<Macros Locais (metafont.c)@>+=
-#define RAISE_ERROR_MISSING_EXPRESSION(mf, cx, line, type) {\
-  if(!mf -> err){\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_MISSING_EXPRESSION);\
-    mf -> errno_int = type;}}
-@
-
-E aqui imprimimos a mensagem com o dignóstico do erro:
-
-@<Imprime Mensagem de Erro@>+=
-case ERROR_MISSING_EXPRESSION:
-  fprintf(stderr, "%s:%s Missing %s expression.",
-          mf -> file, line_number, list_of_keywords[mf -> errno_int - 8]);
-  break;
-@
 
 \subsecao{8.1. Atribuições e Expressões Numéricas}
 
@@ -16921,7 +16822,7 @@ else if(begin -> type == TYPE_PICKCOLOR){
       end_expr = end_expr -> next;  
     }
     if(end_expr == NULL){
-      RAISE_ERROR_MISSING_EXPRESSION(mf, cx, OPTIONAL(end_expr -> line), 
+      RAISE_ERROR_MISSING_EXPRESSION(mf, cx, OPTIONAL(begin -> line), 
                                      TYPE_T_NUMERIC);
       return false;
     }
@@ -19175,6 +19076,37 @@ case ERROR_INVALID_NAME:
           mf -> file, line_number, mf -> errno_str, reason);
   break;
 @
+
+\subsecao{A.X. ERROR\_MISSING\_EXPRESSION}
+
+@<Tipos de Erros@>+=
+ERROR_MISSING_EXPRESSION,
+@
+
+Este erro ocorre sempre que esperava-se encontrar uma expressão de
+determinado tipo, mas ao invés disso, nada é encontrado. Ou então algo
+que não é tal expressão é encontrada. Por exemplo, se criamos uma
+atribuição sem nada do lado direito da expressão.
+
+Diante de tal erro, precisamos armazenar o tipo de expressão que
+esperávemos encontrar, mas não encontramos:
+
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_MISSING_EXPRESSION(mf, cx, line, type) {\
+  if(!mf -> err){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_MISSING_EXPRESSION);\
+    tokenid_to_string(type, mf -> errno_str);}}
+@
+
+E aqui imprimimos a mensagem com o dignóstico do erro:
+
+@<Imprime Mensagem de Erro@>+=
+case ERROR_MISSING_EXPRESSION:
+  fprintf(stderr, "%s:%s Missing '%s' expression.",
+          mf -> file, line_number, mf -> errno_str);
+  break;
+@
+
 
 \subsecao{A.X. ERROR\_NESTED\_BEGINCHAR}
 
