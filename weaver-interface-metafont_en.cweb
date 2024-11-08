@@ -5358,17 +5358,13 @@ this, the following macro may be useful:
 This requires two new types of error:
 
 @<Types of Error@>+=
-ERROR_UNCLOSED_DELIMITER, ERROR_UNOPENED_DELIMITER,
+ERROR_UNOPENED_DELIMITER,
 @
 
 When raising this error, we store the unclosed delimiter as an integer
 (as it is composed by a single character):
 
 @<Local Macros (metafont.c)@>+=
-#define RAISE_ERROR_UNCLOSED_DELIMITER(mf, cx, line, delimiter) {\
-  if(!mf -> err){\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNCLOSED_DELIMITER);\
-    mf -> errno_int = delimiter;}}
 #define RAISE_ERROR_UNOPENED_DELIMITER(mf, cx, line, delimiter) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNOPENED_DELIMITER);\
@@ -5378,10 +5374,6 @@ When raising this error, we store the unclosed delimiter as an integer
 And this is the error message:
 
 @<Print Error Message@>+=
-case ERROR_UNCLOSED_DELIMITER:
-  fprintf(stderr, "%s:%s Delimiter '%c' was not closed.",
-          mf -> file, line_number, mf -> errno_int);
-  break;
 case ERROR_UNOPENED_DELIMITER:
   fprintf(stderr, "%s:%s Delimiter '%c' was not previously opened.",
           mf -> file, line_number, mf -> errno_int);
@@ -18933,6 +18925,35 @@ case ERROR_UNBALANCED_ENDING_TOKEN:
           line_number, mf -> errno_str);
   break;
 @
+
+\subsecao{A.X. ERROR\_UNCLOSED\_DELIMITER}
+
+@<Types of Error@>+=
+ERROR_UNCLOSED_DELIMITER,
+@
+
+This error occurs when a delimiter such as parentheses, brackets or
+curly braces has been opened but not closed. Since each of these
+delimiters is represented by a character, when generating the error,
+the character corresponding to the delimiter that was not closed must
+be passed as the last argument:
+
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_UNCLOSED_DELIMITER(mf, cx, line, delimiter) {\
+  if(!mf -> err){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNCLOSED_DELIMITER);\
+    mf -> errno_int = delimiter;}}
+@
+
+And here we print the error message:
+
+@<Print Error Message@>+=
+case ERROR_UNCLOSED_DELIMITER:
+  fprintf(stderr, "%s:%s Delimiter '%c' was not closed.",
+          mf -> file, line_number, mf -> errno_int);
+  break;
+@
+
 
 \subsecao{A.X. ERROR\_UNCLOSED\_STRING}
 

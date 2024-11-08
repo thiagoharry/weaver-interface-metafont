@@ -5502,17 +5502,13 @@ macro pode ser usada:
 Essa checagem requer que definamos dois novos tipos de erro:
 
 @<Tipos de Erros@>+=
-ERROR_UNCLOSED_DELIMITER, ERROR_UNOPENED_DELIMITER,
+ERROR_UNOPENED_DELIMITER,
 @
 
 Ao gerar este erro, o delimitador que não foi fechado ou que não foi
 aberto será armazenado como um inteiro contendo o caractere:
 
 @<Macros Locais (metafont.c)@>+=
-#define RAISE_ERROR_UNCLOSED_DELIMITER(mf, cx, line, delimiter) {\
-  if(!mf -> err){\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNCLOSED_DELIMITER);\
-    mf -> errno_int = delimiter;}}
 #define RAISE_ERROR_UNOPENED_DELIMITER(mf, cx, line, delimiter) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNOPENED_DELIMITER);\
@@ -5522,10 +5518,6 @@ aberto será armazenado como um inteiro contendo o caractere:
 Esta é a mensagem de diagnóstico deste erro:
 
 @<Imprime Mensagem de Erro@>+=
-case ERROR_UNCLOSED_DELIMITER:
-  fprintf(stderr, "%s:%s Delimiter '%c' was not closed.",
-          mf -> file, line_number, mf -> errno_int);
-  break;
 case ERROR_UNOPENED_DELIMITER:
   fprintf(stderr, "%s:%s Delimiter '%c' was not previously opened.",
           mf -> file, line_number, mf -> errno_int);
@@ -19254,6 +19246,34 @@ case ERROR_UNBALANCED_ENDING_TOKEN:
           "close a compund command that were never opened or you have "
 	  "two or more unbalanced compound statements.", mf -> file,
           line_number, mf -> errno_str);
+  break;
+@
+
+\subsecao{A.X. ERROR\_UNCLOSED\_DELIMITER}
+
+@<Tipos de Erros@>+=
+ERROR_UNCLOSED_DELIMITER,
+@
+
+Este erro ocorre quando um delimitador como parênteses, colchetes ou
+chaves foi aberto, mas não foi fechado. Como cada um destes
+delimitadores é representado por um caractere, ao gerar o erro,
+deve-se passar como último argumento o caractere correspondente ao
+delimitador que não foi encerrado:
+
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_UNCLOSED_DELIMITER(mf, cx, line, delimiter) {\
+  if(!mf -> err){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNCLOSED_DELIMITER);\
+    mf -> errno_int = delimiter;}}
+@
+
+E aqui imprimimos a mensagem de erro:
+
+@<Imprime Mensagem de Erro@>+=
+case ERROR_UNCLOSED_DELIMITER:
+  fprintf(stderr, "%s:%s Delimiter '%c' was not closed.",
+          mf -> file, line_number, mf -> errno_int);
   break;
 @
 
