@@ -2611,7 +2611,7 @@ void test_errors(void){
 	 !strcmp(error_string, "/tmp/test.mf:2: Missing 'numeric' expression.\n"));
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
-  // ERROR: Unclosed delimitere:
+  // ERROR: Unclosed delimiter:
   memset(error_string, 0, 1024);
   setbuf(stderr, error_string);
   create_metafont(&mf, &cx, "numeric a;\na = (1;");
@@ -2619,6 +2619,16 @@ void test_errors(void){
   assert("Raising error for unclosed delimiter",
 	 mf != NULL && mf -> err == ERROR_UNCLOSED_DELIMITER &&
 	 !strcmp(error_string, "/tmp/test.mf:2: Delimiter '(' was not closed.\n"));
+  destroy_context(mf, cx);
+  _Wdestroy_metafont(mf);
+  // ERROR: Unopened delimiter
+  memset(error_string, 0, 1024);
+  setbuf(stderr, error_string);
+  create_metafont(&mf, &cx, "numeric a;\na = 1];");
+  _Wprint_metafont_error(mf);
+  assert("Raising error for unopened delimiter",
+	 mf != NULL && mf -> err == ERROR_UNOPENED_DELIMITER &&
+	 !strcmp(error_string, "/tmp/test.mf:2: Delimiter ']' was not previously opened.\n"));
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);  
   // End of error tests

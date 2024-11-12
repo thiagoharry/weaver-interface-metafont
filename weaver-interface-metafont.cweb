@@ -5499,39 +5499,14 @@ macro pode ser usada:
     return false;}}
 @
 
-Essa checagem requer que definamos dois novos tipos de erro:
-
-@<Tipos de Erros@>+=
-ERROR_UNOPENED_DELIMITER,
-@
-
-Ao gerar este erro, o delimitador que não foi fechado ou que não foi
-aberto será armazenado como um inteiro contendo o caractere:
-
-@<Macros Locais (metafont.c)@>+=
-#define RAISE_ERROR_UNOPENED_DELIMITER(mf, cx, line, delimiter) {\
-  if(!mf -> err){\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNOPENED_DELIMITER);\
-    mf -> errno_int = delimiter;}}
-@
-
-Esta é a mensagem de diagnóstico deste erro:
-
-@<Imprime Mensagem de Erro@>+=
-case ERROR_UNOPENED_DELIMITER:
-  fprintf(stderr, "%s:%s Delimiter '%c' was not previously opened.",
-          mf -> file, line_number, mf -> errno_int);
-  break;
-@
-
-Isso não detecta todos os erros possíveis envolvendo
-delimitadores. Por exemplo, podemos ter um ``\monoespaco{($\{$)$\}$}''
-que está errado, mas que não seria detectado. Tais tipos de erro serão
-detectados futuramente. No momento só estamos nos preocupando com
-delimitadores porque temos que identificar quando um operador está
-fora dele para ser considerado um operador de expressão terciária. E
-somente erros que nos impeçam de identificar isso corretamente serão
-tratados.
+Note que a checagem de erros acima não detecta todos os erros
+possíveis envolvendo delimitadores. Por exemplo, podemos ter um
+``\monoespaco{($\{$)$\}$}'' que está errado, mas que não seria
+detectado. Tais tipos de erro serão detectados futuramente. No momento
+só estamos nos preocupando com delimitadores porque temos que
+identificar quando um operador está fora dele para ser considerado um
+operador de expressão terciária. E somente erros que nos impeçam de
+identificar isso corretamente serão tratados.
 
 Em uma expressão terciária, tudo que estiver do lado esquerdo do
 operador terciário mais à direita deve ser avaliado recursivamente
@@ -5554,7 +5529,7 @@ inverteria o sinal do elemento a seguir. Não está ocorrendo soma ou
 subtração alguma.
 
 Este caso ocorre quando o \monoespaco{+} ou \monoespaco{-} estiverem
-ben no começo da expressão numérica, ou então caso sejam precedidos
+bem no começo da expressão numérica, ou então caso sejam precedidos
 por vírgula, abrir de colchetes, símbolo de multiplicação, divisão,
 outro operador terciário ou então um dos tokens seguintes que veremos
 mais
@@ -5563,7 +5538,7 @@ adiante: \monoespaco{length}, \monoespaco{sqrt}, \monoespaco{sind},
 \monoespaco{floor},  \monoespaco{uniformdeviate}, \monoespaco{rotated},
 \monoespaco{shifted}, \monoespaco{slanted}, \monoespaco{xscaled},
 \monoespaco{yscaled}, \monoespaco{zscaled}, \monoespaco{of}, \monoespaco{point},
-\monoespaco{precontrol} ou \monoespaco{postcontrol}.
+\monoespaco{precontrol},  \monoespaco{postcontrol} ou \monoespaco{uniformdeviate}.
 
 Se nós temos um token anterior (\monoespaco{prev}) e um atual
 (\monoespaco{cur}), podemos checar se ele representa uma adição ou
@@ -19405,6 +19380,36 @@ case ERROR_UNKNOWN_STATEMENT:
           "place.", mf -> file, line_number);
   break;
 @
+
+\subsecao{A.X. ERROR\_UNOPENED\_DELIMITER}
+
+@<Tipos de Erros@>+=
+ERROR_UNOPENED_DELIMITER,
+@
+
+Esta mensagem de erro ocorre quando encontramos o fechamento de um
+delimitador (fechar parênteses, colchetes ou chaves) quando tal
+delimitador não foi aberto.
+
+Quando este erro é gerado, devemos informar o caractere do delimitador
+sendo fechado que encontramos e que gerou o problema:
+
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_UNOPENED_DELIMITER(mf, cx, line, delimiter) {\
+  if(!mf -> err){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNOPENED_DELIMITER);\
+    mf -> errno_int = delimiter;}}
+@
+
+Esta é a mensagem de diagnóstico deste erro:
+
+@<Imprime Mensagem de Erro@>+=
+case ERROR_UNOPENED_DELIMITER:
+  fprintf(stderr, "%s:%s Delimiter '%c' was not previously opened.",
+          mf -> file, line_number, mf -> errno_int);
+  break;
+@
+
 
 \subsecao{A.X. ERROR\_WRONG\_VARIABLE\_TYPE}
 

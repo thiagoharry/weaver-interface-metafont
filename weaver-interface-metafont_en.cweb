@@ -5355,38 +5355,13 @@ this, the following macro may be useful:
     return false;}}
 @
 
-This requires two new types of error:
-
-@<Types of Error@>+=
-ERROR_UNOPENED_DELIMITER,
-@
-
-When raising this error, we store the unclosed delimiter as an integer
-(as it is composed by a single character):
-
-@<Local Macros (metafont.c)@>+=
-#define RAISE_ERROR_UNOPENED_DELIMITER(mf, cx, line, delimiter) {\
-  if(!mf -> err){\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNOPENED_DELIMITER);\
-    mf -> errno_int = delimiter;}}
-@
-
-And this is the error message:
-
-@<Print Error Message@>+=
-case ERROR_UNOPENED_DELIMITER:
-  fprintf(stderr, "%s:%s Delimiter '%c' was not previously opened.",
-          mf -> file, line_number, mf -> errno_int);
-  break;
-@
-
-This does not detect all possible errors involving delimiters. For
-example, we may get a ``\monoespaco{($\{$)$\}$}'', which is wrong, but
-we cannot detect. We will worry about this later. For now, we are
-caring about delimiters only because we need to check for operators
-outside them to correctly find the operators in tertiary expressions,
-and we will worry only about errors that would prevent us to detect
-this.
+The above error checking do not detect all possible errors involving
+delimiters. For example, we may get a ``\monoespaco{($\{$)$\}$}'',
+which is wrong, but we cannot detect. We will worry about this
+later. For now, we are caring about delimiters only because we need to
+check for operators outside them to correctly find the operators in
+tertiary expressions, and we will worry only about errors that would
+prevent us to detect this.
 
 In a tertiary expression, everything in the left side of the rightmost
 tertiary operator should be recursively evaluated as another tertiary
@@ -19082,6 +19057,36 @@ case ERROR_UNKNOWN_STATEMENT:
           "place.", mf -> file, line_number);
   break;
 @
+
+\subsecao{A.X. ERROR\_UNOPENED\_DELIMITER}
+
+@<Types of Error@>+=
+ERROR_UNOPENED_DELIMITER,
+@
+
+Esta mensagem de erro ocorre quando encontramos o fechamento de um
+delimitador (fechar parênteses, colchetes ou chaves) quando tal
+delimitador não foi aberto.
+
+Quando este erro é gerado, devemos informar o caractere do delimitador
+sendo fechado que encontramos e que gerou o problema:
+
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_UNOPENED_DELIMITER(mf, cx, line, delimiter) {\
+  if(!mf -> err){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNOPENED_DELIMITER);\
+    mf -> errno_int = delimiter;}}
+@
+
+Esta é a mensagem de diagnóstico deste erro:
+
+@<Print Error Message@>+=
+case ERROR_UNOPENED_DELIMITER:
+  fprintf(stderr, "%s:%s Delimiter '%c' was not previously opened.",
+          mf -> file, line_number, mf -> errno_int);
+  break;
+@
+
 
 \subsecao{A.X. ERROR\_WRONG\_VARIABLE\_TYPE}
 
