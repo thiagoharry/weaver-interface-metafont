@@ -2630,6 +2630,16 @@ void test_errors(void){
 	 mf != NULL && mf -> err == ERROR_UNOPENED_DELIMITER &&
 	 !strcmp(error_string, "/tmp/test.mf:2: Delimiter ']' was not previously opened.\n"));
   destroy_context(mf, cx);
+  _Wdestroy_metafont(mf);
+  // ERROR: Negative square root
+  memset(error_string, 0, 1024);
+  setbuf(stderr, error_string);
+  create_metafont(&mf, &cx, "numeric a;\na = sqrt(-1);");
+  _Wprint_metafont_error(mf);
+  assert("Raising error for square root of negative number",
+	 mf != NULL && mf -> err == ERROR_NEGATIVE_SQUARE_ROOT &&
+	 !strcmp(error_string, "/tmp/test.mf:2: Tried to compute square root of negative value '-1'.\n"));
+  destroy_context(mf, cx);
   _Wdestroy_metafont(mf);  
   // End of error tests
   setbuf(stderr, NULL);

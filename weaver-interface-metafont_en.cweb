@@ -5485,33 +5485,6 @@ bool eval_numeric_expression(struct metafont *mf, struct context *cx,
 }
 @
 
-Notice that an error may happen in the code above when evaluating
-pitagorig subtraction. We may get the square root of a negative
-number. In this case, we get the following new type of error:
-
-@<Types of Error@>+=
-ERROR_NEGATIVE_SQUARE_ROOT,
-@
-
-When this happens, we store the offending negative number as a string:
-
-@<Local Macros (metafont.c)@>+=
-#define RAISE_ERROR_NEGATIVE_SQUARE_ROOT(mf, cx, line, number) {\
-  if(!mf -> err){\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NEGATIVE_SQUARE_ROOT);\
-    snprintf(mf -> errno_str, 31, "%g", number);\
-    mf -> errno_str[31] = '\0';}}
-@
-
-And this is how we warn the user about this error:
-
-@<Print Error Message@>+=
-case ERROR_NEGATIVE_SQUARE_ROOT:
-  fprintf(stderr, "%s:%s Tried to compute square root of negative value '%s'.",
-          mf -> file, line_number, mf -> errno_str);
-  break;
-@
-
 \subsubsecao{8.1.2. Multiplication and Division}
 
 The rules to deal with secondary numeric expressions are:
@@ -18754,6 +18727,34 @@ case ERROR_MISSING_EXPRESSION:
           mf -> file, line_number, mf -> errno_str);
   break;
 @
+
+\subsecao{A.X. ERROR\_NEGATIVE\_SQUARE_ROOT}
+
+@<Types of Error@>+=
+ERROR_NEGATIVE_SQUARE_ROOT,
+@
+
+This error occurs whenever you try to calculate the square root of a
+negative number. When this occurs, you must store a string
+representation of the negative number that caused the problem:
+
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_NEGATIVE_SQUARE_ROOT(mf, cx, line, number) {\
+  if(!mf -> err){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NEGATIVE_SQUARE_ROOT);\
+    snprintf(mf -> errno_str, 31, "%g", number);\
+    mf -> errno_str[31] = '\0';}}
+@
+
+This is the error message for the user:
+
+@<Print Error Message@>+=
+case ERROR_NEGATIVE_SQUARE_ROOT:
+  fprintf(stderr, "%s:%s Tried to compute square root of negative value '%s'.",
+          mf -> file, line_number, mf -> errno_str);
+  break;
+@
+
 
 \subsecao{A.X. ERROR\_NESTED\_BEGINCHAR}
 

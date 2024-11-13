@@ -5634,34 +5634,6 @@ bool eval_numeric_expression(struct metafont *mf, struct context *cx,
 }
 @
 
-Note que pode ocorrer um erro acima ao tentarmos avaliar a subtração
-pitagórica de dois números. Podemos obter a raíz quadrada de um número
-negativo. Neste caso temos o seguinte novo tipo de erro:
-
-@<Tipos de Erros@>+=
-ERROR_NEGATIVE_SQUARE_ROOT,
-@
-
-Quando isso ocorre, armazenamos o número negativo cuja raíz quadrada
-tentamos obter na forma de uma string:
-
-@<Macros Locais (metafont.c)@>+=
-#define RAISE_ERROR_NEGATIVE_SQUARE_ROOT(mf, cx, line, number) {\
-  if(!mf -> err){\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NEGATIVE_SQUARE_ROOT);\
-    snprintf(mf -> errno_str, 31, "%g", number);\
-    mf -> errno_str[31] = '\0';}}
-@
-
-E esta é a mensagem impressa para o usuário:
-
-@<Imprime Mensagem de Erro@>+=
-case ERROR_NEGATIVE_SQUARE_ROOT:
-  fprintf(stderr, "%s:%s Tried to compute square root of negative value '%s'.",
-          mf -> file, line_number, mf -> errno_str);
-  break;
-@
-
 \subsubsecao{8.1.2. Multiplicação e Divisão}
 
 As regras para lidar com expressões secundárias são:
@@ -19074,6 +19046,32 @@ case ERROR_MISSING_EXPRESSION:
   break;
 @
 
+\subsecao{A.X. ERROR\_NEGATIVE\_SQUARE_ROOT}
+
+@<Tipos de Erros@>+=
+ERROR_NEGATIVE_SQUARE_ROOT,
+@
+
+Este erro ocorre toda vez que tenta-se calcular a raíz quadrada de um
+número negativo. Quando isso ocorre, devemos armazenar uma
+representação em string do número negativo que causou os problemas:
+
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_NEGATIVE_SQUARE_ROOT(mf, cx, line, number) {\
+  if(!mf -> err){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NEGATIVE_SQUARE_ROOT);\
+    snprintf(mf -> errno_str, 31, "%g", number);\
+    mf -> errno_str[31] = '\0';}}
+@
+
+E esta é a mensagem impressa para o usuário:
+
+@<Imprime Mensagem de Erro@>+=
+case ERROR_NEGATIVE_SQUARE_ROOT:
+  fprintf(stderr, "%s:%s Tried to compute square root of negative value '%s'.",
+          mf -> file, line_number, mf -> errno_str);
+  break;
+@
 
 \subsecao{A.X. ERROR\_NESTED\_BEGINCHAR}
 
