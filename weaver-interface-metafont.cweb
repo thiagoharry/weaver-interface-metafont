@@ -5752,29 +5752,6 @@ numeric a;
 a=(4*{8)+3}+1;
 \alinhanormal
 
-Vamos agora adicionar o novo erro que podemos encontrar de divisão por
-zero:
-
-@<Tipos de Erros@>+=
-ERROR_DIVISION_BY_ZERO,
-@
-
-Não é necessário adicionar qualquer informação adicional para reportar
-este erro:
-
-@<Macros Locais (metafont.c)@>+=
-#define RAISE_ERROR_DIVISION_BY_ZERO(mf, cx, line) {\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_DIVISION_BY_ZERO);}
-@
-
-E esta é a mensagem de diagnóstico:
-
-@<Imprime Mensagem de Erro@>+=
-case ERROR_DIVISION_BY_ZERO:
-  fprintf(stderr, "%s:%s Division by zero.", mf -> file, line_number);
-  break;
-@
-
 \subsubsecao{8.1.3. Módulo, Seno, Cosseno, Exponenciais, Piso e Aleatórios Uniformes}
 
 As regras de expressões numéricas primárias são:
@@ -18725,6 +18702,28 @@ if(tok -> type == TYPE_SYMBOLIC){
   dst[31] = '\0';
   return;
 }
+@
+
+\subsecao{A.X. ERROR\_DIVISION\_BY\_ZERO}
+
+@<Tipos de Erros@>+=
+ERROR_DIVISION_BY_ZERO,
+@
+
+Ao encontrar este erro, apenas invocamos o procedimento padrão, sem
+precisar passar qualquer outra informação.
+
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_DIVISION_BY_ZERO(mf, cx, line) {\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_DIVISION_BY_ZERO);}
+@
+
+E esta é a mensagem de diagnóstico:
+
+@<Imprime Mensagem de Erro@>+=
+case ERROR_DIVISION_BY_ZERO:
+  fprintf(stderr, "%s:%s Division by zero.", mf -> file, line_number);
+  break;
 @
 
 

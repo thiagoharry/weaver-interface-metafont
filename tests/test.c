@@ -2640,6 +2640,16 @@ void test_errors(void){
 	 mf != NULL && mf -> err == ERROR_NEGATIVE_SQUARE_ROOT &&
 	 !strcmp(error_string, "/tmp/test.mf:2: Tried to compute square root of negative value '-1'.\n"));
   destroy_context(mf, cx);
+  _Wdestroy_metafont(mf);
+  // ERROR: Division by zero
+  memset(error_string, 0, 1024);
+  setbuf(stderr, error_string);
+  create_metafont(&mf, &cx, "numeric a;\na = 2/0;");
+  _Wprint_metafont_error(mf);
+  assert("Raising error for division by zero",
+	 mf != NULL && mf -> err == ERROR_DIVISION_BY_ZERO &&
+	 !strcmp(error_string, "/tmp/test.mf:2: Division by zero.\n"));
+  destroy_context(mf, cx);
   _Wdestroy_metafont(mf);  
   // End of error tests
   setbuf(stderr, NULL);

@@ -5597,28 +5597,6 @@ numeric a;
 a=(4*{8)+3}+1;
 \alinhanormal
 
-Now we will add the new error caused by division by zero, which can
-also happen when we evaluate a division:
-
-@<Types of Error@>+=
-ERROR_DIVISION_BY_ZERO,
-@
-
-When raising this error, no additional information needs to be stored:
-
-@<Local Macros (metafont.c)@>+=
-#define RAISE_ERROR_DIVISION_BY_ZERO(mf, cx, line) {\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_DIVISION_BY_ZERO);}
-@
-
-And this is the diagnostic message:
-
-@<Print Error Message@>+=
-case ERROR_DIVISION_BY_ZERO:
-  fprintf(stderr, "%s:%s Division by zero.", mf -> file, line_number);
-  break;
-@
-
 \subsubsecao{8.1.3. Modulus, Sine, Cosine, Exponentials, Floor and
   Random Uniform Values}
 
@@ -18411,6 +18389,29 @@ if(tok -> type == TYPE_SYMBOLIC){
   return;
 }
 @
+
+\subsecao{A.X. ERROR\_DIVISION\_BY\_ZERO}
+
+@<Types of Error@>+=
+ERROR_DIVISION_BY_ZERO,
+@
+
+When we find this error, we use the default procedure, without storing
+any other information:
+
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_DIVISION_BY_ZERO(mf, cx, line) {\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_DIVISION_BY_ZERO);}
+@
+
+And this is our diagnostic message:
+
+@<Print Error Message@>+=
+case ERROR_DIVISION_BY_ZERO:
+  fprintf(stderr, "%s:%s Division by zero.", mf -> file, line_number);
+  break;
+@
+
 
 
 \subsecao{A.X. ERROR\_EXPECTED\_FOUND}
