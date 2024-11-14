@@ -5819,31 +5819,6 @@ bool eval_numeric_primary(struct metafont *mf, struct context *cx,
 }
 @
 
-Se não conseguirmos identificar nenhuma das regras, geramos o erro:
-
-@<Tipos de Erros@>+=
-ERROR_UNKNOWN_EXPRESSION,
-@
-
-Gerar esse erro requer armazenar o tipo de expressão que analizávamos
-quando encontramos algo desconhecido:
-
-@<Macros Locais (metafont.c)@>+=
-#define RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, line, type) {\
-  if(!mf -> err){\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNKNOWN_EXPRESSION);\
-    mf -> errno_int = type;}}
-@
-
-E a mensagem de diagnóstico é:
-
-@<Imprime Mensagem de Erro@>+=
-case ERROR_UNKNOWN_EXPRESSION:
-  fprintf(stderr, "%s:%s Unrecognizable %s expression.", mf -> file,
-          line_number, list_of_keywords[mf -> errno_int - 10]);
-  break;
-@
-
 As regras que usamos para reconhecer a expressão são:
 
 1) Se a expressão for composta por um único token, se começar com
@@ -19344,6 +19319,36 @@ E com isso podemos gerar uma mensagem de erro:
 case ERROR_UNEXPECTED_TOKEN:
   fprintf(stderr, "%s:%s We found '%s' token in a context where such "
           "token makes no sense.", mf -> file, line_number, mf -> errno_str);
+  break;
+@
+
+\subsecao{A.X. ERROR\_UNKNOWN\_EXPRESSION}
+
+@<Tipos de Erros@>+=
+ERROR_UNKNOWN_EXPRESSION,
+@
+
+Este erro ocorre quando estávamos interpretando uma expressão de
+determinado tipo (numérica, de par, de transformação, de caminho, de
+imagem ou booleana), mas encontramos uma sequência de tokens que não
+estavam previstos por qualquer regra gramatical.
+
+Gerar esse erro requer armazenar o tipo de expressão que analizávamos
+quando encontramos algo completamente desconhecido:
+
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, line, type) {\
+  if(!mf -> err){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNKNOWN_EXPRESSION);\
+    mf -> errno_int = type;}}
+@
+
+E a mensagem de diagnóstico é:
+
+@<Imprime Mensagem de Erro@>+=
+case ERROR_UNKNOWN_EXPRESSION:
+  fprintf(stderr, "%s:%s Unknown %s expression.", mf -> file,
+          line_number, list_of_keywords[mf -> errno_int - 10]);
   break;
 @
 

@@ -5664,32 +5664,6 @@ bool eval_numeric_primary(struct metafont *mf, struct context *cx,
 }
 @
 
-If we are not able to recognize the primary expression given the
-rules, we raise the error:
-
-@<Types of Error@>+=
-ERROR_UNKNOWN_EXPRESSION,
-@
-
-Raising this error means storing the expression type that we weve
-evaluating when we found an unrecognizable construction:
-
-@<Local Macros (metafont.c)@>+=
-#define RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, line, type) {\
-  if(!mf -> err){\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNKNOWN_EXPRESSION);\
-    mf -> errno_int = type;}}
-@
-
-And this is the diagnostic message:
-
-@<Print Error Message@>+=
-case ERROR_UNKNOWN_EXPRESSION:
-  fprintf(stderr, "%s:%s Unrecognizable %s expression.", mf -> file,
-          line_number, list_of_keywords[mf -> errno_int - 10]);
-  break;
-@
-
 The rules to recognize the expression are:
 
 1) If the expression is composed by a single token, or if it begins
@@ -19028,6 +19002,37 @@ case ERROR_UNEXPECTED_TOKEN:
           "token makes no sense.", mf -> file, line_number, mf -> errno_str);
   break;
 @
+
+\subsecao{A.X. ERROR\_UNKNOWN\_EXPRESSION}
+
+@<Types of Error@>+=
+ERROR_UNKNOWN_EXPRESSION,
+@
+
+Este erro ocorre quando estávamos interpretando uma expressão de
+determinado tipo (numérica, de par, de transformação, de caminho, de
+imagem ou booleana), mas encontramos uma sequência de tokens que não
+estavam previstos por qualquer regra gramatical.
+
+Gerar esse erro requer armazenar o tipo de expressão que analizávamos
+quando encontramos algo completamente desconhecido:
+
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, line, type) {\
+  if(!mf -> err){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNKNOWN_EXPRESSION);\
+    mf -> errno_int = type;}}
+@
+
+E a mensagem de diagnóstico é:
+
+@<Print Error Message@>+=
+case ERROR_UNKNOWN_EXPRESSION:
+  fprintf(stderr, "%s:%s Unknown %s expression.", mf -> file,
+          line_number, list_of_keywords[mf -> errno_int - 10]);
+  break;
+@
+
 
 
 \subsecao{A.X. ERROR\_UNKNOWN\_STATEMENT}

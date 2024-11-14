@@ -2650,7 +2650,18 @@ void test_errors(void){
 	 mf != NULL && mf -> err == ERROR_DIVISION_BY_ZERO &&
 	 !strcmp(error_string, "/tmp/test.mf:2: Division by zero.\n"));
   destroy_context(mf, cx);
-  _Wdestroy_metafont(mf);  
+  _Wdestroy_metafont(mf);
+  // ERROR: Unknown expression
+  memset(error_string, 0, 1024);
+  setbuf(stderr, error_string);
+  create_metafont(&mf, &cx, "numeric a;\na = 5 + -{+};");
+  _Wprint_metafont_error(mf);
+  assert("Raising error for unknown expression",
+	 mf != NULL && mf -> err == ERROR_UNKNOWN_EXPRESSION &&
+	 !strcmp(error_string, "/tmp/test.mf:2: Unknown numeric expression.\n"));
+  destroy_context(mf, cx);
+  _Wdestroy_metafont(mf);
+
   // End of error tests
   setbuf(stderr, NULL);
 }
