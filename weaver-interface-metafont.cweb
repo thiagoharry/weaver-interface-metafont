@@ -5854,8 +5854,8 @@ else if(begin -> type == TYPE_LENGTH){
   }
   @<Avalia 'length'@>
   else{
-    RAISE_ERROR_UNKNOWN_EXPRESSION_TYPE(mf, cx, OPTIONAL(begin -> line),
-                                        expr_type);
+    RAISE_ERROR_UNSUPORTED_LENGTH_OPERAND(mf, cx, OPTIONAL(begin -> line),
+                                          expr_type);
     return false;
   }
 }
@@ -5869,39 +5869,9 @@ recebe o começo e fim de uma expressão e à partir daí retorna o tipo
 da expressão. Se o tipo for numérico, o código acima mostra como
 calculamos o módulo. Se a expressão depois de \monoespaco{length} não
 for numérica, ela será avaliada por outras regras que definiremos
-depois (nas Subseções 8.2.4 e 8.4.5).  E se a expressão não for
-reconhecida ou não seja suportada no contexto deste operador, o
-seguinte tipo de erro é gerado:
+depois (nas Subseções 8.2.4 e 8.4.5).
 
-@<Tipos de Erros@>+=
-ERROR_UNKNOWN_EXPRESSION_TYPE,
-@
 
-O tipo de expressão encontrado é armazenado. Dependendo do caso, o
-tipo será desconhecido (seu valor será -1) ou será um tipo de
-expressão não-suportada.
-
-@<Macros Locais (metafont.c)@>+=
-#define RAISE_ERROR_UNKNOWN_EXPRESSION_TYPE(mf, cx, line, type) {\
-  if(!mf -> err){\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNKNOWN_EXPRESSION_TYPE);\
-    mf -> errno_int = type;}}
-@
-
-Dependendo de qual dos dois casos temos, geramos uma mensagem de erro
-diferente:
-
-@<Imprime Mensagem de Erro@>+=
-case ERROR_UNKNOWN_EXPRESSION_TYPE:
-  if(mf -> errno_int == -1)
-    fprintf(stderr, "%s:%s We could not identity the expression type.",
-            mf -> file, line_number);
-  else
-    fprintf(stderr, "%s:%s Found %s expression in a context where such"
-                    "expression was not expected.", mf -> file, line_number,
-                    list_of_keywords[mf -> errno_int - 8]);
-  break;
-@
 
 3) Se encontrarmos um operador numérico, temos então um operador
 numérico seguido de um primário numérico.
@@ -12948,8 +12918,11 @@ vetor. Os operadores \monoespaco{xpart} funcionam tanto em pares como
 em transformadores.
 
 Note que nenhuma das vezes em que precisamos identificar o tipo de uma
-expressão espera-se que encontremos um caminho, imagem ou uma caneta. Por
-causa disso, vamos ignorar esses tipos nas nossas funções.
+expressão espera-se que encontremos uma imagem ou uma caneta. Por
+causa disso, a prioridade de identificar corretamente tais expressões
+é menor. Contudo, saber identificá-las permite que mensagens de erro
+sejam mais explicativas, pois poderemos avisar que encontramos uma
+expressão de um tipo, quando esperávamos de outro.
 
 Identificar o tipo de uma expressão pode ser complexo e
 trabalhoso. Felizmente, os casos mais comuns tentem a ser simples e
@@ -12999,11 +12972,21 @@ com \monoespaco{length}, \monoespaco{xpart}, \monoespaco{ypart}, \monoespaco{xxp
 5) Se temos um \monoespaco{+} ou \monoespaco{-}, descobrimos o tipo
 avaliando o tipo do restante da expressão.
 
-6) Se temos parênteses e dentro deles temos uma vírgula, é um par. Se
+6) Se o primeiro token é \monoespaco{subpath},
+\monoespaco{makepath} ou \monoespaco{reverse}, é uma expressão de caminho. 
+
+7) Se o primeiro token for \monoespaco{nullpen},
+\monoespaco{pencircle}, \monoespaco{pensemicircle} ou
+\monoespaco{makepen}, então é uma expressão de caneta.
+
+8) Se o primeiro token for \monoespaco{nullpicture} ou \monoespaco{subpicture},
+então é uma expressão de imagem.
+
+9) Se temos parênteses e dentro deles temos uma vírgula, é um par. Se
 houverem mais vírgulas, é uma transformação. Se não houverem vírgulas,
 devemos avaliar o tipo da expressão terciária interna.
 
-7) Nos demais casos, o tipo é desconhecido e um erro deve ter ocorrido.
+10) Nos demais casos, o tipo é desconhecido e um erro deve ter ocorrido.
 
 Na nossa implementação, para testar mais rapidamente, primeiro
 checamos se temos ou não um caso simples composto por um único
@@ -13029,6 +13012,10 @@ int get_primary_expression_type(struct metafont *mf, struct context *cx,
     if(begin_expr -> type == TYPE_NUMERIC ||
        begin_expr -> type == TYPE_NORMALDEVIATE) // Caso 4
       return TYPE_T_NUMERIC;
+    if(begin_expr -> type == TYPE_NULLPEN || // Caso 7
+       begin_expr -> type == TYPE_PENCIRCLE ||
+       begin_expr -> type == TYPE_PENSEMICIRCLE)
+       return TYPE_T_PEN;
     else
       return -1;
   }
@@ -13068,6 +13055,16 @@ int get_primary_expression_type(struct metafont *mf, struct context *cx,
       }
       return TYPE_T_NUMERIC;
     }
+    // Caso 6:
+    if(begin_expr -> type == TYPE_SUBPATH ||
+       begin_expr -> type == TYPE_MAKEPATH ||
+       begin_expr -> type == TYPE_REVERSE)
+      return TYPE_T_PATH;
+    if(begin_expr -> type == TYPE_MAKEPEN) // Caso 7
+      return TYPE_T_PEN;
+    if(begin_expr -> type == TYPE_NULLPICTURE || // Caso 8
+       begin_expr -> type == TYPE_SUBPICTURE)
+      return TYPE_T_PICTURE;
     // Pode haver expressão de par que começa com parênteses e não termina:
     // (1+1)[p1, p2] e também: normaldeviate[p1, p2]
     if((begin_expr -> type == TYPE_OPEN_PARENTHESIS &&
@@ -19352,6 +19349,7 @@ case ERROR_UNKNOWN_EXPRESSION:
   break;
 @
 
+
 \subsecao{A.X. ERROR\_UNKNOWN\_STATEMENT}
 
 @<Tipos de Erros@>+=
@@ -19412,6 +19410,48 @@ case ERROR_UNOPENED_DELIMITER:
   break;
 @
 
+\subsecao{A.X. ERROR\_UNSUPORTED\_LENGTH\_OPERAND}
+
+@<Tipos de Erros@>+=
+ERROR_UNSUPORTED_LENGTH_OPERAND,
+@
+
+Este erro ocorre sempre depois que usamos o operador 'length'. Tal
+operador atua sobre um número (para calcular seu módulo), sobre um par
+(para calcular sua norma euclideana) ou sobre um caminho (para
+calcular o número de curvas que forma o caminho). Isso significa que
+depois de encontrarmos tal operador, precisamos identificar se estamos
+diante de um número, par ou caminho. Se estivermos diante de alguma
+outra coisa ou de uma expressão que não conseguimnos identificar,
+então este erro é gerado.
+
+Ao gerar tal erro, passamos como último argumento o tipo de expressão
+que encontramos ao invés das que esperávamos.  Caso o tipo seja
+desconhecido, passaremos o número -1 neste argumento:
+
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_UNSUPORTED_LENGTH_OPERAND(mf, cx, line, type) {\
+  if(!mf -> err){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNSUPORTED_LENGTH_OPERAND);\
+    mf -> errno_int = type;}}
+@
+
+E assim produzimos a mensagem de erro:
+
+@<Imprime Mensagem de Erro@>+=
+case ERROR_UNSUPORTED_LENGTH_OPERAND:
+  if(mf -> errno_int == -1)
+    fprintf(stderr, "%s:%s Operator 'length' expects a numeric, pair or path "
+            "expression as operand. Instead, we found an unknown expression.",
+            mf -> file, line_number);
+  else{
+    tokenid_to_string(mf -> errno_int, mf -> errno_str);
+    fprintf(stderr, "%s:%s Operator 'length' expects a numeric, pair or path "
+                    "expression as operand. Instead, we found a %s expression.",
+		    mf -> file, line_number, mf -> errno_str);
+  }
+  break;
+@
 
 \subsecao{A.X. ERROR\_WRONG\_VARIABLE\_TYPE}
 

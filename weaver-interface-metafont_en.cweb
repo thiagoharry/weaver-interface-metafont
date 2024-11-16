@@ -5699,8 +5699,8 @@ else if(begin -> type == TYPE_LENGTH){
   }
   @<Evaluate 'length'@>
   else{
-    RAISE_ERROR_UNKNOWN_EXPRESSION_TYPE(mf, cx, OPTIONAL(begin -> line),
-                                       expr_type);
+    RAISE_ERROR_UNSUPORTED_LENGTH_OPERAND(mf, cx, OPTIONAL(begin -> line),
+                                          expr_type);
     return false;
   }
 }
@@ -5713,36 +5713,7 @@ know that given the beginning and ending tokens for some expression,
 it returns the expression type. If the type is numeric, the code above
 shows how we compute the modulus. Otherwise, we will evaluate it using
 other rules that we should define later (in Subsection 8.2.4 and
-8.4.5). If the expression is not recognized or is an expression with
-an unsupported type in this context, the following error is raised:
-
-@<Types of Error@>+=
-ERROR_UNKNOWN_EXPRESSION_TYPE,
-@
-
-The expression type is stored when we raise this error. The type may
-be unknown (is equal -1) or is some type which is not supported:
-
-@<Local Macros (metafont.c)@>+=
-#define RAISE_ERROR_UNKNOWN_EXPRESSION_TYPE(mf, cx, line, type) {\
-  if(!mf -> err){\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNKNOWN_EXPRESSION_TYPE);\
-    mf -> errno_int = type;}}
-@
-
-Depending on the case, we generate different error messages:
-
-@<Print Error Message@>+=
-case ERROR_UNKNOWN_EXPRESSION_TYPE:
-  if(mf -> errno_int == -1)
-    fprintf(stderr, "%s:%s We could not identity the expression type.",
-            mf -> file, line_number);
-  else
-    fprintf(stderr, "%s:%s Found %s expression in a context where such"
-                    "expression was not expected.", mf -> file, line_number,
-                    list_of_keywords[mf -> errno_int - 8]);
-  break;
-@
+8.4.5).
 
 3) If we find some of the numeric operators, we have a numeric
 operator followed by a numeric primary expression.
@@ -12715,9 +12686,11 @@ expressions. We can multiply between two numeric expressions or
 between a numeric and a pair expression. Operators
 like \monoespaco{xpart} works in pairs and transforms.
 
-Notice that in none of the cases above we expect to identify a path,
-picture or pen expression. Therefore, we will ignore these expressions
-when trying to identiy the type.
+Notice that in none of the cases above we expect to identify a picture
+or pen expression. Therefore, identify these expressions is less
+prioritary. However, identifying them still is useful, as it allow us
+to produce more useful error messages, warning the user that we found
+an expression of some specific type instead of another expected type.
 
 Identify the type of some expression can be complex. But the most
 common cases are simple and can be evaluated fast. We will use
@@ -12753,7 +12726,7 @@ complex cases. The rules that allow us to identify the types are:
  a \monoespaco{[}. And also if it begins with a numeric token and have
  parenthesis or the beginning of a primary pair.
 
-4) The expresison is numeric if it has a ingle numeric token or the
+4) The expressison is numeric if it has a single numeric token or the
 token \monoespaco{normaldeviate}. Or if it is a numeric token followed
 by \monoespaco{/}. Or if it begins
 with \monoespaco{length}, \monoespaco{xpart}, \monoespaco{ypart},
@@ -12766,12 +12739,22 @@ with \monoespaco{length}, \monoespaco{xpart}, \monoespaco{ypart},
 ignoring this first token and checking the type of the remaining
 expression.
 
-6) If we begin and end with parenthesis, and have no comma, we should
+6) If the first token is \monoespaco{subpath}, \monoespaco{makepath}
+or \monoespaco{reverse}, it is a path expression.
+
+7) If the first token is \monoespaco{nullpen},
+\monoespaco{pencircle}, \monoespaco{pensemicircle} or
+\monoespaco{makepen}, then it is a pen expression.
+
+8) If the first token is \monoespaco{nullpicture} or
+\monoespaco{subpicture}, it is a picture expression.
+
+9) If we begin and end with parenthesis, and have no comma, we should
 evaluate the type of the tertiary expression inside the
 parenthesis. If we have a single comma, we have a pair. If we have
 five commas, we have a transform.
 
-7) In the other cases, we have an unknown expression and some error
+10) In the other cases, we have an unknown expression and some error
 may be occurred.
 
 The code that tries to encompass these rules (but not in the above
@@ -12796,6 +12779,10 @@ int get_primary_expression_type(struct metafont *mf, struct context *cx,
     if(begin_expr -> type == TYPE_NUMERIC ||
        begin_expr -> type == TYPE_NORMALDEVIATE) // Case 4
       return TYPE_T_NUMERIC;
+    if(begin_expr -> type == TYPE_NULLPEN || // Case 7
+       begin_expr -> type == TYPE_PENCIRCLE ||
+       begin_expr -> type == TYPE_PENSEMICIRCLE)
+       return TYPE_T_PEN;
     else
       return -1;
   }
@@ -12835,7 +12822,16 @@ int get_primary_expression_type(struct metafont *mf, struct context *cx,
       }
       return TYPE_T_NUMERIC;
     }
-    
+    // Case 6:
+    if(begin_expr -> type == TYPE_SUBPATH ||
+       begin_expr -> type == TYPE_MAKEPATH ||
+       begin_expr -> type == TYPE_REVERSE)
+      return TYPE_T_PATH;
+    if(begin_expr -> type == TYPE_MAKEPEN) // Case 7
+      return TYPE_T_PEN;
+    if(begin_expr -> type == TYPE_NULLPICTURE || // Case 8
+       begin_expr -> type == TYPE_SUBPICTURE)
+      return TYPE_T_PICTURE;
     // The remaining cases not encompassed by the more general rules 
     // are expressions that begins with parenthesis but do not end
     // with them: (1+1)[p1, p1] and also: normaldeviate[p1, p2]
@@ -19091,6 +19087,48 @@ Esta é a mensagem de diagnóstico deste erro:
 case ERROR_UNOPENED_DELIMITER:
   fprintf(stderr, "%s:%s Delimiter '%c' was not previously opened.",
           mf -> file, line_number, mf -> errno_int);
+  break;
+@
+
+\subsecao{A.X. ERROR\_UNSUPORTED\_LENGTH\_OPERAND}
+
+@<Types of Error@>+=
+ERROR_UNSUPORTED_LENGTH_OPERAND,
+@
+
+This error always occurs after we use the 'length' operator. Such
+operator acts upon either on a number (to calculate its modulus), on a
+pair (to calculate its Euclidean norm) or on a path (to calculate the
+number of curves that form the path). This means that after finding
+such an operator, we need to identify whether we are dealing with a
+number, a pair or a path. If we are dealing with something else or an
+expression that we cannot identify, then this error is generated.
+
+When generating such an error, we pass as the last argument the type
+of expression that we found instead of the one we expected. If the
+type is unknown, we will pass the number -1 in this argument:
+
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_UNSUPORTED_LENGTH_OPERAND(mf, cx, line, type) {\
+  if(!mf -> err){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNSUPORTED_LENGTH_OPERAND);\
+    mf -> errno_int = type;}}
+@
+
+And this is how we produce the error message:
+
+@<Print Error Message@>+=
+case ERROR_UNSUPORTED_LENGTH_OPERAND:
+  if(mf -> errno_int == -1)
+    fprintf(stderr, "%s:%s Operator 'length' expects a numeric, pair or path "
+            "expression as operand. Instead, we found an unknown expression.",
+            mf -> file, line_number);
+  else{
+    tokenid_to_string(mf -> errno_int, mf -> errno_str);
+    fprintf(stderr, "%s:%s Operator 'length' expects a numeric, pair or path "
+                    "expression as operand. Instead, we found a %s expression.",
+		    mf -> file, line_number, mf -> errno_str);
+  }
   break;
 @
 

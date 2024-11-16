@@ -2661,7 +2661,16 @@ void test_errors(void){
 	 !strcmp(error_string, "/tmp/test.mf:2: Unknown numeric expression.\n"));
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
-
+  // ERROR: 'length' with unsuported operand
+  memset(error_string, 0, 1024);
+  setbuf(stderr, error_string);
+  create_metafont(&mf, &cx, "numeric a;\na = length nullpicture (0, 0);");
+  _Wprint_metafont_error(mf);
+  assert("Raising error for unsuported 'length' operand",
+	 mf != NULL && mf -> err == ERROR_UNSUPORTED_LENGTH_OPERAND &&
+	 !strcmp(error_string, "/tmp/test.mf:2: Operator 'length' expects a numeric, pair or path expression as operand. Instead, we found a picture expression.\n"));
+  destroy_context(mf, cx);
+  _Wdestroy_metafont(mf);
   // End of error tests
   setbuf(stderr, NULL);
 }
