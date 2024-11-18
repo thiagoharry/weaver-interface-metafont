@@ -5938,33 +5938,6 @@ else if(begin -> type == TYPE_LOG){
 }
 @
 
-O novo erro gerado quando tentamos computar o logaritmo de um valor
-negativo é:
-
-@<Tipos de Erros@>+=
-ERROR_NEGATIVE_LOGARITHM,
-@
-
-Quando o erro é gerado, nós convertemos o número negativo que causou
-problemas para uma string:
-
-@<Macros Locais (metafont.c)@>+=
-#define RAISE_ERROR_NEGATIVE_LOGARITHM(mf, cx, line, number) {\
-  if(!mf -> err){\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NEGATIVE_LOGARITHM);\
-    snprintf(mf -> errno_str, 31, "%g", number);\
-    mf -> errno_str[31] = '\0';}}
-@
-
-E avisamos o usuário do problema:
-
-@<Imprime Mensagem de Erro@>+=
-case ERROR_NEGATIVE_LOGARITHM:
-  fprintf(stderr, "%s:%s Tried to compute logarithm of negative value '%s'.",
-          mf -> file, line_number, mf -> errno_str);
-  break;
-@
-
 Assim é como calculamos a exponencial correspondente à $exp x = e^x$:
 
 @<Primário Numérico: Regra 3@>+=
@@ -13101,11 +13074,12 @@ Agora vamos às expressões secundárias. As regras que usaremos são:
 
 2) Se temos \monoespaco{and}, a expressão é booleana.
 
-3) Se temos um transformador (\monoespaco{transformed}, \monoespaco{rotated},
-\monoespaco{scaled}, \monoespaco{shifted}, \monoespaco{slanted},
-\monoespaco{xscaled}, \monoespaco{yscaled}, \monoespaco{zscaled}), ignoramos
-ele e o que há depois dele, voltando a avaliar o restante da expressão
-como expressão secundária. Pode ser um transformador ou um par.
+3) Se temos um transformador (\monoespaco{transformed},
+\monoespaco{rotated}, \monoespaco{scaled}, \monoespaco{shifted},
+\monoespaco{slanted}, \monoespaco{xscaled}, \monoespaco{yscaled},
+\monoespaco{zscaled}), ignoramos ele e o que há depois dele, voltando
+a avaliar o restante da expressão como expressão secundária. Pode ser
+um transformador, par, caminho, caneta ou imagem.
 
 4) Se temos multiplicações e divisões, devemos checar a que está mais
 à direita. Se um dos operandos for um par, é um par. Caso contrário, é
@@ -13185,13 +13159,21 @@ seria de expressões quarternárias. Mas podemos considerar todos esses
 operadores aqui, já que não estamos de fato avaliando as expressões,
 onde seguir regras de precedência é fundamental.
 
-3) Se temos soma e subtração pitagóricos
+3) Se temos tokens de junção de caminho como \monoespaco{\&},
+\monoespaco{..} ou \monoespaco{--}, então também não é uma expressão
+terciária, mas uma expressão de caminho que tem precedência menor
+ainda. De qualquer forma, podemos retornar a informação de que temos
+uma expressão de caminho. O mesmo ocorre se encontrarmos o token
+``\monoespaco{$\{$}'', que é usado apenas na especificação de direção em
+caminhos.
+
+4) Se temos soma e subtração pitagóricos
 (\monoespaco{++}, \monoespaco{+-+}), então é expressão numérica.
 
-4) Se temos soma ou subtração, o tipo da expressão é o mesmo de
+5) Se temos soma ou subtração, o tipo da expressão é o mesmo de
 qualquer um de seus operandos.
 
-5) Nos demais casos, tentamos novamente avaliando a expressão como
+6) Nos demais casos, tentamos novamente avaliando a expressão como
 secundária.
 
 @<Funções Auxiliares Locais (metafont.c)@>+=
@@ -13203,14 +13185,18 @@ int get_tertiary_expression_type(struct metafont *mf, struct context *cx,
   if(begin_expr == end_expr)
     return get_primary_expression_type(mf, cx, begin_expr, end_expr);
   while(t != end_expr && t != NULL){
+    if(IS_NOT_NESTED() && t -> type == TYPE_OPEN_BRACES)
+      return TYPE_T_PATH; // 1o aninhamento '{': especifica direção (Caso 3)
     COUNT_NESTING(t);
     if(IS_NOT_NESTED()){
       if(t -> type == TYPE_OR || t -> type == TYPE_LT ||
            t -> type == TYPE_GT || t -> type == TYPE_GEQ ||
            t -> type == TYPE_LEQ || t -> type == TYPE_EQUAL ||
-           t -> type == TYPE_NEQ){
+           t -> type == TYPE_NEQ)
         return TYPE_T_BOOLEAN;
-      }
+      if(t -> type == TYPE_AMPERSAND || t -> type == TYPE_JOIN ||
+         t -> type == TYPE_STRAIGHT_JOIN)
+        return TYPE_T_PATH;
       if(t -> type == TYPE_PYTHAGOREAN_SUM ||
          t -> type == TYPE_PYTHAGOREAN_SUBTRACT){
         return TYPE_T_NUMERIC;
@@ -19017,7 +19003,35 @@ case ERROR_MISSING_EXPRESSION:
   break;
 @
 
-\subsecao{A.X. ERROR\_NEGATIVE\_SQUARE_ROOT}
+\subsecao{A.X. ERROR\_NEGATIVE\_LOGARITHM}
+
+@<Tipos de Erros@>+=
+ERROR_NEGATIVE_LOGARITHM,
+@
+
+Este erro é causado toda vez que tentamos calcular o logaritmo de um
+valor negativo. Quando o erro é gerado, nós convertemos o número
+negativo que causou problemas para uma string:
+
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_NEGATIVE_LOGARITHM(mf, cx, line, number) {\
+  if(!mf -> err){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NEGATIVE_LOGARITHM);\
+    snprintf(mf -> errno_str, 31, "%g", number);\
+    mf -> errno_str[31] = '\0';}}
+@
+
+E avisamos o usuário do problema:
+
+@<Imprime Mensagem de Erro@>+=
+case ERROR_NEGATIVE_LOGARITHM:
+  fprintf(stderr, "%s:%s Tried to compute logarithm of negative value '%s'.",
+          mf -> file, line_number, mf -> errno_str);
+  break;
+@
+
+
+\subsecao{A.X. ERROR\_NEGATIVE\_SQUARE\_ROOT}
 
 @<Tipos de Erros@>+=
 ERROR_NEGATIVE_SQUARE_ROOT,

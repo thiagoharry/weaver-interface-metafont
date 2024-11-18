@@ -5780,33 +5780,6 @@ else if(begin -> type == TYPE_LOG){
 }
 @
 
-This is the new error that is raised when one tries to compute the
-logarithm of a negative value:
-
-@<Types of Error@>+=
-ERROR_NEGATIVE_LOGARITHM,
-@
-
-When the error is raised, we convert the offending negative number
-that caused the problem to a string:
-
-@<Local Macros (metafont.c)@>+=
-#define RAISE_ERROR_NEGATIVE_LOGARITHM(mf, cx, line, number) {\
-  if(!mf -> err){\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NEGATIVE_LOGARITHM);\
-    snprintf(mf -> errno_str, 31, "%g", number);\
-    mf -> errno_str[31] = '\0';}}
-@
-
-And warn the user about the problem:
-
-@<Print Error Message@>+=
-case ERROR_NEGATIVE_LOGARITHM:
-  fprintf(stderr, "%s:%s Tried to compute logarithm of negative value '%s'.",
-          mf -> file, line_number, mf -> errno_str);
-  break;
-@
-
 And this is how we compute the exponential which means $exp x = e^x$:
 
 @<Numeric Primary: Rule 3@>+=
@@ -12874,7 +12847,7 @@ expression.
 \monoespaco{scaled}, \monoespaco{shifted}, \monoespaco{slanted},
 \monoespaco{xscaled}, \monoespaco{yscaled}, \monoespaco{zscaled}), we ignore it
 and all the tokens after it and re-evaluate the expression. In this case
-we will have a transform or a pair.
+we will have either a transform, a pair, a path, a pen or a picture.
 
 4) In case of multiplications and divisions, the most important is the
 operator more at the right. In the case of multiplication, if one of
@@ -12954,13 +12927,20 @@ quarternary ones. But we can deal with them here, as we are not
 evaluating the expression value, where it is mandatory to follow
 precedence rules.
 
-3) If we have a pyhtagoric sum or subtraction,
+3) If we have tokens from path joining operations, like
+\monoespaco{\&}, \monoespaco{..} or \monoespaco{--}, then it also is
+not a tertiary expression, but an expression with even less
+precedence. Anyway, we can return the information that we have a path
+expression. The same happens if we find a token that open braces, as
+they are used only for direction specifiers in path expressions.
+
+4) If we have a pyhtagoric sum or subtraction,
 (\monoespaco{++}, \monoespaco{+-+}), it is a numeric expression.
 
-4) In the case of a sum or subtraction, the expression type is the
+5) In the case of a sum or subtraction, the expression type is the
 same that its operands type.
 
-5) I other cases, we try again to check the type, but interpreting the
+6) I other cases, we try again to check the type, but interpreting the
 expression as a secondary expression.
 
 @<Auxiliary Local Functions (metafont.c)@>+=
@@ -12972,6 +12952,8 @@ int get_tertiary_expression_type(struct metafont *mf, struct context *cx,
   if(begin_expr == end_expr)
     return get_primary_expression_type(mf, cx, begin_expr, end_expr);
   while(t != end_expr && t != NULL){
+    if(IS_NOT_NESTED() && t -> type == TYPE_OPEN_BRACES)
+      return TYPE_T_PATH; // 1st nesting '{' means direction specifier (Case 3)
     COUNT_NESTING(t);
     if(IS_NOT_NESTED()){
       if(t -> type == TYPE_OR || t -> type == TYPE_LT ||
@@ -12979,6 +12961,9 @@ int get_tertiary_expression_type(struct metafont *mf, struct context *cx,
            t -> type == TYPE_LEQ || t -> type == TYPE_EQUAL ||
            t -> type == TYPE_NEQ)
         return TYPE_T_BOOLEAN;
+      if(t -> type == TYPE_AMPERSAND || t -> type == TYPE_JOIN ||
+         t -> type == TYPE_STRAIGHT_JOIN)
+        return TYPE_T_PATH;
       if(t -> type == TYPE_PYTHAGOREAN_SUM ||
          t -> type == TYPE_PYTHAGOREAN_SUBTRACT)
         return TYPE_T_NUMERIC;
@@ -18254,7 +18239,7 @@ subtract this value from it and thus obtain the index corresponding to
 its reserved word.
 
 If we have a token id between \monoespaco{TYPE\_FOR} and
-\monoespaco{TYPE_SEMICOLON}, then the token will not be listed in the
+\monoespaco{TYPE\_SEMICOLON}, then the token will not be listed in the
 list of keywords, but anyway it would have a single string that
 identifies all tokens with same id. Finally, the reamining tokens with
 lesser codes are variables, strings and numbers. Representing these
@@ -18699,7 +18684,34 @@ case ERROR_MISSING_EXPRESSION:
   break;
 @
 
-\subsecao{A.X. ERROR\_NEGATIVE\_SQUARE_ROOT}
+\subsecao{A.X. ERROR\_NEGATIVE\_LOGARITHM}
+
+@<Types of Error@>+=
+ERROR_NEGATIVE_LOGARITHM,
+@
+
+This error is raised when we try to compute the logarithm of a
+negative value. When the error is raised, we convert the negative
+number to a string representation:
+
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_NEGATIVE_LOGARITHM(mf, cx, line, number) {\
+  if(!mf -> err){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NEGATIVE_LOGARITHM);\
+    snprintf(mf -> errno_str, 31, "%g", number);\
+    mf -> errno_str[31] = '\0';}}
+@
+
+And warn the user about the problem:
+
+@<Print Error Message@>+=
+case ERROR_NEGATIVE_LOGARITHM:
+  fprintf(stderr, "%s:%s Tried to compute logarithm of negative value '%s'.",
+          mf -> file, line_number, mf -> errno_str);
+  break;
+@
+
+\subsecao{A.X. ERROR\_NEGATIVE\_SQUARE\_ROOT}
 
 @<Types of Error@>+=
 ERROR_NEGATIVE_SQUARE_ROOT,
