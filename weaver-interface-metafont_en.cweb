@@ -5989,38 +5989,12 @@ if(begin -> type == TYPE_SYMBOLIC){
   }
   if(isnan(var -> value)){
     RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, OPTIONAL(begin -> line),
-                                      var_token -> value);
+                                      var_token, TYPE_T_NUMERIC);
     return false;
   }
   result -> value = var -> value;
   return true;
 }
-@
-
-If the variable was not declared or is not numeric, we raise errors
-that were already previously defined. If the variable was not
-initialized, then we need to raise a new type of error:
-
-@<Types of Error@>+=
-ERROR_UNINITIALIZED_VARIABLE,
-@
-
-When this error happens, we store the variable name to warn the user:
-
-@<Local Macros (metafont.c)@>+=
-#define RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, line, name) {\
-  if(!mf -> err){\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNINITIALIZED_VARIABLE);\
-    memcpy(mf -> errno_str, name, strlen(name)+1);}}
-@
-
-And this is the error message:
-
-@<Print Error Message@>+=
-case ERROR_UNINITIALIZED_VARIABLE:
-  fprintf(stderr, "%s:%s Uninitialized variable '%s'.",
-          mf -> file, line_number, mf -> errno_str);
-  break;
 @
 
 3) Finally, if we have a single token and it is
@@ -6636,7 +6610,7 @@ if(var -> type != TYPE_T_PAIR){
 }
 if(isnan(var -> x)){
   RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, OPTIONAL(begin -> line),
-                                    tok -> value);
+                                    tok, TYPE_T_PAIR);
   return false;
 }
 result -> x = var -> x;
@@ -7301,7 +7275,8 @@ if(content -> type != TYPE_T_TRANSFORM){
   return false;
 }
 if(isnan(content -> value[0])){
-  RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, OPTIONAL(v -> line), v -> value);
+  RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, OPTIONAL(v -> line), v,
+                                     TYPE_T_TRANSFORM);
   return false;
 }
 memcpy(result -> value, content -> value, sizeof(float) * 9);
@@ -9485,7 +9460,7 @@ the result points and copy the variable content to the result:
   if(((struct pair_variable *) var) -> type == TYPE_T_PAIR){
     if(isnan(((struct pair_variable *) var) -> x)){
       RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, OPTIONAL(begin -> line),
-                                        v -> value);
+                                         v, TYPE_T_PAIR);
       return false;
     }
     result -> length = 1;
@@ -9505,7 +9480,7 @@ the result points and copy the variable content to the result:
   else if(var -> type == TYPE_T_PATH){
     if(var -> length == -1){
       RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, OPTIONAL(begin -> line),
-                                        v -> value);
+                                         v, TYPE_T_PATH);
       return false;
     }
     return recursive_copy_points(mf, cx, temporary_alloc, &result, var, false);
@@ -10211,7 +10186,8 @@ if(content -> type != TYPE_T_PEN){
   return false;
 }
 if(content -> format == NULL && content -> flags == false){
-  RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, OPTIONAL(v -> line), v -> value);
+  RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, OPTIONAL(v -> line), v,
+                                     TYPE_T_PEN);
   return false;
 }
 if(content -> referenced != NULL)
@@ -11665,14 +11641,15 @@ if(content == NULL){
   RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, OPTIONAL(v -> line), v);
   return false;
 }
-if(content -> width == -1 && content -> height == -1){
-  RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, OPTIONAL(v -> line), v -> value);
-  return false;
-}
 if(content -> type != TYPE_T_PICTURE){
   RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, OPTIONAL(v -> line), v, 
                                  ((struct variable *)(v -> var)) -> type,
                                  TYPE_T_PICTURE);
+  return false;
+}
+if(content -> width == -1 && content -> height == -1){
+  RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, OPTIONAL(v -> line), v,
+                                     TYPE_T_PICTURE);
   return false;
 }
 // Preparing the rendering:
@@ -12585,7 +12562,7 @@ bool eval_boolean_primary(struct metafont *mf, struct context *cx,
       }
       if(var -> value == -1){
         RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, OPTIONAL(begin -> line),
-                                          symbol -> value);
+                                          symbol, TYPE_T_BOOLEAN);
         return false;
       }
       result -> value = var -> value;
@@ -16023,7 +16000,7 @@ else if(begin -> type == TYPE_PICKUP){
     }
     if(var -> format == NULL && var -> flags == false){
       RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, OPTIONAL(next_token -> line),
-                                         symbol -> value);
+                                         symbol, TYPE_T_PEN);
       return false;
     }
     cx -> currentpen -> referenced = var;
@@ -19010,6 +18987,39 @@ case ERROR_UNEXPECTED_TOKEN:
           "token makes no sense.", mf -> file, line_number, mf -> errno_str);
   break;
 @
+
+\subsecao{A.X. ERROR\_UNINITIALIZED\_VARIABLE}
+
+@<Types of Error@>+=
+ERROR_UNINITIALIZED_VARIABLE,
+@
+
+This error is raised when we try to read the value of somo
+uninitialized variable in an expression. When this error occurs, we
+have to pass as argument the variable token, as well as its type. With
+this, we store the name of the variable as a string and its type as a
+numeric value:
+
+
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, line, var_token, var_type) {\
+  if(!mf -> err){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNINITIALIZED_VARIABLE);\
+    token_to_string((struct generic_token *) (var_token), mf -> errno_str);\
+    mf -> errno_int = var_type;}}
+@
+
+And this allow us to generate an error message:
+
+@<Print Error Message@>+=
+case ERROR_UNINITIALIZED_VARIABLE:
+  char var_type[32];
+  tokenid_to_string(mf -> errno_int, var_type);
+  fprintf(stderr, "%s:%s Uninitialized %s variable '%s'.",
+          mf -> file, line_number, var_type, mf -> errno_str);
+  break;
+@
+
 
 \subsecao{A.X. ERROR\_UNKNOWN\_EXPRESSION}
 

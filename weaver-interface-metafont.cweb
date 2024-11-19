@@ -6149,7 +6149,7 @@ if(begin -> type == TYPE_SYMBOLIC){
   }
   if(isnan(var -> value)){
     RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, OPTIONAL(begin -> line),
-                                      var_token -> value);
+                                      var_token, TYPE_T_NUMERIC);
     return false;
   }
   result -> value = var -> value;
@@ -6157,32 +6157,6 @@ if(begin -> type == TYPE_SYMBOLIC){
 }
 @
 
-Se a variável não tiver sido declarada ou for do tipo errado, geramos
-os erros cujos tipos já definimos antes. Se a variável não foi
-inicializada, aí é um novo tipo de erro que precisamos definir:
-
-@<Tipos de Erros@>+=
-ERROR_UNINITIALIZED_VARIABLE,
-@
-
-Quando este erro ocorre, temos que armazenar o nome da variável para
-poder informar ao usuário:
-
-@<Macros Locais (metafont.c)@>+=
-#define RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, line, name) {\
-  if(!mf -> err){\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNINITIALIZED_VARIABLE);\
-    memcpy(mf -> errno_str, name, strlen(name)+1);}}
-@
-
-E esta é a mensagem de erro que geramos:
-
-@<Imprime Mensagem de Erro@>+=
-case ERROR_UNINITIALIZED_VARIABLE:
-  fprintf(stderr, "%s:%s Uninitialized variable '%s'.",
-          mf -> file, line_number, mf -> errno_str);
-  break;
-@
 
 3) Por fim, se temos um único token e ele é \monoespaco{normaldeviate},
 então temos que gerar um número aleatório de uma distribuição
@@ -6799,7 +6773,7 @@ if(var -> type != TYPE_T_PAIR){
 }
 if(isnan(var -> x)){
   RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, OPTIONAL(begin -> line),
-                                    tok -> value);
+                                    tok, TYPE_T_PAIR);
   return false;
 }
 result -> x = var -> x;
@@ -7474,7 +7448,8 @@ if(content -> type != TYPE_T_TRANSFORM){
   return false;
 }
 if(isnan(content -> value[0])){
-  RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, OPTIONAL(v -> line), v -> value);
+  RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, OPTIONAL(v -> line), v,
+                       TYPE_T_TRANSFORM);
   return false;
 }
 memcpy(result -> value, content -> value, sizeof(float) * 9);
@@ -9691,7 +9666,7 @@ conteúdo da variável para ele:
   if(((struct pair_variable *) var) -> type == TYPE_T_PAIR){
     if(isnan(((struct pair_variable *) var) -> x)){
       RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, OPTIONAL(begin -> line),
-                                        v -> value);
+                                         v, TYPE_T_PAIR);
       return false;
     }
     result -> length = 1;
@@ -9711,7 +9686,7 @@ conteúdo da variável para ele:
   else if(var -> type == TYPE_T_PATH){
     if(var -> length == -1){
       RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, OPTIONAL(begin -> line),
-                                        v -> value);
+                                        v, TYPE_T_PATH);
       return false;
     }
     return recursive_copy_points(mf, cx, temporary_alloc, &result, var, false);
@@ -10423,7 +10398,8 @@ if(content -> type != TYPE_T_PEN){
   return false;
 }
 if(content -> format == NULL && content -> flags == false){
-  RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, OPTIONAL(v -> line), v -> value);
+  RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, OPTIONAL(v -> line), v,
+                                     TYPE_T_PEN);
   return false;
 }
 if(content -> referenced != NULL)
@@ -11886,14 +11862,15 @@ if(content == NULL){
   RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, OPTIONAL(v -> line), v);
   return false;
 }
-if(content -> width == -1 && content -> height == -1){
-  RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, OPTIONAL(v -> line), v -> value);
-  return false;
-}
 if(content -> type != TYPE_T_PICTURE){
   RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, OPTIONAL(v -> line), v, 
                                  ((struct variable *)(v -> var)) -> type,
                                  TYPE_T_PICTURE);
+  return false;
+}
+if(content -> width == -1 && content -> height == -1){
+  RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, OPTIONAL(v -> line), v,
+                                     TYPE_T_PICTURE);
   return false;
 }
 // Preparar renderização:
@@ -12814,7 +12791,7 @@ bool eval_boolean_primary(struct metafont *mf, struct context *cx,
       }
       if(var -> value == -1){
         RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, OPTIONAL(begin -> line),
-                                          symbol -> value);
+                                          symbol, TYPE_T_BOOLEAN);
         return false;
       }
       result -> value = var -> value;
@@ -16326,7 +16303,7 @@ else if(begin -> type == TYPE_PICKUP){
     }
     if(var -> format == NULL && var -> flags == false){
       RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, OPTIONAL(next_token -> line),
-                                         symbol -> value);
+                                         symbol, TYPE_T_PEN);
       return false;
     }
     cx -> currentpen -> referenced = var;
@@ -19332,6 +19309,38 @@ case ERROR_UNEXPECTED_TOKEN:
           "token makes no sense.", mf -> file, line_number, mf -> errno_str);
   break;
 @
+
+\subsecao{A.X. ERROR\_UNINITIALIZED\_VARIABLE}
+
+@<Tipos de Erros@>+=
+ERROR_UNINITIALIZED_VARIABLE,
+@
+
+Este erro ocorre quando tentamos acessar o valor de uma variável
+não-inicializada em uma expressão. Quando este erro ocorre, temos que
+passar como argumento o token da variável, e também o seu tipo. Com
+isso, armazenamos o nome da variável como string e o seu tipo como
+valor numérico:
+
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, line, var_token, var_type) {\
+  if(!mf -> err){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNINITIALIZED_VARIABLE);\
+    token_to_string((struct generic_token *) (var_token), mf -> errno_str);\
+    mf -> errno_int = var_type;}}
+@
+
+E isso nos permite gerar a mensagem de erro:
+
+@<Imprime Mensagem de Erro@>+=
+case ERROR_UNINITIALIZED_VARIABLE:
+  char var_type[32];
+  tokenid_to_string(mf -> errno_int, var_type);
+  fprintf(stderr, "%s:%s Uninitialized %s variable '%s'.",
+          mf -> file, line_number, var_type, mf -> errno_str);
+  break;
+@
+
 
 \subsecao{A.X. ERROR\_UNKNOWN\_EXPRESSION}
 
