@@ -6094,33 +6094,7 @@ if(begin -> type == TYPE_OPEN_PARENTHESIS &&
 @
 
 If we find just an empty parenthesis, this is an error. The user
-forgot to put some expression in the parenthesis. The raised error has
-this new type:
-
-@<Types of Error@>+=
-ERROR_EMPTY_DELIMITER,
-@
-
-When raising this error, we must inform which empty delimiter we
-found. It may be parenthesis, braces or brackets:
-
-@<Local Macros (metafont.c)@>+=
-#define RAISE_ERROR_EMPTY_DELIMITER(mf, cx, line, delimiter) {\
-  if(!mf -> err){\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_EMPTY_DELIMITER);\
-    mf -> errno_int = delimiter;}}
-@
-
-The error message will be slightly different depending on the delimiter:
-
-@<Print Error Message@>+=
-case ERROR_EMPTY_DELIMITER:
-  fprintf(stderr, "%s:%s Unexpected empty delimiter '%c%c'.",
-          mf -> file, line_number, mf -> errno_int,
-          ((mf -> errno_int == '(')?(')'):
-            ((mf -> errno_int == '[')?(']'):('}'))));
-  break;
-@
+forgot to put some expression in the parenthesis.
 
 5) Finally, the case when the numeric atom is a fraction composed by a
 numeric token, \monoespaco{/} and another numeric token. The result is
@@ -18344,6 +18318,49 @@ case ERROR_DIVISION_BY_ZERO:
   break;
 @
 
+\subsecao{A.X. ERROR\_EMPTY\_DELIMITER}
+
+@<Types of Error@>+=
+ERROR_EMPTY_DELIMITER,
+@
+
+This error is generated if we encounter empty delimiters. For example:
+
+\alinhaverbatim
+{}
+()
+[]
+\alinhanormal
+
+In the original METAFONT language, an empty delimiter \monoespaco{[]}
+was allowed in variable declarations, to declare that a given variable
+could store several different values, using numbers to represent the
+internal position of each value (they are associative arrays where the
+keys are always numbers, not necessarily integers). But Weavefont does
+not support this, so any empty delimiter is treated as an error.
+
+When generating this error, we must inform what type of empty
+delimiter we encountered. It can be parentheses, square brackets or
+curly braces:
+
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_EMPTY_DELIMITER(mf, cx, line, delimiter) {\
+  if(!mf -> err){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_EMPTY_DELIMITER);\
+    mf -> errno_int = delimiter;}}
+@
+
+The error message will be customized according to which delimiter was
+found to be empty:
+
+@<Print Error Message@>+=
+case ERROR_EMPTY_DELIMITER:
+  fprintf(stderr, "%s:%s Unexpected empty delimiter '%c%c'.",
+          mf -> file, line_number, mf -> errno_int,
+          ((mf -> errno_int == '(')?(')'):
+            ((mf -> errno_int == '[')?(']'):('}'))));
+  break;
+@
 
 
 \subsecao{A.X. ERROR\_EXPECTED\_FOUND}

@@ -2690,7 +2690,17 @@ void test_errors(void){
 	 mf != NULL && mf -> err == ERROR_UNINITIALIZED_VARIABLE &&
 	 !strcmp(error_string, "/tmp/test.mf:2: Uninitialized numeric variable 'a'.\n"));
   destroy_context(mf, cx);
-  _Wdestroy_metafont(mf);  
+  _Wdestroy_metafont(mf);
+  // ERROR: Empty delimiter
+  memset(error_string, 0, 1024);
+  setbuf(stderr, error_string);
+  create_metafont(&mf, &cx, "numeric a;\na = ();");
+  _Wprint_metafont_error(mf);
+  assert("Raising error for empty delimiter",
+	 mf != NULL && mf -> err == ERROR_EMPTY_DELIMITER &&
+	 !strcmp(error_string, "/tmp/test.mf:2: Unexpected empty delimiter '()'.\n"));
+  destroy_context(mf, cx);
+  _Wdestroy_metafont(mf);
   // End of error tests
   setbuf(stderr, NULL);
 }

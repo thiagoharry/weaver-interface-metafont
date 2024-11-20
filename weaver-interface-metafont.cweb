@@ -6255,33 +6255,7 @@ if(begin -> type == TYPE_OPEN_PARENTHESIS &&
 
 Se apenas encontramos um parênteses vazio, isso é um erro. O usuário
 parece ter simplesmente esquecido de colocar uma expressão dentro
-dele. O erro gerado é este novo tipo:
-
-@<Tipos de Erros@>+=
-ERROR_EMPTY_DELIMITER,
-@
-
-Ao gerar este erro devemos informar qual o tipo de delimitador vazio
-que encontramos. POde ser parênteses, colchetes ou chaves:
-
-@<Macros Locais (metafont.c)@>+=
-#define RAISE_ERROR_EMPTY_DELIMITER(mf, cx, line, delimiter) {\
-  if(!mf -> err){\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_EMPTY_DELIMITER);\
-    mf -> errno_int = delimiter;}}
-@
-
-A mensagem de erro vai ser personalizada de acordo com qual o
-delimitador foi encontrado vazio:
-
-@<Imprime Mensagem de Erro@>+=
-case ERROR_EMPTY_DELIMITER:
-  fprintf(stderr, "%s:%s Unexpected empty delimiter '%c%c'.",
-          mf -> file, line_number, mf -> errno_int,
-          ((mf -> errno_int == '(')?(')'):
-            ((mf -> errno_int == '[')?(']'):('}'))));
-  break;
-@
+dele.
 
 5) Finalmente, o caso em que o átomo numérico é uma fração composta
 por um token numérico, \monoespaco{/} e outro token numérico. O
@@ -18658,6 +18632,50 @@ E esta é a mensagem de diagnóstico:
 @<Imprime Mensagem de Erro@>+=
 case ERROR_DIVISION_BY_ZERO:
   fprintf(stderr, "%s:%s Division by zero.", mf -> file, line_number);
+  break;
+@
+
+\subsecao{A.X. ERROR\_EMPTY\_DELIMITER}
+
+@<Tipos de Erros@>+=
+ERROR_EMPTY_DELIMITER,
+@
+
+Este erro é gerado caso encontramos delimitadores vazios. Por exemplo:
+
+\alinhaverbatim
+{}
+()
+[]
+\alinhanormal
+
+Na linguagem METAFONT original, um delimitador vazio \monoespaco{[]}
+era permitido na declaração de variáveis, para declarar que uma
+variável específica podia armazenar vários valores diferentes, usando
+números para representar a posição interna de cada valor (são arrays
+associativos, ou dicionários, onde o índice sempre é um número que
+pode ser não-inteiro). Mas Weavefont não suporta isso, então qualquer
+delimitador vazio é tratado como erro.
+
+Ao gerar este erro devemos informar qual o tipo de delimitador vazio
+que encontramos. Pode ser parênteses, colchetes ou chaves:
+
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_EMPTY_DELIMITER(mf, cx, line, delimiter) {\
+  if(!mf -> err){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_EMPTY_DELIMITER);\
+    mf -> errno_int = delimiter;}}
+@
+
+A mensagem de erro vai ser personalizada de acordo com qual o
+delimitador foi encontrado vazio:
+
+@<Imprime Mensagem de Erro@>+=
+case ERROR_EMPTY_DELIMITER:
+  fprintf(stderr, "%s:%s Unexpected empty delimiter '%c%c'.",
+          mf -> file, line_number, mf -> errno_int,
+          ((mf -> errno_int == '(')?(')'):
+            ((mf -> errno_int == '[')?(']'):('}'))));
   break;
 @
 
