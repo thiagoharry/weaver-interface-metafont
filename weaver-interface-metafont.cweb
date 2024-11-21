@@ -7031,35 +7031,13 @@ else if(begin -> type == TYPE_ANGLE){
   if(!eval_pair_primary(mf, cx, begin -> next, end, &p))
     return false;
   if(p.x == 0.0 && p.y == 0.0){
-    RAISE_ERROR_ANGLE_OF_ORIGIN(mf, cx, OPTIONAL(begin -> line));
+    RAISE_ERROR_NULL_VECTOR_ANGLE(mf, cx, OPTIONAL(begin -> line));
     return false;
   }
   result -> value = (float) acos(p.x / (hypot(p.x, p.y)));
   result -> value *= 57.2958; // Radianos para graus
   return true;
 }
-@
-
-Medir o ângulo da origem $(0, 0)$ é um erro do tipo:
-
-@<Tipos de Erros@>+=
-ERROR_ANGLE_OF_ORIGIN,
-@
-
-Esta é a macro que gera este erro:
-
-@<Macros Locais (metafont.c)@>+=
-#define RAISE_ERROR_ANGLE_OF_ORIGIN(mf, cx, line) {\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_ANGLE_OF_ORIGIN);}
-@
-
-E a mensagem de erro impressa na tela para informar o usuário:
-
-@<Imprime Mensagem de Erro@>+=
-case ERROR_ANGLE_OF_ORIGIN:
-  fprintf(stderr, "%s:%s Undefined operation 'angle (0, 0)'.",
-          mf -> file, line_number);
-  break;
 @
 
 \subsecao{8.3. Atribuições e Expressões de Transformação}
@@ -18483,7 +18461,7 @@ no momento, se é que algo estava sendo renderizado:
 @
 
 Como nem sempre sabemos a linha de código em que o erro está (só temos
-esta informação em modo dde depuração), a macro abaixo vai nos ajudar
+esta informação em modo de depuração), a macro abaixo vai nos ajudar
 a tratar tal informação como opcional:
 
 @<Macros Locais (metafont.c)@>+=
@@ -19162,6 +19140,33 @@ case ERROR_NO_PICKUP_PEN:
   fprintf(stderr, "%s:%s After a 'pickup' command, you should use either a "
                   "'nullpen', 'pencircle', 'pensemicircle' or a pen variable.",
 		  mf -> file, line_number);
+  break;
+@
+
+\subsecao{A.X. ERROR\_NULL\_VECTOR\_ANGLE}
+
+@<Tipos de Erros@>+=
+ERROR_NULL_VECTOR_ANGLE,
+@
+
+Este erro ocorre quando tentamos medir o ângulo que o vetor $(0, 0)$
+forma com o eixo $x$. Contudo, como é o vetor nulo, não existe ângulo
+algum sendo formado e usar esta operação sobre o vetor nulo resulta no
+erro.
+
+Este erro é tratado da maneira padrão:
+
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_NULL_VECTOR_ANGLE(mf, cx, line) {\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NULL_VECTOR_ANGLE);}
+@
+
+E a mensagem de erro impressa na tela para informar o usuário:
+
+@<Imprime Mensagem de Erro@>+=
+case ERROR_NULL_VECTOR_ANGLE:
+  fprintf(stderr, "%s:%s You cannot use 'angle' operator in a null vector '(0, 0)'.",
+          mf -> file, line_number);
   break;
 @
 

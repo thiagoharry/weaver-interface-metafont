@@ -6868,35 +6868,13 @@ else if(begin -> type == TYPE_ANGLE){
   if(!eval_pair_primary(mf, cx, begin -> next, end, &p))
     return false;
   if(p.x == 0.0 && p.y == 0.0){
-    RAISE_ERROR_ANGLE_OF_ORIGIN(mf, cx, OPTIONAL(begin -> line));
+    RAISE_ERROR_NULL_VECTOR_ANGLE(mf, cx, OPTIONAL(begin -> line));
     return false;
   }
   result -> value = (float) acos(p.x / (hypot(p.x, p.y)));
   result -> value *= 57.2958; // Radians to degrees
   return true;
 }
-@
-
-Measuring the angle of origin $(0, 0)$ is an error of type:
-
-@<Types of Error@>+=
-ERROR_ANGLE_OF_ORIGIN,
-@
-
-This is the macro that raises the error:
-
-@<Local Macros (metafont.c)@>+=
-#define RAISE_ERROR_ANGLE_OF_ORIGIN(mf, cx, line) {\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_ANGLE_OF_ORIGIN);}
-@
-
-And the error message that is shown in the screen:
-
-@<Print Error Message@>+=
-case ERROR_ANGLE_OF_ORIGIN:
-  fprintf(stderr, "%s:%s Undefined operation 'angle (0, 0)'.",
-          mf -> file, line_number);
-  break;
 @
 
 \subsecao{8.3. Transform Assignments and Expressions}
@@ -18840,6 +18818,34 @@ case ERROR_NO_PICKUP_PEN:
   fprintf(stderr, "%s:%s After a 'pickup' command, you should use either a "
                   "'nullpen', 'pencircle', 'pensemicircle' or a pen variable.",
 		  mf -> file, line_number);
+  break;
+@
+
+\subsecao{A.X. ERROR\_NULL\_VECTOR\_ANGLE}
+
+@<Types of Error@>+=
+ERROR_NULL_VECTOR_ANGLE,
+@
+
+This error occurs when we try to measure the angle of vector $(0, 0)$
+ with the $x$-axis. However, since this is the null vector, there is
+ no angle and using this operation over the null vector results in
+ this error being raised.
+
+This error is handled in the standard way:
+
+
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_NULL_VECTOR_ANGLE(mf, cx, line) {\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NULL_VECTOR_ANGLE);}
+@
+
+And this is the error message that warns the user:
+
+@<Print Error Message@>+=
+case ERROR_NULL_VECTOR_ANGLE:
+  fprintf(stderr, "%s:%s You cannot use 'angle' operator in a null vector '(0, 0)'.",
+          mf -> file, line_number);
   break;
 @
 

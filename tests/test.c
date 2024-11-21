@@ -2701,6 +2701,17 @@ void test_errors(void){
 	 !strcmp(error_string, "/tmp/test.mf:2: Unexpected empty delimiter '()'.\n"));
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
+  // ERROR: Angle of null vector
+  memset(error_string, 0, 1024);
+  setbuf(stderr, error_string);
+  create_metafont(&mf, &cx, "numeric a;\na = angle (0, 0);");
+  _Wprint_metafont_error(mf);
+  assert("Raising error when measuring angle of null vector",
+	 mf != NULL && mf -> err == ERROR_NULL_VECTOR_ANGLE &&
+	 !strcmp(error_string, "/tmp/test.mf:2: You cannot use 'angle' operator in a null vector '(0, 0)'.\n"));
+  destroy_context(mf, cx);
+  _Wdestroy_metafont(mf);
+
   // End of error tests
   setbuf(stderr, NULL);
 }
