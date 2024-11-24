@@ -8464,7 +8464,9 @@ if(begin_j == end_j && begin_j -> type == TYPE_AMPERSAND){
   double dif_x = z1_point -> prov.x - z2_point -> prov.x;
   double dif_y = z1_point -> prov.y - z2_point -> prov.y;
   if(hypot(dif_x, dif_y) > 0.00002){
-    RAISE_ERROR_DISCONTINUOUS_PATH(mf, cx, OPTIONAL(begin_j -> line));
+    RAISE_ERROR_DISCONTINUOUS_PATH(mf, cx, OPTIONAL(begin_j -> line),
+                                   z1_point -> prov.x, z1_point -> prov.y,
+				   z2_point -> prov.x, z2_point -> prov.y);
     return false;
   }
   // Isso fará o primeiro ponto de extremidade ser sobrescrito
@@ -8478,29 +8480,6 @@ if(begin_j == end_j && begin_j -> type == TYPE_AMPERSAND){
 }
 @
 
-O novo erro gerado quando concatenamos caminhos que não tem uma
-extremidade em comum deve ser adicionado à lista de erros:
-
-@<Tipos de Erros@>+=
-ERROR_DISCONTINUOUS_PATH,
-@
-
-E esta é a macro que o gera:
-
-@<Macros Locais (metafont.c)@>+=
-#define RAISE_ERROR_DISCONTINUOUS_PATH(mf, cx, line) {\
-  RAISE_GENERIC_ERROR(mf, cx, line, ERROR_DISCONTINUOUS_PATH);}
-@
-
-A mensagem de erro para avisar o usuário:
-
-@<Imprime Mensagem de Erro@>+=
-case ERROR_DISCONTINUOUS_PATH:
-  fprintf(stderr,
-          "%s:%s Trying to concatenate paths without a common extremity.",
-          mf -> file, line_number);
-  break;
-@
 
 O próximo caso de junção será quando os pontos serão ligados por uma
 linha reta. Neste caso, o nosso ponto terá seu formato modificado para
@@ -18590,6 +18569,52 @@ if(tok -> type == TYPE_SYMBOLIC){
   return;
 }
 @
+
+\subsecao{A.X. ERROR\_DISCONTINUOUS\_PATH}
+
+@<Tipos de Erros@>+=
+ERROR_DISCONTINUOUS_PATH,
+@
+
+Este erro ocorre quando tentamos concatenar dois caminhos, mas
+tentamos uni-los por meio de pontos que estão muito distantes entre
+si. Neste caso, a concatenação é impossível e o erro é gerado. Devemos
+passar para a geração de erro quatro valores numéricos: as coordenadas
+do primeiro ponto e as coordenadas do segundo para avisar o usuário
+que são pontos diferentes e não podem ser fundidos.
+
+Vamos tratar como números em ponto flutuante de precisão simples os
+quatro valores de coordenadas passados. O que significa que precisamos
+de 16 bytes para armazenar todos eles. Como é um caso bastante
+particular deste erro, e não é tão comum assim que precisemos
+armazenar tantos valores numéricos nos demais erros, podemos
+armazená-los sequancialmente no buffer que normalmente usamos para
+armazenar strings de mensagem de erro, já que ele tem um espaço de 32
+bytes:
+
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_DISCONTINUOUS_PATH(mf, cx, line, x1, y1, x2, y2) {\
+  if(!mf -> err){\
+    float *buffer = (float *) (mf -> errno_str);\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_DISCONTINUOUS_PATH);\
+    buffer[0] = (float) (x1);\
+    buffer[1] = (float) (y1);\
+    buffer[2] = (float) (x2);\
+    buffer[3] = (float) (y2);}}
+@
+
+A mensagem de erro para avisar o usuário:
+
+@<Imprime Mensagem de Erro@>+=
+case ERROR_DISCONTINUOUS_PATH:
+  float *buffer = (float *) (mf -> errno_str);
+  fprintf(stderr,
+          "%s:%s Concatenating endpoint '(%g, %g)' with endpoint '(%g, %g)':"
+	  " discontinuous path.",
+          mf -> file, line_number, buffer[0], buffer[1], buffer[2], buffer[3]);
+  break;
+@
+
 
 \subsecao{A.X. ERROR\_DIVISION\_BY\_ZERO}
 

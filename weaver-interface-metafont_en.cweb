@@ -8266,7 +8266,9 @@ if(begin_j == end_j && begin_j -> type == TYPE_AMPERSAND){
   double dif_x = z1_point -> prov.x - z2_point -> prov.x;
   double dif_y = z1_point -> prov.y - z2_point -> prov.y;
   if(hypot(dif_x, dif_y) > 0.00002){
-    RAISE_ERROR_DISCONTINUOUS_PATH(mf, cx, OPTIONAL(begin_j -> line));
+    RAISE_ERROR_DISCONTINUOUS_PATH(mf, cx, OPTIONAL(begin_j -> line),
+                                   z1_point -> prov.x, z1_point -> prov.y,
+				   z2_point -> prov.x, z2_point -> prov.y);
     return false;
   }
   // This will overwrite the first extremity point
@@ -8278,30 +8280,6 @@ if(begin_j == end_j && begin_j -> type == TYPE_AMPERSAND){
   z1_point -> point.x = NAN;
   z1_point -> point.y = NAN;
 }
-@
-
-The new error, when we concatenate paths that do not share a common
-extremity should be added to the list of errors:
-
-@<Types of Error@>+=
-ERROR_DISCONTINUOUS_PATH,
-@
-
-This is the macro that raises the error:
-
-@<Local Macros (metafont.c)@>+=
-#define RAISE_ERROR_DISCONTINUOUS_PATH(mf, cx, line) {\
-  RAISE_GENERIC_ERROR(mf, cx, line, ERROR_DISCONTINUOUS_PATH);}
-@
-
-And the error message that warns the user:
-
-@<Print Error Message@>+=
-case ERROR_DISCONTINUOUS_PATH:
-  fprintf(stderr,
-          "%s:%s Trying to concatenate paths without a common extremity.",
-          mf -> file, line_number);
-  break;
 @
 
 The next joining case will be when the points are connected by a
@@ -18273,6 +18251,50 @@ if(tok -> type == TYPE_SYMBOLIC){
   return;
 }
 @
+
+\subsecao{A.X. ERROR\_DISCONTINUOUS\_PATH}
+
+@<Types of Error@>+=
+ERROR_DISCONTINUOUS_PATH,
+@
+
+This error occurs when we try to concatenate two paths, but we try to
+join them through points that are too far apart. In this case,
+concatenation is impossible and the error is generated. We must pass
+four numeric values ​​to the error generation: the coordinates of the
+first point and the coordinates of the second to warn the user that
+they are different points and cannot be merged.
+
+We will treat the four coordinate values ​​passed as single-precision
+floating-point numbers. This means that we need 16 bytes to store all
+of them. Since this is a very particular case of this error, and it is
+not so common that we need to store so many numeric values ​​in other
+errors, we can store them sequentially in the buffer that we normally
+use to store error message strings, since it has a space of 32 bytes:
+
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_DISCONTINUOUS_PATH(mf, cx, line, x1, y1, x2, y2) {\
+  if(!mf -> err){\
+    float *buffer = (float *) (mf -> errno_str);\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_DISCONTINUOUS_PATH);\
+    buffer[0] = (float) (x1);\
+    buffer[1] = (float) (y1);\
+    buffer[2] = (float) (x2);\
+    buffer[3] = (float) (y2);}}
+@
+
+The error message to warn the user:
+
+@<Print Error Message@>+=
+case ERROR_DISCONTINUOUS_PATH:
+  float *buffer = (float *) (mf -> errno_str);
+  fprintf(stderr,
+          "%s:%s Concatenating endpoint '(%g, %g)' with endpoint '(%g, %g)':"
+	  " discontinuous path.",
+          mf -> file, line_number, buffer[0], buffer[1], buffer[2], buffer[3]);
+  break;
+@
+
 
 \subsecao{A.X. ERROR\_DIVISION\_BY\_ZERO}
 

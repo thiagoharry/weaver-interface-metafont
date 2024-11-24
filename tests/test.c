@@ -2711,7 +2711,16 @@ void test_errors(void){
 	 !strcmp(error_string, "/tmp/test.mf:2: You cannot use 'angle' operator in a null vector '(0, 0)'.\n"));
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
-
+  // ERROR: Concatenating non-adjacent paths
+  memset(error_string, 0, 1024);
+  setbuf(stderr, error_string);
+  create_metafont(&mf, &cx, "path a;\na = ((0, 0)..(1, 0)) & ((0, 1)..(2, 2));");
+  _Wprint_metafont_error(mf);
+  assert("Raising error when concatenating non-adjacent paths",
+	 mf != NULL && mf -> err == ERROR_DISCONTINUOUS_PATH &&
+	 !strcmp(error_string, "/tmp/test.mf:2: Concatenating endpoint '(1, 0)' with endpoint '(0, 1)': discontinuous path.\n"));
+  destroy_context(mf, cx);
+  _Wdestroy_metafont(mf);  
   // End of error tests
   setbuf(stderr, NULL);
 }
