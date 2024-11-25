@@ -8389,7 +8389,7 @@ z0 ..  z1 .. {u-z2}z2 .. controls u and v ..z3
 Este caso é tratado no momento em que interpretamos os pontos de
 controle da junção quando eles são explícitos:
 
-@<Expressão de Caminho: Leu Pontos de Controle Explícitos@>+=
+@<Expressão de Caminho: Leu Pontos de Controle Explícitos@>=
 if(z0_point != NULL && z0_point -> format == PROVISIONAL_FORMAT &&
    isnan(z0_point -> prov.dir2_y)){
   z0_point -> prov.dir2_x = z1_point -> point.u_x - z1_point -> point.x;
@@ -8655,12 +8655,16 @@ else if(begin_j -> type == TYPE_JOIN && begin_j != end_j &&
   }
   if(z1_point -> prov.tension1 < 0.75){
     RAISE_ERROR_INVALID_TENSION(mf, cx, OPTIONAL(begin_t0 -> line),
-                                z1_point -> prov.tension1, 0);
+                                z1_point -> prov.tension1, 0,
+				z1_point -> prov.x, z1_point -> prov.y,
+				z2_point -> prov.x, z2_point -> prov.y);
     return false;
   }
   if(z1_point -> prov.tension2 < 0.75){
     RAISE_ERROR_INVALID_TENSION(mf, cx, OPTIONAL(begin_t0 -> line),
-                                z1_point -> prov.tension2, 1);
+                                z1_point -> prov.tension2, 1,
+				z1_point -> prov.x, z1_point -> prov.y,
+				z2_point -> prov.x, z2_point -> prov.y);
     return false;
   }
 }
@@ -8668,36 +8672,7 @@ else if(begin_j -> type == TYPE_JOIN && begin_j != end_j &&
 
 Conforme visto na Subseção 7.4.3, o valor de tensão não pode ser menor
 que 3/4, ou a equação que nos permite deduzir o formato da curva pode
-não ter solução. Caso o valor de tensão seja abaixo disso, o seguinte
-erro será gerado:
-
-@<Tipos de Erros@>+=
-ERROR_INVALID_TENSION,
-@
-
-A macro que o gera o erro armazena em \monoespaco{errno\_int} se a
-tensão com valor inválido foi a primeira (0) ou a segunda (1). Em
-seguida, armazena como string o valor de tensão que foi encontrado:
-
-@<Macros Locais (metafont.c)@>+=
-#define RAISE_ERROR_INVALID_TENSION(mf, cx, line, value, position) {\
-  if(!mf -> err){\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INVALID_TENSION);\
-    snprintf(mf -> errno_str, 31, "%g", value);\
-    mf -> errno_str[31] = '\0';\
-    mf -> errno_int = position;}}
-@
-
-A mensagem de erro para avisar o usuário:
-
-@<Imprime Mensagem de Erro@>+=
-case ERROR_INVALID_TENSION:
-  fprintf(stderr,
-          "%s:%s %s tension value was smaller than 0.75 (Found value: %s).",
-          mf -> file, line_number, (mf -> errno_int == 0)?"First":"Second",
-          mf -> errno_str);
-  break;
-@
+não ter solução. 
 
 Uma vez que todas as tensões, pontos de controle e direções foram
 coletadas, existem mais algumas operações que precisamos fazer após
@@ -18968,6 +18943,55 @@ case ERROR_INVALID_NAME:
     sprintf(reason, "it is a reserved keyword");
   fprintf(stderr, "%s:%s You can not use '%s' as a variable name: %s.",
           mf -> file, line_number, mf -> errno_str, reason);
+  break;
+@
+
+\subsecao{A.X. ERROR\_INVALID\_TENSION}
+
+@<Tipos de Erros@>+=
+ERROR_INVALID_TENSION,
+@
+
+Quando lemos a especificação de uma curva, um dos parâmetros que o
+usuário pode controlar é a tensão em um segmento, deixando a curva que
+liga duas extremidades mais rígida, próxima de uma reta, ou mais
+frouxa, fazendo um desvio maior até chegar no destino.
+
+O modo pelo qual a tensão é calculada tem a restrição de que o valor
+do parâmetro tensão não pode ser menor que 0.75, do contrário, podemos
+obter um conjunto de equações para as curvas que não pode ter solução.
+
+Caso um valor de tensão menor que este é encontrado, este erro é
+gerado. A macro que o gera o erro armazena em \monoespaco{errno\_int}
+se a tensão com valor inválido foi a primeira (0) ou a segunda (1) no
+segmento. E armazena no buffer \monoespaco{errno\_str} de 32 bytes os
+cinco valores em ponto flutuante simples (totalizando 20 bytes, eles
+cabem tranquilamente no buffer) representando as coordenadas dos dois
+pontos de extremidade que possuem entre si a tensão inválida, e o
+próprio valor da tensão inválida:
+
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_INVALID_TENSION(mf, cx, line, value, position, x1, y1, x2, y2) {\
+  if(!mf -> err){\
+    float *buffer = (float *) (mf -> errno_str);\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INVALID_TENSION);\
+    buffer[0] = (float) (x1);\
+    buffer[1] = (float) (y1);\
+    buffer[2] = (float) (x2);\
+    buffer[3] = (float) (y2);\
+    buffer[4] = (float) (value);\
+    mf -> errno_int = position;}}
+@
+
+A mensagem de erro para avisar o usuário:
+
+@<Imprime Mensagem de Erro@>+=
+case ERROR_INVALID_TENSION:
+  float *buf = (float *) (mf -> errno_str);
+  fprintf(stderr,
+          "%s:%s Between path points (%g, %g) and (%g, %g) we found %s tension value '%g' smaller than minimal allowed '0.75'.",
+          mf -> file, line_number, buf[0], buf[1], buf[2], buf[3],
+	  (mf -> errno_int == 0)?"first":"second", buf[4]);
   break;
 @
 

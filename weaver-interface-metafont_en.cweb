@@ -8456,12 +8456,16 @@ else if(begin_j -> type == TYPE_JOIN && begin_j != end_j &&
   }
   if(z1_point -> prov.tension1 < 0.75){
     RAISE_ERROR_INVALID_TENSION(mf, cx, OPTIONAL(begin_t0 -> line),
-                                z1_point -> prov.tension1, 0);
+                                z1_point -> prov.tension1, 0,
+				z1_point -> prov.x, z1_point -> prov.y,
+				z2_point -> prov.x, z2_point -> prov.y);
     return false;
   }
   if(z1_point -> prov.tension2 < 0.75){
     RAISE_ERROR_INVALID_TENSION(mf, cx, OPTIONAL(begin_t0 -> line),
-                                z1_point -> prov.tension2, 1);
+                                z1_point -> prov.tension2, 1,
+				z1_point -> prov.x, z1_point -> prov.y,
+				z2_point -> prov.x, z2_point -> prov.y);
     return false;
   }
 }
@@ -8469,35 +8473,7 @@ else if(begin_j -> type == TYPE_JOIN && begin_j != end_j &&
 
 Like seen in Subsection 7.4.3., the tension value cannot be smaller
 than 3/4, otherwise the system of equations that determines the curve
-shape could have no solution. If the tension is below this value, the
-following error will be raised:
-
-@<Types of Error@>+=
-ERROR_INVALID_TENSION,
-@
-
-The macro that raises the error will store in \monoespaco{errno\_int}
-if we are having problem in the first (0) or in the second (1) tension. The invalid value also will be stored as a string in \monoespaco{errno\_str}:
-
-@<Local Macros (metafont.c)@>+=
-#define RAISE_ERROR_INVALID_TENSION(mf, cx, line, value, position) {\
-  if(!mf -> err){\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INVALID_TENSION);\
-    snprintf(mf -> errno_str, 31, "%g", value);\
-    mf -> errno_str[31] = '\0';\
-    mf -> errno_int = position;}}
-@
-
-And this is the error message to warn the user:
-
-@<Print Error Message@>+=
-case ERROR_INVALID_TENSION:
-  fprintf(stderr,
-          "%s:%s %s tension value was smaller than 0.75 (Found value: %s).",
-          mf -> file, line_number, (mf -> errno_int == 0)?"First":"Second",
-          mf -> errno_str);
-  break;
-@
+shape could have no solution.
 
 Once we populate the resulting path with all tension values, joinings
 and directions, there is just a little more operations that we need to
@@ -18647,6 +18623,58 @@ case ERROR_INVALID_NAME:
           mf -> file, line_number, mf -> errno_str, reason);
   break;
 @
+
+\subsecao{A.X. ERROR\_INVALID\_TENSION}
+
+@<Types of Error@>+=
+ERROR_INVALID_TENSION,
+@
+
+When we read the specification of a curve, one of the parameters
+controlled by user is the segment tension, making the curve that
+connects two endpoints more rigid, close to a straight line, or looser,
+making a greater deviation until reaching the destination.
+
+The way in which tension is calculated has the restriction that the
+value of the tension parameter cannot be less than 0.75, otherwise, we
+can obtain a set of equations for the curves that will not have a
+solution.
+
+If a tension value lower than this is found, this error is
+generated. The macro that generates the error stores in
+\monoespaco{errno\_int} whether the tension with an invalid value was
+the first (0) or the second (1) in the segment. And it stores in the
+32-byte \monoespaco{errno\_str} buffer the five floating point
+values ​​(totaling 20 bytes, which fit easily in the buffer) representing
+the coordinates of the two endpoints that have the invalid tension
+between them, and the invalid tension value itself:
+
+
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_INVALID_TENSION(mf, cx, line, value, position, x1, y1, x2, y2) {\
+  if(!mf -> err){\
+    float *buffer = (float *) (mf -> errno_str);\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INVALID_TENSION);\
+    buffer[0] = (float) (x1);\
+    buffer[1] = (float) (y1);\
+    buffer[2] = (float) (x2);\
+    buffer[3] = (float) (y2);\
+    buffer[4] = (float) (value);\
+    mf -> errno_int = position;}}
+@
+
+The error message sent to the user:
+
+@<Print Error Message@>+=
+case ERROR_INVALID_TENSION:
+  float *buf = (float *) (mf -> errno_str);
+  fprintf(stderr,
+          "%s:%s Between path points (%g, %g) and (%g, %g) we found %s tension value '%g' smaller than minimal allowed '0.75'.",
+          mf -> file, line_number, buf[0], buf[1], buf[2], buf[3],
+	  (mf -> errno_int == 0)?"first":"second", buf[4]);
+  break;
+@
+
 
 \subsecao{A.X. ERROR\_MISSING\_EXPRESSION}
 

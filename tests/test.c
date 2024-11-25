@@ -2720,6 +2720,17 @@ void test_errors(void){
 	 mf != NULL && mf -> err == ERROR_DISCONTINUOUS_PATH &&
 	 !strcmp(error_string, "/tmp/test.mf:2: Concatenating endpoint '(1, 0)' with endpoint '(0, 1)': discontinuous path.\n"));
   destroy_context(mf, cx);
+  _Wdestroy_metafont(mf);
+  // ERROR: Concatenating non-adjacent paths
+  memset(error_string, 0, 1024);
+  setbuf(stderr, error_string);
+  create_metafont(&mf, &cx, "path a;\na = (0, 0) .. tension 0.5 and 0.75 .. (1, 0);");
+  _Wprint_metafont_error(mf);
+  // Caution: If error message were a little bigger, our test setup could fail:
+  assert("Raising error when using invalid tension values",
+	 mf != NULL && mf -> err == ERROR_INVALID_TENSION &&
+	 !strcmp(error_string, "/tmp/test.mf:2: Between path points (0, 0) and (1, 0) we found first tension value '0.5' smaller than minimal allowed '0.75'.\n"));
+  destroy_context(mf, cx);
   _Wdestroy_metafont(mf);  
   // End of error tests
   setbuf(stderr, NULL);
