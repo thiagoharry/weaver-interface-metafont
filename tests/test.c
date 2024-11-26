@@ -2731,6 +2731,16 @@ void test_errors(void){
 	 mf != NULL && mf -> err == ERROR_INVALID_TENSION &&
 	 !strcmp(error_string, "/tmp/test.mf:2: Between path points (0, 0) and (1, 0) we found first tension value '0.5' smaller than minimal allowed '0.75'.\n"));
   destroy_context(mf, cx);
+  _Wdestroy_metafont(mf);
+  // ERROR: Non-cyclical pen
+  memset(error_string, 0, 1024);
+  setbuf(stderr, error_string);
+  create_metafont(&mf, &cx, "pen a;\na = makepen((0, 0)..(8, 2));");
+  _Wprint_metafont_error(mf);
+  assert("Raising error when trying to create a pen from non-cyclical path",
+	 mf != NULL && mf -> err == ERROR_NONCYCLICAL_PEN &&
+	 !strcmp(error_string, "/tmp/test.mf:2: Tried to create a pen from non-cyclical path.\n"));
+  destroy_context(mf, cx);
   _Wdestroy_metafont(mf);  
   // End of error tests
   setbuf(stderr, NULL);

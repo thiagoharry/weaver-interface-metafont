@@ -34,11 +34,11 @@ extern"C"{
 /*:24*/
 #line 401 "weaver-interface-metafont.cweb"
 
-/*625:*/
-#line 17134 "weaver-interface-metafont.cweb"
+/*622:*/
+#line 17112 "weaver-interface-metafont.cweb"
 
 struct _glyph;
-/*:625*/
+/*:622*/
 #line 402 "weaver-interface-metafont.cweb"
 
 /*75:*/
@@ -67,27 +67,27 @@ struct pen_variable*currentpen;
 #line 5152 "weaver-interface-metafont.cweb"
 
 struct picture_variable*currentpicture;
-/*:197*//*516:*/
-#line 13602 "weaver-interface-metafont.cweb"
+/*:197*//*513:*/
+#line 13580 "weaver-interface-metafont.cweb"
 
 float pen_lft,pen_rt,pen_top,pen_bot;
-/*:516*//*595:*/
-#line 16510 "weaver-interface-metafont.cweb"
+/*:513*//*592:*/
+#line 16488 "weaver-interface-metafont.cweb"
 
 float color[4];
-/*:595*//*607:*/
-#line 16690 "weaver-interface-metafont.cweb"
+/*:592*//*604:*/
+#line 16668 "weaver-interface-metafont.cweb"
 
 GLuint currentpicture_fb;
-/*:607*//*622:*/
-#line 17005 "weaver-interface-metafont.cweb"
+/*:604*//*619:*/
+#line 16983 "weaver-interface-metafont.cweb"
 
 int current_depth;
-/*:622*//*638:*/
-#line 17496 "weaver-interface-metafont.cweb"
+/*:619*//*635:*/
+#line 17474 "weaver-interface-metafont.cweb"
 
 struct _glyph*current_glyph;
-/*:638*/
+/*:635*/
 #line 2165 "weaver-interface-metafont.cweb"
 
 };
@@ -132,24 +132,24 @@ struct pen_variable*internal_pen_variables;
 
 bool have_stored_normaldeviate;
 float normaldeviate;
-/*:240*//*602:*/
-#line 16628 "weaver-interface-metafont.cweb"
+/*:240*//*599:*/
+#line 16606 "weaver-interface-metafont.cweb"
 
 void*mono_expr_begin,*mono_expr_end;
-/*:602*//*628:*/
-#line 17175 "weaver-interface-metafont.cweb"
+/*:599*//*625:*/
+#line 17153 "weaver-interface-metafont.cweb"
 
 struct _glyph*glyphs[332];
 struct _glyph*first_glyph;
 int number_of_glyphs;
-/*:628*//*666:*/
-#line 18313 "weaver-interface-metafont.cweb"
+/*:625*//*663:*/
+#line 18291 "weaver-interface-metafont.cweb"
 
 int err,errno_line;
 char errno_character[5];
 char errno_str[32];
 int errno_int;
-/*:666*/
+/*:663*/
 #line 2185 "weaver-interface-metafont.cweb"
 
 };
@@ -191,19 +191,19 @@ void _Wfinish_weavefont(void);
 #line 360 "weaver-interface-metafont.cweb"
 
 void _Wprint_metafont_error(struct metafont*);
-/*:6*//*644:*/
-#line 17698 "weaver-interface-metafont.cweb"
+/*:6*//*641:*/
+#line 17676 "weaver-interface-metafont.cweb"
 
 bool _Wwrite_numeric_variable(struct metafont*mf,char*name,float value);
 float _Wread_numeric_variable(struct metafont*mf,char*name);
-/*:644*//*648:*/
-#line 17794 "weaver-interface-metafont.cweb"
+/*:641*//*645:*/
+#line 17772 "weaver-interface-metafont.cweb"
 
 bool _Wrender_glyph(struct metafont*mf,char*glyph,
 char*next_glyph,GLuint*texture,
 int*width,int*height,int*depth,
 int*italcorr,int*kerning);
-/*:648*/
+/*:645*/
 #line 404 "weaver-interface-metafont.cweb"
 
 #ifdef __cplusplus

@@ -10406,28 +10406,6 @@ INITIALIZE_IDENTITY_MATRIX(result -> gl_matrix);
 return true;
 @
 
-Nesta expressão podemos encontrar um novo tipo de erro:
-
-@<Tipos de Erros@>+=
-ERROR_NONCYCLICAL_PEN,
-@
-
-Ela só ocorre quando tenta-se criar uma caneta com um formato
-representado por caminho não-cíclico:
-
-@<Macros Locais (metafont.c)@>+=
-#define RAISE_ERROR_NONCYCLICAL_PEN(mf, cx, line) {\
-  RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NO_MEMORY);}
-@
-
-A mensagem de erro para o usuário:
-
-@<Imprime Mensagem de Erro@>+=
-case ERROR_NONCYCLICAL_PEN:
-  fprintf(stderr, "%s:%s Tried to create a pen with non-cyclical format.",
-          mf -> file, line_number);
-  break;
-@
 
 O que falta implementar para que o código de criação de canetas
 personalizadas funcione é a função que percorra os pontos de uma
@@ -19191,6 +19169,32 @@ case ERROR_NO_PICKUP_PEN:
 		  mf -> file, line_number);
   break;
 @
+
+\subsecao{A.X. ERROR\_NONCYCLICAL\_PEN}
+
+@<Tipos de Erros@>+=
+ERROR_NONCYCLICAL_PEN,
+@
+
+Este erro ocorre quando queremos criar uma nova caneta com formato
+personalizado usando \monoespaco{makepen}. Para isso, devemos passar
+como operando deste comando um caminho, que deve ser cíclico. Caso ele
+não seja cíclico, este erro é gerado:
+
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_NONCYCLICAL_PEN(mf, cx, line) {\
+  RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NONCYCLICAL_PEN);}
+@
+
+A mensagem de erro para o usuário:
+
+@<Imprime Mensagem de Erro@>+=
+case ERROR_NONCYCLICAL_PEN:
+  fprintf(stderr, "%s:%s Tried to create a pen from non-cyclical path.",
+          mf -> file, line_number);
+  break;
+@
+
 
 \subsecao{A.X. ERROR\_NULL\_VECTOR\_ANGLE}
 

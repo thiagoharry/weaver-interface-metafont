@@ -10185,35 +10185,12 @@ if(!(result -> format -> cyclic)){
   RAISE_ERROR_NONCYCLICAL_PEN(mf, cx, OPTIONAL(begin -> line));
   return false;
 }
-result -> flags = read_flags(result -> format); // To be implemented
+result -> flags = read_flags(result -> format); // To be implemented below
 result -> referenced = NULL;
 result -> gl_vbo = 0;
 result -> indices = 0;
 INITIALIZE_IDENTITY_MATRIX(result -> gl_matrix);
 return true;
-@
-
-In this kind of expression we can find a new type of error:
-
-@<Types of Error@>+=
-ERROR_NONCYCLICAL_PEN,
-@
-
-It happens when the user tries to create a pen from a non-cyclical
-path:
-
-@<Local Macros (metafont.c)@>+=
-#define RAISE_ERROR_NONCYCLICAL_PEN(mf, cx, line) {\
-  RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NO_MEMORY);}
-@
-
-And the error message for the user:
-
-@<Print Error Message@>+=
-case ERROR_NONCYCLICAL_PEN:
-  fprintf(stderr, "%s:%s Tried to create a pen with non-cyclical format.",
-          mf -> file, line_number);
-  break;
 @
 
 The code for custom pen creation needs a function that walks over the
@@ -18870,6 +18847,32 @@ case ERROR_NO_PICKUP_PEN:
 		  mf -> file, line_number);
   break;
 @
+
+\subsecao{A.X. ERROR\_NONCYCLICAL\_PEN}
+
+@<Types of Error@>+=
+ERROR_NONCYCLICAL_PEN,
+@
+
+This error occurs when we want to create a new pen with a custom
+format using \monoespaco{makepen}. To do this, we must pass a path as
+the operand of this command, which must be cyclic. If it is not
+cyclic, this error is generated:
+
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_NONCYCLICAL_PEN(mf, cx, line) {\
+  RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NONCYCLICAL_PEN);}
+@
+
+The error message to the user:
+
+@<Print Error Message@>+=
+case ERROR_NONCYCLICAL_PEN:
+  fprintf(stderr, "%s:%s Tried to create a pen from non-cyclical path.",
+          mf -> file, line_number);
+  break;
+@
+
 
 \subsecao{A.X. ERROR\_NULL\_VECTOR\_ANGLE}
 
