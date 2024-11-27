@@ -10856,28 +10856,7 @@ bool assign_picture_variable(struct metafont *mf, struct context *cx,
 
 The only error that could happen above is in the OpenGL library, if it
 failed to create a new framebuffer for the new image variable. This
-should not happen during normal execution. But if it happens, then the
-new error created is:
-
-@<Types of Error@>+=
-ERROR_OPENGL_FRAMEBUFFER,
-@
-
-This error is raised by the macro:
-
-@<Local Macros (metafont.c)@>+=
-#define RAISE_ERROR_OPENGL_FRAMEBUFFER(mf, cx, line) {\
-  RAISE_GENERIC_ERROR(mf, cx, line, ERROR_OPENGL_FRAMEBUFFER);}
-@
-
-And the error message print to the user:
-
-@<Print Error Message@>+=
-case ERROR_OPENGL_FRAMEBUFFER:
-  fprintf(stderr, "%s:%s OpenGL error. Couldn't create framebuffer for image.",
-          mf -> file, line_number);
-  break;
-@
+should not happen during normal execution. 
 
 \subsubsecao{8.6.1. Picture Tertiary Expressions: Sum and Subtraction}
 
@@ -18899,6 +18878,60 @@ And this is the error message that warns the user:
 case ERROR_NULL_VECTOR_ANGLE:
   fprintf(stderr, "%s:%s You cannot use 'angle' operator in a null vector '(0, 0)'.",
           mf -> file, line_number);
+  break;
+@
+
+\subsecao{A.X. ERROR\_OPENGL\_FRAMEBUFFER}
+
+@<Types of Error@>+=
+ERROR_OPENGL_FRAMEBUFFER,
+@
+
+This error occurs when a framebuffer cannot be created internally due
+to errors in OpenGL. Ideally, this should not happen, but if it does,
+it may be caused by incorrect OpenGL configuration by the user.
+
+To help debug this type of error, we store the state of the current
+framebuffer in OpenGL, where the error likely occurred:
+
+
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_OPENGL_FRAMEBUFFER(mf, cx, line) {\
+  if(!mf -> err){\
+  RAISE_GENERIC_ERROR(mf, cx, line, ERROR_OPENGL_FRAMEBUFFER);\
+  mf -> errno_int = glCheckFramebufferStatus(GL_FRAMEBUFFER);}}
+@
+
+The error message depends on the framebuffer status:
+
+@<Print Error Message@>+=
+case ERROR_OPENGL_FRAMEBUFFER:
+  fprintf(stderr, "%s:%s OpenGL error. Couldn't create framebuffer for image.",
+          mf -> file, line_number);
+  switch(mf -> errno_int){
+    case GL_FRAMEBUFFER_UNDEFINED:
+      printf(" Default framebuffer not defined.");
+      break;
+    case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+      printf(" The framebuffer had incomplete attachment.");
+      break;
+    case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+      printf(" The framebuffer had no image attached to it.");
+      break;
+    case GL_FRAMEBUFFER_UNSUPPORTED:
+      printf(" Depth and stencil attachments are not the same renderbuffer, "
+             "or internal image format is not supported by this implementation.");
+      break;
+    case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
+      printf("  GL_RENDERBUFFER_SAMPLES is not the same for all attached "
+             " renderbuffers or attached images are a mix of renderbuffers "
+	     "and textures while the value of GL_RENDERBUFFER_SAMPLES "
+	     "is not zero. ");
+      break;
+    default:
+      printf(" Unknown error.");
+      break;
+  }
   break;
 @
 

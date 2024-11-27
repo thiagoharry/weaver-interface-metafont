@@ -2741,7 +2741,7 @@ void test_errors(void){
 	 mf != NULL && mf -> err == ERROR_NONCYCLICAL_PEN &&
 	 !strcmp(error_string, "/tmp/test.mf:2: Tried to create a pen from non-cyclical path.\n"));
   destroy_context(mf, cx);
-  _Wdestroy_metafont(mf);  
+  _Wdestroy_metafont(mf);
   // End of error tests
   setbuf(stderr, NULL);
 }
