@@ -12174,38 +12174,13 @@ bool eval_boolean_expression(struct metafont *mf, struct context *cx,
       break;
     }
     default:
-      RAISE_ERROR_INVALID_COMPARISON(mf, cx, OPTIONAL(begin -> line));
+      RAISE_ERROR_INVALID_COMPARISON(mf, cx, OPTIONAL(begin -> line),
+                                     last_operator, type);
       return false;
     }
     return true;
   }
 }
-@
-
-If the user tries to use operators ``lesser'', ``greater'', ``equal''
-and others to compare two types that cannot be compared (two pictures,
-two pens, two paths), then the following error is raised:
-
-@<Types of Error@>+=
-ERROR_INVALID_COMPARISON,
-@
-
-The macro that raises this error is:
-
-@<Local Macros (metafont.c)@>+=
-#define RAISE_ERROR_INVALID_COMPARISON(mf, cx, line) {\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INVALID_COMPARISON);}
-@
-
-And the diagnostic message:
-
-@<Print Error Message@>+=
-case ERROR_INVALID_COMPARISON:
-  fprintf(stderr,
-          "%s:%s Boolean comparison over non-camparable expression type."
-          " You cannot compare paths, pens or pictures.",
-          mf -> file, line_number);
-  break;
 @
 
 \subsubsecao{8.7.2. Operation OR}
@@ -18533,6 +18508,39 @@ case ERROR_INVALID_CHAR:
   break;
 }
 @
+
+\subsecao{A.X. ERROR\_INVALID\_COMPARISON}
+
+@<Types of Error@>+=
+ERROR_INVALID_COMPARISON,
+@
+
+This error occurs when the user uses Boolean comparison in path, pen
+or expressions. Such types cannot be compared with each other. When
+such an error is generated, we store the invalid expression type that
+was used in the comparison and also the comparison operator.
+
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_INVALID_COMPARISON(mf, cx, line, operator, type) {\
+  if(!mf -> err){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INVALID_COMPARISON);\
+    token_to_string(operator, mf -> errno_str);\
+    mf -> errno_int = type;}}
+@
+
+And the message for diagnostic:
+
+@<Print Error Message@>+=
+case ERROR_INVALID_COMPARISON:
+  char expr_type[32];
+  tokenid_to_string(mf -> errno_int, expr_type);
+  fprintf(stderr,
+          "%s:%s Tried to use '%s' to compare an "
+	  "expression of type '%s', but such type is not comparable.",
+          mf -> file, line_number, mf -> errno_str, expr_type);
+  break;
+@
+
 
 \subsecao{A.X. ERROR\_INVALID\_NAME}
 

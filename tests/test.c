@@ -2742,6 +2742,17 @@ void test_errors(void){
 	 !strcmp(error_string, "/tmp/test.mf:2: Tried to create a pen from non-cyclical path.\n"));
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
+  // ERROR: Comparing non-comparable types
+  memset(error_string, 0, 1024);
+  setbuf(stderr, error_string);
+  create_metafont(&mf, &cx, "pen a, b;\na = nullpen; b = nullpen;\nif a < b: ; fi");
+  _Wprint_metafont_error(mf);
+  assert("Raising error when comparing non-camparable types",
+	 mf != NULL && mf -> err == ERROR_INVALID_COMPARISON &&
+	 !strcmp(error_string, "/tmp/test.mf:3: Tried to use '<' to compare an expression of type 'pen', but such type is not comparable.\n"));
+  destroy_context(mf, cx);
+  _Wdestroy_metafont(mf);
+
   // End of error tests
   setbuf(stderr, NULL);
 }

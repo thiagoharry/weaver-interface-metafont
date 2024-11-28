@@ -12403,7 +12403,8 @@ bool eval_boolean_expression(struct metafont *mf, struct context *cx,
       break;
     }
     default:
-      RAISE_ERROR_INVALID_COMPARISON(mf, cx, OPTIONAL(begin -> line));
+      RAISE_ERROR_INVALID_COMPARISON(mf, cx, OPTIONAL(begin -> line),
+                                     last_operator, type);
       return false;
     }
     return true;
@@ -12411,31 +12412,6 @@ bool eval_boolean_expression(struct metafont *mf, struct context *cx,
 }
 @
 
-Se o usuário tentar usar comparação de maior, menor ou igual para
-comparar algo que não pode ser comparado (duas imagens, duas canetas,
-dois caminhos), então o seguinte erro é gerado:
-
-@<Tipos de Erros@>+=
-ERROR_INVALID_COMPARISON,
-@
-
-A macro que gera este erro é:
-
-@<Macros Locais (metafont.c)@>+=
-#define RAISE_ERROR_INVALID_COMPARISON(mf, cx, line) {\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INVALID_COMPARISON);}
-@
-
-E a mensagem de diagnóstico:
-
-@<Imprime Mensagem de Erro@>+=
-case ERROR_INVALID_COMPARISON:
-  fprintf(stderr,
-          "%s:%s Boolean comparison over non-camparable expression type."
-          " You cannot compare paths, pens or pictures.",
-          mf -> file, line_number);
-  break;
-@
 
 \subsubsecao{8.7.2. A Operação OR}
 
@@ -18857,6 +18833,40 @@ case ERROR_INVALID_CHAR:
   break;
 }
 @
+
+\subsecao{A.X. ERROR\_INVALID\_COMPARISON}
+
+@<Tipos de Erros@>+=
+ERROR_INVALID_COMPARISON,
+@
+
+Este erro ocorre quando o usuário usa operadores booleanos de
+comparação em expressões de tipo caminho, caneta ou imagem. Tais tipos
+não podem ser comparados entre si. Quando tal erro é gerado, nós
+armazenamos qual o tipo de expressão inválido foi usado na comparação
+e também qual foi o operador de comparação.
+
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_INVALID_COMPARISON(mf, cx, line, operator, type) {\
+  if(!mf -> err){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INVALID_COMPARISON);\
+    token_to_string(operator, mf -> errno_str);\
+    mf -> errno_int = type;}}
+@
+
+E a mensagem de diagnóstico:
+
+@<Imprime Mensagem de Erro@>+=
+case ERROR_INVALID_COMPARISON:
+  char expr_type[32];
+  tokenid_to_string(mf -> errno_int, expr_type);
+  fprintf(stderr,
+          "%s:%s Tried to use '%s' to compare an "
+	  "expression of type '%s', but such type is not comparable.",
+          mf -> file, line_number, mf -> errno_str, expr_type);
+  break;
+@
+
 
 \subsecao{A.X. ERROR\_INVALID\_NAME}
 
