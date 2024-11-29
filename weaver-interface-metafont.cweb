@@ -2591,31 +2591,6 @@ bool end_nesting_level(struct metafont *mf, struct context *cx,
 }
 @
 
-
-
-Na macro acima nós geramos a string correta para o tipo de token
-esperado porque cada tipo de token possui um código numérico
-sequencial (todos estão em um \monoespaco{enum} definido da Subseção
-4.1) e o nome da maioria dos tokens também está em uma lista de
-strings sequencial com o nome de todas as palavras-chave (definida na
-Subseção 4.2). Converter do tipo para o nome, para a maioria deles é
-apenas uma questão de subtrair o código numérico do tipo para obter o
-índice em que o nome dele está na lista de nomes. Entretanto, isso não
-funciona para tokens cujo valor numérico é menor que 8, já que eles
-não são tratados como palavras-chave. Para representar o nome destes
-outros tokens possíveis, lemos os seus nomes desta outra lista:
-
-@<Variáveis Locais (metafont.c)@>+=
-static char *token_names_not_in_list_of_keywords[] = {
-  "nil", "<Numeric>", "<String>", "<Variable>", "for", "endfor", "(", ")",
-  ",", ";"};
-@
-
-Já para imprimirmos uma mensagem de erro, fazemos o mesmo tipo de
-transformação, mas desta vez para converter para string o tipo de
-token que armazenamos como inteiro em \monoespaco{errno\_int}:
-
-
 Note que se um erro ocorrer ao interpretar código quando estamos no
 meio de uma função composta, nós podemos interromper a execução antes
 de executarmos o \monoespaco{end\_nesting\_level}. Por causa disso, ao
@@ -2801,7 +2776,7 @@ precisarão de operações adicionais para serem removidas, mas
 trataremos delas posteriormente. Aqui desalocamos as variáveis cujos
 nomes nós não armazenamos nem preservamos:
 
-@<Finalização (struct metafont)@>+=
+@<Finalização (struct metafont)@>=
 if(permanent_free != NULL){
   struct variable *v = (struct variable *) (mf -> variables);
   struct variable *next;
@@ -13141,9 +13116,13 @@ else if(begin -> type == TYPE_IF){
       else if(t -> type == TYPE_ELSE){
         // Achamos o 'else' correspondente ao nosso 'if'
         *end = t -> next;
-        if((*end) == NULL || (*end) -> type != TYPE_COLON){
-          RAISE_ERROR_MISSING_TOKEN(mf, cx, OPTIONAL(begin -> line),
-                                   TYPE_COLON);
+        if((*end) == NULL){
+          RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, OPTIONAL(begin -> line));
+          return false;
+        }
+        else if((*end) -> type != TYPE_COLON){
+          RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL((*end) -> line),
+                                     TYPE_COLON, (*end)); 
           return false;
         }
         return true;
@@ -13175,50 +13154,18 @@ else if(begin -> type == TYPE_IF){
 }
 @
 
-Se o usuário esquecer de colocar um ``:'' após
-o \monoespaco{if}, \monoespaco{else} ou \monoespaco{elseif}, o
-seguinte erro é gerado:
-
-@<Tipos de Erros@>+=
-ERROR_MISSING_TOKEN,
-@
-
-Este erro significa que um token era esperado na construção, mas não
-foi encontrado. A macro que gera este erro armazena o tipo
-em \monoespaco{mf -> errno\_int}:
-
-@<Macros Locais (metafont.c)@>+=
-#define RAISE_ERROR_MISSING_TOKEN(mf, cx, line, tok) {\
-  if(!mf -> err){\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_MISSING_TOKEN);\
-    mf -> errno_int = tok;}}
-@
-
-E a mensagem de erro que mostramos para o usuário é:
-
-@<Imprime Mensagem de Erro@>+=
-case ERROR_MISSING_TOKEN:
-  fprintf(stderr, "%s:%s We expected to find a '%s' token in the present "
-          "context, but none was found.", mf -> file, line_number,
-          ((mf -> errno_int < 8)?
-          (token_names_not_in_list_of_keywords[mf -> errno_int]):
-          (list_of_keywords[mf -> errno_int - 8])));
-  break;
-@
-
-De volta ao código de execução do \monoespaco{if}, a responsabilidade
-de encontrar o código certo a ser executado dependendo da condicional
-é do código mostrado mais acima. Mas nós podemos também encontrar
-um \monoespaco{elseif} ou um \monoespaco{else} no começo de uma
-declaração a ser avaliada. Quando isso ocorre, ou indica que é um erro
-de sintaxe, quando um destes tokens está solto, sem um \monoespaco{if}
-correspondenteo, ou então significa que estamos dentro de
-um \monoespaco{if}, onde já terminamos de executar o código correto e
-encontramos um delimitador onde novas expressões booleanas podems ser
-testadas. Independente da expressão que estiver lá, nós já terminamos
-de executar o nosso \monoespaco{if}. Então devemos ignorar tudo que
-vem a seguir até achar o \monoespaco{fi} que encerra o \monoespaco{if}
-em que estamos:
+A responsabilidade de encontrar o código certo a ser executado
+dependendo da condicional é do código mostrado mais acima. Mas nós
+podemos também encontrar um \monoespaco{elseif} ou um
+\monoespaco{else} no começo de uma declaração a ser avaliada. Quando
+isso ocorre, ou indica que é um erro de sintaxe, quando um destes
+tokens está solto, sem um \monoespaco{if} correspondenteo, ou então
+significa que estamos dentro de um \monoespaco{if}, onde já terminamos
+de executar o código correto e encontramos um delimitador onde novas
+expressões booleanas podems ser testadas. Independente da expressão
+que estiver lá, nós já terminamos de executar o nosso
+\monoespaco{if}. Então devemos ignorar tudo que vem a seguir até achar
+o \monoespaco{fi} que encerra o \monoespaco{if} em que estamos:
 
 @<Instrução: Composta@>+=
 else if(begin -> type == TYPE_ELSEIF || begin -> type == TYPE_ELSE){
@@ -13353,8 +13300,7 @@ Depois da variável, devemos obter um token ``\monoespaco{=}'' ou
 {
   current_token = for_token -> next -> next;
   if(current_token == NULL){
-    RAISE_ERROR_MISSING_TOKEN(mf, cx, OPTIONAL(current_token -> line),
-                             TYPE_EQUAL);
+    RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, OPTIONAL(current_token -> line));
     return false;
   }
   if(current_token -> type != TYPE_ASSIGNMENT &&
@@ -13377,8 +13323,7 @@ aninhamentos de parênteses e expressões ao avaliar esta parte:
 {
   begin_expr = current_token -> next;
   if(begin_expr == NULL){
-    RAISE_ERROR_MISSING_EXPRESSION(mf, cx, OPTIONAL(current_token -> line),
-                                   TYPE_T_NUMERIC);
+    RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, OPTIONAL(current_token -> line));
     return false;
   }
   end_expr = begin_expr;
@@ -13403,8 +13348,7 @@ reavaliar ela.
   while(current_token != NULL && current_token -> type != TYPE_STEP)
     current_token = current_token -> next;
   if(current_token == NULL){
-    RAISE_ERROR_MISSING_TOKEN(mf, cx, OPTIONAL(current_token -> line),
-                             TYPE_STEP);
+    RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, OPTIONAL(current_token -> line));
     return false;
   }
   begin_expr = current_token -> next;
@@ -13412,14 +13356,14 @@ reavaliar ela.
   while(end_expr != NULL && end_expr -> next != NULL &&
         end_expr -> next -> type != TYPE_UNTIL)
     end_expr = end_expr -> next;
-  if(end_expr == NULL){
-    RAISE_ERROR_MISSING_EXPRESSION(mf, cx, OPTIONAL(current_token -> line),
-                                   TYPE_T_NUMERIC);
+  if(end_expr == NULL || end_expr -> next == NULL){
+    RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, OPTIONAL(current_token -> line));
     return false;
   }
-  if(end_expr -> next == NULL){
-    RAISE_ERROR_MISSING_TOKEN(mf, cx, OPTIONAL(current_token -> line),
-                             TYPE_UNTIL);
+  if(end_expr -> next -> type == TYPE_SEMICOLON ||
+     end_expr -> next -> type == TYPE_COLON){
+    RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL(current_token -> line),
+                               TYPE_UNTIL, end_expr -> next);
     return false;
   }
   if(!eval_numeric_expression(mf, cx, begin_expr, end_expr, &increment))
@@ -13447,11 +13391,16 @@ token ``\monoespaco{until}'' e pelo token ``\monoespaco{:}'':
   }
   begin_expr = current_token -> next;
   end_expr = begin_expr;
-  while(end_expr -> next != NULL && end_expr -> next -> type != TYPE_COLON)
+  while(end_expr -> next != NULL && end_expr -> next -> type != TYPE_COLON){
+    if(end_expr -> next -> type == TYPE_SEMICOLON){
+      RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL(current_token -> line),
+                                 TYPE_SEMICOLON, end_expr -> next);
+      return false;
+    }
     end_expr = end_expr -> next;
+  }
   if(end_expr -> next == NULL){
-    RAISE_ERROR_MISSING_TOKEN(mf, cx, OPTIONAL(current_token -> line),
-                             TYPE_COLON);
+    RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, OPTIONAL(current_token -> line));
     return false;
   }
   if(!eval_numeric_expression(mf, cx, begin_expr, end_expr, &limit))
@@ -16491,8 +16440,13 @@ else if(begin -> type == TYPE_PICKCOLOR){
   DECLARE_NESTING_CONTROL();
   struct generic_token *begin_expr, *end_expr;
   begin_expr = begin -> next; 
-  if(begin_expr == NULL || begin_expr -> type != TYPE_OPEN_PARENTHESIS){
-    RAISE_ERROR_MISSING_TOKEN(mf, cx, OPTIONAL(begin_expr -> line), TYPE_COMMA);
+  if(begin_expr == NULL){
+    RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, OPTIONAL(begin_expr -> line));
+    return false;
+  }
+  if(begin_expr -> type != TYPE_OPEN_PARENTHESIS){
+    RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL(begin_expr -> line), 
+                               TYPE_OPEN_PARENTHESIS, begin_expr);
     return false;
   }
   begin_expr = begin_expr -> next;
@@ -17310,16 +17264,28 @@ else if(begin -> type == TYPE_BEGINCHAR && mf -> loading){
   DECLARE_NESTING_CONTROL();
   struct _glyph *glyph;
   struct generic_token *t = begin -> next;
-  if(t == NULL || t -> type != TYPE_OPEN_PARENTHESIS || begin == *end){
-    RAISE_ERROR_MISSING_TOKEN(mf, cx, OPTIONAL(t -> line),
-                              TYPE_OPEN_PARENTHESIS);
+  if(t == NULL){
+    RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, OPTIONAL(begin -> line));
+    return false;
+  }
+  if(begin == *end){
+    RAISE_ERROR_INCOMPLETE_STATEMENT(mf, cx, OPTIONAL(begin -> line));
+    return false;
+  }
+  if(t -> type != TYPE_OPEN_PARENTHESIS){
+    RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL(t -> line),
+                              TYPE_OPEN_PARENTHESIS, t);
     return false;
   }
   if(t != *end)
     t = t -> next;
-  if(t == NULL || t -> type != TYPE_STRING){
-    RAISE_ERROR_MISSING_TOKEN(mf, cx, OPTIONAL(t -> line),
-                              TYPE_STRING);
+  if(t == NULL){
+    RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, OPTIONAL(begin -> line));
+    return false;
+  }
+  if(t -> type != TYPE_STRING){
+    RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL(t -> line),
+                              TYPE_STRING, t);
     return false;
   }
   {
@@ -17985,8 +17951,7 @@ usamos ela para obter o glifo a ser desenhado:
 {
   str = (struct string_token *) (begin -> next);
   if(str == NULL){
-    RAISE_ERROR_MISSING_TOKEN(mf, cx, OPTIONAL(begin -> line),
-                              TYPE_STRING);
+    RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, OPTIONAL(begin -> line));
     return false;
   }
   if(str -> type != TYPE_STRING){
@@ -18087,9 +18052,13 @@ e \monoespaco{and} e armazenar seu resultado:
   DECLARE_NESTING_CONTROL();
   struct generic_token *begin_expr, *end_expr;
   begin_expr = str -> next;
-  if(begin_expr == NULL || begin_expr -> type != TYPE_BETWEEN){
-    RAISE_ERROR_MISSING_TOKEN(mf, NULL, OPTIONAL(begin -> line),
-                             TYPE_BETWEEN);
+  if(begin_expr == NULL){
+    RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, OPTIONAL(str -> line));
+    return false;
+  }
+  if(begin_expr -> type != TYPE_BETWEEN){
+    RAISE_ERROR_EXPECTED_FOUND(mf, NULL, OPTIONAL(begin -> line),
+                             TYPE_BETWEEN, begin_expr);
     if(glyph -> need_rendering) // Rendered with 'shipit'
       glDeleteTextures(1, &(glyph -> texture));
     return false;
@@ -18992,6 +18961,36 @@ case ERROR_MISSING_EXPRESSION:
           mf -> file, line_number, mf -> errno_str);
   break;
 @
+
+\subsecao{A.X. ERROR\_MISSING\_TOKEN}
+
+@<Tipos de Erros@>+=
+ERROR_MISSING_TOKEN,
+@
+
+Este erro ocorre quando o usuário inicial alguns comandos compostos
+(como \monoespaco{if}, por exemplo) sem encerrá-los com o seu
+respectivo fechamento (\monoespaco{fi}, neste caso). Quando o erro é
+gerado, devemos usar como a linha de erro o ponto em que está a
+abertura do comando que não foi fechado, e o tipo de token no último
+argumento é o fechamento que estávemos esperando:
+
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_MISSING_TOKEN(mf, cx, line, tok) {\
+  if(!mf -> err){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_MISSING_TOKEN);\
+    tokenid_to_string(tok, mf -> errno_str);}}
+@
+
+E a mensagem de erro que mostramos para o usuário é:
+
+@<Imprime Mensagem de Erro@>+=
+case ERROR_MISSING_TOKEN:
+  fprintf(stderr, "%s:%s Missing matching token '%s'.", mf -> file, line_number,
+          mf -> errno_str);
+  break;
+@
+
 
 \subsecao{A.X. ERROR\_NEGATIVE\_LOGARITHM}
 
