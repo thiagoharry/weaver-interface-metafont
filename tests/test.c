@@ -2762,7 +2762,16 @@ void test_errors(void){
 	 !strcmp(error_string, "/tmp/test.mf:2: Missing matching token 'fi'.\n"));
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
-
+  // ERROR: Duplicate glyph
+  memset(error_string, 0, 1024);
+  setbuf(stderr, error_string);
+  create_metafont(&mf, &cx, "beginchar(\"a\", 10, 10, 0);\nendchar;\nbeginchar(\"a\", 5, 5, 0);\nendchar;\n");
+  _Wprint_metafont_error(mf);
+  assert("Raising error for duplicate glyphs", 
+	 mf != NULL && mf -> err == ERROR_DUPLICATE_GLYPH &&
+	 !strcmp(error_string, "/tmp/test.mf:3: Glyph 'a' is being defined twice.\n"));
+  destroy_context(mf, cx);
+  _Wdestroy_metafont(mf);
   // End of error tests
   setbuf(stderr, NULL);
 }

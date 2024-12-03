@@ -17338,7 +17338,7 @@ malformado (é o primeiro comando complexo o bastante para causar este
 erro) e quando colocamos um \monoespaco{beginchar} dentro de outro:
 
 @<Tipos de Erros@>+=
-ERROR_DUPLICATE_GLYPH, ERROR_MALFORMED_STATEMENT,
+ERROR_MALFORMED_STATEMENT,
 @
 
 A macro que produz cada um deles no primeiro caso deve armazenar em
@@ -17348,10 +17348,6 @@ e no último caso não é necessário armazenar informação alguma, pois o
 erro é auto-evidente:
 
 @<Macros Locais (metafont.c)@>+=
-#define RAISE_ERROR_DUPLICATE_GLYPH(mf, cx, line, glyph) {\
-  if(!mf -> err){\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_DUPLICATE_GLYPH);\
-    memcpy(mf -> errno_str, glyph, strlen(glyph)+1);}}
 #define RAISE_ERROR_MALFORMED_STATEMENT(mf, cx, line, stat) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_MALFORMED_STATEMENT);\
@@ -17361,11 +17357,6 @@ erro é auto-evidente:
 Por fim, esta é a mensagem de erro que cada um destes erros gera:
 
 @<Imprime Mensagem de Erro@>+=
-case ERROR_DUPLICATE_GLYPH:
-  fprintf(stderr,
-          "%s:%s Glyph '%s' was defined twice by 'beginchar' statement.",
-          mf -> file, line_number, mf -> errno_str);
-  break;
 case ERROR_MALFORMED_STATEMENT:
   fprintf(stderr,
           "%s:%s Malformed '%s' statement.", mf -> file, line_number,
@@ -18515,6 +18506,36 @@ case ERROR_DIVISION_BY_ZERO:
   fprintf(stderr, "%s:%s Division by zero.", mf -> file, line_number);
   break;
 @
+
+\subsecao{A.X. ERROR\_DUPLICATE\_GLYPH}
+
+@<Tipos de Erros@>+=
+ERROR_DUPLICATE_GLYPH,
+@
+
+Este erro ocorre quando um glifo é definido duas vezes com o comando
+\monoespaco{beginchar}. Quando ele ocorre, devemos armazenar quaç é o
+glifo que está tendo uma definição redundante.
+
+
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_DUPLICATE_GLYPH(mf, cx, line, glyph) {\
+  if(!mf -> err){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_DUPLICATE_GLYPH);\
+    memcpy(mf -> errno_str, glyph, strlen(glyph));\
+    mf -> errno_str[strlen(glyph)] = '\0';}}
+@
+
+E esta é a mensagem de erro apresentada para o usuário:
+
+@<Imprime Mensagem de Erro@>+=
+case ERROR_DUPLICATE_GLYPH:
+  fprintf(stderr,
+          "%s:%s Glyph '%s' is being defined twice.",
+          mf -> file, line_number, mf -> errno_str);
+  break;
+@
+
 
 \subsecao{A.X. ERROR\_EMPTY\_DELIMITER}
 
