@@ -2772,6 +2772,17 @@ void test_errors(void){
 	 !strcmp(error_string, "/tmp/test.mf:3: Glyph 'a' is being defined twice.\n"));
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
+  // ERROR: Wrong number of parameters
+  memset(error_string, 0, 1024);
+  setbuf(stderr, error_string);
+  create_metafont(&mf, &cx, "beginchar(\"a\", 10, 10);\nendchar;\n");
+  _Wprint_metafont_error(mf);
+  assert("Raising error for wrong number of parameters", 
+	 mf != NULL && mf -> err == ERROR_WRONG_NUMBER_OF_PARAMETERS &&
+	 !strcmp(error_string, "/tmp/test.mf:1: Statement 'beginchar' expected 4 parameters, but 3 were given.\n"));
+  destroy_context(mf, cx);
+  _Wdestroy_metafont(mf);
+
   // End of error tests
   setbuf(stderr, NULL);
 }

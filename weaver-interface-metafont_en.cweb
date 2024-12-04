@@ -17020,11 +17020,22 @@ else if(begin -> type == TYPE_BEGINCHAR && mf -> loading){
       t = t -> next;
       if(IS_NOT_NESTED() && t -> type == TYPE_CLOSE_PARENTHESIS)
         break;
+      if(t -> type == TYPE_SEMICOLON || t -> type == TYPE_ENDCHAR)
+        break;
     }
-    if(t == NULL || number_of_commas != 3 ||
-       t -> type != TYPE_CLOSE_PARENTHESIS){
-      RAISE_ERROR_MALFORMED_STATEMENT(mf, cx, OPTIONAL(begin -> line),
-                                     TYPE_BEGINCHAR);
+    if(t == NULL){
+      RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, OPTIONAL(prev -> line));
+      return false;
+    }
+    if(t -> type != TYPE_CLOSE_PARENTHESIS){
+      RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL(t -> line),
+                                 TYPE_CLOSE_PARENTHESIS, t);
+      return false;
+    }
+    if(number_of_commas != 3){
+      RAISE_ERROR_WRONG_NUMBER_OF_PARAMETERS(mf, cx, OPTIONAL(t -> line),
+                                             TYPE_BEGINCHAR, 4,
+					     number_of_commas + 1);
       return false;
     }
     t = ((struct linked_token *) begin) -> link;
@@ -17034,38 +17045,6 @@ else if(begin -> type == TYPE_BEGINCHAR && mf -> loading){
   mf -> number_of_glyphs ++;
   return true;
 }
-@
-
-The code above can generate 3 new errors that had not been introduced
-before: when a glyph is defined more than once
-with \monoespaco{beginchar}, when a \monoespaco{beginchar} is
-malformed (it's the first compound statement sufficiently complex to
-cause this error) and when we nest a \monoespaco{beginchar} inside another:
-
-@<Types of Error@>+=
-ERROR_MALFORMED_STATEMENT,
-@
-
-The macros that raise these errors in the first case must store the
-glyph name for printing the error message, in the second case must
-store the statement type (as an integer) and in the last case no
-additional data need to be stored, as the error is self evident:
-
-@<Local Macros (metafont.c)@>+=
-#define RAISE_ERROR_MALFORMED_STATEMENT(mf, cx, line, stat) {\
-  if(!mf -> err){\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_MALFORMED_STATEMENT);\
-    mf -> errno_int = stat;}}
-@
-
-Finally, this is the error message for each one of these errors:
-
-@<Print Error Message@>+=
-case ERROR_MALFORMED_STATEMENT:
-  fprintf(stderr,
-          "%s:%s Malformed '%s' statement.", mf -> file, line_number,
-          list_of_keywords[mf -> errno_int - 8]);
-  break;
 @
 
 If we are in loading mode, and we read a \monoespaco{endchar} token,
@@ -19303,6 +19282,45 @@ case ERROR_UNSUPORTED_LENGTH_OPERAND:
                     "expression as operand. Instead, we found a %s expression.",
 		    mf -> file, line_number, mf -> errno_str);
   }
+  break;
+@
+
+\subsecao{A.X. ERROR\_WRONG\_NUMBER\_OF\_PARAMETERS}
+
+@<Types of Error@>+=
+ERROR_WRONG_NUMBER_OF_PARAMETERS,
+@
+
+Algumas instruções na linguagem WeaveFont requerem que umm certo
+número de parâmetros seja passado. Por exemplo,
+\monoespaco{beginchar(a, b, c, d)} requer quatro parâmetros, aqui
+representados por \monoespaco{a}, \monoespaco{b}, \monoespaco{c} e
+\monoespaco{d}. Se um número menor ou maior for passado, este erro é
+gerado.
+
+Quando geramos este erro, precisamos indicar qual instrução
+\monoespaco{s} causou o problema (armazenaremos o nome dela como
+string), o número de argumentos \monoespaco{e} que esperávamos e o
+valor \monoespaco{f} que é o quantos obtivemos ao invés disso (ambos
+os valores inteiros são combinados e armazenados juntos em
+\monoespaco{errno\_int}):
+
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_WRONG_NUMBER_OF_PARAMETERS(mf, cx, line, s, e, f) {\
+  if(!mf -> err){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_WRONG_NUMBER_OF_PARAMETERS);\
+    tokenid_to_string(s, mf -> errno_str);\
+    mf -> errno_int = (e << 8) + f;}}
+@
+
+Com estas informações, podemos gerar a devida mensagem de erro:
+
+@<Print Error Message@>+=
+case ERROR_WRONG_NUMBER_OF_PARAMETERS:
+  fprintf(stderr,
+          "%s:%s Statement '%s' expected %d parameters, but %d were given.",
+	  mf -> file, line_number, mf -> errno_str, mf -> errno_int >> 8,
+	  mf -> errno_int & 255);
   break;
 @
 

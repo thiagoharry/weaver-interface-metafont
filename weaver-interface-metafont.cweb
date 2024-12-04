@@ -17315,11 +17315,22 @@ else if(begin -> type == TYPE_BEGINCHAR && mf -> loading){
       t = t -> next;
       if(IS_NOT_NESTED() && t -> type == TYPE_CLOSE_PARENTHESIS)
         break;
+      if(t -> type == TYPE_SEMICOLON || t -> type == TYPE_ENDCHAR)
+        break;
     }
-    if(t == NULL || number_of_commas != 3 ||
-       t -> type != TYPE_CLOSE_PARENTHESIS){
-      RAISE_ERROR_MALFORMED_STATEMENT(mf, cx, OPTIONAL(begin -> line),
-                                     TYPE_BEGINCHAR);
+    if(t == NULL){
+      RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, OPTIONAL(prev -> line));
+      return false;
+    }
+    if(t -> type != TYPE_CLOSE_PARENTHESIS){
+      RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL(t -> line),
+                                 TYPE_CLOSE_PARENTHESIS, t);
+      return false;
+    }
+    if(number_of_commas != 3){
+      RAISE_ERROR_WRONG_NUMBER_OF_PARAMETERS(mf, cx, OPTIONAL(t -> line),
+                                             TYPE_BEGINCHAR, 4,
+					     number_of_commas + 1);
       return false;
     }
     t = ((struct linked_token *) begin) -> link;
@@ -17329,39 +17340,6 @@ else if(begin -> type == TYPE_BEGINCHAR && mf -> loading){
   mf -> number_of_glyphs ++;
   return true;
 }
-@
-
-O código acima pode gerar três novos erros ainda não apresentados:
-quando um glifo é definido mais de uma vez com
-um \monoespaco{beginchar}, quando um comando \monoespaco{beginchar} é
-malformado (é o primeiro comando complexo o bastante para causar este
-erro) e quando colocamos um \monoespaco{beginchar} dentro de outro:
-
-@<Tipos de Erros@>+=
-ERROR_MALFORMED_STATEMENT,
-@
-
-A macro que produz cada um deles no primeiro caso deve armazenar em
-string o nome do glifo para fins de mensagem de erro, no segundo
-caso deve armazenar em um inteiro o tipo do comando que foi malformado
-e no último caso não é necessário armazenar informação alguma, pois o
-erro é auto-evidente:
-
-@<Macros Locais (metafont.c)@>+=
-#define RAISE_ERROR_MALFORMED_STATEMENT(mf, cx, line, stat) {\
-  if(!mf -> err){\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_MALFORMED_STATEMENT);\
-    mf -> errno_int = stat;}}
-@
-
-Por fim, esta é a mensagem de erro que cada um destes erros gera:
-
-@<Imprime Mensagem de Erro@>+=
-case ERROR_MALFORMED_STATEMENT:
-  fprintf(stderr,
-          "%s:%s Malformed '%s' statement.", mf -> file, line_number,
-          list_of_keywords[mf -> errno_int - 8]);
-  break;
 @
 
 Já se estivermos em modo de carregamento e lermos um
@@ -19615,6 +19593,44 @@ case ERROR_UNSUPORTED_LENGTH_OPERAND:
   }
   break;
 @
+
+\subsecao{A.X. ERROR\_WRONG\_NUMBER\_OF\_PARAMETERS}
+
+@<Tipos de Erros@>+=
+ERROR_WRONG_NUMBER_OF_PARAMETERS,
+@
+
+Some instructions in the WeaveFont language require a certain number
+of parameters to be passed. For example, \monoespaco{beginchar(a, b,
+c, d)} requires four parameters, here represented by \monoespaco{a},
+\monoespaco{b}, \monoespaco{c}, and \monoespaco{d}. If a smaller or
+larger number is passed, this error is generated.
+
+When we generate this error, we need to indicate which instruction
+\monoespaco{s} caused the problem (we will store its name as a string),
+the number of arguments \monoespaco{e} we expected, and the value
+\monoespaco{f} which is how many we got instead (both integer values
+​​are combined and stored together in \monoespaco{errno\_int}):
+
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_WRONG_NUMBER_OF_PARAMETERS(mf, cx, line, s, e, f) {\
+  if(!mf -> err){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_WRONG_NUMBER_OF_PARAMETERS);\
+    tokenid_to_string(s, mf -> errno_str);\
+    mf -> errno_int = (e << 8) + f;}}
+@
+
+With these information, we can generate the correct errror message:
+
+@<Imprime Mensagem de Erro@>+=
+case ERROR_WRONG_NUMBER_OF_PARAMETERS:
+  fprintf(stderr,
+          "%s:%s Statement '%s' expected %d parameters, but %d were given.",
+	  mf -> file, line_number, mf -> errno_str, mf -> errno_int >> 8,
+	  mf -> errno_int & 255);
+  break;
+@
+
 
 \subsecao{A.X. ERROR\_WRONG\_VARIABLE\_TYPE}
 
