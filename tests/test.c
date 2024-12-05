@@ -2481,7 +2481,7 @@ void test_errors(void){
     fprintf(stderr, "ERROR: Test cannot be done. Initialization failed.\n");
     exit(1);
   }
-  setbuf(stderr, error_string);
+  setvbuf(stderr, error_string, _IOLBF, 1024);
   memset(error_string, 0, 1024);
   create_metafont(&mf, &cx, "numeric i; path p; p = (0,0); for i = 0 step 0 until 1: p = p & p; endfor\n");
   _Wprint_metafont_error(mf);
@@ -2496,7 +2496,7 @@ void test_errors(void){
     exit(1);
   }
   // ERROR: File with source code not found
-  setbuf(stderr, error_string);
+  setvbuf(stderr, error_string, _IOLBF, 1024);
   memset(error_string, 0, 1024);
   mf = init_metafont("/tmp/ççç.mf");
   if(mf != NULL)
@@ -2511,7 +2511,7 @@ void test_errors(void){
   _Wdestroy_metafont(mf);
   // Error: Invalid char in source code ('ç')
   memset(error_string, 0, 1024);
-  setbuf(stderr, error_string);
+  setvbuf(stderr, error_string, _IOLBF, 1024);
   create_metafont(&mf, &cx, "ç\n");
   _Wprint_metafont_error(mf);
   assert("Raising error when finding invalid character in source code",
@@ -2521,7 +2521,7 @@ void test_errors(void){
   _Wdestroy_metafont(mf);
   // Error: Nested beginchar
   memset(error_string, 0, 1024);
-  setbuf(stderr, error_string);
+  setvbuf(stderr, error_string, _IOLBF, 1024);
   create_metafont(&mf, &cx, "beginchar beginchar endchar endchar\n");
   _Wprint_metafont_error(mf);
   assert("Raising error when finding nested 'beginchar's",
@@ -2531,7 +2531,7 @@ void test_errors(void){
   _Wdestroy_metafont(mf);
   // Error: Incomplete source code
   memset(error_string, 0, 1024);
-  setbuf(stderr, error_string);
+  setvbuf(stderr, error_string, _IOLBF, 1024);
   create_metafont(&mf, &cx, "numeric\n");
   _Wprint_metafont_error(mf);
   assert("Raising error if source ends in middle of statement",
@@ -2541,7 +2541,7 @@ void test_errors(void){
   _Wdestroy_metafont(mf);
   // Error: Incomplete statement
   memset(error_string, 0, 1024);
-  setbuf(stderr, error_string);
+  setvbuf(stderr, error_string, _IOLBF, 1024);
   create_metafont(&mf, &cx, "numeric;\n");
   _Wprint_metafont_error(mf);
   assert("Raising error for incomplete statements",
@@ -2551,7 +2551,7 @@ void test_errors(void){
   _Wdestroy_metafont(mf);
   // Error: token different than expected
   memset(error_string, 0, 1024);
-  setbuf(stderr, error_string);
+  setvbuf(stderr, error_string, _IOLBF, 1024);
   create_metafont(&mf, &cx, "numeric aabaa of daaca;\n");
   _Wprint_metafont_error(mf);
   assert("Raising error for tokens different than expected",
@@ -2561,7 +2561,7 @@ void test_errors(void){
   _Wdestroy_metafont(mf);
   // Error: pickup without valid pen
   memset(error_string, 0, 1024);
-  setbuf(stderr, error_string);
+  setvbuf(stderr, error_string, _IOLBF, 1024);
   create_metafont(&mf, &cx, "pickup;\n");
   _Wprint_metafont_error(mf);
   assert("Raising error for 'pickup' with no pen",
@@ -2571,7 +2571,7 @@ void test_errors(void){
   _Wdestroy_metafont(mf);
   // Error: invalid variable name
   memset(error_string, 0, 1024);
-  setbuf(stderr, error_string);
+  setvbuf(stderr, error_string, _IOLBF, 1024);
   create_metafont(&mf, &cx, "numeric pickup;\n");
   _Wprint_metafont_error(mf);
   assert("Raising error for invalid variable name",
@@ -2581,7 +2581,7 @@ void test_errors(void){
   _Wdestroy_metafont(mf);
   // Error: variable not declared
   memset(error_string, 0, 1024);
-  setbuf(stderr, error_string);
+  setvbuf(stderr, error_string, _IOLBF, 1024);
   create_metafont(&mf, &cx, "undeclared = 5;\n");
   _Wprint_metafont_error(mf);
   assert("Raising error for undeclared variable",
@@ -2591,7 +2591,7 @@ void test_errors(void){
   _Wdestroy_metafont(mf);
   // Error: wrong variable type
   memset(error_string, 0, 1024);
-  setbuf(stderr, error_string);
+  setvbuf(stderr, error_string, _IOLBF, 1024);
   create_metafont(&mf, &cx, "numeric a; picture b;\n"
 		  "b = nullpicture (10,10);\n"
 		  "a = 5 + b;");
@@ -2603,7 +2603,7 @@ void test_errors(void){
   _Wdestroy_metafont(mf);
   // ERROR: Missing expression
   memset(error_string, 0, 1024);
-  setbuf(stderr, error_string);
+  setvbuf(stderr, error_string, _IOLBF, 1024);
   create_metafont(&mf, &cx, "numeric a;\na =;");
   _Wprint_metafont_error(mf);
   assert("Raising error for missing expressions",
@@ -2613,7 +2613,7 @@ void test_errors(void){
   _Wdestroy_metafont(mf);
   // ERROR: Unclosed delimiter:
   memset(error_string, 0, 1024);
-  setbuf(stderr, error_string);
+  setvbuf(stderr, error_string, _IOLBF, 1024);
   create_metafont(&mf, &cx, "numeric a;\na = (1;");
   _Wprint_metafont_error(mf);
   assert("Raising error for unclosed delimiter",
@@ -2623,7 +2623,7 @@ void test_errors(void){
   _Wdestroy_metafont(mf);
   // ERROR: Unopened delimiter
   memset(error_string, 0, 1024);
-  setbuf(stderr, error_string);
+  setvbuf(stderr, error_string, _IOLBF, 1024);
   create_metafont(&mf, &cx, "numeric a;\na = 1];");
   _Wprint_metafont_error(mf);
   assert("Raising error for unopened delimiter",
@@ -2633,7 +2633,7 @@ void test_errors(void){
   _Wdestroy_metafont(mf);
   // ERROR: Negative square root
   memset(error_string, 0, 1024);
-  setbuf(stderr, error_string);
+  setvbuf(stderr, error_string, _IOLBF, 1024);
   create_metafont(&mf, &cx, "numeric a;\na = sqrt(-1);");
   _Wprint_metafont_error(mf);
   assert("Raising error for square root of negative number",
@@ -2643,7 +2643,7 @@ void test_errors(void){
   _Wdestroy_metafont(mf);
   // ERROR: Division by zero
   memset(error_string, 0, 1024);
-  setbuf(stderr, error_string);
+  setvbuf(stderr, error_string, _IOLBF, 1024);
   create_metafont(&mf, &cx, "numeric a;\na = 2/0;");
   _Wprint_metafont_error(mf);
   assert("Raising error for division by zero",
@@ -2653,7 +2653,7 @@ void test_errors(void){
   _Wdestroy_metafont(mf);
   // ERROR: Unknown expression
   memset(error_string, 0, 1024);
-  setbuf(stderr, error_string);
+  setvbuf(stderr, error_string, _IOLBF, 1024);
   create_metafont(&mf, &cx, "numeric a;\na = 5 + -{+};");
   _Wprint_metafont_error(mf);
   assert("Raising error for unknown expression",
@@ -2663,7 +2663,7 @@ void test_errors(void){
   _Wdestroy_metafont(mf);
   // ERROR: 'length' with unsuported operand
   memset(error_string, 0, 1024);
-  setbuf(stderr, error_string);
+  setvbuf(stderr, error_string, _IOLBF, 1024);
   create_metafont(&mf, &cx, "numeric a;\na = length nullpicture (0, 0);");
   _Wprint_metafont_error(mf);
   assert("Raising error for unsuported 'length' operand",
@@ -2673,7 +2673,7 @@ void test_errors(void){
   _Wdestroy_metafont(mf);
   // ERROR: Negative logarithm
   memset(error_string, 0, 1024);
-  setbuf(stderr, error_string);
+  setvbuf(stderr, error_string, _IOLBF, 1024);
   create_metafont(&mf, &cx, "numeric a;\na = log(-2);");
   _Wprint_metafont_error(mf);
   assert("Raising error for negative logarithm",
@@ -2683,7 +2683,7 @@ void test_errors(void){
   _Wdestroy_metafont(mf);
   // ERROR: Variable not initialized
   memset(error_string, 0, 1024);
-  setbuf(stderr, error_string);
+  setvbuf(stderr, error_string, _IOLBF, 1024);
   create_metafont(&mf, &cx, "numeric a;\na = 5 + a;");
   _Wprint_metafont_error(mf);
   assert("Raising error for unitialized variable",
@@ -2693,7 +2693,7 @@ void test_errors(void){
   _Wdestroy_metafont(mf);
   // ERROR: Empty delimiter
   memset(error_string, 0, 1024);
-  setbuf(stderr, error_string);
+  setvbuf(stderr, error_string, _IOLBF, 1024);
   create_metafont(&mf, &cx, "numeric a;\na = ();");
   _Wprint_metafont_error(mf);
   assert("Raising error for empty delimiter",
@@ -2703,7 +2703,7 @@ void test_errors(void){
   _Wdestroy_metafont(mf);
   // ERROR: Angle of null vector
   memset(error_string, 0, 1024);
-  setbuf(stderr, error_string);
+  setvbuf(stderr, error_string, _IOLBF, 1024);
   create_metafont(&mf, &cx, "numeric a;\na = angle (0, 0);");
   _Wprint_metafont_error(mf);
   assert("Raising error when measuring angle of null vector",
@@ -2723,10 +2723,9 @@ void test_errors(void){
   _Wdestroy_metafont(mf);
   // ERROR: Concatenating non-adjacent paths
   memset(error_string, 0, 1024);
-  setbuf(stderr, error_string);
+  setvbuf(stderr, error_string, _IOLBF, 1024);
   create_metafont(&mf, &cx, "path a;\na = (0, 0) .. tension 0.5 and 0.75 .. (1, 0);");
   _Wprint_metafont_error(mf);
-  // Caution: If error message were a little bigger, our test setup could fail:
   assert("Raising error when using invalid tension values",
 	 mf != NULL && mf -> err == ERROR_INVALID_TENSION &&
 	 !strcmp(error_string, "/tmp/test.mf:2: Between path points (0, 0) and (1, 0) we found first tension value '0.5' smaller than minimal allowed '0.75'.\n"));
@@ -2734,7 +2733,7 @@ void test_errors(void){
   _Wdestroy_metafont(mf);
   // ERROR: Non-cyclical pen
   memset(error_string, 0, 1024);
-  setbuf(stderr, error_string);
+  setvbuf(stderr, error_string, _IOLBF, 1024);
   create_metafont(&mf, &cx, "pen a;\na = makepen((0, 0)..(8, 2));");
   _Wprint_metafont_error(mf);
   assert("Raising error when trying to create a pen from non-cyclical path",
@@ -2744,7 +2743,7 @@ void test_errors(void){
   _Wdestroy_metafont(mf);
   // ERROR: Comparing non-comparable types
   memset(error_string, 0, 1024);
-  setbuf(stderr, error_string);
+  setvbuf(stderr, error_string, _IOLBF, 1024);
   create_metafont(&mf, &cx, "pen a, b;\na = nullpen; b = nullpen;\nif a < b: ; fi");
   _Wprint_metafont_error(mf);
   assert("Raising error when comparing non-camparable types",
@@ -2754,7 +2753,7 @@ void test_errors(void){
   _Wdestroy_metafont(mf);
   // ERROR: Missing matching token
   memset(error_string, 0, 1024);
-  setbuf(stderr, error_string);
+  setvbuf(stderr, error_string, _IOLBF, 1024);
   create_metafont(&mf, &cx, "numeric a;\n if 1 < 2:\n a = 2;");
   _Wprint_metafont_error(mf);
   assert("Raising error when missing matching token",
@@ -2764,7 +2763,7 @@ void test_errors(void){
   _Wdestroy_metafont(mf);
   // ERROR: Duplicate glyph
   memset(error_string, 0, 1024);
-  setbuf(stderr, error_string);
+  setvbuf(stderr, error_string, _IOLBF, 1024);
   create_metafont(&mf, &cx, "beginchar(\"a\", 10, 10, 0);\nendchar;\nbeginchar(\"a\", 5, 5, 0);\nendchar;\n");
   _Wprint_metafont_error(mf);
   assert("Raising error for duplicate glyphs", 
@@ -2774,12 +2773,28 @@ void test_errors(void){
   _Wdestroy_metafont(mf);
   // ERROR: Wrong number of parameters
   memset(error_string, 0, 1024);
-  setbuf(stderr, error_string);
+  setvbuf(stderr, error_string, _IOLBF, 1024);
   create_metafont(&mf, &cx, "beginchar(\"a\", 10, 10);\nendchar;\n");
   _Wprint_metafont_error(mf);
   assert("Raising error for wrong number of parameters", 
 	 mf != NULL && mf -> err == ERROR_WRONG_NUMBER_OF_PARAMETERS &&
 	 !strcmp(error_string, "/tmp/test.mf:1: Statement 'beginchar' expected 4 parameters, but 3 were given.\n"));
+  destroy_context(mf, cx);
+  _Wdestroy_metafont(mf);
+  // ERROR: Glyph with invalid dimensions
+  create_metafont(&mf, &cx, "beginchar(\"a\", 0, 10, -11);\nendchar;\n");
+  {
+    int width = 0, height = 0, depth = -1, italcorr = -1, kerning = -1;
+    GLuint glyph = 0;
+    _Wrender_glyph(mf, "a", NULL, &glyph, &width, &height,
+		   &depth, &italcorr, &kerning);
+  }
+  memset(error_string, 0, 1024);
+  setvbuf(stderr, error_string, _IOLBF, 1024);
+  _Wprint_metafont_error(mf);
+  assert("Raising error for glyphs with invalid dimensions", 
+	 mf != NULL && mf -> err == ERROR_INVALID_DIMENSION_GLYPH &&
+	 !strcmp(error_string, "/tmp/test.mf:1: Glyph with size 0x-1. Expected positive values for both width and height+depth. (while rendering 'a')\n"));
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
 

@@ -17420,10 +17420,6 @@ else if(begin -> type == TYPE_BEGINCHAR){
   }
   else if(!eval_numeric_expression(mf, cx, begin_expr, end_expr, &width))
     return false;
-  if(width.value <= 0.0){
-    RAISE_ERROR_INVALID_DIMENSION_GLYPH(mf, cx, OPTIONAL(begin -> line));
-    return false;
-  }
   t = t -> next;
   begin_expr = t;
   do{
@@ -17442,8 +17438,10 @@ else if(begin -> type == TYPE_BEGINCHAR){
   } while(!IS_NOT_NESTED() || t -> type != TYPE_CLOSE_PARENTHESIS);
   if(!eval_numeric_expression(mf, cx, begin_expr, end_expr, &depth))
     return false;
-  if(height.value + depth.value <= 0.0){
-    RAISE_ERROR_INVALID_DIMENSION_GLYPH(mf, cx, OPTIONAL(begin -> line));
+  if(height.value + depth.value <= 0.0 || width.value <= 0){
+    RAISE_ERROR_INVALID_DIMENSION_GLYPH(mf, cx, OPTIONAL(begin -> line),
+                                        width.value,
+					height.value + depth.value);
     return false;
   }
   *end = t;
@@ -17498,30 +17496,6 @@ else if(begin -> type == TYPE_BEGINCHAR){
   }
   return true;
 }
-@
-
-Caso um glifo com largura ou altura mais profundidade não-positiva
-tenha sido especificada, isso é um erro:
-
-@<Tipos de Erros@>+=
-ERROR_INVALID_DIMENSION_GLYPH,
-@
-
-A macro que produz este erro é genérica:
-
-@<Macros Locais (metafont.c)@>+=
-#define RAISE_ERROR_INVALID_DIMENSION_GLYPH(mf, cx, line) {\
-  RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INVALID_DIMENSION_GLYPH);}
-@
-
-E o erro gera esta mensagem de diagnóstico:
-
-@<Imprime Mensagem de Erro@>+=
-case ERROR_INVALID_DIMENSION_GLYPH:
-  fprintf(stderr,
-          "%s:%s You tried to specify a glyph with nonpositive width or "
-          "non-positive height+depth.", mf -> file, line_number);
-  break;
 @
 
 Finalmente, quando lemos um \monoespaco{endchar} em modo de execução,
@@ -18832,6 +18806,45 @@ case ERROR_INVALID_COMPARISON:
           "%s:%s Tried to use '%s' to compare an "
 	  "expression of type '%s', but such type is not comparable.",
           mf -> file, line_number, mf -> errno_str, expr_type);
+  break;
+@
+
+\subsecao{A.X. ERROR\_INVALID\_DIMENSION\_GLYPH}
+
+@<Tipos de Erros@>+=
+ERROR_INVALID_DIMENSION_GLYPH,
+@
+
+Este erro ocorre quando vamos renderizar um caractere, e estamos
+diante de algo que terá largura não-positiva, ou estão, se somarmos a
+profundidade com a altura, obtemos também um valor não-positivo. Como
+é impossível gerar uma textura com uma dimensão igual a zero ou
+negativa, geramos tal erro e armazenamos as dimensões do glifo que
+tentamos gerar:
+
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_INVALID_DIMENSION_GLYPH(mf, cx, line, width, height) {\
+  if(!mf -> err){\
+    int *buffer = (int *) (mf -> errno_str);\
+    buffer[0] = (int) width;\
+    buffer[1] = (int) height;\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INVALID_DIMENSION_GLYPH);}}
+@
+
+E o erro gera esta mensagem de diagnóstico:
+
+@<Imprime Mensagem de Erro@>+=
+case ERROR_INVALID_DIMENSION_GLYPH:
+  int *size_buffer = (int *) (mf -> errno_str);
+  fprintf(stderr,
+          "%s:%s Glyph with size %dx%d. Expected positive values for ",
+	  mf -> file, line_number, size_buffer[0], size_buffer[1]);
+  if(size_buffer[0] <= 0 && size_buffer[1] <= 0)
+    fprintf(stderr, "both width and height+depth.");
+  else if(size_buffer[0] <= 0)
+    fprintf(stderr, "width.");
+  else if(size_buffer[1] <= 0)
+    fprintf(stderr, "height+depth.");
   break;
 @
 

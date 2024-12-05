@@ -17125,10 +17125,6 @@ else if(begin -> type == TYPE_BEGINCHAR){
   }
   else if(!eval_numeric_expression(mf, cx, begin_expr, end_expr, &width))
     return false;
-  if(width.value <= 0.0){
-    RAISE_ERROR_INVALID_DIMENSION_GLYPH(mf, cx, OPTIONAL(begin -> line));
-    return false;
-  }
   t = t -> next;
   begin_expr = t;
   do{
@@ -17147,8 +17143,10 @@ else if(begin -> type == TYPE_BEGINCHAR){
   } while(!IS_NOT_NESTED() || t -> type != TYPE_CLOSE_PARENTHESIS);
   if(!eval_numeric_expression(mf, cx, begin_expr, end_expr, &depth))
     return false;
-  if(height.value + depth.value <= 0.0){
-    RAISE_ERROR_INVALID_DIMENSION_GLYPH(mf, cx, OPTIONAL(begin -> line));
+  if(height.value + depth.value <= 0.0 || width.value <= 0){
+    RAISE_ERROR_INVALID_DIMENSION_GLYPH(mf, cx, OPTIONAL(begin -> line),
+                                        width.value,
+					height.value + depth.value);
     return false;
   }
   *end = t;
@@ -17203,30 +17201,6 @@ else if(begin -> type == TYPE_BEGINCHAR){
   }
   return true;
 }
-@
-
-If a glyph is specified with non-positive width, or with non-positive
-height plus depth, this is an error:
-
-@<Types of Error@>+=
-ERROR_INVALID_DIMENSION_GLYPH,
-@
-
-The macro that raises this error is a generic one:
-
-@<Local Macros (metafont.c)@>+=
-#define RAISE_ERROR_INVALID_DIMENSION_GLYPH(mf, cx, line) {\
-  RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INVALID_DIMENSION_GLYPH);}
-@
-
-And the error produces this error message:
-
-@<Print Error Message@>+=
-case ERROR_INVALID_DIMENSION_GLYPH:
-  fprintf(stderr,
-          "%s:%s You tried to specify a glyph with nonpositive width or "
-          "non-positive height+depth.", mf -> file, line_number);
-  break;
 @
 
 Finally, when we read an \monoespaco{endchar} token not in the loading
@@ -18526,6 +18500,44 @@ case ERROR_INVALID_COMPARISON:
   break;
 @
 
+\subsecao{A.X. ERROR\_INVALID\_DIMENSION\_GLYPH}
+
+@<Types of Error@>+=
+ERROR_INVALID_DIMENSION_GLYPH,
+@
+
+This error occurs when we are going to render a character, and we are
+faced with something that will have a non-positive width, or if we add
+the depth to the height, we also obtain a non-positive value. Since it
+is impossible to generate a texture with a dimension equal to zero or
+negative, we generate this error and store the dimensions of the glyph
+that we were trying to generate:
+
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_INVALID_DIMENSION_GLYPH(mf, cx, line, width, height) {\
+  if(!mf -> err){\
+    int *buffer = (int *) (mf -> errno_str);\
+    buffer[0] = (int) width;\
+    buffer[1] = (int) height;\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INVALID_DIMENSION_GLYPH);}}
+@
+
+The error will then ṕṕroduce this diagnostic message:
+
+@<Print Error Message@>+=
+case ERROR_INVALID_DIMENSION_GLYPH:
+  int *size_buffer = (int *) (mf -> errno_str);
+  fprintf(stderr,
+          "%s:%s Glyph with size %dx%d. Expected positive values for ",
+	  mf -> file, line_number, size_buffer[0], size_buffer[1]);
+  if(size_buffer[0] <= 0 && size_buffer[1] <= 0)
+    fprintf(stderr, "both width and height+depth.");
+  else if(size_buffer[0] <= 0)
+    fprintf(stderr, "width.");
+  else if(size_buffer[1] <= 0)
+    fprintf(stderr, "height+depth.");
+  break;
+@
 
 \subsecao{A.X. ERROR\_INVALID\_NAME}
 
