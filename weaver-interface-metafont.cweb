@@ -17208,6 +17208,8 @@ static struct _glyph *get_glyph(struct metafont *mf, unsigned char *c,
     for(i = 0; i < block_size; i ++)
       INITIALIZE_GLYPH(mf -> glyphs[block][i]);
   }
+  if(mf -> glyphs[block][index].begin == NULL && !create_if_not_exist)
+    return NULL; // Glifo alocado, mas não existente
   return &(mf -> glyphs[block][index]);
 }
 @
@@ -17907,7 +17909,8 @@ usamos ela para obter o glifo a ser desenhado:
   else{
     glyph = get_glyph(mf, (unsigned char *) (str -> value), false);
     if(glyph == NULL){
-      RAISE_ERROR_UNKNOWN_GLYPH(mf, cx, OPTIONAL(str -> line), str -> value);
+      RAISE_ERROR_UNKNOWN_GLYPH_DEPENDENCY(mf, cx, OPTIONAL(str -> line),
+                                           str -> value);
       return false;
     }
     str -> glyph = glyph;
@@ -17955,17 +17958,13 @@ O comando \monoespaco{renderchar} requer então os seguintes novos
 tipos de erro:
 
 @<Tipos de Erros@>+=
-ERROR_UNKNOWN_GLYPH, ERROR_RECURSIVE_RENDERCHAR,
+ERROR_RECURSIVE_RENDERCHAR,
 @
 
 Que podem ser gerados pelas seguintes macros, que devem armazenar o
 glifo que apresentou problemas:
 
 @<Macros Locais (metafont.c)@>+=
-#define RAISE_ERROR_UNKNOWN_GLYPH(mf, cx, line, str) {\
-  if(!mf -> err){\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNKNOWN_GLYPH);\
-    memcpy(mf -> errno_str, str, strlen(str)+1);}}
 #define RAISE_ERROR_RECURSIVE_RENDERCHAR(mf, cx, line, str) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_RECURSIVE_RENDERCHAR);\
@@ -17975,10 +17974,6 @@ glifo que apresentou problemas:
 E esta é a mensagem de erro impressa para tais erros:
 
 @<Imprime Mensagem de Erro@>+=
-case ERROR_UNKNOWN_GLYPH:
-  fprintf(stderr, "%s:%s Cannot render unknown glyph \"%s\".", mf -> file,
-          line_number, mf -> errno_str);
-  break;
 case ERROR_RECURSIVE_RENDERCHAR:
   fprintf(stderr, "%s:%s Recursive 'renderchar' in glyph \"%s\".", mf -> file,
           line_number, mf -> errno_str);
@@ -19469,6 +19464,36 @@ case ERROR_UNINITIALIZED_VARIABLE:
   tokenid_to_string(mf -> errno_int, var_type);
   fprintf(stderr, "%s:%s Uninitialized %s variable '%s'.",
           mf -> file, line_number, var_type, mf -> errno_str);
+  break;
+@
+
+\subsecao{A.X. ERROR\_UNKNOWN\_GLYPH\_DEPENDENCY}
+
+@<Tipos de Erros@>+=
+ERROR_UNKNOWN_GLYPH_DEPENDENCY,
+@
+
+Este erro ocorre quando um glifo tem como dependência de renderização
+algum outro glifo, que por sua vez, não foi definido. Ocorre quando
+usamos os comando \monoespaco{renderchar} passando para ele unm glifo
+não-definido. Diante deste erro, precisamos armazenar como string qual
+o nome do glifo inexistente que encontramos como dependência.
+
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_UNKNOWN_GLYPH_DEPENDENCY(mf, cx, line, glyph) {\
+  if(!mf -> err){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNKNOWN_GLYPH_DEPENDENCY);\
+    memcpy(mf -> errno_str, glyph, strlen(glyph));\
+    mf -> errno_str[strlen(glyph)] = '\0';}}
+@
+
+E com isso produzimos a mensagem de erro:
+
+@<Imprime Mensagem de Erro@>+=
+case ERROR_UNKNOWN_GLYPH_DEPENDENCY:
+  fprintf(stderr,
+          "%s:%s Command 'renderchar' created dependency of undefined glyph '%s'.",
+	  mf -> file, line_number, mf -> errno_str);
   break;
 @
 
