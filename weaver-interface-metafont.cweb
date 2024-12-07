@@ -17954,32 +17954,6 @@ if(glyph -> need_rendering){
 }
 @
 
-O comando \monoespaco{renderchar} requer então os seguintes novos
-tipos de erro:
-
-@<Tipos de Erros@>+=
-ERROR_RECURSIVE_RENDERCHAR,
-@
-
-Que podem ser gerados pelas seguintes macros, que devem armazenar o
-glifo que apresentou problemas:
-
-@<Macros Locais (metafont.c)@>+=
-#define RAISE_ERROR_RECURSIVE_RENDERCHAR(mf, cx, line, str) {\
-  if(!mf -> err){\
-    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_RECURSIVE_RENDERCHAR);\
-    memcpy(mf -> errno_str, str, strlen(str)+1);}}
-@
-
-E esta é a mensagem de erro impressa para tais erros:
-
-@<Imprime Mensagem de Erro@>+=
-case ERROR_RECURSIVE_RENDERCHAR:
-  fprintf(stderr, "%s:%s Recursive 'renderchar' in glyph \"%s\".", mf -> file,
-          line_number, mf -> errno_str);
-  break;
-@
-
 Agora para renderizar o glifo, devemos identificar onde exatamente na
 textura da imagem atual devemos colocá-lo. Para isso, devemos obter a
 primeira expressão de par, delimitada por \monoespaco{between}
@@ -18469,8 +18443,8 @@ glifo que está tendo uma definição redundante.
 #define RAISE_ERROR_DUPLICATE_GLYPH(mf, cx, line, glyph) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_DUPLICATE_GLYPH);\
-    memcpy(mf -> errno_str, glyph, strlen(glyph));\
-    mf -> errno_str[strlen(glyph)] = '\0';}}
+    memcpy(mf -> errno_str, glyph, 4);\
+    mf -> errno_str[4] = '\0';}}
 @
 
 E esta é a mensagem de erro apresentada para o usuário:
@@ -19274,6 +19248,41 @@ case ERROR_OPENGL_FRAMEBUFFER:
   break;
 @
 
+\subsecao{A.X. ERROR\_RECURSIVE\_RENDERCHAR}
+
+@<Tipos de Erros@>+=
+ERROR_RECURSIVE_RENDERCHAR,
+@
+
+Este erro ocorre quando o uso do comando \monoespaco{renderchar} em
+dois ou mais glifos gera uma depenndência circular. Por exemplo, para
+renderizar o glifo ``a'', devemos primeiro renderizar ``b''. Mas para
+renderizar o ``b'', devemos renderizar ``a''. Nenhum tipo de recursão
+deste tipo é permitida, mesmo que o usuário tome cuidado de criar uma
+lógica que a impeça de ser infinita e nunca terminar. Quando uma
+definição recursiva deste tipo é encontrada, este erro é gerado. E
+informamos qual o glifo que estamos precisando renderizar como
+dependência do atual, tal que o atual é dependência dele.
+
+@<Macros Locais (metafont.c)@>+=
+#define RAISE_ERROR_RECURSIVE_RENDERCHAR(mf, cx, line, glyph) {\
+  if(!mf -> err){\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_RECURSIVE_RENDERCHAR);\
+    memcpy(mf -> errno_str, glyph, 4);\
+    mf -> errno_str[4] = '\0';}}
+@
+
+E esta é a mensagem de erro impressa para tais erros:
+
+@<Imprime Mensagem de Erro@>+=
+case ERROR_RECURSIVE_RENDERCHAR:
+  fprintf(stderr, "%s:%s Recursive 'renderchar' detected. Glyph '%s' depends on "
+          "current glyph, but current glyph depends on '%s'.", mf -> file,
+          line_number, mf -> errno_str, mf -> errno_str);
+  break;
+@
+
+
 \subsecao{A.X. ERROR\_UNBALANCED\_ENDING\_TOKEN}
 
 @<Tipos de Erros@>+=
@@ -19483,8 +19492,8 @@ o nome do glifo inexistente que encontramos como dependência.
 #define RAISE_ERROR_UNKNOWN_GLYPH_DEPENDENCY(mf, cx, line, glyph) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNKNOWN_GLYPH_DEPENDENCY);\
-    memcpy(mf -> errno_str, glyph, strlen(glyph));\
-    mf -> errno_str[strlen(glyph)] = '\0';}}
+    memcpy(mf -> errno_str, glyph, 4);\
+    mf -> errno_str[4] = '\0';}}
 @
 
 E com isso produzimos a mensagem de erro:

@@ -142,14 +142,14 @@ void*mono_expr_begin,*mono_expr_end;
 struct _glyph*glyphs[332];
 struct _glyph*first_glyph;
 int number_of_glyphs;
-/*:615*//*647:*/
-#line 18154 "weaver-interface-metafont.cweb"
+/*:615*//*644:*/
+#line 18128 "weaver-interface-metafont.cweb"
 
 int err,errno_line;
 char errno_character[5];
 char errno_str[32];
 int errno_int;
-/*:647*/
+/*:644*/
 #line 2185 "weaver-interface-metafont.cweb"
 
 };

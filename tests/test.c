@@ -2813,7 +2813,22 @@ void test_errors(void){
 	 !strcmp(error_string, "/tmp/test.mf:2: Command 'renderchar' created dependency of undefined glyph 'b'. (while rendering 'a')\n"));
   destroy_context(mf, cx);
   _Wdestroy_metafont(mf);
-
+  // ERROR: Recursive 'renderchar'
+  create_metafont(&mf, &cx, "beginchar(\"a\", 10, 10, 0);\nrenderchar \"b\" between (0,0) and (10, 10);\nendchar;\nbeginchar(\"b\", 10, 10, 0);\nrenderchar \"c\" between (0, 0 and (10, 10);\nendchar;\nbeginchar(\"c\", 10, 10, 0);\nrenderchar \"a\" between (0, 0 and (10, 10);\nendchar;\n");
+  {
+    int width = 0, height = 0, depth = -1, italcorr = -1, kerning = -1;
+    GLuint glyph = 0;
+    _Wrender_glyph(mf, "a", NULL, &glyph, &width, &height,
+		   &depth, &italcorr, &kerning);
+  }
+  memset(error_string, 0, 1024);
+  setvbuf(stderr, error_string, _IOLBF, 1024);
+  _Wprint_metafont_error(mf);
+  assert("Raising error for infinite recursion in 'renderchar'", 
+	 mf != NULL && mf -> err == ERROR_RECURSIVE_RENDERCHAR &&
+	 !strcmp(error_string, "/tmp/test.mf:8: Recursive 'renderchar' detected. Glyph 'a' depends on current glyph, but current glyph depends on 'a'. (while rendering 'c')\n"));
+  destroy_context(mf, cx);
+  _Wdestroy_metafont(mf);
   // End of error tests
   setbuf(stderr, NULL);
 }
