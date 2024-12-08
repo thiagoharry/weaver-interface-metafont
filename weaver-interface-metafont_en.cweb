@@ -18058,6 +18058,53 @@ if(tok -> type == TYPE_SYMBOLIC){
 }
 @
 
+Everything we have described above is useful for an error message to
+be printed by the \monoespaco{\_Wprint\_metafont\_error} command. But
+what if the user does not want to print the error and wants to
+diagnose it manually, generating his own custom error handler? In this
+case, she should read this Appendix to learn how errors are handled and
+how their information is added. Knowing this, she can inspect on his
+own in \monoespaco{mf -> error} whether any error occurred and what
+type it was. She can force certain errors to be ignored so that the
+code can be re-executed by changing the variable that stores whether
+an error occurred to false. And she can write custom messages for each
+type of error.
+
+For this second task, it will need to have the list of possible errors
+(each one will be described in a subsection below) and it must also
+have a list of possible tokens to identify some information stored
+about some errors. We will export all this information in a specific
+header that only needs to be inserted into a program when the user
+wants to create custom error handlers:
+
+
+@(src/metafont_error.h@>=
+#ifndef __WEAVER_METAFONT_ERROR
+#define __WEAVER_METAFONT_ERROR
+#ifdef __cplusplus
+extern "C" {
+#endif
+enum { // Types of error
+  ERROR_NO_ERROR = 0,
+  // All the different errors that will be defined in this APpendix
+  @<Types of Error@>
+  // And a last one that we should not use for unknown errors
+  ERROR_UNKNOWN
+};
+enum { // Types of tokens
+  TYPE_NUMERIC = 1, TYPE_STRING, TYPE_SYMBOLIC, TYPE_FOR, TYPE_ENDFOR,
+  // The basic types can be seen above. All others are inserted below:
+  @<WEAVEFONT: Symbolic Token Definition@>
+  // And a last one that should not be used:
+  TYPE_INVALID_TOKEN
+};
+#ifdef __cplusplus
+}
+#endif
+#endif
+@
+
+
 \subsecao{A.X. ERROR\_DISCONTINUOUS\_PATH}
 
 @<Types of Error@>+=

@@ -18360,6 +18360,52 @@ if(tok -> type == TYPE_SYMBOLIC){
 }
 @
 
+Tudo o que descrevemos acima serve para que uma mensagem de erro possa
+ser impressa pelo comando \monoespaco{\_Wprint\_metafont\_error}. Mas
+e se o usuário não quiser imprimir o erro e queira diagnosticar ele
+manualmente, gerando o seu tratamento de erros customizado? Neste
+caso, ele deve ler este Apêndice para saber como os erros são tratados
+e como suas informações são adicionadas. Sabendo disso, ele pode
+inspecionar por conta própria em \monoespaco{mf -> error} se algum
+erro ocorreu e qual o tipo dele. Ele pode forçar certos erros a serem
+ignorados para que tente-se executar mais uma vez o código, mudando
+para falso a variável que armazena se um erro ocorreu. E ele pode
+escrever mensagens customizadas para cada tipo de erro.
+
+Para esta segunda tarefa, ele precisará ter a lista de erros possíveis
+(cada um será descrito em uma subseção a seguir) e deve também ter uma
+lista de tokens possíveis para identificar algumas informações
+armazenadas sobre alguns erros. Vamos exportar todas estas informações
+em um cabeçalho próprio que só precisa ser inserido em um programa
+quando o usuário quer criar tratamentos de erros customizados:
+
+@(src/metafont_error.h@>=
+#ifndef __WEAVER_METAFONT_ERROR
+#define __WEAVER_METAFONT_ERROR
+#ifdef __cplusplus
+extern "C" {
+#endif
+enum { // Tipos de Erros
+  ERROR_NO_ERROR = 0,
+  // Os diferentes tipos que serão definidos:
+  @<Tipos de Erros@>
+  // E um último que esperamos nunca usar: indica erro desconhecido
+  ERROR_UNKNOWN
+};
+enum { // Tipos de Tokens
+  TYPE_NUMERIC = 1, TYPE_STRING, TYPE_SYMBOLIC, TYPE_FOR, TYPE_ENDFOR,
+  // Os tipos básicos (numérico, string, varivel, começo e fim de
+  // loop) estão acima. Os outros serão colocados logo abaixo:
+  @<WEAVEFONT: Definição de Token Simbólico@>
+  // E um último tipo que não deve ser usado, exceto para indicar erro:
+  TYPE_INVALID_TOKEN
+};
+#ifdef __cplusplus
+}
+#endif
+#endif
+@
+
 \subsecao{A.X. ERROR\_DISCONTINUOUS\_PATH}
 
 @<Tipos de Erros@>+=
