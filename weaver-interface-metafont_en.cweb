@@ -16763,12 +16763,13 @@ struct kerning{
 };
 @
 
-The list of all glyphs and a pointer to the first defined glyph will
-be stored here:
+The list of all glyphs and a pointer to the first defined glyph
+together with its string encoding will be stored here:
 
 @<Attributes (struct metafont)@>+=
 struct _glyph *glyphs[332];
 struct _glyph *first_glyph;
+char first_glyph_symbol[5];
 int number_of_glyphs;
 @
 
@@ -16783,6 +16784,7 @@ to them, we will need to allocate them:
 @<Initialization (struct metafont)@>+=
 memset(mf -> glyphs, 0, sizeof(struct _glyph *) * 332);
 mf -> first_glyph = NULL;
+memset(mf -> first_glyph_symbol, 0, 5);
 mf -> number_of_glyphs = 0;
 @
 
@@ -17000,8 +17002,10 @@ else if(begin -> type == TYPE_BEGINCHAR && mf -> loading){
     glyph = get_glyph(mf, (unsigned char *) str -> value, true);
     if(glyph == NULL)
       return false;
-    if(mf -> first_glyph == NULL)
+    if(mf -> first_glyph == NULL){
       mf -> first_glyph = glyph;
+      memcpy(mf -> first_glyph_symbol, (unsigned char *) str -> value, 4);
+    }
     if(glyph -> begin != NULL){
       RAISE_ERROR_DUPLICATE_GLYPH(mf, cx, OPTIONAL(begin -> line), str -> value);
       return false;
@@ -17800,6 +17804,174 @@ use in the rendering:
     glDeleteTextures(1, &(glyph -> texture));
 }
 @
+
+\secao{X. Integrating WeaveFont and Weaver Game Engine}
+
+The Weaver game engine has a module responsible for loading new
+interfaces, which are visual elements to be presented to the user. The
+idea is that the engine can automatically create visual elements from
+a file name where a texture can be seen. This is done by invoking the
+function:
+
+\alinhaverbatim
+W.new_interface("textura.mf", NULL, 100.0, 100.0, 0.0, 100.0, 100.0);
+\alinhanormal
+
+The above function must read the file \monoespaco{textura.mf}, extract
+the texture that is inside it and produce a new structure of type
+\monoespaco{struct user\_interface} that represents something that
+will immediately appear on the screen.
+
+But how does the game engine know how to interpret the file
+\monoespaco{textura.mf}? To do so, it must be initialized by passing
+it the pointer to a function that interprets such texture. In our
+case, we will assume that such texture is a Weavefont source code.
+
+We also must define af function with the header below:
+
+\alinhaverbatim
+void extract(void *(*permanent_alloc)(size_t),
+             void (*permanent_free)(void *),
+             void *(*temporary_alloc)(size_t),
+             void (*temporary_free)(void *),
+             void (*before_loading_interface)(void),
+             void (*after_loading_interface)(void),
+             char *source_filename, struct user_interface *i)
+\alinhanormal
+
+The first four parameters are just functions for the allocation and
+deallocation functions that we must use when we interpret the
+file. The next two functions are just pointers to functions that must
+be executed before and after we interpret the texture. Next comes the
+path of the file where the code to be interpreted is located. And
+finally, a pointer to the interface where we must place the
+texture. It is possible to define animated textures.
+
+We define such function as:
+
+
+@<API Functions Definition (metafont.c)@>+=
+#if defined(WEAVER_ENGINE)
+@<Functions to be Stored in User Interface@>
+void _Wmetafont_loading(void *(*permanent_alloc)(size_t),
+                        void (*permanent_free)(void *),
+                        void *(*temporary_alloc)(size_t),
+                        void (*temporary_free)(void *),
+                        void (*before_loading_interface)(void),
+                        void (*after_loading_interface)(void),
+                        char *source_filename,
+                        struct user_interface *target){
+  struct metafont *mf;
+  float size;
+  int texture_width, texture_height, texture_depth, ignore_this;
+  if(before_loading_interface != NULL)
+      before_loading_interface();
+  mf = _Wnew_metafont(source_filename);
+  if(mf == NULL)
+    return;
+  if(mf -> err){
+    _Wprint_metafont_error(mf);
+    return;
+  }
+  // Computing interface height in pixels to a value in pt.
+  // If supported by the texture, this defines its size.
+  size = 72.0 * (target -> height) / dpi;
+  _Wwrite_numeric_variable(mf, "size", size);
+  // Computing width:
+  size = 72.0 * (target -> width) / dpi;
+  _Wwrite_numeric_variable(mf, "hsize", size);
+  // The texture is the first glyph in mf -> first_glyph_symbol
+  target -> _texture1 = (GLuint *) permanent_alloc(sizeof(GLuint));
+  if(target -> _texture1 == NULL)
+    return;
+  _Wrender_glyph(mf, mf -> first_glyph_symbol, NULL, target -> _texture1, 
+                 &texture_width, &texture_height,
+                 &texture_depth, &ignore_this, &ignore_this);
+  if(mf -> err){
+    _Wprint_metafont_error(mf);
+    _Wdestroy_metafont(mf);
+    return;
+  }
+  if(mf -> first_glyph -> need_rendering){ // Animated texture
+    float frame_duration;
+    target -> animate = true;
+    target -> frame_duration = (unsigned *) permanent_alloc(sizeof(unsigned));
+    if(target -> frame_duration == NULL){
+      _Wdestroy_metafont(mf);
+      return;
+    }
+    frame_duration = (unsigned) _Wread_numeric_variable(mf, "frame_duration");
+    if(isnan(frame_duration))
+      target -> frame_duration[0] = 0;
+    else
+      target -> frame_duration[0] = (unsigned) frame_duration;
+    target -> max_repetition = -1;
+  }
+  target -> width = texture_width;
+  target -> height = texture_height + texture_depth;
+  target -> _internal_data = (void *) mf;
+  target -> _free_internal_data = _interface_free_metafont;
+  target -> _reload_texture = _reload_texture;
+  target -> _loaded_texture = true;
+  if(after_loading_interface != NULL)
+    after_loading_interface();
+}
+#endif
+@
+
+The above function creates a new user interface from WeaveFont code,
+where the code will define the texture that the interface will have. A
+pointer to the metafont structure is also placed in the interface, as
+well as a pointer to the finalization and reloading function.
+
+That function creates a new user interface from WeaveFont code which
+describes the texture. A pointer to the metafont struct is also stored
+together with a pointer to the function that disallocate it and
+another function that can reload the texture.
+
+The disallocation function should receive a generic pointer and should
+do any work necessary to close and deallocate any resources placed in
+the interface. In this case, we will need to execute
+\monoespaco{\_Wdestroy\_metafont} on the stored metafont structure:
+
+@<Functions to be Stored in User Interface@>=
+void _interface_free_metafont(void *data){
+  _Wdestroy_metafont((struct metafont *) data);
+}
+@
+
+The function that reloads textures is executed every time the user
+interface changes size, or every frame it is animated. What it will do
+is reload the texture by reinterpreting the WeaveFont code:
+
+@<Functions to be Stored in User Interface@>+=
+void _reload_texture(struct user_interface *target){
+  struct metafont *mf = (struct metafont *) (target -> _internal_data);
+  int texture_width, texture_height, texture_depth, ignore_this;
+  // Computando a altura da interface, dada em pixels, para pontos tipográficos.
+  // Se for suportado pela textura, usamos isso para determinar seu tamanho.
+  float size = 72.0 * (target -> height) / dpi;
+  _Wwrite_numeric_variable(mf, "size", size);
+  // Computando a largura:
+  size = 72.0 * (target -> width) / dpi;
+  _Wwrite_numeric_variable(mf, "hsize", size);
+  glDeleteTextures(1, target -> _texture1);
+  _Wrender_glyph(mf, mf -> first_glyph_symbol, NULL, target -> _texture1, 
+                 &texture_width, &texture_height,
+                 &texture_depth, &ignore_this, &ignore_this);
+  if(mf -> err){
+    _Wprint_metafont_error(mf);
+    _Wdestroy_metafont(mf);
+    target -> _internal_data = NULL;
+    return;
+  }
+  if(!(mf -> first_glyph -> need_rendering))
+    target -> animate = false;
+  target -> width = texture_width;
+  target -> height = texture_height + texture_depth;
+}
+@
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

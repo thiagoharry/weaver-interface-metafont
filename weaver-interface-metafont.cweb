@@ -17058,11 +17058,13 @@ struct kerning{
 @
 
 A lista de todos os glifos possíveis ficará na estrutura global da
-linguagem, assim como um ponteiro para o primeiro glifo definido:
+linguagem, assim como um ponteiro para o primeiro glifo definido e sua
+representação em string:
 
 @<Atributos (struct metafont)@>+=
 struct _glyph *glyphs[332];
 struct _glyph *first_glyph;
+char first_glyph_symbol[5];
 int number_of_glyphs;
 @
 
@@ -17078,6 +17080,7 @@ teremos que alocar cada um deles:
 @<Inicialização (struct metafont)@>+=
 memset(mf -> glyphs, 0, sizeof(struct _glyph *) * 332);
 mf -> first_glyph = NULL;
+memset(mf -> first_glyph_symbol, 0, 5);
 mf -> number_of_glyphs = 0;
 @
 
@@ -17295,8 +17298,10 @@ else if(begin -> type == TYPE_BEGINCHAR && mf -> loading){
     glyph = get_glyph(mf, (unsigned char *) str -> value, true);
     if(glyph == NULL)
       return false;
-    if(mf -> first_glyph == NULL)
+    if(mf -> first_glyph == NULL){
       mf -> first_glyph = glyph;
+      memcpy(mf -> first_glyph_symbol, (unsigned char *) str -> value, 4);
+    }
     if(glyph -> begin != NULL){
       RAISE_ERROR_DUPLICATE_GLYPH(mf, cx, OPTIONAL(begin -> line), str -> value);
       return false;
@@ -18097,6 +18102,181 @@ espelhada verticalmente. Isso funciona simplesmente multiplicando por
   glDisable(GL_BLEND);
   if(glyph -> need_rendering) // Rendered with 'shipit'
     glDeleteTextures(1, &(glyph -> texture));
+}
+@
+
+\secao{X. Integração entre Weavefont e Motor de Jogos Weaver}
+
+O motor de jogos Weaver possui um módulo responsável por carregar
+novas interfaces, que são elementos visuais a serem apresentados ao
+usuário. A ideia é que o motor possa criar automaticamente elementos
+visuais à partir de um nome de arquivo onde pode-se ver uma
+textura. Isso é feito por meio da invocação da função:
+
+\alinhaverbatim
+W.new_interface("textura.mf", NULL, 100.0, 100.0, 0.0, 100.0, 100.0);
+\alinhanormal
+
+A função acima deve ler o arquivo \monoespaco{textura.mf}, extrair a
+textura que está dentro dele e produzir uma nova estrutura de tipo
+\monoespaco{struct user\_interface} que representa algo que
+imediatamente aparecerá na tela.
+
+Mas como o motor de jogos sabe como interpretar o arquivo
+\monoespaco{textura.mf}? Para isso, ele deve ser inicializado passando
+para ele o ponteiro de uma função que interpreta tal textura. No nosso
+caso, vamos assumir que a tal textura é um código-fonte
+Weavefont.
+
+Para isso, se estivermos usando o motor de jogos Weaver, devemos
+inserir o cabeçalho que contém a descrição das interfaces de usuário:
+
+@<Cabeçalhos Locais (metafont.c)@>+=
+#if defined(WEAVER_ENGINE)
+#include "interface.h"
+#endif
+@
+
+Devemos também definir uma nova função com o seguinte cabeçalho:
+
+\alinhaverbatim
+void extract(void *(*permanent_alloc)(size_t),
+             void (*permanent_free)(void *),
+             void *(*temporary_alloc)(size_t),
+             void (*temporary_free)(void *),
+             void (*before_loading_interface)(void),
+             void (*after_loading_interface)(void),
+             char *source_filename, struct user_interface *i)
+\alinhanormal
+
+Os quatro primeiros parâmetros são apenas funções para as funções de
+alocação e desalocação que devemos usar quando interpretamos o
+arquivo. As duas próximas funções são apenas ponteiros para funções
+que devem ser executadas antes e depois de interpretarmos a
+textura. Em seguida, vem o caminho do arquivo onde está o código a ser
+interpretado. E por fim, umponteiro para a interface onde devemos
+colocar a textura lida. É possível definir texturas animadas.
+
+Definimos tal função como:
+
+
+@<Definição de Funções da API (metafont.c)@>+=
+#if defined(WEAVER_ENGINE)
+@<Funções a Serem Colocadas na Interface de Usuário@>
+void _Wmetafont_loading(void *(*permanent_alloc)(size_t),
+                        void (*permanent_free)(void *),
+                        void *(*temporary_alloc)(size_t),
+                        void (*temporary_free)(void *),
+                        void (*before_loading_interface)(void),
+                        void (*after_loading_interface)(void),
+                        char *source_filename,
+                        struct user_interface *target){
+  struct metafont *mf;
+  float size;
+  int texture_width, texture_height, texture_depth, ignore_this;
+  if(before_loading_interface != NULL)
+      before_loading_interface();
+  mf = _Wnew_metafont(source_filename);
+  if(mf == NULL)
+    return;
+  if(mf -> err){
+    _Wprint_metafont_error(mf);
+    return;
+  }
+  // Computando a altura da interface, dada em pixels, para pontos tipográficos.
+  // Se for suportado pela textura, usamos isso para determinar seu tamanho.
+  size = 72.0 * (target -> height) / dpi;
+  _Wwrite_numeric_variable(mf, "size", size);
+  // Computando a largura:
+  size = 72.0 * (target -> width) / dpi;
+  _Wwrite_numeric_variable(mf, "hsize", size);
+  // A textura  é o primeiro glifo definido em mf -> first_glyph_symbol
+  target -> _texture1 = (GLuint *) permanent_alloc(sizeof(GLuint));
+  if(target -> _texture1 == NULL)
+    return;
+  _Wrender_glyph(mf, mf -> first_glyph_symbol, NULL, target -> _texture1, 
+                 &texture_width, &texture_height,
+                 &texture_depth, &ignore_this, &ignore_this);
+  if(mf -> err){
+    _Wprint_metafont_error(mf);
+    _Wdestroy_metafont(mf);
+    return;
+  }
+  if(mf -> first_glyph -> need_rendering){ // Animated texture
+    float frame_duration;
+    target -> animate = true;
+    target -> frame_duration = (unsigned *) permanent_alloc(sizeof(unsigned));
+    if(target -> frame_duration == NULL){
+      _Wdestroy_metafont(mf);
+      return;
+    }
+    frame_duration = (unsigned) _Wread_numeric_variable(mf, "frame_duration");
+    if(isnan(frame_duration))
+      target -> frame_duration[0] = 0;
+    else
+      target -> frame_duration[0] = (unsigned) frame_duration;
+    target -> max_repetition = -1;
+  }
+  target -> width = texture_width;
+  target -> height = texture_height + texture_depth;
+  target -> _internal_data = (void *) mf;
+  target -> _free_internal_data = _interface_free_metafont;
+  target -> _reload_texture = _reload_texture;
+  target -> _loaded_texture = true;
+  if(after_loading_interface != NULL)
+    after_loading_interface();
+}
+#endif
+@
+
+A função acima cria uma nova interface de usuário à partir de um
+código WeaveFont, onde o código irá definir a textura que a interface
+terá. Um ponteiro para a estrutura metafont é também colocado na
+interface, e também um ponteiro para função de finalização e para
+recarregar a textura.
+
+A função de finalização deve receber um ponteiro genérico e deve fazer
+qualquer trabalho necessário para encerrar e desalocar qualquer
+recurso que tenhamos colocado na interface. No caso, para nós será
+necessário executar \monoespaco{\_Wdestroy\_metafont} na estrutura
+metafont armazenada:
+
+@<Funções a Serem Colocadas na Interface de Usuário@>=
+void _interface_free_metafont(void *data){
+  _Wdestroy_metafont((struct metafont *) data);
+}
+@
+
+Já a função que recarrega texturas é executada toda vez que a
+interface de usuário muda de tamanho, ou a cada frame que ela for
+animada. O que ela fará será recarregar a textura reinterpretando o
+código WeaveFont:
+
+@<Funções a Serem Colocadas na Interface de Usuário@>+=
+void _reload_texture(struct user_interface *target){
+  struct metafont *mf = (struct metafont *) (target -> _internal_data);
+  int texture_width, texture_height, texture_depth, ignore_this;
+  // Computando a altura da interface, dada em pixels, para pontos tipográficos.
+  // Se for suportado pela textura, usamos isso para determinar seu tamanho.
+  float size = 72.0 * (target -> height) / dpi;
+  _Wwrite_numeric_variable(mf, "size", size);
+  // Computando a largura:
+  size = 72.0 * (target -> width) / dpi;
+  _Wwrite_numeric_variable(mf, "hsize", size);
+  glDeleteTextures(1, target -> _texture1);
+  _Wrender_glyph(mf, mf -> first_glyph_symbol, NULL, target -> _texture1, 
+                 &texture_width, &texture_height,
+                 &texture_depth, &ignore_this, &ignore_this);
+  if(mf -> err){
+    _Wprint_metafont_error(mf);
+    _Wdestroy_metafont(mf);
+    target -> _internal_data = NULL;
+    return;
+  }
+  if(!(mf -> first_glyph -> need_rendering))
+    target -> animate = false;
+  target -> width = texture_width;
+  target -> height = texture_height + texture_depth;
 }
 @
 

@@ -10,12 +10,12 @@ tangle_en:
 	ctangle weaver-interface-metafont_en.cweb
 test: tangle
 	cp src/metafont.* tests/
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -Wfatal-errors -Wall -g -O2 tests/window.c tests/test.c -o test_metafont -lpthread -lX11 -lEGL -lGLESv2 -lm -DW_DEBUG_METAFONT
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -Wfatal-errors -Wall -g -O2 tests/window.c tests/test.c -o test_metafont -lpthread -lX11 -lEGL -lGLESv2 -lm -DW_DEBUG_METAFONT -DWEAVER_ENGINE
 	./test_metafont 2> /dev/null
 test_en:
 	ctangle weaver-interface-metafont_en.cweb
 	cp src/metafont.* tests/
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -Wall -Wfatal-errors -g -O2 tests/window.c tests/test.c  -o test_metafont -lX11 -lEGL -lGLESv2 -lm -DW_DEBUG_METAFONT
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -Wall -Wfatal-errors -g -O2 tests/window.c tests/test.c  -o test_metafont -lX11 -lEGL -lGLESv2 -lm -DW_DEBUG_METAFONT -DWEAVER_ENGINE
 	./test_metafont 2> /dev/null
 test_web:
 	ctangle weaver-interface-metafont.cweb
