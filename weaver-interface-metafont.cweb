@@ -42,216 +42,298 @@
 
 \twelve
 \vskip12pt
-\titulo{WEAVEFONT: Linguagem de Desrição de Fontes Tipográficas}
+\titulo{WeaveFont: Linguagem de Desrição de Fontes Tipográficas}
 \vskip12pt
 \autor{Thiago Leucz Astrizi}
 \vskip6pt
 \email{thiago@@bitbitbit.com.br}
 \vskip6pt
 
-\abstract{This article contains an implementation of  WEAVEFONT, a language
+\abstract{This article contains an implementation of  WeaveFont, a language
  created to represent typographical fonts, vector illustrations and
  animations. The language is strongly based on METAFONT, a description
  language created by Donald Knuth in 1984 [KNUTH, 1989]. The syntax is
- very similar for both languages, but WEAVEFONT was created to run and
+ very similar for both languages, but WeaveFont was created to run and
  produce images in real time using OpenGL. Therefore, changes were
  made to make the language faster for this goal. Contrary to METAFONT,
- WEAVEFONT do not support macros and is an imperative
+ WeaveFont do not support macros and is an imperative
  language. Several useful features from METAFONT that were implemented
- with macros, in WEAVEFONT are a direct part of the language.}
+ with macros, in WeaveFont are a direct part of the language.}
 
 \vskip 0.5cm plus 3pt minus 3pt
 
-\resumo{Este artigo contém uma implementação de WEAVEFONT, uma linguagem criada
+\resumo{Este artigo contém uma implementação de WeaveFont, uma linguagem criada
  para representar fontes tipográficas, ilustrações vetoriais e
  animações. A linguagem é fortemente baseada em METAFONT, uma
  linguagem de descrição criada por Donald Knuth em 1977 [KNUTH,
  1989]. A sintaxe é muito similar para ambas as linguagens.  mas
- WEAVEFONT foi criada para executar e produzir imagens em tempo real
+ WeaveFont foi criada para executar e produzir imagens em tempo real
  usando OpenGL. Por isso, mudanças foram feitas para tornar a
  linguagem mais rápida para tal propósito. Ao contrário de METAFONT,
- WEAVEFONT não suporta macros e é uma linguagem imperativa. Várias
+ WeaveFont não suporta macros e é uma linguagem imperativa. Várias
  funcionalidades úteis que em METAFONT foram criadas usando macros, em
- WEAVEFONT são diretamente parte da linguagem.}
+ WeaveFont são diretamente parte da linguagem.}
 
 \secao{Índice}
 
 \def\indice#1{\leaders\hbox{.}\hfill #1}
 
-1. Introdução \indice{3}
+1. Introdução \indice{5}
 
-1.1. Programação Literária \indice{5}
+1.1. Programação Literária \indice{6}
 
-2. Código Auxiliar Geral \indice{6}
+2. Código Auxiliar Geral \indice{7}
 
-2.1. Código de Álgebra Linear \indice{6}
+2.1. Código de Álgebra Linear \indice{7}
 
-2.1.1. Resolvendo Sistemas de Equações Lineares \indice{9}
+2.1.1. Resolvendo Sistemas de Equações Lineares \indice{10}
 
-2.2. Mutexes e Seções Críticas \indice{11}
+2.2. Mutexes e Seções Críticas \indice{12}
 
-2.3. Lidando com Erros \indice{XX}
+2.3. Lidando com Erros \indice{14}
 
-3. Inicialização e Finalização \indice{12}
+3. Inicialização e Finalização \indice{14}
 
-4. Analisador Léxico \indice{12}
+4. Analisador Léxico \indice{15}
 
-4.1. Tipos de Tokens \indice{12}
+4.1. Tipos de Tokens \indice{15}
 
-4.2. A Análise Léxica \indice{16}
+4.2. A Análise Léxica \indice{18}
 
-5. Programas WEAVEFONT \indice{24}
+5. Programas WeaveFont \indice{32}
 
-5.1. Executando Programas \indice{24}
+5.1. Executando Programas \indice{32}
 
-5.3. Separando Lista de Instruções em Instruções Individuais \indice{30}
+5.2. Separando Lista de Instruções em Instruções Individuais \indice{34}
 
-6. Uma Instrução Composta: O Bloco Composto \indice{31}
+6. Uma Instrução Composta: O Bloco Composto \indice{36}
 
-6.1. Suportando Instruções Compostas \indice{31}
+6.1. Suportando Instruções Compostas \indice{36}
 
-6.2. A Instrução \monoespaco{begingroup}$\ldots$\monoespaco{endgroup}\indice{36}
+6.2. A Instrução \monoespaco{begingroup}$\ldots$\monoespaco{endgroup}\indice{39}
 
-7. Declaração de Variáveis \indice{37}
+7. Declaração de Variáveis \indice{40}
 
-7.1. Variáveis Numéricas \indice{43}
+7.1. Variáveis Numéricas \indice{46}
 
-7.2. Variáveis de Pares \indice{45}
+7.2. Variáveis de Pares \indice{49}
 
-7.3. Variáveis de Transformação \indice{45}
+7.3. Variáveis de Transformação \indice{49}
 
-7.4. Variáveis de Caminhos \indice{47}
+7.4. Variáveis de Caminhos \indice{50}
 
-7.4.1. Removendo Recursão de Variáveis de Caminho \indice{50}
+7.4.1. Removendo Recursão de Variáveis de Caminho \indice{53}
 
-7.4.2. Tensão e Especificadores de Direção \indice{51}
+7.4.2. Tensão e Especificadores de Direção \indice{55}
 
-7.4.3. Deduzindo Especificadores de Direção \indice{56}
+7.4.3. Deduzindo Especificadores de Direção \indice{60}
 
-7.4.4. Normalização de Caminhos \indice{64}
+7.4.4. Normalização de Caminhos \indice{69}
 
-7.5. Variáveis de Caneta \indice{66}
+7.5. Variáveis de Caneta \indice{71}
 
-7.6. Variáveis de Imagens \indice{XX}
+7.6. Variáveis de Imagens \indice{75}
 
-7.7. Variáveis Booleanas \indice{XX}
+7.7. Variáveis Booleanas \indice{76}
 
-8. Atribuições \indice{XX}
+8. Atribuições \indice{76}
 
-8.1. Atribuições e Expressões Numéricas \indice{XX}
+8.1. Atribuições e Expressões Numéricas \indice{78}
 
-8.1.1. Soma e Subtração: Normal e Pitagórica \indice{XX}
+8.1.1. Soma e Subtração: Normal e Pitagórica \indice{79}
 
-8.1.2. Multiplicação e Divisão \indice{XX}
+8.1.2. Multiplicação e Divisão \indice{83}
 
-8.1.3. Módulo, Seno, Cosseno, Exponenciais, Piso e Aleatórios Uniformes \indice{XX}
+8.1.3. Módulo, Seno, Cosseno, Exponenciais, Piso e Aleatórios Uniformes \indice{85}
 
-8.1.4. Números Isolados e Valores Aleatórios Normais \indice{XX}
+8.1.4. Números Isolados e Valores Aleatórios Normais \indice{89}
 
-8.2. Atribuições e Expressões de Pares \indice{XX}
+8.2. Atribuições e Expressões de Pares \indice{92}
 
-8.2.1. Soma e Subtração \indice{XX}
+8.2.1. Soma e Subtração \indice{93}
 
-8.2.2. Transformações, Multiplicação e Divisão Escalar \indice{XX}
+8.2.2. Transformações, Multiplicação e Divisão Escalar \indice{94}
 
-8.2.3. Valores Intermediários de Pares, Literais e Variáveis \indice{XX}
+8.2.3. Valores Intermediários de Pares, Literais e Variáveis \indice{98}
 
-8.2.4. Pares em Expressões Numéricas \indice{XX}
+8.2.4. Pares em Expressões Numéricas \indice{103}
 
-8.3. Atribuições e Expressões de Transformação \indice{XX}
+8.3. Atribuições e Expressões de Transformação \indice{104}
 
-8.3.1. Transformações sobre Transformadores \indice{XX}
+8.3.1. Transformações sobre Transformadores \indice{105}
 
-8.3.2 Expressões Primárias de Transformação: Literais e Variáveis \indice{XX}
+8.3.2 Expressões Primárias de Transformação: Literais e Variáveis \indice{108}
 
-8.3.3. Transformações em Expressões Numéricas \indice{XX}
+8.3.3. Transformações em Expressões Numéricas \indice{111}
 
-8.3.4. Transformações em Expressões de Pares \indice{XX}
+8.3.4. Transformações em Expressões de Pares \indice{112}
 
-8.4. Atribuições e Expressões de Caminhos \indice{XX}
+8.4. Atribuições e Expressões de Caminhos \indice{113}
 
-8.4.1. Junção de Caminhos \indice{XX}
+8.4.1. Junção de Caminhos \indice{113}
 
-8.4.2. Expressões Terciárias de Caminhos \indice{XX}
+8.4.2. Expressões Terciárias de Caminhos \indice{132}
 
-8.4.3. Expressões Secundárias de Caminhos: Transformadores \indice{XX}
+8.4.3. Expressões Secundárias de Caminhos: Transformadores \indice{133}
 
-8.4.4. Expressões Primárias: Variáveis, Reversos e Subcaminhos \indice{XX}
+8.4.4. Expressões Primárias: Variáveis, Reversos e Subcaminhos \indice{139}
 
-8.4.5. Caminhos em Expressões Numéricas \indice{XX}
+8.4.5. Caminhos em Expressões Numéricas \indice{145}
 
-8.4.6. Caminhos em Expressões de Pares \indice{XX}
+8.4.6. Caminhos em Expressões de Pares \indice{145}
 
-8.5. Atribuições e Expressões de Caneta \indice{XX}
+8.5. Atribuições e Expressões de Caneta \indice{148}
 
-8.5.1. Expressão Terciária de Caneta \indice{XX}
+8.5.1. Expressão Terciária de Caneta \indice{149}
 
-8.5.2. Transformadores de Caneta \indice{XX}
+8.5.2. Transformadores de Caneta \indice{150}
 
 8.5.3. Expressões Primárias: Caneta Nula, Circular,
-Arbitrária e Variáveis \indice{XX}
+Arbitrária e Variáveis \indice{154}
 
-8.5.4. Canetas em Expressões de Caminho \indice{XX}
+8.5.4. Canetas em Expressões de Caminho \indice{158}
 
-8.6. Atribuições e Expressões de Imagens \indice{XX}
+8.6. Atribuições e Expressões de Imagens \indice{162}
 
-8.6.1. Expressões Terciárias de Imagem: Soma e Subtração \indice{XX}
+8.6.1. Expressões Terciárias de Imagem: Soma e Subtração \indice{168}
 
-8.6.2. Expressões Secundárias de Imagem: Transformadores \indice{XX}
+8.6.2. Expressões Secundárias de Imagem: Transformadores \indice{171}
 
 8.6.3. Expressões Primárias: Inversores, Identidade e
-Imagens Vazias \indice{XX}
+Imagens Vazias \indice{177}
 
-8.6.4. Imagens em Expressões Numéricas \indice{XX}
+8.6.4. Imagens em Expressões Numéricas \indice{182}
 
-8.7. Atribuições e Expressões Booleanas \indice{XX}
+8.7. Atribuições e Expressões Booleanas \indice{185}
 
-8.7.1. Comparações \indice{XX}
+8.7.1. Comparações \indice{185}
 
-8.7.2. A Operação OR \indice{XX}
+8.7.2. A Operação OR \indice{189}
 
-8.7.3. A Operação AND \indice{XX}
+8.7.3. A Operação AND \indice{191}
 
-8.7.4. Expressões Primárias Booleanas: Literais e Predicados Simples \indice{XX}
+8.7.4. Expressões Primárias Booleanas: Literais e Predicados Simples \indice{192}
 
-8.8. Identificando Tipos de Expressões \indice{XX}
+8.8. Identificando Tipos de Expressões \indice{194}
 
-9. Declaração Composta: Declaração Condicional \indice{XX}
+9. Declaração Composta: Declaração Condicional \indice{199}
 
-10. O Comando \monoespaco{pickup} \indice{XX}
+10. Declaração Composta: Iterações \indice{202}
 
-10.1. Pontos de Extremidade de Caneta \indice{XX}
+11. O Comando \monoespaco{pickup} \indice{206}
 
-10.2. Triangulação \indice{XX}
+11.1. Pontos de Extremidade de Caneta \indice{206}
 
-10.3. Interpretando o Comando \monoespaco{pickup} \indice{XX}
+11.2. Triangulação \indice{211}
 
-10.4. Os Operadores \monoespaco{bot}, \monoespaco{top}, \monoespaco{lft},
-\monoespaco{rt} \indice{XX}
+11.3. Interpretando o Comando \monoespaco{pickup} \indice{249}
 
-XX. O Comando \monoespaco{pickcolor} \indice{XX}
+11.4. Os Operadores \monoespaco{bot}, \monoespaco{top}, \monoespaco{lft},
+\monoespaco{rt} \indice{254}
 
-XX. O Comando \monoespaco{monowidth} \indice{XX}
+12. O Comando \monoespaco{pickcolor} \indice{255}
 
-11. O Comando \monoespaco{draw} e \monoespaco{erase} \indice{XX}
+13. O Comando \monoespaco{monowidth} \indice{257}
 
-11.1. Preparando o Framebuffer \indice{XX}
+14. O Comando \monoespaco{draw} e \monoespaco{erase} \indice{257}
 
-11.2. Shaders de Desenho \indice{XX}
+14.1. Preparando o Framebuffer \indice{258}
 
-11.3. Desenhando Caminhos \indice{XX}
+14.2. Shaders de Desenho \indice{259}
 
-12. Declaração Composta: Declaração de Caractere \indice{XX}
+14.3. Desenhando Caminhos \indice{260}
 
-12.1 Unicode e UTF-8 \indice{XX}
+15. Declaração Composta: Declaração de Caractere \indice{264}
 
-13. Funções de API para Usar as Fontes \indice{XX}
+15.1 Unicode e UTF-8 \indice{264}
 
-Referências \indice{XX}
+16. Funções de API para Usar as Fontes \indice{273}
 
-Apêndice A: Tratamento de Erros \indice XX
+17. O Comando \monoespaco{shipit} \indice{276}
 
-A.1. ERROR\_NO\_MEMORY \indice{XX}
+18. O Comando \monoespaco{renderchar} \indice{278}
+
+19. Integração entre WeaveFont e Motor de Jogos Weaver \indice{282}
+
+Apêndice A: Tratamento de Erros \indice{285}
+
+A.1. ERROR\_DISCONTINUOUS\_PATH \indice{289}
+
+A.2. ERROR\_DIVISION\_BY\_ZERO \indice{290}
+
+A.3. ERROR\_DUPLICATE\_GLYPH \indice{290}
+
+A.4. ERROR\_EMPTY\_DELIMITER \indice{291}
+
+A.5. ERROR\_EXPECTED\_FOUND \indice{291}
+
+A.6. ERROR\_FAILED\_OPENING\_FILE \indice{292}
+
+A.7. ERROR\_INCOMPLETE\_SOURCE \indice{292}
+
+A.8. ERROR\_INCOMPLETE\_STATEMENT \indice{293}
+
+A.9. ERROR\_INVALID\_CHAR \indice{293}
+
+A.10. ERROR\_INVALID\_COMPARISON \indice{295}
+
+A.11. ERROR\_INVALID\_DIMENSION\_GLYPH \indice{295}
+
+A.12. ERROR\_INVALID\_NAME \indice{296}
+
+A.13. ERROR\_INVALID\_TENSION \indice{296}
+
+A.14. ERROR\_MISSING\_EXPRESSION \indice{297}
+
+A.15. ERROR\_MISSING\_TOKEN \indice{298}
+
+A.16. ERROR\_NEGATIVE\_LOGARITHM \indice{298}
+
+A.17. ERROR\_NEGATIVE\_SQUARE\_ROOT \indice{298}
+
+A.18. ERROR\_NESTED\_BEGINCHAR \indice{299}
+
+A.19. ERROR\_NO\_MEMORY \indice{299}
+
+A.20. ERROR\_NO\_PICKUP\_PEN \indice{300}
+
+A.21. ERROR\_NONCYCLICAL\_PEN \indice{300}
+
+A.22. ERROR\_NULL\_VECTOR\_ANGLE \indice{301}
+
+A.23. ERROR\_OPENGL\_FRAMEBUFFER \indice{301}
+
+A.24. ERROR\_RECURSIVE\_RENDERCHAR \indice{302}
+
+A.25. ERROR\_UNBALANCED\_ENDING\_TOKEN \indice{303}
+
+A.26. ERROR\_UNCLOSED\_DELIMITER \indice{303}
+
+A.27. ERROR\_UNCLOSED\_STRING \indice{303}
+
+A.28. ERROR\_UNDECLARED\_VARIABLE \indice{304}
+
+A.29. ERROR\_UNEXPECTED\_TOKEN \indice{304}
+
+A.30. ERROR\_UNINITIALIZED\_VARIABLE \indice{305}
+
+A.31. ERROR\_UNKNOWN\_GLYPH\_DEPENDENCY \indice{305}
+
+A.32. ERROR\_UNKNOWN\_EXPRESSION \indice{306}
+
+A.33. ERROR\_UNKNOWN\_STATEMENT \indice{306}
+
+A.34. ERROR\_UNOPENED\_DELIMITER \indice{307}
+
+A.35. ERROR\_UNSUPORTED\_LENGTH\_OPERAND \indice{307}
+
+A.36. ERROR\_WRONG\_NUMBER\_OF\_PARAMETERS \indice{308}
+
+A.37. ERROR\_WRONG\_VARIABLE\_TYPE \indice{308}
+
+Referências \indice{309}
+
+\quebra
 
 \secao{1. Introdução}
 
@@ -268,12 +350,12 @@ linguagem METAFONT.
 
 A especificação original da linguagem METAFONT pode ser encontrada em
 [KNUTH, 1989].  Baseada nesta linguagem, definiremos aqui a linguagem
-WEAVEFONT, a qual tem objetivos similares. A diferença é que a
+WeaveFont, a qual tem objetivos similares. A diferença é que a
 linguagem a ser definida aqui deverá ser usada em tempo real para
 produzir imagens à partir da descrição vetorial.
 
 O arquivo de código-fonte que está sendo definido neste artigo pode
-tanto ser usado sozinho para usar somente a linguagem WEAVEFONT, ou
+tanto ser usado sozinho para usar somente a linguagem WeaveFont, ou
 pode estar integrado ao subsistema do Motor de Jogos Weaver, do qual
 esta linguagem é um sub-projeto. Se estivermos usando este projeto
 dentro do motor de jogos, isso significa que temos definida a
@@ -295,7 +377,7 @@ void _Wmetafont_loading(void *(*permanent_alloc)(size_t),
 
 Esta função serve para ler um arquivo (\monoespaco{source\_filename})
 e gerar com ele uma nova interface de usuário a ser usada pelo motor
-de jogos. No caso, o arquivo com código WEAVEFONT será interpretado
+de jogos. No caso, o arquivo com código WeaveFont será interpretado
 como uma imagem vetorial ou uma animação vetorial.
 
 E nós precisamos também inserir o cabeçalho Weaver de interface de usuário:
@@ -353,7 +435,7 @@ void _Wfinish_weavefont(void);
 @
 
 Caso algum erro tenha ocorrido durante a execução de um código
-WEAVEFONT que define uma meta-fonte, então o usuário poderá usar a
+WeaveFont que define uma meta-fonte, então o usuário poderá usar a
 seguinte função para imprimir na tela uma mensagem descrevendo o erro
 encontrado:
 
@@ -730,8 +812,7 @@ linhas, trocamos na matriz $M$ e em $b$ as linhas $i$ e $j$:
 
 Note que trocar as linhas não muda o resultado de um sistema de
 equações. Por exemplo, as três equações abaixo tem a mesma solução
-($x=0$, $y=0$, $z=2$) do sistema de equações do começo da Subseção
-2.1.1:
+($x=0$, $y=0$, $z=2$) do sistema de equações do começo da Subseção:
 
 $$
 6x-3y+z=2
@@ -944,14 +1025,13 @@ posteriormente que uma mensagem de diagnóstico seja impressa se o
 usuário assim desejar.
 
 O ato de preencher as informações sobre o erro na estrutura da fonte
-será feita com a ajuda de macros. Alguns exemplos de macros podem ser
-\monoespaco{RAISE\_NO\_MEMORY} ou
-\monoespaco{RAISE\_ERROR\_FAILED\_OPENING\_FILE}. Quase todas as
-macros de erros irão receber como entrada a estrutura da fonte (para
-preencherem ali dados sobre o erro), informações de contexto ou NULL
-(caso precisem ler informações adicionais sobre a execução) e
-opcionalmente o número da linha em que o erro foi encontrado. A
-depender do erro, mais informações podem ser colocadas na macro.
+será feita com a ajuda de macros. Por exemplo:
+\monoespaco{RAISE\_NO\_MEMORY}. Quase todas as macros de erros irão
+receber como entrada a estrutura da fonte (para preencherem ali dados
+sobre o erro), informações de contexto ou NULL (caso precisem ler
+informações adicionais sobre a execução) e opcionalmente o número da
+linha em que o erro foi encontrado. A depender do erro, mais
+informações podem ser colocadas na macro.
 
 Para evitar ter que definirminuciosamente muitos tipos diferentes de
 erro no corpo do texto, tirqndo assim o foco dos algoritmos e da
@@ -988,7 +1068,7 @@ bool _Winit_weavefont(void *(*t_alloc)(size_t),
   permanent_free = p_free;
   random_func = random;
   dpi = pixel_density;
-  @<Inicialização WEAVEFONT@>
+  @<Inicialização WeaveFont@>
   return true;
 }
 @
@@ -999,7 +1079,7 @@ correspondente à finalização:
 
 @<Definição de Funções da API (metafont.c)@>+=
 void _Wfinish_weavefont(void){
-  @<Finalização WEAVEFONT@>
+  @<Finalização WeaveFont@>
 }
 @
 
@@ -1027,7 +1107,7 @@ léxico. Ele irá ler o código-fonte da linguagem presente em um arquivo
 e irágerar uma lista de ``tokens'', sendo cada token a unidade mais
 básica da linguagem, basicamente uma palavra.
 
-WEAVEFONT reconhece o seguintes tipos de tokens: numéricos, strings,
+WeaveFont reconhece o seguintes tipos de tokens: numéricos, strings,
 simbólicos de variável, simbólico de começo de loop, simbólico de fim
 de loop e simbólico genérico. Os simbólicos genéricos se subdividem em
 muitos outros tipos, um para cada palavra reservada da linguagem. Aqui
@@ -1039,7 +1119,7 @@ enum { // Tipos de Tokens
   TYPE_NUMERIC = 1, TYPE_STRING, TYPE_SYMBOLIC, TYPE_FOR, TYPE_ENDFOR,
   // Os tipos básicos (numérico, string, varivel, começo e fim de
   // loop) estão acima. Os outros serão colocados logo abaixo:
-  @<WEAVEFONT: Definição de Token Simbólico@>
+  @<WeaveFont: Definição de Token Simbólico@>
   // E um último tipo que não deve ser usado, exceto para indicar erro:
   TYPE_INVALID_TOKEN
 };
@@ -1072,7 +1152,7 @@ struct string_token{
   int line;
 #endif
   char value[4];
-  // Ponteiro para o glifo que a string representa (tratado na Seção XXX)
+  // Ponteiro para o glifo que a string representa (tratado na Seção 15.1)
   struct _glyph *glyph;
 };
 @
@@ -1163,7 +1243,7 @@ struct generic_token{
 Precisamos apenas definir para eles um subtipo de token que indique o quê
 eles são:
 
-@<WEAVEFONT: Definição de Token Simbólico@>=
+@<WeaveFont: Definição de Token Simbólico@>=
 TYPE_OPEN_PARENTHESIS,  // '('
 TYPE_CLOSE_PARENTHESIS, // ')'
 TYPE_COMMA,             // ','
@@ -1186,7 +1266,7 @@ por isso, não queremos armazenar neles mais do que é necessário. Por
 exemplo, o número de linha em que eles estão é útil para indicar onde
 um erro foi localizado no código-fonte. Esta é uma variável que
 certamente será usada por um projetista de fontes ou por quem está
-criando código WEAVEFONT. Mas para a maioria dos usuários, depurar
+criando código WeaveFont. Mas para a maioria dos usuários, depurar
 erros não será algo que eles farão. Por causa disso, só armazenamos
 tal informação se estivermos em modo de depuração. E pelo mesmo motivo
 não nos preocupamos em armazenar strings muito grandes.
@@ -1323,7 +1403,7 @@ if((c == '.' && isdigit(next_char)) || isdigit(c)){
   if(new_token == NULL){
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
-    RAISE_ERROR_NO_MEMORY(mf, NULL, line); // Vamos definir erros na Seção 5.2.
+    RAISE_ERROR_NO_MEMORY(mf, NULL, line); // Vamos definir erros no Apêndice A
     return false;
   }
   new_token -> type = TYPE_NUMERIC;
@@ -2096,11 +2176,11 @@ if(buffer[0] != '\0'){
 }
 @
 
-\secao{5. Programas WEAVEFONT}
+\secao{5. Programas WeaveFont}
 
 \subsecao{5.1. Executando Programas}
 
-Quando avaliamos um programa WEAVEFONT, vamos precisar de duas
+Quando avaliamos um programa WeaveFont, vamos precisar de duas
 extruturas adicionais. A primeira delas, a qual chamaremos
 de \monoespaco{struct metafont} irá conter as informações finais da
 meta-fonte tipográfica que foi lida e que terá tudo que for necessário
@@ -2112,7 +2192,7 @@ interpretando corretamente uma lista de tokens. Essa segunda estrutura
 pode ser descartada depois de terminarmos de ler os tokens de nossa
 fonte.
 
-Em suma, para cada arquivo com código-fonte WEAVEFONT, iremos gerar um
+Em suma, para cada arquivo com código-fonte WeaveFont, iremos gerar um
 único \monoespaco{struct metafont} com informações da fonte. Mas cada
 vez que formos executar código deste arquivo (quando lemos ele pela
 primeira vez, e depois uma vez para cada caractere a ser renderizado),
@@ -2120,14 +2200,14 @@ criaremos un novo \monoespaco{struct context}, que será descartado
 após a execução.
 
 A primeira coisa que nosso analisador sintático precisa saber é que
-todo programa WEAVEFONT é uma sequência de instruções:
+todo programa WeaveFont é uma sequência de instruções:
 
 \alinhaverbatim
 <Programa> -> <Lista de Instruções>
 \alinhanormal
 
 Na linguagem METAFONT era necessário indicar o fim de um programa com
-a instrução \monoespaco{end}. Mas para a linguagem WEAVEFONT isso não
+a instrução \monoespaco{end}. Mas para a linguagem WeaveFont isso não
 é necessário, pois ela assume que todo o código-fonte está contido em
 um único arquivo. Portanto, o fim do arquivo é o fim do código
 
@@ -2171,7 +2251,7 @@ dentro dela. A primeira é um mutex, como descrito na Subseção 2.2.
 Depois temos uma string com o nome do arquivo de onde o código da
 fonte foi lida. A última indica se a fonte já terminou de carregar ou
 se ainda está em carregamento. Uma fonte em carregamento está
-executando código WEAVEFONT, mas ainda não terminou de processar todo
+executando código WeaveFont, mas ainda não terminou de processar todo
 o arquivo até o final pela primeira vez. Ela ainda não sabe quais
 caracteres ela pode ou não renderizar. Já se ela não está em modo de
 carregamento,ela já terminou de processar o arquivo com o código e
@@ -2187,10 +2267,10 @@ struct metafont{
 @
 
 Ambas as estruturas de dados terão uma função que as inicializa e as
-finaliza (a função que finaliza a estrutura
-metafont, \monoespaco{\_Wdestroy\_metafont}, já foi declarada na Seção
-1, quando listávamos o cabeçalho das funções que seriam exportadas
-para o usuário):
+finaliza (a função que finaliza a estrutura metafont,
+\monoespaco{\_Wdestroy\_metafont}, já foi declarada na Seção 1, quando
+listávamos o cabeçalho das funções que seriam exportadas para o
+usuário):
 
 @<Declaração de Função Local (metafont.c)@>+=
 struct metafont *init_metafont(char *filename);
@@ -2224,7 +2304,7 @@ struct context *init_context(struct metafont *mf){
   struct context *cx;
   cx = (struct context *) temporary_alloc(sizeof(struct context));
   if(cx == NULL){
-    RAISE_ERROR_NO_MEMORY(mf, NULL, 0); // Vamos definir erros na Seção 5.2.
+    RAISE_ERROR_NO_MEMORY(mf, NULL, 0); // Vamos definir erros no Apêndice A
     return NULL;
   }
   cx -> current_character[0] = '\0';
@@ -2270,7 +2350,7 @@ variável:
 mf -> loading = false;
 @
 
-\subsecao{5.3. Separando Lista de Instruções em Instruções Individuais}
+\subsecao{5.2. Separando Lista de Instruções em Instruções Individuais}
 
 Uma lista de instruções é uma sequência vazia, ou uma sequência de
 instruções vazias, simples e compostas que podem se alternar em
@@ -2427,7 +2507,7 @@ um \monoespaco{endchar}, o programa não está correto.
 Para ler corretamente instruções compostas, devemos sevar em conta os
 tokens que as delimitam, definidos abaixo:
 
-@<WEAVEFONT: Definição de Token Simbólico@>+=
+@<WeaveFont: Definição de Token Simbólico@>+=
 TYPE_BEGINGROUP,            // O token simbólico 'begingroup'
 TYPE_ENDGROUP,              // O token simbólico 'endgroup'
 TYPE_IF,                    // O token simbólico 'if'
@@ -2629,7 +2709,7 @@ diferentes. Quando recebermos um \monoespaco{[begingroup][T5]},
 devemos avaliar só ele iniciando um novo aninhamento. Os dois outros
 tokens recebidos serão devolvidos, para serem avaliados logo em
 seguida. Fazemos isso mudando a posição do ponteiro que marca o fim da
-instrução atual, conforme discutido na Subseção 5.3.
+instrução atual, conforme discutido na Subseção 6.1.
 
 Quando recebermos o \monoespaco{endgroup}, faremos o mesmo:
 interpretaremos só ele, marcando o fim da ĩnstrução composta e
@@ -2693,7 +2773,7 @@ mas ``\monoespaco{begingroup}'' não é.
 Para interpretar a declaração de variáveis, vamos então introduzir no
 nosso analisador léxico os seguintes tokens especiais:
 
-@<WEAVEFONT: Definição de Token Simbólico@>+=
+@<WeaveFont: Definição de Token Simbólico@>+=
 TYPE_T_BOOLEAN,               // O token simbólico 'boolean'
 TYPE_T_PATH,                  // O token simbólico 'path'
 TYPE_T_PEN,                   // O token simbólico 'pen'
@@ -3374,7 +3454,7 @@ else if(!strcmp(buffer, "identity"))
 \subsecao{7.4. Variáveis de Caminhos}
 
 Variáveis de caminho são os tipos de variável mais complexas em
-WEAVEFONT. Estas variáveis armazenam uma sequência de curvas onde a
+WeaveFont. Estas variáveis armazenam uma sequência de curvas onde a
 próxima curva começa onde a última termina. Cada curva pode estar
 representada de mais de uma forma diferente. Mas cada uma delas é uma
 Curva de Beziér cúbica. O caminho pode ser cíclico, quando a última
@@ -3558,7 +3638,7 @@ void path_recursive_free(void (*free_func)(void *),
 
 \subsubsecao{7.4.1. Removendo Recursão de Variáveis de Caminho}
 
-As variáveis de caminho são as mais complexas da linguagem WEAVEFONT,
+As variáveis de caminho são as mais complexas da linguagem WeaveFont,
 e podem estar representadas de diferentes formas. Entretanto, muitas
 destas formas são provisórias e apresentam características
 indesejáveis. Por exemplo, embora um caminho possa armazenar seus
@@ -4639,14 +4719,14 @@ ambos os valores com o código abaixo:
 \subsubsecao{7.4.4. Normalização de Caminhos}
 
 Agora que definimos uma função que remove a recursão de caminhos
-(\monoespaco{recursive\_copy\_points}, vista na Subseção 7.4.1), outra
-para garantir que todos os pontos terão especificadores de direção
-(\monoespaco{find\_missing\_directions}, vista na Subseção 7.4.3) e
-uma outra que converte todos os pontos de um caminho do formato
-provisório para o final (\monoespaco{convert\_to\_final}, visto na
-Subseção 7.4.2), é hora de combinar todas estas funções de modo a
-normalizar um caminho, deixando ele em seu formato final: o formato no
-qual ele já pode ser renderizado.
+(\monoespaco{recursive\_copy\_points}, vista na Subseção 7.4.1.),
+outra para garantir que todos os pontos terão especificadores de
+direção (\monoespaco{find\_missing\_directions}, vista na Subseção
+7.4.3.) e uma outra que converte todos os pontos de um caminho do
+formato provisório para o final (\monoespaco{convert\_to\_final},
+visto na Subseção 7.4.2.), é hora de combinar todas estas funções
+de modo a normalizar um caminho, deixando ele em seu formato final: o
+formato no qual ele já pode ser renderizado.
 
 Fazer isso envolve chamar cada uma destas funções na ordem
 certa. Entretanto, existe uma última complicação que devemos tratar
@@ -4677,13 +4757,13 @@ for(i = 0; i < path -> length; i ++)
   struct path_point *p = &(path -> points[(begin + i) % path -> length]);
 \alinhanormal
 
-Observe como no código acima, não importa qual o valor
-de \monoespaco{begin}, nós visitamos cada ponto uma só vez. Mas apenas
-se trabalharmos com o pressuposto de que não estamos repetindo o
-primeiro ponto uma vez adicional no fim do caminho cíclico. No código
-da Subseção 7.4.3, usamos um laço deste tipo para percorrer um
-segmento de caminho, e o código funciona mesmo quando o final do
-segmento de caminho cíclico está armazenado antes do começo.
+Observe como no código acima, não importa qual o valor de
+\monoespaco{begin}, nós visitamos cada ponto uma só vez. Mas apenas se
+trabalharmos com o pressuposto de que não estamos repetindo o primeiro
+ponto uma vez adicional no fim do caminho cíclico. No código das
+Subseções anteriores, chegamos a usar um laço deste tipo para
+percorrer um segmento de caminho, e o código funciona mesmo quando o
+final do segmento de caminho cíclico está armazenado antes do começo.
 
 Entretanto, há dois casos em que há vantagem em armazenar
 explicitamente uma cópia do primeiro ponto no fim de um caminho
@@ -4791,7 +4871,7 @@ struct pen_variable{
   int flags;
   struct pen_variable *referenced; // Não-nulo só em 'currentpen'
   float gl_matrix[9]; // Matriz de transformação OpenGL
-  // As variáveis abaixo serão manipuladas só na Seção 10.
+  // As variáveis abaixo serão manipuladas só na Seção 11.2
   GLuint gl_vbo; // Os vértices OpenGL após triangulação
   GLsizei indices; // Número de vértices presentes acima
   // Esta armazena o quão detalhada é a triangulação, necessária para
@@ -4831,7 +4911,7 @@ possíveis são:
 #define FLAG_SEMICIRCULAR  8
 #define FLAG_SQUARE       16
 #define FLAG_NULL         32
-// Mais flags serão definidas posteriormente, Subseção 10.2
+// Mais flags serão definidas posteriormente, Subseção 11.2
 @
 
 A flag \monoespaco{FLAG\_CONVEX} armazena se estamos diante de um
@@ -4880,12 +4960,12 @@ então podemos representar eventuais transformações lineares nela por
 meio dessa matriz ao invés de ter que computar novos valores para seus
 pontos.
 
-As demais variáveis serão usadas mais na Seção
-10. A \monoespaco{gl\_vbo} referenciará os vértices da caneta após ela
-ser triangulada para poder ser desenhada. Se a caneta não foi
-triangulada, seu valor será zero. Tais vértices, se existirem, estarão
-armazenados na memória da placa de vídeo. Por
-fim, \monoespaco{triang\_resolution} será uma medida interna do quão
+As demais variáveis serão usadas mais na Seção 11.2 (sobre
+triangulação). A \monoespaco{gl\_vbo} referenciará os vértices da
+caneta após ela ser triangulada para poder ser desenhada. Se a caneta
+não foi triangulada, seu valor será zero. Tais vértices, se existirem,
+estarão armazenados na memória da placa de vídeo. Por fim,
+\monoespaco{triang\_resolution} será uma medida interna do quão
 detalhada é a triangulação. Ela ajudará a determinar se precisamos
 criar uma triangulação mais detalhada, ou se a que temos já é a
 suficiente.
@@ -5207,7 +5287,7 @@ certamente estamos diante de uma atribuição.
 No contexto de uma atribuição, os tokens ``\monoespaco{=}'' e
 ``\monoespaco{:=}'' são equivalentes:
 
-@<WEAVEFONT: Definição de Token Simbólico@>+=
+@<WeaveFont: Definição de Token Simbólico@>+=
 TYPE_EQUAL,            // O token simbólico '='
 TYPE_ASSIGNMENT,       // O token simbólico ':='
 @
@@ -5375,7 +5455,7 @@ outras operações forem feitas.
 
 Vamos definir os tokens de tais operadores:
 
-@<WEAVEFONT: Definição de Token Simbólico@>+=
+@<WeaveFont: Definição de Token Simbólico@>+=
 TYPE_SUM,                   // O token simbólico '+'
 TYPE_SUBTRACT,              // O token simbólico '-'
 TYPE_PYTHAGOREAN_SUM,       // O token simbólico '++'
@@ -5388,7 +5468,7 @@ terciária envolve levar em conta delimitadores como ``['', ``]'',
 introduzimos o analisador léxico. Por isso, adicionaeremos também
 tokens para os delimitadores que ainda não foram definidos:
 
-@<WEAVEFONT: Definição de Token Simbólico@>+=
+@<WeaveFont: Definição de Token Simbólico@>+=
 TYPE_OPEN_BRACKETS,         // O token simbólico '['
 TYPE_CLOSE_BRACKETS,        // O token simbólico ']'
 TYPE_OPEN_BRACES,           // O token simbólico '{'
@@ -5625,7 +5705,7 @@ multiplicação e divisão.
 Vamos adicionar estes operadores à lista de palavras-chave reservadas
 e definir seus tipos:
 
-@<WEAVEFONT: Definição de Token Simbólico@>+=
+@<WeaveFont: Definição de Token Simbólico@>+=
 TYPE_MULTIPLICATION,        // O token simbólico '*'
 TYPE_DIVISION,              // O token simbólico '/'
 @
@@ -5751,7 +5831,7 @@ significados se sucedido por outro tipo de expressão primária.
 Os novos operadores que aparecem aqui precisam ser adicionados à lista
 de tokens:
 
-@<WEAVEFONT: Definição de Token Simbólico@>+=
+@<WeaveFont: Definição de Token Simbólico@>+=
 TYPE_LENGTH,         // O token simbólico 'length'
 TYPE_SQRT,           // O token simbólico 'sqrt'
 TYPE_SIND,           // O token simbólico 'sind'
@@ -5845,7 +5925,6 @@ da expressão. Se o tipo for numérico, o código acima mostra como
 calculamos o módulo. Se a expressão depois de \monoespaco{length} não
 for numérica, ela será avaliada por outras regras que definiremos
 depois (nas Subseções 8.2.4 e 8.4.5).
-
 
 
 3) Se encontrarmos um operador numérico, temos então um operador
@@ -6040,7 +6119,7 @@ As regras finais para as expressões numéricas que iremos tratar são:
 
 O único token novo a ser tratado é \monoespaco{normaldeviate}:
 
-@<WEAVEFONT: Definição de Token Simbólico@>+=
+@<WeaveFont: Definição de Token Simbólico@>+=
 TYPE_NORMALDEVIATE,  // O token simbólico 'normaldeviate'
 @
 
@@ -6365,13 +6444,13 @@ A gramática para expressões de pares secundárias é:
 \alinhanormal
 
 As regras acima sobre transformadores estão incompletas, pois veremos
-ainda na Subseção 8.3.1. que há mais um tipo de transformador a ser
+ainda na Subseção 8.3.1 que há mais um tipo de transformador a ser
 definido.
 
 Por hora, vamos adicionar as sete novas palavras-chave representando
 transformadores conhecidos:
 
-@<WEAVEFONT: Definição de Token Simbólico@>+=
+@<WeaveFont: Definição de Token Simbólico@>+=
 TYPE_ROTATED,  // O token simbólico 'rotated'
 TYPE_SCALED,   // O token simbólico 'scaled'
 TYPE_SHIFTED,  // O token simbólico 'shifted'
@@ -6422,7 +6501,7 @@ bool eval_pair_secondary(struct metafont *mf, struct context *cx,
              p -> type == TYPE_SCALED || p -> type == TYPE_SHIFTED ||
              p -> type == TYPE_SLANTED || p -> type == TYPE_XSCALED ||
              p -> type == TYPE_YSCALED || p -> type == TYPE_ZSCALED ||
-             // 'transformed' será definido na Subseção 8.3.4.
+             // 'transformed' será definido na Subseção 8.3.1
              p -> type == TYPE_TRANSFORMED)){
       if(p -> type == TYPE_DIVISION && prev -> type == TYPE_NUMERIC &&
          p != end && p -> next -> type != TYPE_NUMERIC &&
@@ -6654,7 +6733,8 @@ As regras gramaticais finais para a expressão de pares é:
 \alinhanormal
 
 Temos uma parte omitida na regra gramatical acima porque há alguns
-operadores primários que vamos definir só nas Subseções 8.4.6 e 10.4.
+operadores primários que vamos definir só nas Subseções 8.4.6 e
+11.4.
 
 Uma novidade é a construção do tipo $a[b, c]$ onde $b$ e $c$ são
 pares. Ela representa um valor intermediário entre os
@@ -6926,7 +7006,7 @@ envolvem avaliar pares:
 
 Isso requer definir os seguintes novos tipos de tokens:
 
-@<WEAVEFONT: Definição de Token Simbólico@>+=
+@<WeaveFont: Definição de Token Simbólico@>+=
 TYPE_XPART,  // O token simbólico 'xpart'
 TYPE_YPART,  // O token simbólico 'ypart'
 TYPE_ANGLE,  // O token simbólico 'angle'
@@ -6955,7 +7035,7 @@ else if(expr_type == TYPE_T_PAIR){
 
 O operador \monoespaco{xpart} simplesmente retorna o primeiro valor de
 um par. Entretanto, devemos ter um cuidado adicional: este operador
-pode ser usado em outro contexto como ainda será visto na Sub-subseção
+pode ser usado em outro contexto como ainda será visto na Subseção
 8.3.3. Então devemos primeiro nos certificar que o que vem depois do
 operador é um par. Em caso afirmativo, retornamos seu primeiro valor:
 
@@ -7065,7 +7145,7 @@ Temos aqui um novo tipo de token, representando o último tipo de
 transformador que não havíamos definido na subseção anterior sobre
 expressões de pares:
 
-@<WEAVEFONT: Definição de Token Simbólico@>+=
+@<WeaveFont: Definição de Token Simbólico@>+=
 TYPE_TRANSFORMED,  // O token simbólico 'transformed'
 @
 
@@ -7472,7 +7552,7 @@ Como \monoespaco{xpart} e \monoespaco{ypart} já havia aparecido quando
 definíamos as expressões de pares, resta definirmos tokens para os
 outros quatro operadores que são novos:
 
-@<WEAVEFONT: Definição de Token Simbólico@>+=
+@<WeaveFont: Definição de Token Simbólico@>+=
 TYPE_XXPART,  // O token simbólico xxpart'
 TYPE_XYPART,  // O token simbólico xypart'
 TYPE_YXPART,  // O token simbólico yxpart'
@@ -7544,7 +7624,7 @@ lado direito:
 O que este operador faz é aplicar a transformação linear sobre o
 par. Vamos implementá-lo com o código adicional abaixo que irá se
 somar ao código que implementa transformações sobre pares da
-Subsubseção 8.2.2.
+Subseção 8.2.2.
 
 @<Operador Secundário de Pares: Outros@>=
 else if(last_mul -> type == TYPE_TRANSFORMED){
@@ -7628,7 +7708,7 @@ A gramática para a expressão de caminhos começa com:
 
 Tudo isso requer que registremos os seguintes novos tipos de tokens:
 
-@<WEAVEFONT: Definição de Token Simbólico@>+=
+@<WeaveFont: Definição de Token Simbólico@>+=
 TYPE_CYCLE,          // O token simbólico 'cycle'
 TYPE_AMPERSAND,      // O token simbólico '&'
 TYPE_JOIN,           // O token simbólico '..'
@@ -9295,7 +9375,7 @@ relacionado à variáveis de caneta será definido na Subseção 8.5.4.
 Por hora devemos registrar tokens
 novos: \monoespaco{reverse}, \monoespaco{subpath} e \monoespaco{of}:
 
-@<WEAVEFONT: Definição de Token Simbólico@>+=
+@<WeaveFont: Definição de Token Simbólico@>+=
 TYPE_REVERSE,        // O token simbólico 'reverse'
 TYPE_SUBPATH,        // O token simbólico 'subpath'
 TYPE_OF,             // O token simbólico 'of'
@@ -9674,7 +9754,7 @@ isso é:
 
 Isso requer adicionarmos os seguintes novos tipos de tokens:
 
-@<WEAVEFONT: Definição de Token Simbólico@>+=
+@<WeaveFont: Definição de Token Simbólico@>+=
 TYPE_POINT,             // O token simbólico 'point'
 TYPE_PRECONTROL,        // O token simbólico 'precontrol'
 TYPE_POSTCONTROL,       // O token simbólico 'postcontrol'
@@ -9901,7 +9981,7 @@ bool assign_pen_variable(struct metafont *mf, struct context *cx,
   target -> indices = 0;
   target -> referenced = NULL;
   // Se estamos atribuindo para 'currentpen', devemos retriangular a caneta.
-  // Conforme descreveremos na Seção 10.
+  // Conforme descreveremos na Seção 11.2.
   if(target == cx -> currentpen)
     triangulate_pen(mf, cx, target, target -> gl_matrix);
   return true;
@@ -10195,7 +10275,7 @@ A gramática das expressões primárias de caminho é definida como:
 
 Isso requer registrar quatro novas palavras reservadas:
 
-@<WEAVEFONT: Definição de Token Simbólico@>+=
+@<WeaveFont: Definição de Token Simbólico@>+=
 TYPE_NULLPEN,        // O token simbólico 'nullpen'
 TYPE_PENCIRCLE,      // O token simbólico 'pencircle'
 TYPE_PENSEMICIRCLE,  // O token simbólico 'pensemicircle'
@@ -10476,7 +10556,7 @@ operação é:
 
 Temos que registrar um novo token para o ``makepath'':
 
-@<WEAVEFONT: Definição de Token Simbólico@>+=
+@<WeaveFont: Definição de Token Simbólico@>+=
 TYPE_MAKEPATH,       // O token simbólico 'makepath'
 @
 
@@ -10730,7 +10810,7 @@ else if(type == TYPE_T_PICTURE){
       pic -> type = TYPE_T_PICTURE;
       // Se atribuindo para 'currentpicture', precisamos de código adicional
       if(pic == cx -> currentpicture){
-        // O código abaixo será definido na Subseção 11.2:
+        // O código abaixo será definido na Subseção 14.1:
         @<Gera nova 'currentpicture'@>
       }
     }
@@ -10780,7 +10860,7 @@ o lado de trás dos polígonos não sejam desenhados.
 Na inicialização do Weaver Metafont nós enviamos estes vértices para
 a placa de vídeo:
 
-@<Inicialização WEAVEFONT@>=
+@<Inicialização WeaveFont@>=
 glGenBuffers(1, &vbo);
 glBindBuffer(GL_ARRAY_BUFFER, vbo);
 // Enviando os vértices para a placa de vídeo:
@@ -10789,7 +10869,7 @@ glBufferData(GL_ARRAY_BUFFER, sizeof(square), square, GL_STATIC_DRAW);
 
 Na finalização nós removemos os vértices da placa de vídeo:
 
-@<Finalização WEAVEFONT@>=
+@<Finalização WeaveFont@>=
 glDeleteBuffers(1, &vbo);
 @
 
@@ -10893,7 +10973,7 @@ GLuint compile_shader_program(const char *vertex_shader_source,
 
 E podemos usar esta função para inicializar nosso programa de shader padrão:
 
-@<Inicialização WEAVEFONT@>+=
+@<Inicialização WeaveFont@>+=
 {
   program = compile_shader_program(vertex_shader, fragment_shader);
   if(program == 0)
@@ -10905,7 +10985,7 @@ E podemos usar esta função para inicializar nosso programa de shader padrão:
 
 Na finalização iremos destruir o programa compilado acima:
 
-@<Finalização WEAVEFONT@>+=
+@<Finalização WeaveFont@>+=
 glDeleteProgram(program);
 @
 
@@ -11036,7 +11116,7 @@ bool assign_picture_variable(struct metafont *mf, struct context *cx,
   glBindFramebuffer(GL_FRAMEBUFFER, previous_framebuffer);
   glDeleteFramebuffers(1, &temporary_framebuffer);
   if(target == cx -> currentpicture){
-    // O código abaixo será definido na Subseção 11.2:
+    // O código abaixo será definido na Subseção 14.1:
     @<Gera nova 'currentpicture'@>
   }
   return true;
@@ -11188,7 +11268,7 @@ static GLint uniform_inv_matrix; // A posição da matriz do programa acima
 Um novo programa de shader deve ser então compilado na inicialização
 para podermos inverter os valores RGB de imagens:
 
-@<Inicialização WEAVEFONT@>+=
+@<Inicialização WeaveFont@>+=
 {
   inv_program = compile_shader_program(vertex_shader, fragment_shader_inverse);
   uniform_inv_matrix = glGetUniformLocation(inv_program, "model_view_matrix");
@@ -11198,7 +11278,7 @@ para podermos inverter os valores RGB de imagens:
 
 E na finalização nós destruimos este programa:
 
-@<Finalização WEAVEFONT@>+=
+@<Finalização WeaveFont@>+=
 glDeleteProgram(inv_program);
 @
 
@@ -11408,8 +11488,7 @@ bool eval_picture_secondary(struct metafont *mf, struct context *cx,
 
 Avaliar cada um dos diferentes tipos de transformadores significa
 modificar a matriz multiplicando ela pela matriz que representa a
-transformação. Exatamente como fizemos com as canetas. Conforme
-descrito por código da Subseção X.Y.
+transformação. Exatamente como fizemos com as canetas. 
 
 Esta é a mudança de escala:
 
@@ -11627,7 +11706,7 @@ de imagens é:
 
 Isso requer registrar ``nullpicture'' e ``subpicture'' como um token:
 
-@<WEAVEFONT: Definição de Token Simbólico@>+=
+@<WeaveFont: Definição de Token Simbólico@>+=
 TYPE_NULLPICTURE,        // O token simbólico 'nullpicture'
 TYPE_SUBPICTURE,         // O token simbólico 'subpicture'
 @
@@ -11995,7 +12074,7 @@ obter o valor, multiplicamos pela transparência.
 
 Primeiro vamos adicionar novos tipos de tokens para esses operadores:
 
-@<WEAVEFONT: Definição de Token Simbólico@>+=
+@<WeaveFont: Definição de Token Simbólico@>+=
 TYPE_TOTALWEIGHT,        // O token simbólico 'totalweight'
 TYPE_WIDTH,              // O token simbólico 'width'
 TYPE_HEIGHT,             // O token simbólico 'height'
@@ -12162,7 +12241,7 @@ interno das expressões mais gerais.
 As relações mostradas acima requerem que novos tipos de tokens sejam
 considerados:
 
-@<WEAVEFONT: Definição de Token Simbólico@>+=
+@<WeaveFont: Definição de Token Simbólico@>+=
 TYPE_LT,                    // O token simbólico '<'
 TYPE_LEQ,                   // O token simbólico '<='
 TYPE_GT,                    // O token simbólico '>'
@@ -12401,7 +12480,7 @@ gramática das expressões booleanas terciárias é:
 Para implementarmos esta expressão, precisamos então
 definir \monoespaco{or} como um novo tipo de token simbólico:
 
-@<WEAVEFONT: Definição de Token Simbólico@>+=
+@<WeaveFont: Definição de Token Simbólico@>+=
 TYPE_OR,                    // O token simbólico 'or'
 @
 
@@ -12552,7 +12631,7 @@ serve para checar se um caminho é cíclico ou não.
 
 Os seguintes novos tipos de token não foram ainda definidos:
 
-@<WEAVEFONT: Definição de Token Simbólico@>+=
+@<WeaveFont: Definição de Token Simbólico@>+=
 TYPE_TRUE,                    // O token simbólico 'true'
 TYPE_FALSE,                   // O token simbólico 'false'
 TYPE_ODD,                     // O token simbólico 'odd'
@@ -13026,7 +13105,7 @@ expressões deste tipo é:
 
 Declararemos então os seguintes novos tipos de tokens:
 
-@<WEAVEFONT: Definição de Token Simbólico@>+=
+@<WeaveFont: Definição de Token Simbólico@>+=
 TYPE_ELSEIF,  // O token simbólico 'elseif'
 TYPE_ELSE,    // O token simbólico 'else'
 TYPE_COLON,   // O token simbólico ':'
@@ -13038,11 +13117,11 @@ Os quais devem ser adicionados à lista de palavras reservadas:
 "elseif", "else", ":",
 @
 
-Na Seção 6 nós vimos a primeira das declarações compostas. A que
-começa com \monoespaco{begingroup} e termina
-com \monoespaco{endgroup}. A declaração condicional
-usando \monoespaco{if} também é uma declaração composta do tipo, que
-contém dentro de si várias outras declarações.
+Na Seção 6.2 nós vimos a primeira das declarações compostas. A
+que começa com \monoespaco{begingroup} e termina com
+\monoespaco{endgroup}. A declaração condicional usando \monoespaco{if}
+também é uma declaração composta do tipo, que contém dentro de si
+várias outras declarações.
 
 Lembre-se que código é primeiro avaliado na
 função \monoespaco{eval\_list\_of\_statement}, qe separa o código
@@ -13054,7 +13133,7 @@ avaliou, o qual é usado para depois escolher os próximos tokens a
 serem lidos. É nessa segunda função que o código que trata
 um \monoespaco{if} é localizado.
 
-Assim como no caso do \monoespaco{begingroup} da Seção 6,
+Assim como no caso do \monoespaco{begingroup} da Seção 6.2,
 quando encontramos tokens a serem avaliados que começam
 com \monoespaco{if}, o que fazemos é iniciar um novo nível de
 aninhamento e depois disso corrigimos a posição do ponteiro do último
@@ -13230,7 +13309,7 @@ pare de ser executado.
 
 Vamos precisar então dos novos tipos de tokens:
 
-@<WEAVEFONT: Definição de Token Simbólico@>+=
+@<WeaveFont: Definição de Token Simbólico@>+=
 TYPE_STEP,  // O token simbólico 'step'
 TYPE_UNTIL, // O token simbólico 'until'
 @
@@ -13454,7 +13533,7 @@ comando \monoespaco{pickup} é dada por:
 
 O comando requer que criemos um novo token e palavra reservada:
 
-@<WEAVEFONT: Definição de Token Simbólico@>+=
+@<WeaveFont: Definição de Token Simbólico@>+=
 TYPE_PICKUP,   // O token simbólico 'pickup'
 @
 
@@ -13849,7 +13928,7 @@ Vamos agora lidar com o código de triangulação. As placas de vídeo e o
 OpenGL trabalha com triângulos. Nós devemos então triangular um pincel
 antes de podermos representá-lo graficamente. Devemos representá-lo
 como uma lista de triângulos. Isso chegou a ser mencionado na Subseção
-7.5. sobre variáveis de caneta, mas o processo de triangulação não foi
+7.5 sobre variáveis de caneta, mas o processo de triangulação não foi
 definido lá.
 
 Para recapitular, estas são as variáveis relevantes para a
@@ -13995,7 +14074,7 @@ static GLuint pensquare_vbo;
 
 E o código de triangulação que será usado na inicialização:
 
-@<Inicialização WEAVEFONT@>+=
+@<Inicialização WeaveFont@>+=
 {
   float square_vertices[8] = {-0.5, -0.5,
                                +0.5, -0.5,
@@ -14010,7 +14089,7 @@ E o código de triangulação que será usado na inicialização:
 
 Na finalização podemos remover os vértices da placa de vídeo:
 
-@<Finalização WEAVEFONT@>+=
+@<Finalização WeaveFont@>+=
 glDeleteBuffers(1, &pensquare_vbo);
 @
 
@@ -16298,7 +16377,7 @@ definir aqui. A gramática deles é:
 
 Isso requer adicionar 4 novos tokens para tais operadores:
 
-@<WEAVEFONT: Definição de Token Simbólico@>+=
+@<WeaveFont: Definição de Token Simbólico@>+=
 TYPE_BOT,  // O token simbólico 'bot'
 TYPE_TOP,  // O token simbólico 'top'
 TYPE_LFT,  // O token simbólico 'lft'
@@ -16380,7 +16459,7 @@ else if(begin  -> type == TYPE_RT){
 }
 @
 
-\secao{XX. O Comando \monoespaco{pickcolor}}
+\secao{12. O Comando \monoespaco{pickcolor}}
 
 A cor padrão usada por WeaveFont é definida pelas variáveis globais
 \monoespaco{color\_r}, \monoespaco{color\_g}, \monoespaco{color\_b} e
@@ -16418,7 +16497,7 @@ descrita abaixo:
 
 O qual requer uma palavra reservada nova:
 
-@<WEAVEFONT: Definição de Token Simbólico@>+=
+@<WeaveFont: Definição de Token Simbólico@>+=
 TYPE_PICKCOLOR,   // O token simbólico 'pickcolor'
 @
 
@@ -16480,7 +16559,7 @@ else if(begin -> type == TYPE_PICKCOLOR){
 }
 @
 
-\secao{XX. O Comando \monoespaco{monowidth}}
+\secao{13. O Comando \monoespaco{monowidth}}
 
 Caso uma fonte tipográfica seja configurada para ter uma versão
 monoespaço, onde todos os caracteres devem ter exatamente a mesma
@@ -16500,7 +16579,7 @@ A sintaxe para o comando \monoespaco{monowidth} é:
 
 O que requer um novo token e palavra reservada:
 
-@<WEAVEFONT: Definição de Token Simbólico@>+=
+@<WeaveFont: Definição de Token Simbólico@>+=
 TYPE_MONOWIDTH,   // O token simbólico 'monowidth'
 @
 
@@ -16524,7 +16603,7 @@ mf -> mono_expr_begin = mf -> mono_expr_end = NULL;
 @
 
 Interpretar o comando então não envolve interpretar a
-expressãonumérica, mas armazená-la para ser interpretada na hora de
+expressão numérica, mas armazená-la para ser interpretada na hora de
 preparar um novo glifo para renderizar:
 
 @<Instrução: Comando@>+=
@@ -16539,7 +16618,7 @@ else if(begin -> type == TYPE_MONOWIDTH){
 }
 @
 
-\secao{12. O Comando \monoespaco{draw} e \monoespaco{erase}}
+\secao{14. O Comando \monoespaco{draw} e \monoespaco{erase}}
 
 Finalmente podemos começar a especificar dois dos mais importantes
 comandos da linguagem. O comando que usa uma caneta para caminhos em
@@ -16554,7 +16633,7 @@ apagar é:
 
 Os quais requerem dois tokens e palavras reservada novas:
 
-@<WEAVEFONT: Definição de Token Simbólico@>+=
+@<WeaveFont: Definição de Token Simbólico@>+=
 TYPE_DRAW,   // O token simbólico 'draw'
 TYPE_ERASE,  // O token simbólico 'erase'
 @
@@ -16563,7 +16642,7 @@ TYPE_ERASE,  // O token simbólico 'erase'
 "draw", "erase",
 @
 
-\subsecao{12.1. Preparando o Framebuffer}
+\subsecao{14.1. Preparando o Framebuffer}
 
 Para desenhar ou apagar com uma caneta na
 imagem \monoespaco{currentpicture}, nós precisamos de um framebuffer
@@ -16669,7 +16748,7 @@ glBindFramebuffer(GL_FRAMEBUFFER, previous_fb);
 glViewport(_viewport[0], _viewport[1], _viewport[2], _viewport[3]);
 @
 
-\subsecao{12.2. Shaders de Desenho}
+\subsecao{14.2. Shaders de Desenho}
 
 Desenhar e apagar com uma caneta vai exigir dois novos shaders (um
 para cada operação) que precisamos definir. Os shaders que definimos
@@ -16720,7 +16799,7 @@ static GLint pen_uniform_color, pen_erase_uniform_color; // Cor
 Na inicialização nós compilamos estes dois shaders e obtemos a
 localização de suas variáveis uniformes:
 
-@<Inicialização WEAVEFONT@>+=
+@<Inicialização WeaveFont@>+=
 {
   pen_program = compile_shader_program(pen_vertex_shader, pen_fragment_shader);
   pen_uniform_matrix = glGetUniformLocation(pen_program, "model_view_matrix");
@@ -16735,12 +16814,12 @@ localização de suas variáveis uniformes:
 
 E na finalização nós destruimos estes programas:
 
-@<Finalização WEAVEFONT@>+=
+@<Finalização WeaveFont@>+=
 glDeleteProgram(pen_program);
 glDeleteProgram(pen_erase_program);
 @
 
-\subsecao{12.3. Desenhando Caminhos}
+\subsecao{14.3. Desenhando Caminhos}
 
 Terminada a preparação da triangulação, do framebuffer e do shader
 usado, podemos escrever agora códigos que fazem o desenho.
@@ -16970,7 +17049,7 @@ void drawpoint(struct metafont *mf, struct context *cx,
 }
 @
 
-\secao{13. Declaração Composta: Declaração de Caractere}
+\secao{15. Declaração Composta: Declaração de Caractere}
 
 Vamos agora à parte que é o prinicpal objetivo da linguagem: definir
 novos caracteres para fontes tipográficas, ou então definir uma imagem
@@ -17001,7 +17080,7 @@ profundidade do caractere (profundidade sendo a altura dele abaixo da
 linha de base, para caracteres como ``p'' com partes dele ficando
 abaixo da linha).
 
-A linguagem WEAVEFONT tem dois modos de operação: ela pode estar
+A linguagem WeaveFont tem dois modos de operação: ela pode estar
 carregando ou executando. O modo determina o comportamento dela ao
 encontrar o token \monoespaco{beginchar}. No modo de carregamento, ela
 copia o código que representa o caractere para uma posição adequada,
@@ -17010,7 +17089,7 @@ caractere. O código dentro do corpo de \monoespaco{beginchar} nem
 chega a ser executado e interpretado. No modo de execução, aí sim este
 código será executado para que o caracteres seja renderizado.
 
-\subsecao{13.1 Unicode e UTF-8}
+\subsecao{15.1 Unicode e UTF-8}
 
 Mas onde devemos armazenar o código de um caractere quando estamos no
 modo de carregamento? Vamos definir a seguinte estrutura que armazena
@@ -17386,7 +17465,7 @@ nova \monoespaco{currentpicture}. A imagem renderizada terá o dobro
 dos valores indicados para que possamos obter tons de cinza realizando
 uma multi-amostragem, gerando cada pixel à partir de 4 outros pixels
 de amostragem. Exceto se a
-macro \monoespaco{W\_WEAVEFONT\_DISABLE\_MULTISAMPLE} estiver
+macro \monoespaco{W\_WeaveFont\_DISABLE\_MULTISAMPLE} estiver
 definida, caso em que não usaremos a técnica.  Por fim, a caneta atual
 é modificada para ser uma caneta nula.
 
@@ -17460,7 +17539,7 @@ else if(begin -> type == TYPE_BEGINCHAR){
      if(pic -> texture != 0)
        glDeleteTextures(1, &(pic -> texture));
      vars = ((struct numeric_variable *) cx -> internal_numeric_variables);
-#ifdef W_WEAVEFONT_DISABLE_MULTISAMPLE
+#ifdef W_WeaveFont_DISABLE_MULTISAMPLE
     cx -> current_depth = round(depth.value);
     pic -> width = round(width.value);
     pic -> height = (round(height.value) + round(depth.value));
@@ -17524,7 +17603,7 @@ else if(begin -> type == TYPE_ENDCHAR){
   cx -> current_glyph -> height = round(currentpicture -> height -
                                         cx -> current_depth);
   cx -> current_glyph -> texture = currentpicture -> texture;
-#ifndef W_WEAVEFONT_DISABLE_MULTISAMPLE
+#ifndef W_WeaveFont_DISABLE_MULTISAMPLE
   cx -> current_glyph -> width /= 2;
   cx -> current_glyph -> depth /= 2;
   cx -> current_glyph -> height /= 2;
@@ -17538,9 +17617,9 @@ else if(begin -> type == TYPE_ENDCHAR){
 }
 @
 
-\secao{14. Funções de API para Usar as Fontes}
+\secao{16. Funções de API para Usar as Fontes}
 
-Um código WEAVEFONT pode ter suas variáveis globais modificadas e
+Um código WeaveFont pode ter suas variáveis globais modificadas e
 assim atualizar a renderização de glifos e imagens sem que o código
 precise ser reescrito e reinterpretado. Para escrever e ler variáveis
 globais numéricas, usamos as seguintes funções que serão exportadas:
@@ -17615,7 +17694,7 @@ float _Wread_numeric_variable(struct metafont *mf, char *name){
 }
 @
 
-Já a função que lê um arquivo com código WEAVEFONT e carrega uma nova
+Já a função que lê um arquivo com código WeaveFont e carrega uma nova
 meta-fonte é:
 
 @<Definição de Funções da API (metafont.c)@>+=
@@ -17699,7 +17778,7 @@ bool _Wrender_glyph(struct metafont *mf, char *glyph,
 }
 @
 
-\secao{15. O Comando \monoespaco{shipit}}
+\secao{17. O Comando \monoespaco{shipit}}
 
 Na linguagem METAFONT original, para que qualquer caractere fosse
 renderizado, era necessário usar a macro \monoespaco{shipit} ou o
@@ -17752,7 +17831,7 @@ isso, que tem a seguinte gramática:
 Vamos adicionar então o token correspondente e a palavra reservada
 para o \monoespaco{shipit}:
 
-@<WEAVEFONT: Definição de Token Simbólico@>+=
+@<WeaveFont: Definição de Token Simbólico@>+=
 TYPE_SHIPIT,   // O token simbólico 'shipit'
 @
 
@@ -17796,7 +17875,7 @@ else if(begin -> type == TYPE_SHIPIT){
   cx -> current_glyph -> height = round(currentpicture -> height -
                                         cx -> current_depth);
   cx -> current_glyph -> texture = currentpicture -> texture;
-#ifndef W_WEAVEFONT_DISABLE_MULTISAMPLE
+#ifndef W_WeaveFont_DISABLE_MULTISAMPLE
   cx -> current_glyph -> width /= 2;
   cx -> current_glyph -> depth /= 2;
   cx -> current_glyph -> height /= 2;
@@ -17829,7 +17908,7 @@ glifo que ele acabou de renderizar usa o \monoespaco{shipit}, ou então
 ele deve conferir após a renderização o valor do
 atributo \monoespaco{need\_rendering} para saber como tratar a textura.
 
-\secao{16. O Comando \monoespaco{renderchar}}
+\secao{18. O Comando \monoespaco{renderchar}}
 
 Muitas vezes um glifo tipográfico é formado pela junção de outros
 glifos. Por exemplo, o glifo ``\$'' pode ser visto como um glifo ``S''
@@ -17857,7 +17936,7 @@ vista abaixo:
 
 O que requer suporte para o token e palavra reservada \monoespaco{between}:
 
-@<WEAVEFONT: Definição de Token Simbólico@>+=
+@<WeaveFont: Definição de Token Simbólico@>+=
 TYPE_RENDERCHAR,  // O token simbólico 'renderchar'
 TYPE_BETWEEN,     // O token simbólico 'between'
 @
@@ -18105,7 +18184,7 @@ espelhada verticalmente. Isso funciona simplesmente multiplicando por
 }
 @
 
-\secao{X. Integração entre Weavefont e Motor de Jogos Weaver}
+\secao{19. Integração entre WeaveFont e Motor de Jogos Weaver}
 
 O motor de jogos Weaver possui um módulo responsável por carregar
 novas interfaces, que são elementos visuais a serem apresentados ao
@@ -18126,7 +18205,7 @@ Mas como o motor de jogos sabe como interpretar o arquivo
 \monoespaco{textura.mf}? Para isso, ele deve ser inicializado passando
 para ele o ponteiro de uma função que interpreta tal textura. No nosso
 caso, vamos assumir que a tal textura é um código-fonte
-Weavefont.
+WeaveFont.
 
 Para isso, se estivermos usando o motor de jogos Weaver, devemos
 inserir o cabeçalho que contém a descrição das interfaces de usuário:
@@ -18280,25 +18359,9 @@ void _reload_texture(struct user_interface *target){
 }
 @
 
-\secao{Referências}
-
-\referencia{De Berg, M. (2000)
-``Computational geometry: algorithms and applications''.
-Springer Science \& Business Media.}
-
-\referencia{Knuth, D. E. (1984) ``Literate Programming'', The Computer
-  Journal, Volume 27, Edição 2, Páginas 97--111.}
-
-\referencia{Hobby, J. D. (1986), ``Smooth, easy to compute interpolating
- splines'', Discrete \& computational geometry, 1(2), 123-140}
-
-\referencia{Knuth, D. E. (1989) ``The METAFONT book'', Addison-Wesley
- Longsman Publishing Co., Inc}
-
-
 \secao{Apêndice A: Tratamento de Erros}
 
-Quando erros existirem em um código-fonte WEAVEFONT, nenhuma imagem ou
+Quando erros existirem em um código-fonte WeaveFont, nenhuma imagem ou
 meta-fonte tipográfica pode ser gerada. Entretanto, o programador deve
 ter alguma forma de descobrir o quê deu errado para que o problema
 possa ser ajustado. Por causa disso, vamos adicionar à estrutura de
@@ -18337,7 +18400,7 @@ em \monoespaco{errno\_int}.
 
 Somente o primeiro erro encontrado em cada meta-fonte deve ser
 armazenado. Se houverem mais, eles devem ser ignorados. Todas as
-funções que executam código WEAVEFONT devem retornar um valor
+funções que executam código WeaveFont devem retornar um valor
 booleano. Caso nenhum erro tenha ocorrido, retrona-se verdadeiro. Já
 em caso de erros, retorna-se falso.
 
@@ -18576,7 +18639,7 @@ enum { // Tipos de Tokens
   TYPE_NUMERIC = 1, TYPE_STRING, TYPE_SYMBOLIC, TYPE_FOR, TYPE_ENDFOR,
   // Os tipos básicos (numérico, string, varivel, começo e fim de
   // loop) estão acima. Os outros serão colocados logo abaixo:
-  @<WEAVEFONT: Definição de Token Simbólico@>
+  @<WeaveFont: Definição de Token Simbólico@>
   // E um último tipo que não deve ser usado, exceto para indicar erro:
   TYPE_INVALID_TOKEN
 };
@@ -18586,7 +18649,7 @@ enum { // Tipos de Tokens
 #endif
 @
 
-\subsecao{A.X. ERROR\_DISCONTINUOUS\_PATH}
+\subsecao{A.1. ERROR\_DISCONTINUOUS\_PATH}
 
 @<Tipos de Erros@>+=
 ERROR_DISCONTINUOUS_PATH,
@@ -18632,7 +18695,7 @@ case ERROR_DISCONTINUOUS_PATH:
 @
 
 
-\subsecao{A.X. ERROR\_DIVISION\_BY\_ZERO}
+\subsecao{A.2. ERROR\_DIVISION\_BY\_ZERO}
 
 @<Tipos de Erros@>+=
 ERROR_DIVISION_BY_ZERO,
@@ -18654,7 +18717,7 @@ case ERROR_DIVISION_BY_ZERO:
   break;
 @
 
-\subsecao{A.X. ERROR\_DUPLICATE\_GLYPH}
+\subsecao{A.3. ERROR\_DUPLICATE\_GLYPH}
 
 @<Tipos de Erros@>+=
 ERROR_DUPLICATE_GLYPH,
@@ -18684,7 +18747,7 @@ case ERROR_DUPLICATE_GLYPH:
 @
 
 
-\subsecao{A.X. ERROR\_EMPTY\_DELIMITER}
+\subsecao{A.4. ERROR\_EMPTY\_DELIMITER}
 
 @<Tipos de Erros@>+=
 ERROR_EMPTY_DELIMITER,
@@ -18703,7 +18766,7 @@ era permitido na declaração de variáveis, para declarar que uma
 variável específica podia armazenar vários valores diferentes, usando
 números para representar a posição interna de cada valor (são arrays
 associativos, ou dicionários, onde o índice sempre é um número que
-pode ser não-inteiro). Mas Weavefont não suporta isso, então qualquer
+pode ser não-inteiro). Mas WeaveFont não suporta isso, então qualquer
 delimitador vazio é tratado como erro.
 
 Ao gerar este erro devemos informar qual o tipo de delimitador vazio
@@ -18729,7 +18792,7 @@ case ERROR_EMPTY_DELIMITER:
 @
 
 
-\subsecao{A.X. ERROR\_EXPECTED\_FOUND}
+\subsecao{A.5. ERROR\_EXPECTED\_FOUND}
 
 @<Tipos de Erros@>+=
 ERROR_EXPECTED_FOUND,
@@ -18763,7 +18826,7 @@ case ERROR_EXPECTED_FOUND:
 @
 
 
-\subsecao{A.X. ERROR\_FAILED\_OPENING\_FILE}
+\subsecao{A.6. ERROR\_FAILED\_OPENING\_FILE}
 
 @<Tipos de Erros@>+=
 ERROR_FAILED_OPENING_FILE,
@@ -18804,7 +18867,7 @@ variável \monoespaco{errno}:
 #include <errno.h>
 @
 
-\subsecao{A.X. ERROR\_INCOMPLETE\_SOURCE}
+\subsecao{A.7. ERROR\_INCOMPLETE\_SOURCE}
 
 @<Tipos de Erros@>=
 ERROR_INCOMPLETE_SOURCE,
@@ -18834,7 +18897,7 @@ case ERROR_INCOMPLETE_SOURCE:
   break;  
 @
 
-\subsecao{A.X. ERROR\_INCOMPLETE\_STATEMENT}
+\subsecao{A.8. ERROR\_INCOMPLETE\_STATEMENT}
 
 @<Tipos de Erros@>=
 ERROR_INCOMPLETE_STATEMENT,
@@ -18866,7 +18929,7 @@ case ERROR_INCOMPLETE_STATEMENT:
 @
 
 
-\subsecao{A.X. ERROR\_INVALID\_CHAR}
+\subsecao{A.9. ERROR\_INVALID\_CHAR}
 
 @<Tipos de Erros@>=
 ERROR_INVALID_CHAR,
@@ -18971,7 +19034,7 @@ case ERROR_INVALID_CHAR:
 }
 @
 
-\subsecao{A.X. ERROR\_INVALID\_COMPARISON}
+\subsecao{A.10. ERROR\_INVALID\_COMPARISON}
 
 @<Tipos de Erros@>+=
 ERROR_INVALID_COMPARISON,
@@ -19004,7 +19067,7 @@ case ERROR_INVALID_COMPARISON:
   break;
 @
 
-\subsecao{A.X. ERROR\_INVALID\_DIMENSION\_GLYPH}
+\subsecao{A.11. ERROR\_INVALID\_DIMENSION\_GLYPH}
 
 @<Tipos de Erros@>+=
 ERROR_INVALID_DIMENSION_GLYPH,
@@ -19044,7 +19107,7 @@ case ERROR_INVALID_DIMENSION_GLYPH:
 @
 
 
-\subsecao{A.X. ERROR\_INVALID\_NAME}
+\subsecao{A.12. ERROR\_INVALID\_NAME}
 
 @<Tipos de Erros@>+=
 ERROR_INVALID_NAME,
@@ -19090,7 +19153,7 @@ case ERROR_INVALID_NAME:
   break;
 @
 
-\subsecao{A.X. ERROR\_INVALID\_TENSION}
+\subsecao{A.13. ERROR\_INVALID\_TENSION}
 
 @<Tipos de Erros@>+=
 ERROR_INVALID_TENSION,
@@ -19139,7 +19202,7 @@ case ERROR_INVALID_TENSION:
   break;
 @
 
-\subsecao{A.X. ERROR\_MISSING\_EXPRESSION}
+\subsecao{A.14. ERROR\_MISSING\_EXPRESSION}
 
 @<Tipos de Erros@>+=
 ERROR_MISSING_EXPRESSION,
@@ -19169,7 +19232,7 @@ case ERROR_MISSING_EXPRESSION:
   break;
 @
 
-\subsecao{A.X. ERROR\_MISSING\_TOKEN}
+\subsecao{A.15. ERROR\_MISSING\_TOKEN}
 
 @<Tipos de Erros@>+=
 ERROR_MISSING_TOKEN,
@@ -19199,7 +19262,7 @@ case ERROR_MISSING_TOKEN:
 @
 
 
-\subsecao{A.X. ERROR\_NEGATIVE\_LOGARITHM}
+\subsecao{A.16. ERROR\_NEGATIVE\_LOGARITHM}
 
 @<Tipos de Erros@>+=
 ERROR_NEGATIVE_LOGARITHM,
@@ -19227,7 +19290,7 @@ case ERROR_NEGATIVE_LOGARITHM:
 @
 
 
-\subsecao{A.X. ERROR\_NEGATIVE\_SQUARE\_ROOT}
+\subsecao{A.17. ERROR\_NEGATIVE\_SQUARE\_ROOT}
 
 @<Tipos de Erros@>+=
 ERROR_NEGATIVE_SQUARE_ROOT,
@@ -19254,7 +19317,7 @@ case ERROR_NEGATIVE_SQUARE_ROOT:
   break;
 @
 
-\subsecao{A.X. ERROR\_NESTED\_BEGINCHAR}
+\subsecao{A.18. ERROR\_NESTED\_BEGINCHAR}
 
 @<Tipos de Erros@>+=
 ERROR_NESTED_BEGINCHAR,
@@ -19281,7 +19344,7 @@ case ERROR_NESTED_BEGINCHAR:
   break;
 @
 
-\subsecao{A.X. ERROR\_NO\_MEMORY}
+\subsecao{A.19. ERROR\_NO\_MEMORY}
 
 @<Tipos de Erros@>+=
 ERROR_NO_MEMORY,
@@ -19333,7 +19396,7 @@ case ERROR_NO_MEMORY:
   break;
 @
 
-\subsecao{A.X. ERROR\_NO\_PICKUP\_PEN}
+\subsecao{A.20. ERROR\_NO\_PICKUP\_PEN}
 
 @<Tipos de Erros@>+=
 ERROR_NO_PICKUP_PEN,
@@ -19366,7 +19429,7 @@ case ERROR_NO_PICKUP_PEN:
   break;
 @
 
-\subsecao{A.X. ERROR\_NONCYCLICAL\_PEN}
+\subsecao{A.21. ERROR\_NONCYCLICAL\_PEN}
 
 @<Tipos de Erros@>+=
 ERROR_NONCYCLICAL_PEN,
@@ -19392,7 +19455,7 @@ case ERROR_NONCYCLICAL_PEN:
 @
 
 
-\subsecao{A.X. ERROR\_NULL\_VECTOR\_ANGLE}
+\subsecao{A.22. ERROR\_NULL\_VECTOR\_ANGLE}
 
 @<Tipos de Erros@>+=
 ERROR_NULL_VECTOR_ANGLE,
@@ -19420,7 +19483,7 @@ case ERROR_NULL_VECTOR_ANGLE:
 @
 
 
-\subsecao{A.X. ERROR\_OPENGL\_FRAMEBUFFER}
+\subsecao{A.23. ERROR\_OPENGL\_FRAMEBUFFER}
 
 @<Tipos de Erros@>+=
 ERROR_OPENGL_FRAMEBUFFER,
@@ -19474,7 +19537,7 @@ case ERROR_OPENGL_FRAMEBUFFER:
   break;
 @
 
-\subsecao{A.X. ERROR\_RECURSIVE\_RENDERCHAR}
+\subsecao{A.24. ERROR\_RECURSIVE\_RENDERCHAR}
 
 @<Tipos de Erros@>+=
 ERROR_RECURSIVE_RENDERCHAR,
@@ -19508,8 +19571,7 @@ case ERROR_RECURSIVE_RENDERCHAR:
   break;
 @
 
-
-\subsecao{A.X. ERROR\_UNBALANCED\_ENDING\_TOKEN}
+\subsecao{A.25. ERROR\_UNBALANCED\_ENDING\_TOKEN}
 
 @<Tipos de Erros@>+=
 ERROR_UNBALANCED_ENDING_TOKEN,
@@ -19545,7 +19607,7 @@ case ERROR_UNBALANCED_ENDING_TOKEN:
   break;
 @
 
-\subsecao{A.X. ERROR\_UNCLOSED\_DELIMITER}
+\subsecao{A.26. ERROR\_UNCLOSED\_DELIMITER}
 
 @<Tipos de Erros@>+=
 ERROR_UNCLOSED_DELIMITER,
@@ -19573,7 +19635,7 @@ case ERROR_UNCLOSED_DELIMITER:
   break;
 @
 
-\subsecao{A.X. ERROR\_UNCLOSED\_STRING}
+\subsecao{A.27. ERROR\_UNCLOSED\_STRING}
 
 @<Tipos de Erros@>+=
 ERROR_UNCLOSED_STRING,
@@ -19610,7 +19672,7 @@ case ERROR_UNCLOSED_STRING:
   break;
 @
 
-\subsecao{A.X. ERROR\_UNDECLARED\_VARIABLE}
+\subsecao{A.28. ERROR\_UNDECLARED\_VARIABLE}
 
 @<Tipos de Erros@>+=
 ERROR_UNDECLARED_VARIABLE,
@@ -19638,7 +19700,7 @@ case ERROR_UNDECLARED_VARIABLE:
 @
 
 
-\subsecao{A.X. ERROR\_UNEXPECTED\_TOKEN}
+\subsecao{A.29. ERROR\_UNEXPECTED\_TOKEN}
 
 @<Tipos de Erros@>+=
 ERROR_UNEXPECTED_TOKEN,
@@ -19671,7 +19733,7 @@ case ERROR_UNEXPECTED_TOKEN:
   break;
 @
 
-\subsecao{A.X. ERROR\_UNINITIALIZED\_VARIABLE}
+\subsecao{A.30. ERROR\_UNINITIALIZED\_VARIABLE}
 
 @<Tipos de Erros@>+=
 ERROR_UNINITIALIZED_VARIABLE,
@@ -19702,7 +19764,7 @@ case ERROR_UNINITIALIZED_VARIABLE:
   break;
 @
 
-\subsecao{A.X. ERROR\_UNKNOWN\_GLYPH\_DEPENDENCY}
+\subsecao{A.31. ERROR\_UNKNOWN\_GLYPH\_DEPENDENCY}
 
 @<Tipos de Erros@>+=
 ERROR_UNKNOWN_GLYPH_DEPENDENCY,
@@ -19733,7 +19795,7 @@ case ERROR_UNKNOWN_GLYPH_DEPENDENCY:
 @
 
 
-\subsecao{A.X. ERROR\_UNKNOWN\_EXPRESSION}
+\subsecao{A.32. ERROR\_UNKNOWN\_EXPRESSION}
 
 @<Tipos de Erros@>+=
 ERROR_UNKNOWN_EXPRESSION,
@@ -19764,7 +19826,7 @@ case ERROR_UNKNOWN_EXPRESSION:
 @
 
 
-\subsecao{A.X. ERROR\_UNKNOWN\_STATEMENT}
+\subsecao{A.33. ERROR\_UNKNOWN\_STATEMENT}
 
 @<Tipos de Erros@>+=
 ERROR_UNKNOWN_STATEMENT,
@@ -19795,7 +19857,7 @@ case ERROR_UNKNOWN_STATEMENT:
   break;
 @
 
-\subsecao{A.X. ERROR\_UNOPENED\_DELIMITER}
+\subsecao{A.34. ERROR\_UNOPENED\_DELIMITER}
 
 @<Tipos de Erros@>+=
 ERROR_UNOPENED_DELIMITER,
@@ -19824,7 +19886,7 @@ case ERROR_UNOPENED_DELIMITER:
   break;
 @
 
-\subsecao{A.X. ERROR\_UNSUPORTED\_LENGTH\_OPERAND}
+\subsecao{A.35. ERROR\_UNSUPORTED\_LENGTH\_OPERAND}
 
 @<Tipos de Erros@>+=
 ERROR_UNSUPORTED_LENGTH_OPERAND,
@@ -19867,7 +19929,7 @@ case ERROR_UNSUPORTED_LENGTH_OPERAND:
   break;
 @
 
-\subsecao{A.X. ERROR\_WRONG\_NUMBER\_OF\_PARAMETERS}
+\subsecao{A.36. ERROR\_WRONG\_NUMBER\_OF\_PARAMETERS}
 
 @<Tipos de Erros@>+=
 ERROR_WRONG_NUMBER_OF_PARAMETERS,
@@ -19905,7 +19967,7 @@ case ERROR_WRONG_NUMBER_OF_PARAMETERS:
 @
 
 
-\subsecao{A.X. ERROR\_WRONG\_VARIABLE\_TYPE}
+\subsecao{A.37. ERROR\_WRONG\_VARIABLE\_TYPE}
 
 @<Tipos de Erros@>+=
 ERROR_WRONG_VARIABLE_TYPE,
@@ -19943,6 +20005,21 @@ case ERROR_WRONG_VARIABLE_TYPE:
           found, expected);
   break;
 @
+
+\secao{Referências}
+
+\referencia{De Berg, M. (2000)
+``Computational geometry: algorithms and applications''.
+Springer Science \& Business Media.}
+
+\referencia{Knuth, D. E. (1984) ``Literate Programming'', The Computer
+  Journal, Volume 27, Edição 2, Páginas 97--111.}
+
+\referencia{Hobby, J. D. (1986), ``Smooth, easy to compute interpolating
+ splines'', Discrete \& computational geometry, 1(2), 123-140}
+
+\referencia{Knuth, D. E. (1989) ``The METAFONT book'', Addison-Wesley
+ Longsman Publishing Co., Inc}
 
 
 \fim

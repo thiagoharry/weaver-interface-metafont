@@ -700,7 +700,7 @@ we swap in the matrix $M$ and in $b$ the lines $i$ and $j$:
 Note that changing the lines does not change the result of a system.
 equations. For example, the three equations below have the same
 solution ($x=0$, $y=0$, $z=2$) of the system of equations at the
-beginning of the Subsection 2.1.1:
+beginning of the Subsection <<Section>>:
 
 $$
 6x-3y+z=2
@@ -1030,7 +1030,7 @@ struct string_token{
   int line;
 #endif
   char value[5];
-  // Pointer for the glyph represented by string (will be used in Section XXX)
+  // Pointer for the glyph represented by string (will be used in Section <<Section>>)
   struct _glyph *glyph;
 };
 @
@@ -1268,7 +1268,7 @@ if((c == '.' && isdigit(next_char)) || isdigit(c)){
   if(new_token == NULL){
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
-    RAISE_ERROR_NO_MEMORY(mf, NULL, 0); //We will define errors on Section 5.2.
+    RAISE_ERROR_NO_MEMORY(mf, NULL, 0); //We will define errors on Section <<Section>>.
     return false;
   }
   new_token -> type = TYPE_NUMERIC;
@@ -2107,7 +2107,7 @@ struct context{
 
 For the meta-font struct, for now we will define three variables
 stored in it. The first one is a mutex, as described in Subsection
-2.2. Next we have a string with the filename from where the font
+<<Section>>. Next we have a string with the filename from where the font
 source code was read. The last one is a boolean variable that stores if
 the font is still loading or if it finished. A font that is still
 loading did not proccessed all the source code in its file. It is
@@ -2125,9 +2125,9 @@ struct metafont{
 @
 
 Both data structures will have a function that initializes them and
-also finalizes them (the function that destroys a meta-font
-struct, \monoespaco{\_Wdestroy\_metafont}, already was declared in
-Section 1, when we listed the headers of functions that would be
+also finalizes them (the function that destroys a meta-font struct,
+\monoespaco{\_Wdestroy\_metafont}, already was declared in Section
+<<Section>>, when we listed the headers of functions that would be
 exported for the user):
 
 @<Local Function Declaration (metafont.c)@>+=
@@ -2162,7 +2162,7 @@ struct context *init_context(struct metafont *mf){
   struct context *cx;
   cx = (struct context *) temporary_alloc(sizeof(struct context));
   if(cx == NULL){
-    RAISE_ERROR_NO_MEMORY(mf, NULL, 0); // We will define errors on Section 5.2.
+    RAISE_ERROR_NO_MEMORY(mf, NULL, 0); // We will define errors on Section <<Section>>.
     return NULL;
   }
   cx -> current_character[0] = '\0';
@@ -2558,7 +2558,7 @@ the three first tokens in the example above, we will evaluate
 only \monoespaco{begingroup}, and we will give back the other two
 tokens to be evaluated later. We can do this changing the position of
 the pointer that marks the end of current statement, like explained in
-Subsection 5.3.
+Subsection <<Section>>.
 
 When we get the \monoespaco{endgroup}, we will do the same: we
 evaluate only the \monoespaco{endgroup} part to close the compound
@@ -4536,12 +4536,12 @@ using the code below:
 \subsubsecao{7.4.4. Normalizing Paths}
 
 Now that we defined a function that removes path recursion
-(\monoespaco{recursive\_copy\_points}, seen in Subsection 7.4.1),
+(\monoespaco{recursive\_copy\_points}, seen in Subsection <<Section>>),
 another to ensure that all points will have direction specifiers
-(\monoespaco{find\_missing\_directions}, seen in Subsection 7.4.3) and
+(\monoespaco{find\_missing\_directions}, seen in Subsection <<Section>>) and
 a third one that converts all points of a path from provisional format
 to final format (\monoespaco{convert\_to\_final}, seen in Subsection
-7.4.2), we can combine all these functions in order to normalize a
+<<Section>>), we can combine all these functions in order to normalize a
 path, leaving it in its final format: the format in which it can
 be rendered.
 
@@ -4574,7 +4574,7 @@ for(i = 0; i < path -> length; i ++)
 Notice how in the code above, it doesn't matter what the value is
 for \monoespaco{begin}, we visit each point exactly once. But only if
 we work with the assumption that we are not repeating the first point
-at the end of the cyclic path. In code from Subsection 7.4.3, we used
+at the end of the cyclic path. In code from Subsection <<Section>>, we used
 a loop like this to traverse a path segment, and the code works even
 when the end of the segment is stored before the beginning, which can
 happen in segments inside cyclic paths.
@@ -4679,7 +4679,7 @@ struct pen_variable{
   int flags;
   struct pen_variable *referenced; // Not null only in 'currentpen'
   float gl_matrix[9]; // OpenGL matrix transformation
-  // The variables below will be manipulated only in Section 10
+  // The variables below will be manipulated only in Section <<Section>>
   GLuint gl_vbo; // The OpenGL vertices after triangulation
   GLsizei indices; // Number of vertices stored above
   // This will store how detailed is our triangulation, which will help us
@@ -4718,7 +4718,7 @@ variable \monoespaco{flags}. Some of the possible flags are:
 #define FLAG_SEMICIRCULAR  8
 #define FLAG_SQUARE       16
 #define FLAG_NULL         32
-// More flags will be defined later, Subsection 10.2
+// More flags will be defined later, Subsection <<Section>>
 @
 
 The flag \monoespaco{FLAG\_CONVEX} stores if our pen is convex. If so,
@@ -4761,7 +4761,7 @@ will not be subdivided nor concatenated as in the subpath operations,
 then we can represent their linear transformations using this matrix
 instead of updating manually their points.
 
-The other variables will me used more on Section 10. The
+The other variables will me used more on Section <<Section>>. The
 variable \monoespaco{gl\_vbo} will reference the pen vertices after
 the triangulation, when the pen is ready to be drawn. Such vertices,
 if they exist, will be stored in the video card. Otherwise, this
@@ -5699,12 +5699,12 @@ else if(begin -> type == TYPE_LENGTH){
 
 Notice that identifying if we have or not a numeric primary expression
 involves calling \monoespaco{get\_primatry\_expression\_type}. This
-function will be defined in Subsection 8.8. For now, we just need to
+function will be defined in Subsection <<Section>>. For now, we just need to
 know that given the beginning and ending tokens for some expression,
 it returns the expression type. If the type is numeric, the code above
 shows how we compute the modulus. Otherwise, we will evaluate it using
-other rules that we should define later (in Subsection 8.2.4 and
-8.4.5).
+other rules that we should define later (in Subsection <<Section>> and
+<<Section>>).
 
 3) If we find some of the numeric operators, we have a numeric
 operator followed by a numeric primary expression.
@@ -6219,7 +6219,7 @@ The grammar for secondary pair expressions is:
 \alinhanormal
 
 The above transformer rule is incomplete because we will see the last
-existing transformer in Subsection 8.3.1.
+existing transformer in Subsection <<Section>>.
 
 For now let's add the seven new keywords representing known
 transformers:
@@ -6277,7 +6277,7 @@ bool eval_pair_secondary(struct metafont *mf, struct context *cx,
              p -> type == TYPE_SLANTED || p -> type == TYPE_XSCALED ||
              p -> type == TYPE_YSCALED || p -> type == TYPE_ZSCALED ||
              // Operator 'transformed' still not defined. We will see
-             // it defined in Subsection 8.3.4.
+             // it defined in Subsection <<Section>>.
              p -> type == TYPE_TRANSFORMED)){
       if(p -> type == TYPE_DIVISION && prev -> type == TYPE_NUMERIC &&
          p != end && p -> next -> type != TYPE_NUMERIC &&
@@ -6508,7 +6508,7 @@ The final grammar rules for pair expressions are:
 \alinhanormal
 
 We ommited some rules above because there are primary operators that
-we will define later, in Subsections 8.4.6 and 10.4.
+we will define later, in Subsections <<Section>> and <<Section>>.
 
 The novel operator is the constructionn $a[b, c]$, where $b$ and $c$
 are pairs. It represents intermediary values between $b$ end $c$. It
@@ -6808,7 +6808,7 @@ else if(expr_type == TYPE_T_PAIR){
 The operator \monoespaco{xpart} returns the first value in a
 pair. However, we must take an additioonal care: this operator can be
 use in contexts other than getting value from a pair, as we will still
-see in Sub-subsection 8.3.3. Therefore, first we must check if what we
+see in Sub-subsection <<Section>>. Therefore, first we must check if what we
 have after the operator is a pair. If so, we return the first value:
 
 @<Numeric Primary: Additional Operators@>=
@@ -7345,7 +7345,7 @@ else if(begin -> type >= TYPE_XXPART && begin -> type <= TYPE_YYPART){
 
 But what about \monoespaco{xpart} and \monoespaco{ypart}? They were
 already treated when we were evaluating primary numeric expressions in
-Subsection 8.2.4. But we need to augment the definition of this
+Subsection <<Section>>. But we need to augment the definition of this
 operator present there to also deal with cases where the operand is
 not a pair, but a transform. This is how we do this for
 the \monoespaco{xpart} operator:
@@ -7381,7 +7381,7 @@ expressions:
 
 This operator apply the linear transform in the right-side to the pair
 in the left-side. We can implement it with the code below that augment
-the already written code about transformers in Subsection 8.2.2. about
+the already written code about transformers in Subsection <<Section>>. about
 pair secondary expressions.
 
 @<Secondary Pair Operator: Additional Operators@>=
@@ -7550,7 +7550,7 @@ bool eval_path_expression(struct metafont *mf, struct context *cx,
   @<Path Expression: When There is No Joins@>
   @<Path Expression: Allocating Path Variable@>
   @<Path Expression: Iterating over Joins@>
-  // Paths are normalized as seen in Subsection 7.4.4:
+  // Paths are normalized as seen in Subsection <<Section>>:
   return normalize_path(mf, cx, result);
 }
 @
@@ -8462,7 +8462,7 @@ else if(begin_j -> type == TYPE_JOIN && begin_j != end_j &&
 }
 @
 
-Like seen in Subsection 7.4.3., the tension value cannot be smaller
+Like seen in Subsection <<Section>>, the tension value cannot be smaller
 than 3/4, otherwise the system of equations that determines the curve
 shape could have no solution.
 
@@ -9103,7 +9103,7 @@ The grammar for primary path expressions is:
 \alinhanormal
 
 The rules are incomplete because an additional primary operator
-related to pen variables will be defined in Subsection 8.5.4.
+related to pen variables will be defined in Subsection <<Section>>.
 
 For now we need to register the new
 tokens \monoespaco{reverse}, \monoespaco{subpath} and \monoespaco{of}:
@@ -9713,7 +9713,7 @@ bool assign_pen_variable(struct metafont *mf, struct context *cx,
   target -> indices = 0;
   target -> referenced = NULL;
   // If we are assigning to 'currentpen', then we need to retriangulate
-  // the pen, as will be described in Section 10:
+  // the pen, as will be described in Section <<Section>>:
   if(target == cx -> currentpen)
     triangulate_pen(mf, cx, target, target -> gl_matrix);
   return true;
@@ -10530,7 +10530,7 @@ else if(type == TYPE_T_PICTURE){
       pic -> type = TYPE_T_PICTURE;
       // If assigning to 'currentpicture', additional code is executed
       if(pic == cx -> currentpicture){
-        // The code below will be defined in Subsection 11.2:
+        // The code below will be defined in Subsection <<Section>>:
         @<Create new 'currentpicture'@>
       }
     }
@@ -10838,7 +10838,7 @@ bool assign_picture_variable(struct metafont *mf, struct context *cx,
   glBindTexture(GL_TEXTURE_2D, 0);
   glDeleteFramebuffers(1, &temporary_framebuffer);
   if(target == cx -> currentpicture){
-    // The code below will be defined on Subsection 11.2:
+    // The code below will be defined on Subsection <<Section>>:
     @<Create new 'currentpicture'@>
   }
   return true;
@@ -11201,7 +11201,7 @@ bool eval_picture_secondary(struct metafont *mf, struct context *cx,
 Evaluating each different linear transformation means modifying the
 secondary expression matrix, multiplying its previous value by a new
 matrix. Exactly like we did for pens. Like described in code from
-Subsection X.Y.
+Subsection <<Section>>.
 
 This is scale changing:
 
@@ -11980,7 +11980,7 @@ that produce its operands. But to evaluate an expression, we need to
 know its type. We will assume that we have a function that, given an
 tertiary expression, returns its type. We will call
 it \monoespaco{get\_tertiary\_expression\_type}. We will define it
-later, in Subsection 8.8. But for now we will just assume that the
+later, in Subsection <<Section>>. But for now we will just assume that the
 function exists.
 
 The implementation is:
@@ -12816,7 +12816,7 @@ Which should be associated with the following reserved words:
 "elseif", "else", ":",
 @
 
-In Section 6, we introduced the first compound statement: the one that
+In Section <<Section>>, we introduced the first compound statement: the one that
 begins with \monoespaco{begingroup} and ends
 with \monoespaco{endgroup}. The conditional statement
 using \monoespaco{if} is also a compound statement, which can contain
@@ -12831,13 +12831,13 @@ last evaluated token, which is used to determine the next tokens to be
 evaluated. It's in this function that our \monoespaco{if} will be
 evaluated.
 
-Like in the \monoespaco{begingroup} case, seen in Section 6, when we
-find a \monoespaco{if} in the first position in the list of tokens to
-be evalueated, we increase the nesting level and correct the position
-of the end pointer, ensuring that the next tokens to be evaluated will
-be the right ones. Here we do the same, but the logic to choose the
-right pointer is more complex and involves evaluating boolean
-expressions.
+Like in the \monoespaco{begingroup} case, seen in Section <<Section>>,
+when we find a \monoespaco{if} in the first position in the list of
+tokens to be evalueated, we increase the nesting level and correct the
+position of the end pointer, ensuring that the next tokens to be
+evaluated will be the right ones. Here we do the same, but the logic
+to choose the right pointer is more complex and involves evaluating
+boolean expressions.
 
 Given a \monoespaco{if}, we first evaluate the boolean expression next
 to it. If true, the position for the pointer will be the colon after
@@ -13438,7 +13438,7 @@ only in the interval between -0.5 and +0.5 (or between 0 and 0.5 for
 $f_y$ in case of a semicircle). If the value that we are searching is
 near the extremity, it is possible that we step outside the function
 Domain. If this happens, we will change to another method. We will use
-the slowerBissection Method. For this method, notice that $f'(-0.5)$
+the slower Bissection Method. For this method, notice that $f'(-0.5)$
 and $f'(+0.5)$ has opposite signals. The root of this functions is in
 this interval. Next, we make the interval slower computing $f'$ in the
 middle of the interval and checking the signal. And we repeat until we
@@ -13625,7 +13625,7 @@ void path_extremity_points(struct metafont *mf, struct context *cx,
 Now let's deal with the triangulation code. Video cards and OpenGL
 works drawing triangles in the screen. Therefore, each pen should be
 transformed in a set of triangles before drawing them. This was
-mentioned in Subsection 7.5. about pen variables. But the code for
+mentioned in Subsection <<Section>>. about pen variables. But the code for
 triangulation still needs to be defined.
 
 To recap, these are the relevant variables stored inside
@@ -15998,7 +15998,7 @@ the triangulation function:
 \subsecao{11.4. Operators \monoespaco{bot}, \monoespaco{top}, \monoespaco{lft},
 \monoespaco{rt}}
 
-We defined most pair operators in Subsection 8.2, but there are still
+We defined most pair operators in Subsection <<Section>>, but there are still
 4 missing operators that we will define here. Their grammar is:
 
 \alinhaverbatim

@@ -11,8 +11,8 @@
 
 // In 96 dpi: 300 pt = 400 px
 
-#define MIN_SIZE 400
-#define MAX_SIZE 400
+#define MIN_SIZE 500
+#define MAX_SIZE 500
 
 #define ZOOM 1.0
 
@@ -360,7 +360,7 @@ int main(int argc, char **argv){
     fprintf(stderr, "ERROR loading sample.mf.\n");
     return 1;
   }
-  if(mf -> errno){
+  if(mf -> err){
     _Wprint_metafont_error(mf);
     return 1;
   }
