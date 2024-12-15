@@ -90,9 +90,7 @@
 
 5.1. Running Programs \indice{24}
 
-5.2. Handling Errors \indice{26}
-
-5.3. Splitting List of Statements in Individual Statements \indice{29}
+5.2. Splitting List of Statements in Individual Statements \indice{29}
 
 6. A Compound Statement: The Compound Block \indice{31}
 
@@ -165,7 +163,7 @@
 
 8.4.3. Secondary Path Expressions: Transformers \indice{XX}
 
-8.4.4. Primary Path Expressions \indice{XX}
+8.4.4. Primary Path Expressions: Variables, Reverses and Subpath \indice{XX}
 
 8.4.5. Path in Numeric Expressions \indice{XX}
 
@@ -205,40 +203,120 @@
 
 9. Compound Statements: Conditional Statement \indice{XX}
 
-10. The \monoespaco{pickup} Command \indice{XX}
+10. Compound Statements: Iterations \indice{XX}
 
-10.1. Extremity Points in Pens \indice{XX}
+11. The \monoespaco{pickup} Command \indice{XX}
 
-10.2. Triangulation \indice{XX}
+11.1. Extremity Points in Pens \indice{XX}
 
-10.3. Reading the \monoespaco{pickup} Command\indice{XX}
+11.2. Triangulation \indice{XX}
 
-10.4. Operators \monoespaco{bot}, \monoespaco{top}, \monoespaco{lft},
+11.3. Reading the \monoespaco{pickup} Command\indice{XX}
+
+11.4. Operators \monoespaco{bot}, \monoespaco{top}, \monoespaco{lft},
 \monoespaco{rt}\indice{XX}
 
-XX. The \monoespaco{pickcolor} Command \indice{XX}
+12. The \monoespaco{pickcolor} Command \indice{XX}
 
-XX. The \monoespaco{monowidth} Command \indice{XX}
+13. The \monoespaco{monowidth} Command \indice{XX}
 
-11. The \monoespaco{draw} and \monoespaco{erase} Command\indice{XX}
+14. The \monoespaco{draw} and \monoespaco{erase} Command\indice{XX}
 
-11.1. Preparing Framebuffer \indice{XX}
+14.1. Preparing Framebuffer \indice{XX}
 
-11.2. Drawing Shaders\indice{XX}
+14.2. Drawing Shaders\indice{XX}
 
-11.3. Drawing Paths \indice{XX}
+14.3. Drawing Paths \indice{XX}
 
-12. Compound Statement: Character Definition \indice{XX}
+15. Compound Statement: Character Definition \indice{XX}
 
-12.1 Unicode and UTF-8 \indice{XX}
+15.1 Unicode and UTF-8 \indice{XX}
 
-13. API Functions to Use the Fonts \indice{XX}
+16. API Functions to Use the Fonts \indice{XX}
+
+17. The \monoespaco{shipit} Command \indice{XX}
+
+18. The \monoespaco{renderchar} Command \indice{XX}
+
+19. Integrating WeaveFont and Weaver Game Engine \indice{XX}
 
 References \indice{XX}
 
 Appendix A: Handling Errors \indice{XX}
 
-A.1. ERROR\_NO\_MEMORY \indice{XX}
+A.1. ERROR\_DISCONTINUOUS\_PATH \indice{289}
+
+A.2. ERROR\_DIVISION\_BY\_ZERO \indice{290}
+
+A.3. ERROR\_DUPLICATE\_GLYPH \indice{290}
+
+A.4. ERROR\_EMPTY\_DELIMITER \indice{291}
+
+A.5. ERROR\_EXPECTED\_FOUND \indice{291}
+
+A.6. ERROR\_FAILED\_OPENING\_FILE \indice{292}
+
+A.7. ERROR\_INCOMPLETE\_SOURCE \indice{292}
+
+A.8. ERROR\_INCOMPLETE\_STATEMENT \indice{293}
+
+A.9. ERROR\_INVALID\_CHAR \indice{293}
+
+A.10. ERROR\_INVALID\_COMPARISON \indice{295}
+
+A.11. ERROR\_INVALID\_DIMENSION\_GLYPH \indice{295}
+
+A.12. ERROR\_INVALID\_NAME \indice{296}
+
+A.13. ERROR\_INVALID\_TENSION \indice{296}
+
+A.14. ERROR\_MISSING\_EXPRESSION \indice{297}
+
+A.15. ERROR\_MISSING\_TOKEN \indice{298}
+
+A.16. ERROR\_NEGATIVE\_LOGARITHM \indice{298}
+
+A.17. ERROR\_NEGATIVE\_SQUARE\_ROOT \indice{298}
+
+A.18. ERROR\_NESTED\_BEGINCHAR \indice{299}
+
+A.19. ERROR\_NO\_MEMORY \indice{299}
+
+A.20. ERROR\_NO\_PICKUP\_PEN \indice{300}
+
+A.21. ERROR\_NONCYCLICAL\_PEN \indice{300}
+
+A.22. ERROR\_NULL\_VECTOR\_ANGLE \indice{301}
+
+A.23. ERROR\_OPENGL\_FRAMEBUFFER \indice{301}
+
+A.24. ERROR\_RECURSIVE\_RENDERCHAR \indice{302}
+
+A.25. ERROR\_UNBALANCED\_ENDING\_TOKEN \indice{303}
+
+A.26. ERROR\_UNCLOSED\_DELIMITER \indice{303}
+
+A.27. ERROR\_UNCLOSED\_STRING \indice{303}
+
+A.28. ERROR\_UNDECLARED\_VARIABLE \indice{304}
+
+A.29. ERROR\_UNEXPECTED\_TOKEN \indice{304}
+
+A.30. ERROR\_UNINITIALIZED\_VARIABLE \indice{305}
+
+A.31. ERROR\_UNKNOWN\_GLYPH\_DEPENDENCY \indice{305}
+
+A.32. ERROR\_UNKNOWN\_EXPRESSION \indice{306}
+
+A.33. ERROR\_UNKNOWN\_STATEMENT \indice{306}
+
+A.34. ERROR\_UNOPENED\_DELIMITER \indice{307}
+
+A.35. ERROR\_UNSUPORTED\_LENGTH\_OPERAND \indice{307}
+
+A.36. ERROR\_WRONG\_NUMBER\_OF\_PARAMETERS \indice{308}
+
+A.37. ERROR\_WRONG\_VARIABLE\_TYPE \indice{308}
 
 \secao{1. Introduction}
 
@@ -700,7 +778,7 @@ we swap in the matrix $M$ and in $b$ the lines $i$ and $j$:
 Note that changing the lines does not change the result of a system.
 equations. For example, the three equations below have the same
 solution ($x=0$, $y=0$, $z=2$) of the system of equations at the
-beginning of the Subsection <<Section>>:
+beginning of this Subsection:
 
 $$
 6x-3y+z=2
@@ -1030,7 +1108,7 @@ struct string_token{
   int line;
 #endif
   char value[5];
-  // Pointer for the glyph represented by string (will be used in Section <<Section>>)
+  // Pointer for the glyph represented by string (will be used in Section 15.1)
   struct _glyph *glyph;
 };
 @
@@ -1268,7 +1346,7 @@ if((c == '.' && isdigit(next_char)) || isdigit(c)){
   if(new_token == NULL){
     free_token_list(*first_token);
     *first_token = *last_token = NULL;
-    RAISE_ERROR_NO_MEMORY(mf, NULL, 0); //We will define errors on Section <<Section>>.
+    RAISE_ERROR_NO_MEMORY(mf, NULL, 0); // We will define errors on Appendix A.
     return false;
   }
   new_token -> type = TYPE_NUMERIC;
@@ -2107,7 +2185,7 @@ struct context{
 
 For the meta-font struct, for now we will define three variables
 stored in it. The first one is a mutex, as described in Subsection
-<<Section>>. Next we have a string with the filename from where the font
+2.2. Next we have a string with the filename from where the font
 source code was read. The last one is a boolean variable that stores if
 the font is still loading or if it finished. A font that is still
 loading did not proccessed all the source code in its file. It is
@@ -2126,9 +2204,9 @@ struct metafont{
 
 Both data structures will have a function that initializes them and
 also finalizes them (the function that destroys a meta-font struct,
-\monoespaco{\_Wdestroy\_metafont}, already was declared in Section
-<<Section>>, when we listed the headers of functions that would be
-exported for the user):
+\monoespaco{\_Wdestroy\_metafont}, already was declared in Section 1,
+when we listed the headers of functions that would be exported for the
+user):
 
 @<Local Function Declaration (metafont.c)@>+=
 struct metafont *init_metafont(char *filename);
@@ -2162,7 +2240,7 @@ struct context *init_context(struct metafont *mf){
   struct context *cx;
   cx = (struct context *) temporary_alloc(sizeof(struct context));
   if(cx == NULL){
-    RAISE_ERROR_NO_MEMORY(mf, NULL, 0); // We will define errors on Section <<Section>>.
+    RAISE_ERROR_NO_MEMORY(mf, NULL, 0); // We will define errors on Appendix A.
     return NULL;
   }
   cx -> current_character[0] = '\0';
@@ -2209,7 +2287,7 @@ executed:
 mf -> loading = false;
 @
 
-\subsecao{5.3. Splitting List of Statements in Individual Statements}
+\subsecao{5.2. Splitting List of Statements in Individual Statements}
 
 A list of statements is a possibly empty sequence of statements, which
 can be empty, simple or compound and could be placed in any order:
@@ -2558,7 +2636,7 @@ the three first tokens in the example above, we will evaluate
 only \monoespaco{begingroup}, and we will give back the other two
 tokens to be evaluated later. We can do this changing the position of
 the pointer that marks the end of current statement, like explained in
-Subsection <<Section>>.
+Subsection 6.1.
 
 When we get the \monoespaco{endgroup}, we will do the same: we
 evaluate only the \monoespaco{endgroup} part to close the compound
@@ -2705,7 +2783,7 @@ complex, could need additional operations before removing them, but we
 will deal with them later. Here we disallocate the variables whose
 names we did not preserve:
 
-@<Finalization (struct metafont)@>+=
+@<Finalization (struct metafont)@>=
 if(permanent_free != NULL){
   struct variable *v = (struct variable *) (mf -> variables);
   struct variable *next;
@@ -4536,12 +4614,12 @@ using the code below:
 \subsubsecao{7.4.4. Normalizing Paths}
 
 Now that we defined a function that removes path recursion
-(\monoespaco{recursive\_copy\_points}, seen in Subsection <<Section>>),
+(\monoespaco{recursive\_copy\_points}, seen in Subsection 7.4.1),
 another to ensure that all points will have direction specifiers
-(\monoespaco{find\_missing\_directions}, seen in Subsection <<Section>>) and
+(\monoespaco{find\_missing\_directions}, seen in Subsection 7.4.3) and
 a third one that converts all points of a path from provisional format
 to final format (\monoespaco{convert\_to\_final}, seen in Subsection
-<<Section>>), we can combine all these functions in order to normalize a
+7.4.2), we can combine all these functions in order to normalize a
 path, leaving it in its final format: the format in which it can
 be rendered.
 
@@ -4571,10 +4649,10 @@ for(i = 0; i < path -> length; i ++)
   struct path_point *p = &(path -> points[(begin + i) % path -> length]);
 \alinhanormal
 
-Notice how in the code above, it doesn't matter what the value is
-for \monoespaco{begin}, we visit each point exactly once. But only if
-we work with the assumption that we are not repeating the first point
-at the end of the cyclic path. In code from Subsection <<Section>>, we used
+Notice how in the code above, it doesn't matter what the value is for
+\monoespaco{begin}, we visit each point exactly once. But only if we
+work with the assumption that we are not repeating the first point at
+the end of the cyclic path. In code from previous subsections, we used
 a loop like this to traverse a path segment, and the code works even
 when the end of the segment is stored before the beginning, which can
 happen in segments inside cyclic paths.
@@ -4679,7 +4757,7 @@ struct pen_variable{
   int flags;
   struct pen_variable *referenced; // Not null only in 'currentpen'
   float gl_matrix[9]; // OpenGL matrix transformation
-  // The variables below will be manipulated only in Section <<Section>>
+  // The variables below will be manipulated only in Section 11.2
   GLuint gl_vbo; // The OpenGL vertices after triangulation
   GLsizei indices; // Number of vertices stored above
   // This will store how detailed is our triangulation, which will help us
@@ -4718,7 +4796,7 @@ variable \monoespaco{flags}. Some of the possible flags are:
 #define FLAG_SEMICIRCULAR  8
 #define FLAG_SQUARE       16
 #define FLAG_NULL         32
-// More flags will be defined later, Subsection <<Section>>
+// More flags will be defined later, Subsection 11.2
 @
 
 The flag \monoespaco{FLAG\_CONVEX} stores if our pen is convex. If so,
@@ -4761,7 +4839,7 @@ will not be subdivided nor concatenated as in the subpath operations,
 then we can represent their linear transformations using this matrix
 instead of updating manually their points.
 
-The other variables will me used more on Section <<Section>>. The
+The other variables will me used more on Section 11.2. The
 variable \monoespaco{gl\_vbo} will reference the pen vertices after
 the triangulation, when the pen is ready to be drawn. Such vertices,
 if they exist, will be stored in the video card. Otherwise, this
@@ -5699,12 +5777,12 @@ else if(begin -> type == TYPE_LENGTH){
 
 Notice that identifying if we have or not a numeric primary expression
 involves calling \monoespaco{get\_primatry\_expression\_type}. This
-function will be defined in Subsection <<Section>>. For now, we just need to
+function will be defined in Subsection 8.8. For now, we just need to
 know that given the beginning and ending tokens for some expression,
 it returns the expression type. If the type is numeric, the code above
 shows how we compute the modulus. Otherwise, we will evaluate it using
-other rules that we should define later (in Subsection <<Section>> and
-<<Section>>).
+other rules that we should define later (in Subsection 8.2.4 and
+8.4.5).
 
 3) If we find some of the numeric operators, we have a numeric
 operator followed by a numeric primary expression.
@@ -6219,7 +6297,7 @@ The grammar for secondary pair expressions is:
 \alinhanormal
 
 The above transformer rule is incomplete because we will see the last
-existing transformer in Subsection <<Section>>.
+existing transformer in Subsection 8.3.1.
 
 For now let's add the seven new keywords representing known
 transformers:
@@ -6276,8 +6354,7 @@ bool eval_pair_secondary(struct metafont *mf, struct context *cx,
              p -> type == TYPE_SCALED || p -> type == TYPE_SHIFTED ||
              p -> type == TYPE_SLANTED || p -> type == TYPE_XSCALED ||
              p -> type == TYPE_YSCALED || p -> type == TYPE_ZSCALED ||
-             // Operator 'transformed' still not defined. We will see
-             // it defined in Subsection <<Section>>.
+             // Operator 'transformed'  will be defined in Subsection 8.3.1.
              p -> type == TYPE_TRANSFORMED)){
       if(p -> type == TYPE_DIVISION && prev -> type == TYPE_NUMERIC &&
          p != end && p -> next -> type != TYPE_NUMERIC &&
@@ -6508,7 +6585,7 @@ The final grammar rules for pair expressions are:
 \alinhanormal
 
 We ommited some rules above because there are primary operators that
-we will define later, in Subsections <<Section>> and <<Section>>.
+we will define later, in Subsections 8.4.6 and 11.4.
 
 The novel operator is the constructionn $a[b, c]$, where $b$ and $c$
 are pairs. It represents intermediary values between $b$ end $c$. It
@@ -6808,7 +6885,7 @@ else if(expr_type == TYPE_T_PAIR){
 The operator \monoespaco{xpart} returns the first value in a
 pair. However, we must take an additioonal care: this operator can be
 use in contexts other than getting value from a pair, as we will still
-see in Sub-subsection <<Section>>. Therefore, first we must check if what we
+see in Sub-subsection 8.3.3. Therefore, first we must check if what we
 have after the operator is a pair. If so, we return the first value:
 
 @<Numeric Primary: Additional Operators@>=
@@ -7345,7 +7422,7 @@ else if(begin -> type >= TYPE_XXPART && begin -> type <= TYPE_YYPART){
 
 But what about \monoespaco{xpart} and \monoespaco{ypart}? They were
 already treated when we were evaluating primary numeric expressions in
-Subsection <<Section>>. But we need to augment the definition of this
+Subsection 8.2.4. But we need to augment the definition of this
 operator present there to also deal with cases where the operand is
 not a pair, but a transform. This is how we do this for
 the \monoespaco{xpart} operator:
@@ -7381,7 +7458,7 @@ expressions:
 
 This operator apply the linear transform in the right-side to the pair
 in the left-side. We can implement it with the code below that augment
-the already written code about transformers in Subsection <<Section>>. about
+the already written code about transformers in Subsection 8.2.2 about
 pair secondary expressions.
 
 @<Secondary Pair Operator: Additional Operators@>=
@@ -7550,7 +7627,7 @@ bool eval_path_expression(struct metafont *mf, struct context *cx,
   @<Path Expression: When There is No Joins@>
   @<Path Expression: Allocating Path Variable@>
   @<Path Expression: Iterating over Joins@>
-  // Paths are normalized as seen in Subsection <<Section>>:
+  // Paths are normalized as seen in Subsection 7.4.4:
   return normalize_path(mf, cx, result);
 }
 @
@@ -8462,7 +8539,7 @@ else if(begin_j -> type == TYPE_JOIN && begin_j != end_j &&
 }
 @
 
-Like seen in Subsection <<Section>>, the tension value cannot be smaller
+Like seen in Subsection 7.4.3, the tension value cannot be smaller
 than 3/4, otherwise the system of equations that determines the curve
 shape could have no solution.
 
@@ -9103,7 +9180,7 @@ The grammar for primary path expressions is:
 \alinhanormal
 
 The rules are incomplete because an additional primary operator
-related to pen variables will be defined in Subsection <<Section>>.
+related to pen variables will be defined in Subsection 8.5.4.
 
 For now we need to register the new
 tokens \monoespaco{reverse}, \monoespaco{subpath} and \monoespaco{of}:
@@ -9713,7 +9790,7 @@ bool assign_pen_variable(struct metafont *mf, struct context *cx,
   target -> indices = 0;
   target -> referenced = NULL;
   // If we are assigning to 'currentpen', then we need to retriangulate
-  // the pen, as will be described in Section <<Section>>:
+  // the pen, as will be described in Section 11.2:
   if(target == cx -> currentpen)
     triangulate_pen(mf, cx, target, target -> gl_matrix);
   return true;
@@ -10530,7 +10607,7 @@ else if(type == TYPE_T_PICTURE){
       pic -> type = TYPE_T_PICTURE;
       // If assigning to 'currentpicture', additional code is executed
       if(pic == cx -> currentpicture){
-        // The code below will be defined in Subsection <<Section>>:
+        // The code below will be defined in Subsection 14.1:
         @<Create new 'currentpicture'@>
       }
     }
@@ -10838,7 +10915,7 @@ bool assign_picture_variable(struct metafont *mf, struct context *cx,
   glBindTexture(GL_TEXTURE_2D, 0);
   glDeleteFramebuffers(1, &temporary_framebuffer);
   if(target == cx -> currentpicture){
-    // The code below will be defined on Subsection <<Section>>:
+    // The code below will be defined on Subsection 14.1:
     @<Create new 'currentpicture'@>
   }
   return true;
@@ -11200,8 +11277,7 @@ bool eval_picture_secondary(struct metafont *mf, struct context *cx,
 
 Evaluating each different linear transformation means modifying the
 secondary expression matrix, multiplying its previous value by a new
-matrix. Exactly like we did for pens. Like described in code from
-Subsection <<Section>>.
+matrix. Exactly like we did for pens.
 
 This is scale changing:
 
@@ -11980,7 +12056,7 @@ that produce its operands. But to evaluate an expression, we need to
 know its type. We will assume that we have a function that, given an
 tertiary expression, returns its type. We will call
 it \monoespaco{get\_tertiary\_expression\_type}. We will define it
-later, in Subsection <<Section>>. But for now we will just assume that the
+later, in Subsection 8.8. But for now we will just assume that the
 function exists.
 
 The implementation is:
@@ -12816,7 +12892,7 @@ Which should be associated with the following reserved words:
 "elseif", "else", ":",
 @
 
-In Section <<Section>>, we introduced the first compound statement: the one that
+In Section 6.2, we introduced the first compound statement: the one that
 begins with \monoespaco{begingroup} and ends
 with \monoespaco{endgroup}. The conditional statement
 using \monoespaco{if} is also a compound statement, which can contain
@@ -12831,7 +12907,7 @@ last evaluated token, which is used to determine the next tokens to be
 evaluated. It's in this function that our \monoespaco{if} will be
 evaluated.
 
-Like in the \monoespaco{begingroup} case, seen in Section <<Section>>,
+Like in the \monoespaco{begingroup} case, seen in Section 6.2,
 when we find a \monoespaco{if} in the first position in the list of
 tokens to be evalueated, we increase the nesting level and correct the
 position of the end pointer, ensuring that the next tokens to be
@@ -13625,7 +13701,7 @@ void path_extremity_points(struct metafont *mf, struct context *cx,
 Now let's deal with the triangulation code. Video cards and OpenGL
 works drawing triangles in the screen. Therefore, each pen should be
 transformed in a set of triangles before drawing them. This was
-mentioned in Subsection <<Section>>. about pen variables. But the code for
+mentioned in Subsection 7.5. about pen variables. But the code for
 triangulation still needs to be defined.
 
 To recap, these are the relevant variables stored inside
@@ -15998,7 +16074,7 @@ the triangulation function:
 \subsecao{11.4. Operators \monoespaco{bot}, \monoespaco{top}, \monoespaco{lft},
 \monoespaco{rt}}
 
-We defined most pair operators in Subsection <<Section>>, but there are still
+We defined most pair operators in Subsection 8.2, but there are still
 4 missing operators that we will define here. Their grammar is:
 
 \alinhaverbatim
@@ -16093,7 +16169,7 @@ else if(begin -> type == TYPE_RT){
 }
 @
 
-\secao{XX. The \monoespaco{pickcolor} Command}
+\secao{12. The \monoespaco{pickcolor} Command}
 
 The default color used by WeaveFont is defined by the global variables
 \monoespaco{color\_r}, \monoespaco{color\_g}, \monoespaco{color\_b},
@@ -16188,7 +16264,7 @@ else if(begin -> type == TYPE_PICKCOLOR){
 }
 @
 
-\secao{XX. The \monoespaco{monowidth} Command}
+\secao{13. The \monoespaco{monowidth} Command}
 
 If a typeface is set to have a monospace version, where all characters
 must have exactly the same width, it is useful to use the
@@ -16247,7 +16323,7 @@ else if(begin -> type == TYPE_MONOWIDTH){
 }
 @
 
-\secao{12. The \monoespaco{draw} and \monoespaco{erase} Command}
+\secao{14. The \monoespaco{draw} and \monoespaco{erase} Command}
 
 Finally we can begin specifying two of the most important command in
 the language. The command that uses a pen to draw a path in a picture
@@ -16271,7 +16347,7 @@ TYPE_ERASE, // Symbolic token 'erase'
 "draw", "erase",
 @
 
-\subsecao{12.1. Preparing Framebuffer}
+\subsecao{14.1. Preparing Framebuffer}
 
 To draw or erase with a pen in the
 picture \monoespaco{currentpicture}, we need a framebuffer associated
@@ -16376,7 +16452,7 @@ glBindFramebuffer(GL_FRAMEBUFFER, previous_fb);
 glViewport(_viewport[0], _viewport[1], _viewport[2], _viewport[3]);
 @
 
-\subsecao{12.2. Drawing Shaders}
+\subsecao{14.2. Drawing Shaders}
 
 Drawing and erasing will require two new shaders (one for each
 operation) that we will define. The previous shaders were defined to
@@ -16447,7 +16523,7 @@ glDeleteProgram(pen_program);
 glDeleteProgram(pen_erase_program);
 @
 
-\subsecao{12.3. Drawing Paths}
+\subsecao{14.3. Drawing Paths}
 
 After finishing preparing the triangulation, the framebuffer and
 shaders, we finally can write code for drawing.
@@ -16676,7 +16752,7 @@ void drawpoint(struct metafont *mf, struct context *cx,
 }
 @
 
-\secao{13. Compound Statement: Character Definition}
+\secao{15. Compound Statement: Character Definition}
 
 Now we are in the part that is the main objective of the language:
 defining new characters for typographical fonts, or defining a new
@@ -16715,7 +16791,7 @@ interpreted later, when we need to render the character. When running,
 then the language will interpret and execute the code because we need
 to render such character.
 
-\subsecao{13.1 Unicode and UTF-8}
+\subsecao{15.1 Unicode and UTF-8}
 
 But where should we store the code for each character when in the
 loading mode? For this, we will define the following structure that
@@ -17244,7 +17320,7 @@ else if(begin -> type == TYPE_ENDCHAR){
 }
 @
 
-\secao{14. API Functions to Use the Fonts}
+\secao{16. API Functions to Use the Fonts}
 
 A WEAVEFONT code can have its global variables changed and this will
 change the rendering of the next glyphs, without needing to change the
@@ -17406,7 +17482,7 @@ bool _Wrender_glyph(struct metafont *mf, char *glyph,
 }
 @
 
-\secao{The \monoespaco{shipit} Command}
+\secao{17. The \monoespaco{shipit} Command}
 
 In the original METAFONT language, in order for any character to be
 rendered, it was necessary to use the macro \monoespaco{shipit} or the
@@ -17529,7 +17605,7 @@ know if the produced glyph internally used \monoespaco{shipit}, or she
 must checks if the glyph whose texture was produced is still marked as
 needing to be rendered or not.
 
-\secao{16. The \monoespaco{renderchar} Command}
+\secao{18. The \monoespaco{renderchar} Command}
 
 Sometimes a glyph is composed by other glyph. For example, the glyph
 ``\$'' can be seen as the glyph ``S'' with an additional vertical
@@ -17805,7 +17881,7 @@ use in the rendering:
 }
 @
 
-\secao{X. Integrating WeaveFont and Weaver Game Engine}
+\secao{19. Integrating WeaveFont and Weaver Game Engine}
 
 The Weaver game engine has a module responsible for loading new
 interfaces, which are visual elements to be presented to the user. The
