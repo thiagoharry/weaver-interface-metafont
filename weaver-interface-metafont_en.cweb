@@ -13888,7 +13888,8 @@ perform a triangulation creating triangles that always use this vertex
 and each other adjacent pair of vertices in our shape. It's the fan
 triangulation:
 
-\imagem{images/triangulacao_leque.eps}
+\vskip-7cm\imagem{images/triangulacao_leque_a.eps}\vskip7cm
+
 
 To use this, we can just pass all the pen vertices in the same order
 that they are stored and later, when drawing them, we will tell OpenGL to use
@@ -14208,7 +14209,7 @@ cannot triangulate using the simple algorithms seen above, just
 choosing a pivot and creating a triangles that share the pivot as a
 common vertex. Consider the concave polygon below, for example:
 
-\imagem{images/concave1.eps}
+\vskip-4cm\imagem{images/concave1a.eps}\vskip4cm
 
 If we choose vertex $E$ as pivot, we would produce the triangle
 $ECD$. But this would be a wrong triangle: even if their vertices are
@@ -14230,7 +14231,7 @@ definition for the $y$-axis.
 
 The polygon below, otherwise, is not $x$-monotone neither $y$-monotone:
 
-\imagem{images/concave2.eps}
+\vskip-5.2cm\imagem{images/concave2a.eps}\vskip5.5cm
 
 To triangulate a $x$-monotone polygon, we can assume that we already
 checked that it is $x$-monotone by traversing its vertices from the
@@ -14862,7 +14863,7 @@ one). The image below shows two regular vertices. The first one has an
 internal angle lesser than 180 degrees and the vertex below has an
 internal angle greater than 180 degrees.
 
-\imagem{images/regular_vertices.eps}
+\vskip-4cm\imagem{images/regular_vertices_a.eps}\vskip4cm
 
 The two next types of vertices are the start and the end vertices. A
 start vertex has both neighbors at its right and an internal angle
@@ -14871,7 +14872,7 @@ and its internal angle is lesser than 180 degrees. A $x$-monotone
 polygon should have a single start vertex and a single end vertex. The
 picture below shows both kind of vertices highlighted:
 
-\imagem{images/start_end_vertices.eps}
+\vskip-5cm\imagem{images/start_end_vertices_a.eps}\vskip5cm
 
 Finally, the last two types of vertices are the merge and split
 vertices. A merge vertex has both neighbors at its left, but its

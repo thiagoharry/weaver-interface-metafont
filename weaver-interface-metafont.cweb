@@ -14117,7 +14117,7 @@ vértice como pivô e fazemos uma triangulação gerando triângulos usando
 o pivô e cada um dos vértices adjacentes que temos. É o método de
 triangulação em leque:
 
-\imagem{images/triangulacao_leque.eps}
+\vskip-7cm\imagem{images/triangulacao_leque_a.eps}\vskip7cm
 
 Para isso basta passarmos os vértices da caneta na ordem anti-horária
 para a placa de vídeo usando o OpenGL. Depois, quando chegar a hora de
@@ -14450,7 +14450,7 @@ forma côncava. Não podemos triangulá-la de maneira tão simples à
 partir de um pivô à partir do qual geramos todos os
 triângulos. Considere o polígono côncavo abaixo, por exemplo:
 
-\imagem{images/concave1.eps}
+\vskip-4cm\imagem{images/concave1a.eps}\vskip4cm
 
 Se nós escolhermos o vértice $E$ como pivô, poderíamos acabar enviando
 para a triangulação um triângulo $EDC$, que mesmo que seja composto
@@ -14469,9 +14469,11 @@ $x$-monótono. Mas se ele fosse rotacionado 90 graus, ele não seria
 mais $x$-monótono, mas sim $y$-monótono seguindo uma definição
 equivalente para o eixo $y$.
 
+\quebra
+
 Já o polígono abaixo, não é nem $x$-monótono e nem $y$-monótono:
 
-\imagem{images/concave2.eps}
+\vskip-5.5cm\imagem{images/concave2a.eps}\vskip5.5cm
 
 Para triangular um polígono $x$-monótono, podemos assumir que nós
 primeiro verificamos que ele é $x$-monótono percorrendo seus vértices
@@ -15112,7 +15114,7 @@ primeiro e último). A imagem abaixo mostra dois vértices regulares. O
 primeiro deles tem um ângulo interno menor que 180 graus e o mais
 abaixo tem um ângulo interno maior que 180 graus.
 
-\imagem{images/regular_vertices.eps}
+\vskip-4cm\imagem{images/regular_vertices_a.eps}\vskip4cm
 
 Os dois próximos tipos de vértice são o de começo e de fim. Um vértice
 de começo tem ambos os vizinhos mais à direita que ele, e seu ângulo
@@ -15122,7 +15124,7 @@ graus. Espera-se que um polígono $x$-monótono tenha só um vértice de
 começo e um de fim. A imagem abaixo mostra ambos os tipos de vértice
 destacados:
 
-\imagem{images/start_end_vertices.eps}
+\vskip-5cm\imagem{images/start_end_vertices_a.eps}\vskip5cm
 
 Por fim, os dois últimos tipos de vértice são o de junção e
 separação. Um vértice de junção tem ambos os seus vizinhos à esquerda,
