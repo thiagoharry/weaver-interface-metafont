@@ -12566,7 +12566,9 @@ To identify primary expressions, first we can treat the simplest cases
 (the expression have a single token) and then we deal with the more
 complex cases. The rules that allow us to identify the types are:
 
-1) A variable is an expression with the variable type.
+1) A variable is an expression with the variable type. Only some
+special variables do not have a type encoded because they are
+temporary variables and they are handled differently.
 
 2) The expression is boolean if it is the single
  token \monoespaco{true} or \monoespaco{false}. Or if it begins
@@ -12621,8 +12623,19 @@ int get_primary_expression_type(struct metafont *mf, struct context *cx,
     if(begin_expr -> type == TYPE_SYMBOLIC){ // Case 1
       struct variable *var = (struct variable *)
                                ((struct symbolic_token *) begin_expr) -> var;
-      if(var == NULL)
+      if(var == NULL){
+        if(!strcmp(((struct symbolic_token *) begin_expr) -> value, "w") ||
+           !strcmp(((struct symbolic_token *) begin_expr) -> value, "h") ||
+           !strcmp(((struct symbolic_token *) begin_expr) -> value, "d"))
+          return TYPE_T_NUMERIC;
+        if(!strcmp(((struct symbolic_token *) begin_expr) -> value,
+                   "currentpen"))
+          return TYPE_T_PEN;
+        if(!strcmp(((struct symbolic_token *) begin_expr) -> value,
+                   "currentpicture"))
+          return TYPE_T_PICTURE;
         return -1;
+      }
       else
         return var -> type;
     }
@@ -16596,7 +16609,7 @@ bool drawing_commands(struct metafont *mf, struct context *cx,
     dx = path -> points[(i+1) % (path -> length)].point.x - path -> points[i].point.v_x;
     dy = path -> points[(i+1) % (path -> length)].point.y - path -> points[i].point.v_y;
     distance += (int) ceil(sqrt(dx * dx + dy * dy));
-    distance *= 1.31; // Multiplier obtained by tests to avoid leaps in the drawing
+    distance *= 1.4; // Multiplier obtained by tests to avoid leaps in the drawing
     dt = 1 / ((float) distance);
     for(j = 0; j <= distance; j ++){
       float t = dt * j;

@@ -101,8 +101,8 @@ endchar;
 
 beginchar("&", (0.657+0.02*(weight-1)-0.045*italic)*size*pt,
     (0.68+0.027*(weight-1))*size*pt, 0);
-  pair p0, p1, p2, p3, p4, p5, p6, p7, p8;
-  path p, q;
+  pair p0, p2, p3, p4, p5, p6, p7, p8;
+  path p;
   pickup pensquare xscaled (0.17+0.07*(weight-1)-0.04*italic*(weight-1))*h;
   p0 = lft (w-(0.1w*italic*(weight-1)), 0);
   p2 = ((0.356+0.082*italic+0.00*italic*(weight-1))*w, 0.561*h);
@@ -115,49 +115,7 @@ beginchar("&", (0.657+0.02*(weight-1)-0.045*italic)*size*pt,
   p7 = top ((0.342+0.01*italic*(weight-1)) * w, 0);
   p8 = ((0.8+0.119*italic)*w, (0.539-0.03*italic)*h);
   p8 = italic[p8, lft (w, ypart p8)];
-  p = p2 .. controls
-    (xpart p2 + (0.543760 * (xpart p3 - xpart p2)),
-      ypart p2 + (0.314640 * (ypart p3 - ypart p2)))
-    and
-    (xpart p2 + (1.002670 * (xpart p3 - xpart p2)),
-      ypart p2 + (0.648256 * (ypart p3 - ypart p2)))
-    .. p3 .. controls
-    (xpart p3 + (0.139858 * (xpart p4 - xpart p3)),
-      ypart p3 + (0.719832 * (ypart p4 - ypart p3)))
-    and
-    (xpart p3 + (0.592392 * (xpart p4 - xpart p3)),
-      ypart p3 + (1.028397 * (ypart p4 - ypart p3)))
-    .. p4 .. controls
-    (xpart p4 + (0.700771 * (xpart p5 - xpart p4)),
-      ypart p4 + (0.032380 * (ypart p5 - ypart p4)))
-    and
-    (xpart p4 + (0.924984 * (xpart p5 - xpart p4)),
-      ypart p4 + (0.458009 * (ypart p5 - ypart p4)))
-    .. p5 .. controls
-    (xpart p5 + (0.024487 * (xpart p2 - xpart p5)),
-      ypart p5 + (0.659662 * (ypart p2 - ypart p5)))
-    and
-    (xpart p5 + (0.585291 * (xpart p2 - xpart p5)),
-      ypart p5 + (0.906773 * (ypart p2 - ypart p5)))
-    .. p2 .. controls
-    (xpart p2 + (0.571520 * (xpart p6 - xpart p2)),
-      ypart p2 + (0.137705 * (ypart p6 - ypart p2)))
-    and
-    (xpart p2 + (1.067061 * (xpart p6 - xpart p2)),
-      ypart p2 + (0.585083 * (ypart p6 - ypart p2)))
-    .. p6 .. controls
-    (xpart p6 + (0.119713 * (xpart p7 - xpart p6)),
-      ypart p6 + (0.922794 * (ypart p7 - ypart p6)))
-    and
-    (xpart p6 + (0.452067 * (xpart p7 - xpart p6)),
-      ypart p6 + (0.953419 * (ypart p7 - ypart p6)))
-    .. p7 .. controls
-    (xpart p7 + (0.538469 * (xpart p8 - xpart p7)),
-      ypart p7 + (-0.012226 * (ypart p8 - ypart p7)))
-    and
-    (xpart p7 + (0.814176 * (xpart p8 - xpart p7)),
-      ypart p7 + (0.589757 * (ypart p8 - ypart p7)))
-    .. p8;
+  p = p2..p3..p4..p5..p2..p6..p7..p8;
   draw p;
   pickup pensemicircle scaled (0.13+0.05*(weight-1)-0.01*italic*(weight-1))*1.1*h;
   pickcolor(1, 1, 1, 0);
@@ -375,8 +333,6 @@ endchar;
 beginchar("2", (0.482+0.032*(weight-1)+0.112*italic-0.005*italic*(weight-1))*size*pt,
     0.68*size*pt, 0);
   pair begin, upper, back, basis;
-  path semicircle;
-  pen eraser;
   numeric ang, b;
   ang = 90 - 12 * italic;
   b = ((0.113 + 0.071 * (weight-1)) * h);
@@ -394,15 +350,25 @@ beginchar("2", (0.482+0.032*(weight-1)+0.112*italic-0.005*italic*(weight-1))*siz
   pickup pensquare xscaled ((1/sind ang)*b) rotated ang;
   draw top rt (0, 0) .. top lft (w * (1 - 0.16 * italic), 0);
   % Erasing:
-  semicircle =   (0.5, 0)
-  .. controls (0.5, 0.13261) and (0.44733, 0.2598) ..
-  (0.35356, 0.35356)
-  .. controls (0.2598, 0.44733) and (0.13261, 0.5) ..
-  (0, 0.5);
-  semicircle = semicircle & semicircle rotated 90 -- (0.5, 0) & cycle;
-  eraser = makepen(semicircle);
-  pickup eraser scaled ((0.16+ 0.093 * (weight - 1))  * h) rotated 160;
+  pickup pensemicircle scaled ((0.16+ 0.093 * (weight - 1))  * h) rotated 160;
   erase begin;
+  pickcolor(1, 0, 0, 1);
+  pickup pencircle scaled 10;
+  pair r1, r2, r3, r4, r5, r6;
+  pen eraser;
+  r1 = (1, 0) rotated -20 scaled ((0.131 + 0.093 * (weight-1)) * 0.5 * h) shifted begin;
+  r2 = (0, -1+(0.25*(weight-1))) scaled ((0.131 + 0.093 * (weight-1)) * 0.5 * h) shifted upper;
+  r3 = (-1, 0) scaled ((0.131 + 0.093 * (weight-1)) * 0.5 * h) shifted back;
+  r5 = (0, 1.2) scaled ((0.131 + 0.093 * (weight-1)) * 0.5 * h) shifted basis;
+  r4 = 0.5[r3, r5] + (0.12*w, 0);
+  r6 = 0.5[r4, r5];
+  if weight-1 > 0.5:
+    eraser = makepen(r1..r2..r3..r4{-1, -1.1}..r6--r5..cycle);
+    pickup eraser;
+    erase (0,0);
+    %pickup pencircle scaled 5;
+    %draw r1..r2..r3..r4{-1, -1.1}..r6--r5..cycle;
+  fi
 endchar;
 
 beginchar("3", (0.475+0.047*(weight-1)+0.035*italic+0.017*italic*(weight-1)) * size * pt, 0.68*size*pt, 0);

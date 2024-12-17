@@ -2426,7 +2426,7 @@ void test_renderchar_command(void){
   if(!ret)
     _Wprint_metafont_error(mf);
   assert("Testing 'renderchar' command", ret &&
-	 ALMOST_EQUAL(numeric_w -> value, 6132.117188));
+	 ALMOST_EQUAL(numeric_w -> value, 6132.6831));
   ret = _Wrender_glyph(mf, "B", NULL, &glyph, &width, &height,
 		       &depth, &italcorr, &kerning);
   if(!ret)

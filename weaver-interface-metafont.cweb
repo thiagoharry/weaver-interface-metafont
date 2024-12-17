@@ -12791,7 +12791,9 @@ casos mais simples (a expressão é composta por um único token) e
 depois lidar com os casos mais complexos. As regras que nos permitem
 identificar são:
 
-1) Uma variável é uma expressão com o tipo da variável.
+1) Uma variável é uma expressão com o tipo da variável. Precisamos
+apenas tratar de forma diferente apenas algumas variáveis especiais
+cuja existência é temporária.
 
 2) São expressões booleanas as que tem como único
 token \monoespaco{true} ou \monoespaco{false}. Ou que começam
@@ -12845,8 +12847,19 @@ int get_primary_expression_type(struct metafont *mf, struct context *cx,
     if(begin_expr -> type == TYPE_SYMBOLIC){ // Caso 1
       struct variable *var = (struct variable *)
                                ((struct symbolic_token *) begin_expr) -> var;
-      if(var == NULL)
+      if(var == NULL){
+        if(!strcmp(((struct symbolic_token *) begin_expr) -> value, "w") ||
+           !strcmp(((struct symbolic_token *) begin_expr) -> value, "h") ||
+           !strcmp(((struct symbolic_token *) begin_expr) -> value, "d"))
+          return TYPE_T_NUMERIC;
+        if(!strcmp(((struct symbolic_token *) begin_expr) -> value,
+                   "currentpen"))
+          return TYPE_T_PEN;
+        if(!strcmp(((struct symbolic_token *) begin_expr) -> value,
+                   "currentpicture"))
+          return TYPE_T_PICTURE;
         return -1;
+      }
       else
         return var -> type;
     }
@@ -16890,7 +16903,7 @@ bool drawing_commands(struct metafont *mf, struct context *cx,
     dx = path -> points[(i+1) % (path -> length)].point.x - path -> points[i].point.v_x;
     dy = path -> points[(i+1) % (path -> length)].point.y - path -> points[i].point.v_y;
     distance +=  (int) ceil(sqrt(dx * dx + dy * dy));
-    distance *= 1.31; // Multiplicador obtido experimentalmente para evitar saltos
+    distance *= 1.4; // Multiplicador obtido experimentalmente para evitar saltos
     dt = 1 / ((float) distance);
     for(j = 0; j <= distance; j ++){
       float t = dt * j;
