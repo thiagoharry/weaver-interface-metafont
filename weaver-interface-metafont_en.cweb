@@ -43,280 +43,280 @@
 
 \twelve
 \vskip12pt
-\titulo{WEAVEFONT: A Description Language for Typographical Fonts}
+\titulo{WeaveFont: A Description Language for Typographical Fonts}
 \vskip12pt
 \autor{Thiago Leucz Astrizi}
 \vskip6pt
 \email{thiago@@bitbitbit.com.br}
 \vskip6pt
 
-\abstract{This article contains an implementation of  WEAVEFONT, a language
+\abstract{This article contains an implementation of  WeaveFont, a language
  created to represent typographical fonts, vector illustrations and
  animations. The language is strongly based on METAFONT, a description
  language created by Donald Knuth in 1984. The syntax is very similar
- for both languages, but WEAVEFONT was created to run and produce images
+ for both languages, but WeaveFont was created to run and produce images
  in real time using OpenGL. Therefore, changes were made to make the language
- faster for this goal. Contrary to METAFONT, WEAVEFONT do not support macros
+ faster for this goal. Contrary to METAFONT, WeaveFont do not support macros
  and is an imperative language. Several useful features from METAFONT that
- were implemented with macros, in WEAVEFONT are a direct part of the language.}
+ were implemented with macros, in WeaveFont are a direct part of the language.}
 
 \secao{Index}
 
 \def\indice#1{\leaders\hbox{.}\hfill #1}
 
-1. Introduction \indice{3}
+1. Introduction \indice{4}
 
-1.1. Literate Programming \indice{4}
+1.1. Literate Programming \indice{6}
 
-2. General Auxiliary Code \indice{6}
+2. General Auxiliary Code \indice{7}
 
-2.1. Linear Algebra Code \indice{6}
+2.1. Linear Algebra Code \indice{7}
 
-2.1.1. Solving Linear System Equations \indice{9}
+2.1.1. Solving Linear System Equations \indice{10}
 
-2.2. Mutexes and Critical Sections \indice{11}
+2.2. Mutexes and Critical Sections \indice{12}
 
-2.3 Dealing with Errors \indice{XX}
+2.3 Dealing with Errors \indice{13}
 
-3. Initialization and Finalization \indice{12}
+3. Initialization and Finalization \indice{14}
 
-4. Lexer \indice{13}
+4. Lexer \indice{15}
 
-4.1. Token Types \indice{13}
+4.1. Token Types \indice{15}
 
-4.2. Lexical Analysis \indice{15}
+4.2. Lexical Analysis \indice{17}
 
-5. WEAVEFONT Programs \indice{24}
+5. WeaveFont Programs \indice{32}
 
-5.1. Running Programs \indice{24}
+5.1. Running Programs \indice{32}
 
-5.2. Splitting List of Statements in Individual Statements \indice{29}
+5.2. Splitting List of Statements in Individual Statements \indice{34}
 
-6. A Compound Statement: The Compound Block \indice{31}
+6. A Compound Statement: The Compound Block \indice{36}
 
-6.1. Supporting Compound Statements \indice{31}
+6.1. Supporting Compound Statements \indice{36}
 
-6.2. The Statement \monoespaco{begingroup}$\ldots$\monoespaco{endgroup} \indice{36}
+6.2. The Statement \monoespaco{begingroup}$\ldots$\monoespaco{endgroup} \indice{39}
 
-7. Variable Declarations \indice{37}
+7. Variable Declarations \indice{40}
 
-7.1. Numeric Variables \indice{42}
+7.1. Numeric Variables \indice{46}
 
-7.2. Pair Variables \indice{45}
+7.2. Pair Variables \indice{49}
 
-7.3. Transform Variables \indice{45}
+7.3. Transform Variables \indice{49}
 
-7.4. Path Variables \indice{47}
+7.4. Path Variables \indice{50}
 
-7.4.1. Removing Recursion from Path Variables \indice{49}
+7.4.1. Removing Recursion from Path Variables \indice{53}
 
-7.4.2. Tension and Direction Specifiers \indice{51}
+7.4.2. Tension and Direction Specifiers \indice{55}
 
-7.4.3. Deducing Direction Specifiers \indice{55}
+7.4.3. Deducing Direction Specifiers \indice{60}
 
-7.4.4. Normalizing Paths \indice{64}
+7.4.4. Normalizing Paths \indice{69}
 
-7.5. Pen Variables \indice{66}
+7.5. Pen Variables \indice{71}
 
-7.6. Picture Variables \indice{XX}
+7.6. Picture Variables \indice{75}
 
-7.7. Boolean Variables \indice{XX}
+7.7. Boolean Variables \indice{76}
 
-8. Assignments \indice{XX}
+8. Assignments \indice{76}
 
-8.1. Numeric Assignments and Expressions \indice{XX}
+8.1. Numeric Assignments and Expressions \indice{78}
 
-8.1.1. Sum and Subtraction: Normal and Pythagorean \indice{XX}
+8.1.1. Sum and Subtraction: Normal and Pythagorean \indice{79}
 
-8.1.2. Multiplication and Division \indice{XX}
+8.1.2. Multiplication and Division \indice{83}
 
 8.1.3. Modulus, Sine, Cosine, Exponentials, Floor and
-  Random Uniform Values \indice{XX}
+  Random Uniform Values \indice{85}
 
-8.1.4. Isolated Numbers and Random Normal Values \indice{XX}
+8.1.4. Isolated Numbers and Random Normal Values \indice{89}
 
-8.2. Pair Assignments and Expressions \indice{XX}
+8.2. Pair Assignments and Expressions \indice{92}
 
-8.2.1. Sum and Subtraction \indice{XX}
+8.2.1. Sum and Subtraction \indice{93}
 
-8.2.2. Transformers and Scalar Multiplication and Division \indice{XX}
+8.2.2. Transformers and Scalar Multiplication and Division \indice{94}
 
-8.2.3. Pair Intermediary Values, Literals and Variables \indice{XX}
+8.2.3. Pair Intermediary Values, Literals and Variables \indice{99}
 
-8.2.4. Pairs in Numeric Expressions \indice{XX}
+8.2.4. Pairs in Numeric Expressions \indice{103}
 
-8.3. Transform Assignments and Expressions \indice{XX}
+8.3. Transform Assignments and Expressions \indice{105}
 
-8.3.1. Transforming Transformers \indice{XX}
+8.3.1. Transforming Transformers \indice{105}
 
-8.3.2 Transform Tertiary Expressions: Literals and Variables \indice{XX}
+8.3.2 Transform Tertiary Expressions: Literals and Variables \indice{109}
 
-8.3.3. Transforms in Numeric Expressions \indice{XX}
+8.3.3. Transforms in Numeric Expressions \indice{112}
 
-8.3.4. Transforms in Pair Expressions \indice{XX}
+8.3.4. Transforms in Pair Expressions \indice{113}
 
-8.4. Path Assignments and Expressions \indice{XX}
+8.4. Path Assignments and Expressions \indice{113}
 
-8.4.1. Joining Paths \indice{XX}
+8.4.1. Joining Paths \indice{114}
 
-8.4.2. Tertiary Path Expressions \indice{XX}
+8.4.2. Tertiary Path Expressions \indice{133}
 
-8.4.3. Secondary Path Expressions: Transformers \indice{XX}
+8.4.3. Secondary Path Expressions: Transformers \indice{134}
 
-8.4.4. Primary Path Expressions: Variables, Reverses and Subpath \indice{XX}
+8.4.4. Primary Path Expressions: Variables, Reverses and Subpath \indice{140}
 
-8.4.5. Path in Numeric Expressions \indice{XX}
+8.4.5. Path in Numeric Expressions \indice{146}
 
-8.4.6. Path in Pair Expressions \indice{XX}
+8.4.6. Path in Pair Expressions \indice{147}
 
-8.5. Pen Assignments and Expressions \indice{XX}
+8.5. Pen Assignments and Expressions \indice{150}
 
-8.5.1. Pen Tertiary Expression \indice{XX}
+8.5.1. Pen Tertiary Expression \indice{151}
 
-8.5.2. Pen Transformers \indice{XX}
+8.5.2. Pen Transformers \indice{151}
 
-8.5.3. Variables, Null Pen, Circular Pen and Arbitrary Pen \indice{XX}
+8.5.3. Variables, Null Pen, Circular Pen and Arbitrary Pen \indice{155}
 
-8.5.4. Pens in Path Expressions \indice{XX}
+8.5.4. Pens in Path Expressions \indice{160}
 
-8.6. Picture Assignments and Expressions \indice{XX}
+8.6. Picture Assignments and Expressions \indice{164}
 
-8.6.1. Picture Tertiary Expressions: Sum and Subtraction \indice{XX}
+8.6.1. Picture Tertiary Expressions: Sum and Subtraction \indice{170}
 
-8.6.2. Picture Secondary Expressions: Transformers \indice{XX}
+8.6.2. Picture Secondary Expressions: Transformers \indice{173}
 
-8.6.3. Inverters, Identity and Empty Images \indice{XX}
+8.6.3. Inverters, Identity and Empty Images \indice{178}
 
-8.6.4. Pictures in Numeric Expressions \indice{XX}
+8.6.4. Pictures in Numeric Expressions \indice{184}
 
-8.7. Boolean Assignments and Expressions \indice{XX}
+8.7. Boolean Assignments and Expressions \indice{187}
 
-8.7.1. Comparisons \indice{XX}
+8.7.1. Comparisons \indice{187}
 
-8.7.2. Operation OR \indice{XX}
+8.7.2. Operation OR \indice{192}
 
-8.7.3. Operator AND \indice{XX}
+8.7.3. Operator AND \indice{193}
 
-8.7.4. Boolean Literals, Variables, NOT and Simple Predicates \indice{XX}
+8.7.4. Boolean Literals, Variables, NOT and Simple Predicates \indice{194}
 
-8.8. Identifying Expression Types \indice{XX}
+8.8. Identifying Expression Types \indice{196}
 
-9. Compound Statements: Conditional Statement \indice{XX}
+9. Compound Statements: Conditional Statement \indice{201}
 
-10. Compound Statements: Iterations \indice{XX}
+10. Compound Statements: Iterations \indice{204}
 
-11. The \monoespaco{pickup} Command \indice{XX}
+11. The \monoespaco{pickup} Command \indice{208}
 
-11.1. Extremity Points in Pens \indice{XX}
+11.1. Extremity Points in Pens \indice{209}
 
-11.2. Triangulation \indice{XX}
+11.2. Triangulation \indice{214}
 
-11.3. Reading the \monoespaco{pickup} Command\indice{XX}
+11.3. Reading the \monoespaco{pickup} Command\indice{250}
 
 11.4. Operators \monoespaco{bot}, \monoespaco{top}, \monoespaco{lft},
-\monoespaco{rt}\indice{XX}
+\monoespaco{rt}\indice{255}
 
-12. The \monoespaco{pickcolor} Command \indice{XX}
+12. The \monoespaco{pickcolor} Command \indice{256}
 
-13. The \monoespaco{monowidth} Command \indice{XX}
+13. The \monoespaco{monowidth} Command \indice{258}
 
-14. The \monoespaco{draw} and \monoespaco{erase} Command\indice{XX}
+14. The \monoespaco{draw} and \monoespaco{erase} Command\indice{258}
 
-14.1. Preparing Framebuffer \indice{XX}
+14.1. Preparing Framebuffer \indice{259}
 
-14.2. Drawing Shaders\indice{XX}
+14.2. Drawing Shaders\indice{260}
 
-14.3. Drawing Paths \indice{XX}
+14.3. Drawing Paths \indice{261}
 
-15. Compound Statement: Character Definition \indice{XX}
+15. Compound Statement: Character Definition \indice{265}
 
-15.1 Unicode and UTF-8 \indice{XX}
+15.1 Unicode and UTF-8 \indice{265}
 
-16. API Functions to Use the Fonts \indice{XX}
+16. API Functions to Use the Fonts \indice{274}
 
-17. The \monoespaco{shipit} Command \indice{XX}
+17. The \monoespaco{shipit} Command \indice{277}
 
-18. The \monoespaco{renderchar} Command \indice{XX}
+18. The \monoespaco{renderchar} Command \indice{279}
 
-19. Integrating WeaveFont and Weaver Game Engine \indice{XX}
+19. Integrating WeaveFont and Weaver Game Engine \indice{284}
 
-References \indice{XX}
+Appendix A: Handling Errors \indice{286}
 
-Appendix A: Handling Errors \indice{XX}
+A.1. ERROR\_DISCONTINUOUS\_PATH \indice{291}
 
-A.1. ERROR\_DISCONTINUOUS\_PATH \indice{289}
+A.2. ERROR\_DIVISION\_BY\_ZERO \indice{291}
 
-A.2. ERROR\_DIVISION\_BY\_ZERO \indice{290}
+A.3. ERROR\_DUPLICATE\_GLYPH \indice{292}
 
-A.3. ERROR\_DUPLICATE\_GLYPH \indice{290}
+A.4. ERROR\_EMPTY\_DELIMITER \indice{292}
 
-A.4. ERROR\_EMPTY\_DELIMITER \indice{291}
+A.5. ERROR\_EXPECTED\_FOUND \indice{293}
 
-A.5. ERROR\_EXPECTED\_FOUND \indice{291}
+A.6. ERROR\_FAILED\_OPENING\_FILE \indice{293}
 
-A.6. ERROR\_FAILED\_OPENING\_FILE \indice{292}
+A.7. ERROR\_INCOMPLETE\_SOURCE \indice{294}
 
-A.7. ERROR\_INCOMPLETE\_SOURCE \indice{292}
+A.8. ERROR\_INCOMPLETE\_STATEMENT \indice{294}
 
-A.8. ERROR\_INCOMPLETE\_STATEMENT \indice{293}
+A.9. ERROR\_INVALID\_CHAR \indice{295}
 
-A.9. ERROR\_INVALID\_CHAR \indice{293}
+A.10. ERROR\_INVALID\_COMPARISON \indice{296}
 
-A.10. ERROR\_INVALID\_COMPARISON \indice{295}
+A.11. ERROR\_INVALID\_DIMENSION\_GLYPH \indice{297}
 
-A.11. ERROR\_INVALID\_DIMENSION\_GLYPH \indice{295}
+A.12. ERROR\_INVALID\_NAME \indice{297}
 
-A.12. ERROR\_INVALID\_NAME \indice{296}
+A.13. ERROR\_INVALID\_TENSION \indice{298}
 
-A.13. ERROR\_INVALID\_TENSION \indice{296}
+A.14. ERROR\_MISSING\_EXPRESSION \indice{299}
 
-A.14. ERROR\_MISSING\_EXPRESSION \indice{297}
+A.15. ERROR\_MISSING\_TOKEN \indice{299}
 
-A.15. ERROR\_MISSING\_TOKEN \indice{298}
+A.16. ERROR\_NEGATIVE\_LOGARITHM \indice{300}
 
-A.16. ERROR\_NEGATIVE\_LOGARITHM \indice{298}
+A.17. ERROR\_NEGATIVE\_SQUARE\_ROOT \indice{300}
 
-A.17. ERROR\_NEGATIVE\_SQUARE\_ROOT \indice{298}
+A.18. ERROR\_NESTED\_BEGINCHAR \indice{300}
 
-A.18. ERROR\_NESTED\_BEGINCHAR \indice{299}
+A.19. ERROR\_NO\_MEMORY \indice{301}
 
-A.19. ERROR\_NO\_MEMORY \indice{299}
+A.20. ERROR\_NO\_PICKUP\_PEN \indice{301}
 
-A.20. ERROR\_NO\_PICKUP\_PEN \indice{300}
+A.21. ERROR\_NONCYCLICAL\_PEN \indice{302}
 
-A.21. ERROR\_NONCYCLICAL\_PEN \indice{300}
+A.22. ERROR\_NULL\_VECTOR\_ANGLE \indice{302}
 
-A.22. ERROR\_NULL\_VECTOR\_ANGLE \indice{301}
+A.23. ERROR\_OPENGL\_FRAMEBUFFER \indice{303}
 
-A.23. ERROR\_OPENGL\_FRAMEBUFFER \indice{301}
+A.24. ERROR\_RECURSIVE\_RENDERCHAR \indice{303}
 
-A.24. ERROR\_RECURSIVE\_RENDERCHAR \indice{302}
+A.25. ERROR\_UNBALANCED\_ENDING\_TOKEN \indice{304}
 
-A.25. ERROR\_UNBALANCED\_ENDING\_TOKEN \indice{303}
+A.26. ERROR\_UNCLOSED\_DELIMITER \indice{304}
 
-A.26. ERROR\_UNCLOSED\_DELIMITER \indice{303}
+A.27. ERROR\_UNCLOSED\_STRING \indice{305}
 
-A.27. ERROR\_UNCLOSED\_STRING \indice{303}
+A.28. ERROR\_UNDECLARED\_VARIABLE \indice{305}
 
-A.28. ERROR\_UNDECLARED\_VARIABLE \indice{304}
+A.29. ERROR\_UNEXPECTED\_TOKEN \indice{306}
 
-A.29. ERROR\_UNEXPECTED\_TOKEN \indice{304}
+A.30. ERROR\_UNINITIALIZED\_VARIABLE \indice{306}
 
-A.30. ERROR\_UNINITIALIZED\_VARIABLE \indice{305}
+A.31. ERROR\_UNKNOWN\_GLYPH\_DEPENDENCY \indice{307}
 
-A.31. ERROR\_UNKNOWN\_GLYPH\_DEPENDENCY \indice{305}
+A.32. ERROR\_UNKNOWN\_EXPRESSION \indice{307}
 
-A.32. ERROR\_UNKNOWN\_EXPRESSION \indice{306}
+A.33. ERROR\_UNKNOWN\_STATEMENT \indice{308}
 
-A.33. ERROR\_UNKNOWN\_STATEMENT \indice{306}
+A.34. ERROR\_UNOPENED\_DELIMITER \indice{308}
 
-A.34. ERROR\_UNOPENED\_DELIMITER \indice{307}
+A.35. ERROR\_UNSUPORTED\_LENGTH\_OPERAND \indice{308}
 
-A.35. ERROR\_UNSUPORTED\_LENGTH\_OPERAND \indice{307}
+A.36. ERROR\_WRONG\_NUMBER\_OF\_PARAMETERS \indice{309}
 
-A.36. ERROR\_WRONG\_NUMBER\_OF\_PARAMETERS \indice{308}
+A.37. ERROR\_WRONG\_VARIABLE\_TYPE \indice{310}
 
-A.37. ERROR\_WRONG\_VARIABLE\_TYPE \indice{308}
+References \indice{310}
 
 \secao{1. Introduction}
 
@@ -331,13 +331,13 @@ our system, which should not be confused with the METAFONT language.
 
 The original specification for the METAFONT language can be found in
 [KNUTH, 1989]. Based on this language, we will define here the
-language WEAVEFONT, which will have similar goals, except that it will
+language WeaveFont, which will have similar goals, except that it will
 be focused on defining typographical fonts that could be interpreted
 and rendered on the fly.
 
 The source-code defined in this article can be used standalone, or
 together with more files from Weaver Geme Engine, as the language
-WEAVEFONT is a part of that bigger project. When we run the source
+WeaveFont is a part of that bigger project. When we run the source
 code from inside the game engine, then we have the
 macro \monoespaco{WEAVER\_ENGINE} defined. In this case, we must define
 the following function:
@@ -345,18 +345,18 @@ the following function:
 @<Function Declaration (metafont.h)@>=
 #if defined(WEAVER_ENGINE)
 void _Wmetafont_loading(void *(*permanent_alloc)(size_t),
-		      void (*permanent_free)(void *),
-		      void *(*temporary_alloc)(size_t),
-		      void (*temporary_free)(void *),
-		      void (*before_loading_interface)(void),
-		      void (*after_loading_interface)(void),
-		      char *source_filename,
+                      void (*permanent_free)(void *),
+                      void *(*temporary_alloc)(size_t),
+                      void (*temporary_free)(void *),
+                      void (*before_loading_interface)(void),
+                      void (*after_loading_interface)(void),
+                      char *source_filename,
                       struct user_interface *target);
 #endif
 @
 
 This function will read a file (\monoespaco{source\_filename}) and
-create after interpret its WEAVEFONT code a new vector image or a
+create after interpret its WeaveFont code a new vector image or a
 vector animation.
 
 And we will also need the header for Weaver user interfaces:
@@ -408,7 +408,7 @@ finalize it:
 void _Wfinish_weavefont(void);
 @
 
-If an error was found in a WEAVEFONT source code that defines a
+If an error was found in a WeaveFont source code that defines a
 meta-font, then the following exported function could be used to print
 a diagnostic message in the screen:
 
@@ -451,7 +451,6 @@ extern "C" {
 #include <sys/param.h> // Needed on BSD, but does not exist on Windows
 #endif
 @<Include General Headers (metafont.h)@>
-//@<General Macros (metafont.h)@>
 @<General Declarations (metafont.h)@>
 @<Data Structures (metafont.h)@>
 @<Function Declaration (metafont.h)@>
@@ -1022,7 +1021,7 @@ bool _Winit_weavefont(void *(*t_alloc)(size_t),
   permanent_free = p_free;
   random_func = random;
   dpi = pixel_density;
-  @<WEAVEFONT Initialization@>
+  @<WeaveFont Initialization@>
   return true;
 }
 @
@@ -1033,7 +1032,7 @@ the finalization function:
 
 @<API Functions Definition (metafont.c)@>=
 void _Wfinish_weavefont(void){
-  @<WEAVEFONT Finalization@>
+  @<WeaveFont Finalization@>
 }
 @
 
@@ -1063,7 +1062,7 @@ read the source code in a file and will output a list of tokens, where
 tokens are the most basic unit in the language. A token is like a
 word: the most basic element in a language.
 
-WEAVEFONT recognizes the following types of tokens: numeric, strings,
+WeaveFont recognizes the following types of tokens: numeric, strings,
 symbolic variable, symbolic loop begin, symbolic loop end and symbolic
 generic. The symbolic generic on practice is subdivided in several
 other sub types, one for each reserved word in the language. Here is
@@ -1075,7 +1074,7 @@ enum { // Token types
   TYPE_NUMERIC = 1, TYPE_STRING, TYPE_SYMBOLIC, TYPE_FOR, TYPE_ENDFOR,
   // The basic types (numeric, string, variable, loop begin and end)
   //  are above. Others will be placed below:
-  @<WEAVEFONT: Symbolic Token Definition@>
+  @<WeaveFont: Symbolic Token Definition@>
   // And the last one that shouldn't be used, except to represent errors:
   TYPE_INVALID_TOKEN
 };
@@ -1191,7 +1190,7 @@ struct generic_token{
 
 We just need to define a subtype for each of them:
 
-@<WEAVEFONT: Symbolic Token Definition@>=
+@<WeaveFont: Symbolic Token Definition@>=
 TYPE_OPEN_PARENTHESIS,  // '('
 TYPE_CLOSE_PARENTHESIS, // ')'
 TYPE_COMMA,             // ','
@@ -1212,7 +1211,7 @@ many times, each one to render a new character. Because of this, we
 avoid to store in them information that is not needed. For example,
 their line numbers in the source code is useful for debugging. Font
 designers and image creators would use this information, but most
-casual users never would debug the WEAVEFONT code that they run,
+casual users never would debug the WeaveFont code that they run,
 Because of this, we store this information only if we are in debugging
 mode.
 
@@ -2114,11 +2113,11 @@ if(buffer[0] != '\0'){
 }
 @
 
-\secao{5. WEAVEFONT Programs}
+\secao{5. WeaveFont Programs}
 
 \subsecao{5.1. Running Programs}
 
-To evaluate a WEAVEFONT program, we need two additional
+To evaluate a WeaveFont program, we need two additional
 structures. The first one, which we will call \monoespaco{struct
 metafont} will contain all the final information extracted from the
 typographical meta-font and that will store all needed information to
@@ -2128,14 +2127,14 @@ parser and represents information that we need to know to interpret
 correctly the token list. This second structure can be discarded after
 we read all the tokens from our font.
 
-In short, for each file with WEAVEFONT source-code, we will produce a
+In short, for each file with WeaveFont source-code, we will produce a
 single \monoespaco{struct metafont} with data about the font. And each
 time we execute code from this file (when we read the file for the
 first time, and each time we render a new character), we create a
 new \monoespaco{struct context}, which will be discarded after the
 code execution.
 
-The first thing that our parser needs to know is that a WEAVEFONT
+The first thing that our parser needs to know is that a WeaveFont
 program is a list (possibly empty) of statements:
 
 \alinhaverbatim
@@ -2143,7 +2142,7 @@ program is a list (possibly empty) of statements:
 \alinhanormal
 
 In the METAFONT language, it was necessary to indicate the end of
-statements with a final \monoespaco{end} statement. In WEAVEFONT
+statements with a final \monoespaco{end} statement. In WeaveFont
 language this is not necessary becaus e we will assume that all code
 is in a single file. Therefore, the end of file is the end of
 statements.
@@ -2433,7 +2432,7 @@ correct.
 To read correctly compound statements, we need to take into account
 their delimiting tokens, which we define below:
 
-@<WEAVEFONT: Symbolic Token Definition@>+=
+@<WeaveFont: Symbolic Token Definition@>+=
 TYPE_BEGINGROUP,            // Symbolic token 'begingroup'
 TYPE_ENDGROUP,              // Symbolic token 'endgroup'
 TYPE_IF,                    // Symbolic token 'if'
@@ -2701,7 +2700,7 @@ in the language. For example, ``\monoespaco{tag}'' is a tag, but
 To interpret a declaration, we will introduce the following special
 tokens:
 
-@<WEAVEFONT: Symbolic Token Definition@>+=
+@<WeaveFont: Symbolic Token Definition@>+=
 TYPE_T_BOOLEAN,               // Symbolic token 'boolean'
 TYPE_T_PATH,                  // Symbolic token 'path'
 TYPE_T_PEN,                   // Symbolic token 'pen'
@@ -2872,8 +2871,8 @@ else if(begin -> type >= TYPE_T_BOOLEAN && begin -> type <= TYPE_T_NUMERIC){
        !strcmp(variable -> value, "currentpen") ||
        !strcmp(variable -> value, "currentpicture")){
       RAISE_ERROR_INVALID_NAME(mf, cx, OPTIONAL(variable -> line),
-			      (struct generic_token *) variable,
-			      variable -> type);
+                              (struct generic_token *) variable,
+                              variable -> type);
       return false;
     }
     @<Insert Declared Variable@>
@@ -3369,7 +3368,7 @@ else if(!strcmp(buffer, "identity"))
 
 \subsecao{7.4. Path Variables}
 
-Path variables are the most complex variables in the WEAVEFONT
+Path variables are the most complex variables in the WeaveFont
 language. They store a sequence of curves, where the next curve begins
 in the same point where the last ended. Each curve can be represented
 in several different formats. But all them are cubic Beziér
@@ -3551,7 +3550,7 @@ void path_recursive_free(void (*free_func)(void *),
 
 \subsubsecao{7.4.1. Removing Recursion from Path Variables}
 
-Pathh variables are the most complex variables in WEAVEFONT
+Pathh variables are the most complex variables in WeaveFont
 language. They can be stored in memory in several different
 format. However, some of these formats are provisional and has
 undesirable properties. For example, while we can represent a path
@@ -5165,7 +5164,7 @@ we are dealing with an assignment.
 In an assignment statement, the tokens ``\monoespaco{=}'' and
 ``\monoespaco{:=}'' are equivalent:
 
-@<WEAVEFONT: Symbolic Token Definition@>+=
+@<WeaveFont: Symbolic Token Definition@>+=
 TYPE_EQUAL,            // Symbolic token '='
 TYPE_ASSIGNMENT,       // Symbolic token ':='
 @
@@ -5331,7 +5330,7 @@ operations will be done only after all other mathematical operations.
 
 We define below the tokens for the operators:
 
-@<WEAVEFONT: Symbolic Token Definition@>+=
+@<WeaveFont: Symbolic Token Definition@>+=
 TYPE_SUM,                   // O token simbólico '+'
 TYPE_SUBTRACT,              // O token simbólico '-'
 TYPE_PYTHAGOREAN_SUM,       // O token simbólico '++'
@@ -5344,7 +5343,7 @@ expression requires taking into account delimiters like ``['',
 already defined when we introduced the lexer. Because of this, we add
 new token types for the delimiters that still were not defined:
 
-@<WEAVEFONT: Symbolic Token Definition@>+=
+@<WeaveFont: Symbolic Token Definition@>+=
 TYPE_OPEN_BRACKETS,         // O token simbólico '['
 TYPE_CLOSE_BRACKETS,        // O token simbólico ']'
 TYPE_OPEN_BRACES,           // O token simbólico '{'
@@ -5569,7 +5568,7 @@ multiplication and division.
 
 Let's add these operators as reserved tokens and define their types:
 
-@<WEAVEFONT: Symbolic Token Definition@>+=
+@<WeaveFont: Symbolic Token Definition@>+=
 TYPE_MULTIPLICATION,        // Symbolic token '*'
 TYPE_DIVISION,              // Symbolic token '/'
 @
@@ -5690,7 +5689,7 @@ kind of primary expression, it could mean different things.
 
 All these new operators must be added to the token list:
 
-@<WEAVEFONT: Symbolic Token Definition@>+=
+@<WeaveFont: Symbolic Token Definition@>+=
 TYPE_LENGTH,         // Symbolic token 'length'
 TYPE_SQRT,           // Symbolic token 'sqrt'
 TYPE_SIND,           // Symbolic token 'sind'
@@ -5974,7 +5973,7 @@ The final rules for numeric expressions are:
 
 The only new token in this part is \monoespaco{normaldeviate}:
 
-@<WEAVEFONT: Symbolic Token Definition@>+=
+@<WeaveFont: Symbolic Token Definition@>+=
 TYPE_NORMALDEVIATE,   // O token simbólico 'normaldeviate'
 @
 
@@ -6302,7 +6301,7 @@ existing transformer in Subsection 8.3.1.
 For now let's add the seven new keywords representing known
 transformers:
 
-@<WEAVEFONT: Symbolic Token Definition@>+=
+@<WeaveFont: Symbolic Token Definition@>+=
 TYPE_ROTATED,  // Symbolic token 'rotated'
 TYPE_SCALED,   // Symbolic token 'scaled'
 TYPE_SHIFTED,  // Symbolic token 'shifted'
@@ -6854,7 +6853,7 @@ numeric primary operators involving pairs:
 
 This require defining the following three new token types:
 
-@<WEAVEFONT: Symbolic Token Definition@>+=
+@<WeaveFont: Symbolic Token Definition@>+=
 TYPE_XPART,  // Symbolic token 'xpart'
 TYPE_YPART,  // Symbolic token 'ypart'
 TYPE_ANGLE,  // Symbolic token 'angle'
@@ -6994,7 +6993,7 @@ We have here a new type of token, representing the last type of
 transformer that we ommited in the last subsection about pair
 expressions:
 
-@<WEAVEFONT: Symbolic Token Definition@>+=
+@<WeaveFont: Symbolic Token Definition@>+=
 TYPE_TRANSFORMED,  // Symbolic token 'transformed'
 @
 
@@ -7387,7 +7386,7 @@ As \monoespaco{xpart} and \monoespaco{ypart} already were defined when
 we were defining pair expressions, we just need to define the next
 four new tokens for the new operators:
 
-@<WEAVEFONT: Symbolic Token Definition@>+=
+@<WeaveFont: Symbolic Token Definition@>+=
 TYPE_XXPART,  // Symbolic token xxpart'
 TYPE_XYPART,  // Symbolic token xypart'
 TYPE_YXPART,  // Symbolic token yxpart'
@@ -7541,7 +7540,7 @@ The grammar for path expressions begin with:
 
 This requires the register of these new types of tokens:
 
-@<WEAVEFONT: Symbolic Token Definition@>+=
+@<WeaveFont: Symbolic Token Definition@>+=
 TYPE_CYCLE,          // Symbolic token 'cycle'
 TYPE_AMPERSAND,      // Symbolic token '&'
 TYPE_JOIN,           // Symbolic token '..'
@@ -8336,7 +8335,7 @@ if(begin_j == end_j && begin_j -> type == TYPE_AMPERSAND){
   if(hypot(dif_x, dif_y) > 0.00002){
     RAISE_ERROR_DISCONTINUOUS_PATH(mf, cx, OPTIONAL(begin_j -> line),
                                    z1_point -> prov.x, z1_point -> prov.y,
-				   z2_point -> prov.x, z2_point -> prov.y);
+                                   z2_point -> prov.x, z2_point -> prov.y);
     return false;
   }
   // This will overwrite the first extremity point
@@ -8525,15 +8524,15 @@ else if(begin_j -> type == TYPE_JOIN && begin_j != end_j &&
   if(z1_point -> prov.tension1 < 0.75){
     RAISE_ERROR_INVALID_TENSION(mf, cx, OPTIONAL(begin_t0 -> line),
                                 z1_point -> prov.tension1, 0,
-				z1_point -> prov.x, z1_point -> prov.y,
-				z2_point -> prov.x, z2_point -> prov.y);
+                                z1_point -> prov.x, z1_point -> prov.y,
+                                z2_point -> prov.x, z2_point -> prov.y);
     return false;
   }
   if(z1_point -> prov.tension2 < 0.75){
     RAISE_ERROR_INVALID_TENSION(mf, cx, OPTIONAL(begin_t0 -> line),
                                 z1_point -> prov.tension2, 1,
-				z1_point -> prov.x, z1_point -> prov.y,
-				z2_point -> prov.x, z2_point -> prov.y);
+                                z1_point -> prov.x, z1_point -> prov.y,
+                                z2_point -> prov.x, z2_point -> prov.y);
     return false;
   }
 }
@@ -9185,7 +9184,7 @@ related to pen variables will be defined in Subsection 8.5.4.
 For now we need to register the new
 tokens \monoespaco{reverse}, \monoespaco{subpath} and \monoespaco{of}:
 
-@<WEAVEFONT: Symbolic Token Definition@>+=
+@<WeaveFont: Symbolic Token Definition@>+=
 TYPE_REVERSE,        // O token simbólico 'reverse'
 TYPE_SUBPATH,        // O token simbólico 'subpath'
 TYPE_OF,             // O token simbólico 'of'
@@ -9563,7 +9562,7 @@ extremity point or some of the control points. The syntax for this is:
 
 This requires adding the following new token types:
 
-@<WEAVEFONT: Symbolic Token Definition@>+=
+@<WeaveFont: Symbolic Token Definition@>+=
 TYPE_POINT,             // O token simbólico 'point'
 TYPE_PRECONTROL,        // O token simbólico 'precontrol'
 TYPE_POSTCONTROL,       // O token simbólico 'postcontrol'
@@ -9622,16 +9621,16 @@ struct path_points *_get_point(struct path_variable *v, int n, int *count){
   for(i = 0; i < v -> length; i ++){
     if(v -> points[i].format != SUBPATH_FORMAT) {
       if(*count == n && !isnan(v -> points[i].point.x))
-	return ((struct path_points *) &(v -> points[i]));
+        return ((struct path_points *) &(v -> points[i]));
       else if(!isnan(v -> points[i].point.x))
-	(*count) ++;
+        (*count) ++;
     }
     else{
       struct path_points *r =
-	_get_point((struct path_variable *) (v -> points[i].subpath),
-		   n, count);
+        _get_point((struct path_variable *) (v -> points[i].subpath),
+                   n, count);
       if(r != NULL)
-	return r;
+        return r;
     }
   }
   return NULL;
@@ -10080,7 +10079,7 @@ The grammar for pen primary expressions are defined as:
 
 This requires four new reserved words:
 
-@<WEAVEFONT: Symbolic Token Definition@>+=
+@<WeaveFont: Symbolic Token Definition@>+=
 TYPE_NULLPEN,        // The symbolic token 'nullpen'
 TYPE_PENCIRCLE,      // The symbolic token 'pencircle'
 TYPE_PENSEMICIRCLE,  // The symbolic token 'pensemicircle'
@@ -10353,7 +10352,7 @@ path. The grammar for this operation is:
 
 We need to register a new token for ``makepath'':
 
-@<WEAVEFONT: Symbolic Token Definition@>+=
+@<WeaveFont: Symbolic Token Definition@>+=
 TYPE_MAKEPATH,       // O token simbólico 'makepath'
 @
 
@@ -10657,7 +10656,7 @@ active.
 When initializing Weaver Metafont, we sent these vertices to the
 graphics card:
 
-@<WEAVEFONT Initialization@>=
+@<WeaveFont Initialization@>=
 glGenBuffers(1, &vbo);
 glBindBuffer(GL_ARRAY_BUFFER, vbo);
 // Sending vertices to the graphics card
@@ -10666,7 +10665,7 @@ glBufferData(GL_ARRAY_BUFFER, sizeof(square), square, GL_STATIC_DRAW);
 
 And during finalization, we remove and erase these vertices:
 
-@<WEAVEFONT Finalization@>=
+@<WeaveFont Finalization@>=
 glDeleteBuffers(1, &vbo);
 @
 
@@ -10771,7 +10770,7 @@ GLuint compile_shader_program(const char *vertex_shader_source,
 And we can use now this function to compile our default shader
 program:
 
-@<WEAVEFONT Initialization@>+=
+@<WeaveFont Initialization@>+=
 {
   program = compile_shader_program(vertex_shader, fragment_shader);
   if(program == 0)
@@ -10783,7 +10782,7 @@ program:
 
 During finalization we will delete the program:
 
-@<WEAVEFONT Finalization@>+=
+@<WeaveFont Finalization@>+=
 glDeleteProgram(program);
 @
 
@@ -11064,7 +11063,7 @@ static GLint uniform_inv_matrix; // Matrix position in the program
 A new shader program to render the inverse RGB must be compiled during
 initialization:
 
-@<WEAVEFONT Initialization@>+=
+@<WeaveFont Initialization@>+=
 {
   inv_program = compile_shader_program(vertex_shader, fragment_shader_inverse);
   uniform_inv_matrix = glGetUniformLocation(program, "model_view_matrix");
@@ -11074,7 +11073,7 @@ initialization:
 
 In the finalization, we destroy the program:
 
-@<WEAVEFONT Finalization@>+=
+@<WeaveFont Finalization@>+=
 glDeleteProgram(inv_program);
 @
 
@@ -11495,7 +11494,7 @@ The grammar for primary picture expressions is:
 This means that we need to register a new token for ``nullpicture'' and
 ``subpicture'':
 
-@<WEAVEFONT: Symbolic Token Definition@>+=
+@<WeaveFont: Symbolic Token Definition@>+=
 TYPE_NULLPICTURE,        // Symbolic token 'nullpicture'
 TYPE_SUBPICTURE,         // Symbolic token 'subpicture'
 @
@@ -11860,7 +11859,7 @@ multiplied by the alpha component.
 
 First we need a new token types for the three new operators:
 
-@<WEAVEFONT: Symbolic Token Definition@>+=
+@<WeaveFont: Symbolic Token Definition@>+=
 TYPE_TOTALWEIGHT,        // Symbolic token 'totalweight'
 TYPE_WIDTH,              // Symbolic token 'width'
 TYPE_HEIGHT,             // Symbolic token 'height'
@@ -12024,7 +12023,7 @@ general boolean expressions.
 
 The relations above require new token types to represent them:
 
-@<WEAVEFONT: Symbolic Token Definition@>+=
+@<WeaveFont: Symbolic Token Definition@>+=
 TYPE_LT,                    // O token simbólico '<'
 TYPE_LEQ,                   // O token simbólico '<='
 TYPE_GT,                    // O token simbólico '>'
@@ -12263,7 +12262,7 @@ grammar for boolean tertiary expressions is:
 To implement the operator, we need to define a new symbolic token
 representing the \monoespaco{or} opeartor:
 
-@<WEAVEFONT: Symbolic Token Definition@>+=
+@<WeaveFont: Symbolic Token Definition@>+=
 TYPE_OR,                    // Symbolic token 'or'
 @
 
@@ -12414,7 +12413,7 @@ integer. And \monoespaco{cycle} checks if a path is cyclic.
 
 The following new tokens are defined:
 
-@<WEAVEFONT: Symbolic Token Definition@>+=
+@<WeaveFont: Symbolic Token Definition@>+=
 TYPE_TRUE,                    // O token simbólico 'true'
 TYPE_FALSE,                   // O token simbólico 'false'
 TYPE_ODD,                     // O token simbólico 'odd'
@@ -12880,7 +12879,7 @@ complete gramamr for these statements is:
 
 We need to declare two new kinds of tokens:
 
-@<WEAVEFONT: Symbolic Token Definition@>+=
+@<WeaveFont: Symbolic Token Definition@>+=
 TYPE_ELSEIF,  // Symbolic token 'elseif'
 TYPE_ELSE,    // Symbolic token 'else'
 TYPE_COLON,   // Symbolic token ':'
@@ -12997,11 +12996,11 @@ else if(begin -> type == TYPE_IF){
         begin_bool = t -> next;
         end_bool = begin_bool;
         while(end_bool != NULL && end_bool != *end &&
-	      end_bool -> next -> type != TYPE_COLON)
+              end_bool -> next -> type != TYPE_COLON)
           end_bool = end_bool -> next;
-	if(end_bool == NULL){
+        if(end_bool == NULL){
           RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, OPTIONAL(begin -> line));
-	  return false;
+          return false;
         }
         if(!eval_boolean_expression(mf, cx, begin_bool, end_bool, &b))
           return false;
@@ -13095,7 +13094,7 @@ command.
 
 We will need the following new token types:
 
-@<WEAVEFONT: Symbolic Token Definition@>+=
+@<WeaveFont: Symbolic Token Definition@>+=
 TYPE_STEP,  // Symbolic token 'step'
 TYPE_UNTIL, // Symbolic token 'until'
 @
@@ -13317,7 +13316,7 @@ command \monoespaco{pickup} is:
 
 The command requires a new token and reserver keyword:
 
-@<WEAVEFONT: Symbolic Token Definition@>+=
+@<WeaveFont: Symbolic Token Definition@>+=
 TYPE_PICKUP,  // Symbolic token 'pickup'
 @
 
@@ -13845,7 +13844,7 @@ static GLuint pensquare_vbo;
 
 The triangulation code thet will be run in the initialization:
 
-@<WEAVEFONT Initialization@>+=
+@<WeaveFont Initialization@>+=
 {
   float square_vertices[8] = {-0.5, -0.5,
                                +0.5, -0.5,
@@ -13860,7 +13859,7 @@ The triangulation code thet will be run in the initialization:
 
 And in the finalization we can remove the vertices:
 
-@<WEAVEFONT Finalization@>+=
+@<WeaveFont Finalization@>+=
 glDeleteBuffers(1, &pensquare_vbo);
 @
 
@@ -14208,6 +14207,8 @@ Finally, the most complex triangulation: if we have a concave form. We
 cannot triangulate using the simple algorithms seen above, just
 choosing a pivot and creating a triangles that share the pivot as a
 common vertex. Consider the concave polygon below, for example:
+
+\break
 
 \vskip-4cm\imagem{images/concave1a.eps}\vskip4cm
 
@@ -14881,7 +14882,7 @@ neighbors at the right, but the internal angle is greater than 180
 degrees. The figure below shows a polygon with a merge vertex (at the
 left) and a split vertex (at the right), both highlighted:
 
-\imagem{images/merge_split_vertices.eps}
+\vskip-5.5cm\imagem{images/merge_split_vertices_a.eps}\vskip5.5cm
 
 The split and merge vertices are a source of non-monotonicity. Every
 polygon without these types of vertices is a $x$-monotonous
@@ -14916,7 +14917,9 @@ and A2. After we find P2 which is between both edges and so we choose
 P1 and P2 as the vertices where we will ``cut'' our polygon
 partitioning it:
 
-\imagem{images/partition_polygon.eps}
+\break
+
+\vskip-6cm\imagem{images/partition_polygon_a.eps}\vskip6cm
 
 This means that we need to define new flags to represent the different
 types of vertices that we could find:
@@ -16085,7 +16088,7 @@ We defined most pair operators in Subsection 8.2, but there are still
 
 This requires 4 new tokens for such operators:
 
-@<WEAVEFONT: Symbolic Token Definition@>+=
+@<WeaveFont: Symbolic Token Definition@>+=
 TYPE_BOT,  // Symbolic token 'bot'
 TYPE_TOP,  // Symbolic token 'top'
 TYPE_LFT,  // Symbolic token 'lft'
@@ -16204,7 +16207,7 @@ command \monoespaco{pickcolor}, whose grammar is described below:
 
 Which requires a new reserved keyword:
 
-@<WEAVEFONT: Symbolic Token Definition@>+=
+@<WeaveFont: Symbolic Token Definition@>+=
 TYPE_PICKCOLOR,  // Symbolic token 'pickcolor'
 @
 
@@ -16285,7 +16288,7 @@ The syntax for \monoespaco{monowidth} command is:
 
 Which requires a new tokenn type and reserved keyword:
 
-@<WEAVEFONT: Symbolic Token Definition@>+=
+@<WeaveFont: Symbolic Token Definition@>+=
 TYPE_MONOWIDTH,  // Symbolic token 'monowidth'
 @
 
@@ -16339,7 +16342,7 @@ is:
 
 Which requires a new token type and a new reserved word:
 
-@<WEAVEFONT: Symbolic Token Definition@>+=
+@<WeaveFont: Symbolic Token Definition@>+=
 TYPE_DRAW,  // Symbolic token 'draw'
 TYPE_ERASE, // Symbolic token 'erase'
 @
@@ -16504,7 +16507,7 @@ static GLint pen_uniform_color, pen_erase_uniform_color; // Color
 During initialization, we compile these shaders and get the uniform
 locations:
 
-@<WEAVEFONT Initialization@>+=
+@<WeaveFont Initialization@>+=
 {
   pen_program = compile_shader_program(pen_vertex_shader, pen_fragment_shader);
   pen_uniform_matrix = glGetUniformLocation(pen_program, "model_view_matrix");
@@ -16519,7 +16522,7 @@ locations:
 
 And in the finalization we destroy these programs:
 
-@<WEAVEFONT Finalization@>+=
+@<WeaveFont Finalization@>+=
 glDeleteProgram(pen_program);
 glDeleteProgram(pen_erase_program);
 @
@@ -16783,7 +16786,7 @@ numeric values after the string are teh character width, height and
 depth. The depth is its height below the baseline, for characters like
 ``p'' or ``q'', with parts extending below the line.
 
-The language WEAVEFONT has two modes of operation: it can be loading
+The language WeaveFont has two modes of operation: it can be loading
 or running. The mode changes how we deal with the code in
 a \monoespaco{beginchar} statement. If loading, the code inside
 the \monoespaco{beginchar} body will not be interpreted and
@@ -17118,7 +17121,7 @@ else if(begin -> type == TYPE_BEGINCHAR && mf -> loading){
     if(number_of_commas != 3){
       RAISE_ERROR_WRONG_NUMBER_OF_PARAMETERS(mf, cx, OPTIONAL(t -> line),
                                              TYPE_BEGINCHAR, 4,
-					     number_of_commas + 1);
+                                             number_of_commas + 1);
       return false;
     }
     t = ((struct linked_token *) begin) -> link;
@@ -17167,7 +17170,7 @@ multiplied by 2, rendering the glyph with twice the size that we will
 use in the screen. This way, we get more precise results, rendering in
 the screen each pixel as a result multisampled from 4 other
 pixels. But we will not use this technique if the
-macro \monoespaco{W\_WEAVEFONT\_DISABLE\_MULTISAMPLE} is
+macro \monoespaco{W\_WeaveFont\_DISABLE\_MULTISAMPLE} is
 defined. Finally, the current pen is modified to be equal
 a \monoespaco{nullpen}.
 
@@ -17229,7 +17232,7 @@ else if(begin -> type == TYPE_BEGINCHAR){
   if(height.value + depth.value <= 0.0 || width.value <= 0){
     RAISE_ERROR_INVALID_DIMENSION_GLYPH(mf, cx, OPTIONAL(begin -> line),
                                         width.value,
-					height.value + depth.value);
+                                        height.value + depth.value);
     return false;
   }
   *end = t;
@@ -17241,7 +17244,7 @@ else if(begin -> type == TYPE_BEGINCHAR){
      if(pic -> texture != 0)
        glDeleteTextures(1, &(pic -> texture));
      vars = ((struct numeric_variable *) cx -> internal_numeric_variables);
-#ifdef W_WEAVEFONT_DISABLE_MULTISAMPLE
+#ifdef W_WeaveFont_DISABLE_MULTISAMPLE
     cx -> current_depth = round(depth.value);
     pic -> width = round(width.value);
     pic -> height = (round(height.value) + round(depth.value));
@@ -17307,7 +17310,7 @@ else if(begin -> type == TYPE_ENDCHAR){
   cx -> current_glyph -> height = round(currentpicture -> height -
                                         cx -> current_depth);
   cx -> current_glyph -> texture = currentpicture -> texture;
-#ifndef W_WEAVEFONT_DISABLE_MULTISAMPLE
+#ifndef W_WeaveFont_DISABLE_MULTISAMPLE
   cx -> current_glyph -> width /= 2;
   cx -> current_glyph -> depth /= 2;
   cx -> current_glyph -> height /= 2;
@@ -17323,7 +17326,7 @@ else if(begin -> type == TYPE_ENDCHAR){
 
 \secao{16. API Functions to Use the Fonts}
 
-A WEAVEFONT code can have its global variables changed and this will
+A WeaveFont code can have its global variables changed and this will
 change the rendering of the next glyphs, without needing to change the
 source code or reload the code. To read and update numeric global
 variables, we will export the following functions:
@@ -17358,7 +17361,7 @@ bool _Wwrite_numeric_variable(struct metafont *mf, char *name, float value){
         if(n -> type != TYPE_T_NUMERIC)
           return false;
         n -> value = value;
-	updated = true;
+        updated = true;
       }
       var = var -> next;
     }
@@ -17399,7 +17402,7 @@ float _Wread_numeric_variable(struct metafont *mf, char *name){
 }
 @
 
-The function that reads a file with WEAVEFONT code and creates a new
+The function that reads a file with WeaveFont code and creates a new
 metafont is:
 
 @<API Functions Definition (metafont.c)@>+=
@@ -17530,7 +17533,7 @@ this, which has the following grammar:
 
 Let's add \monoespaco{shipit} to our list of tokens and keywords:
 
-@<WEAVEFONT: Symbolic Token Definition@>+=
+@<WeaveFont: Symbolic Token Definition@>+=
 TYPE_SHIPIT,  // Symbolic token 'shipit'
 @
 
@@ -17574,7 +17577,7 @@ else if(begin -> type == TYPE_SHIPIT){
   cx -> current_glyph -> height = round(currentpicture -> height -
                                         cx -> current_depth);
   cx -> current_glyph -> texture = currentpicture -> texture;
-#ifndef W_WEAVEFONT_DISABLE_MULTISAMPLE
+#ifndef W_WeaveFont_DISABLE_MULTISAMPLE
   cx -> current_glyph -> width /= 2;
   cx -> current_glyph -> depth /= 2;
   cx -> current_glyph -> height /= 2;
@@ -17617,7 +17620,7 @@ part of other more complex character. For example, the logograms below
 are: ``rén'' (person), ``dá'' (big), ``ti{\accent22 a}n'' (sky),
 ``Wù'' (a common surname), and ``yú'' (pleasure):
 
-\imagem{images/chinese.eps}
+\vskip-22.5cm\imagem{images/chinese.eps}\vskip23cm
 
 This is not adequate in all cases, but sometimes a character can be
 directly extended by another character, which makes easier and faster
@@ -17633,7 +17636,7 @@ below:
 
 Which requires support for the \monoespaco{between} token and keyword:
 
-@<WEAVEFONT: Symbolic Token Definition@>+=
+@<WeaveFont: Symbolic Token Definition@>+=
 TYPE_RENDERCHAR, // Symbolic token 'renderchar'
 TYPE_BETWEEN,    // Symbolic token 'between'
 @
@@ -17902,7 +17905,7 @@ will immediately appear on the screen.
 But how does the game engine know how to interpret the file
 \monoespaco{textura.mf}? To do so, it must be initialized by passing
 it the pointer to a function that interprets such texture. In our
-case, we will assume that such texture is a Weavefont source code.
+case, we will assume that such texture is a WeaveFont source code.
 
 We also must define af function with the header below:
 
@@ -18052,24 +18055,9 @@ void _reload_texture(struct user_interface *target){
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\secao{References}
-
-\referencia{De Berg, M. (2000)
-``Computational geometry: algorithms and applications''.
-Springer Science \& Business Media.}
-
-\referencia{Knuth, D. E. (1984) ``Literate Programming'', The Computer
-  Journal, Volume 27, Issue 2, Pages 97--111.}
-
-\referencia{Hobby, J. D. (1986), ``Smooth, easy to compute interpolating
- splines'', Discrete \& computational geometry, 1(2), 123-140}
-
-\referencia{Knuth, D. E. (1989) ``The METAFONT book'', Addison-Wesley
- Longsman Publishing Co., Inc}
-
 \secao{Appendix A: Handling Errors}
 
-When there are errors in a WEAVEFONT source code, no image or
+When there are errors in a WeaveFont source code, no image or
 typographical meta-font will be created. However, the programmer
 should have means to discover what was wrong to solve the problem. For
 this, we will add in the struct for each meta-font additional data for
@@ -18103,7 +18091,7 @@ the other variables to store some additional string or an integer.
 
 Only the first error found in a meta-font source code will be
 stored. If there are more errors, they will be ignored. All functions
-that execute WEAVEFONT source code return a boolean value. If no
+that execute WeaveFont source code return a boolean value. If no
 errors were found they return true; and if an error was found they
 return false.
 
@@ -18343,7 +18331,7 @@ enum { // Types of error
 enum { // Types of tokens
   TYPE_NUMERIC = 1, TYPE_STRING, TYPE_SYMBOLIC, TYPE_FOR, TYPE_ENDFOR,
   // The basic types can be seen above. All others are inserted below:
-  @<WEAVEFONT: Symbolic Token Definition@>
+  @<WeaveFont: Symbolic Token Definition@>
   // And a last one that should not be used:
   TYPE_INVALID_TOKEN
 };
@@ -18392,7 +18380,7 @@ case ERROR_DISCONTINUOUS_PATH:
   float *buffer = (float *) (mf -> errno_str);
   fprintf(stderr,
           "%s:%s Concatenating endpoint '(%g, %g)' with endpoint '(%g, %g)':"
-	  " discontinuous path.",
+          " discontinuous path.",
           mf -> file, line_number, buffer[0], buffer[1], buffer[2], buffer[3]);
   break;
 @
@@ -18467,7 +18455,7 @@ In the original METAFONT language, an empty delimiter \monoespaco{[]}
 was allowed in variable declarations, to declare that a given variable
 could store several different values, using numbers to represent the
 internal position of each value (they are associative arrays where the
-keys are always numbers, not necessarily integers). But Weavefont does
+keys are always numbers, not necessarily integers). But WeaveFont does
 not support this, so any empty delimiter is treated as an error.
 
 When generating this error, we must inform what type of empty
@@ -18596,7 +18584,7 @@ And this is the error message for this error:
 case ERROR_INCOMPLETE_SOURCE:
   fprintf(stderr,
           "%s:%s Incomplete code. WeaveFont source code ended in middle of statement.",
-	  mf -> file, line_number);
+          mf -> file, line_number);
   break;  
 @
 
@@ -18627,8 +18615,8 @@ And our error message:
 case ERROR_INCOMPLETE_STATEMENT:
   fprintf(stderr,
           "%s:%s Incomplete statement. You ended the statement with ';' before "
-	  "fully defining it.",
-	  mf -> file, line_number);
+          "fully defining it.",
+          mf -> file, line_number);
   break;  
 @
 
@@ -18700,9 +18688,9 @@ case ERROR_INVALID_CHAR:
   else if((unsigned char) mf -> errno_str[0] >= 224 && 
           (unsigned char) mf -> errno_str[0] <= 239 &&
           (unsigned char) mf -> errno_str[1] >= 128 &&
-	  (unsigned char) mf -> errno_str[1] <= 191 &&
+          (unsigned char) mf -> errno_str[1] <= 191 &&
           (unsigned char) mf -> errno_str[2] >= 128 &&
-	  (unsigned char) mf -> errno_str[2] <= 191){
+          (unsigned char) mf -> errno_str[2] <= 191){
     code_point = (unsigned char) mf -> errno_str[2] - 128;
     code_point += ((unsigned char) mf -> errno_str[1] - 128) * 64;
     code_point += ((unsigned char) mf -> errno_str[0] - 224) * 4096;
@@ -18711,11 +18699,11 @@ case ERROR_INVALID_CHAR:
   else if((unsigned char) mf -> errno_str[0] >= 240 &&
           (unsigned char) mf -> errno_str[0] <= 247 &&
           (unsigned char) mf -> errno_str[1] >= 128 &&
-	  (unsigned char) mf -> errno_str[1] <= 191 &&
+          (unsigned char) mf -> errno_str[1] <= 191 &&
           (unsigned char) mf -> errno_str[2] >= 128 &&
-	  (unsigned char) mf -> errno_str[2] <= 191 &&
-	  (unsigned char) mf -> errno_str[3] >= 128 &&
-	  (unsigned char) mf -> errno_str[3] <= 191){
+          (unsigned char) mf -> errno_str[2] <= 191 &&
+          (unsigned char) mf -> errno_str[3] >= 128 &&
+          (unsigned char) mf -> errno_str[3] <= 191){
     code_point = (unsigned char) mf -> errno_str[3] - 128;
     code_point += ((unsigned char) mf -> errno_str[2] - 128) * 64;
     code_point += ((unsigned char) mf -> errno_str[1] - 128) * 4096;
@@ -18760,7 +18748,7 @@ case ERROR_INVALID_COMPARISON:
   tokenid_to_string(mf -> errno_int, expr_type);
   fprintf(stderr,
           "%s:%s Tried to use '%s' to compare an "
-	  "expression of type '%s', but such type is not comparable.",
+          "expression of type '%s', but such type is not comparable.",
           mf -> file, line_number, mf -> errno_str, expr_type);
   break;
 @
@@ -18794,7 +18782,7 @@ case ERROR_INVALID_DIMENSION_GLYPH:
   int *size_buffer = (int *) (mf -> errno_str);
   fprintf(stderr,
           "%s:%s Glyph with size %dx%d. Expected positive values for ",
-	  mf -> file, line_number, size_buffer[0], size_buffer[1]);
+          mf -> file, line_number, size_buffer[0], size_buffer[1]);
   if(size_buffer[0] <= 0 && size_buffer[1] <= 0)
     fprintf(stderr, "both width and height+depth.");
   else if(size_buffer[0] <= 0)
@@ -18897,7 +18885,7 @@ case ERROR_INVALID_TENSION:
   fprintf(stderr,
           "%s:%s Between path points (%g, %g) and (%g, %g) we found %s tension value '%g' smaller than minimal allowed '0.75'.",
           mf -> file, line_number, buf[0], buf[1], buf[2], buf[3],
-	  (mf -> errno_int == 0)?"first":"second", buf[4]);
+          (mf -> errno_int == 0)?"first":"second", buf[4]);
   break;
 @
 
@@ -19061,7 +19049,7 @@ caused by any syntax error in the language. It can be caused by
 external factors. But it also could be caused by memory leaks due to
 poor or questionable WeaveFont code. For example:
 
-\alinhacodigo
+\alinhaverbatim
 numeric i;
 path p;
 p = (0, 0);
@@ -19122,7 +19110,7 @@ case ERROR_NO_PICKUP_PEN:
   tokenid_to_string(mf -> errno_int, mf -> errno_str);
   fprintf(stderr, "%s:%s After a 'pickup' command, you should use either a "
                   "'nullpen', 'pencircle', 'pensemicircle' or a pen variable.",
-		  mf -> file, line_number);
+                  mf -> file, line_number);
   break;
 @
 
@@ -19224,8 +19212,8 @@ case ERROR_OPENGL_FRAMEBUFFER:
     case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
       printf("  GL_RENDERBUFFER_SAMPLES is not the same for all attached "
              " renderbuffers or attached images are a mix of renderbuffers "
-	     "and textures while the value of GL_RENDERBUFFER_SAMPLES "
-	     "is not zero. ");
+             "and textures while the value of GL_RENDERBUFFER_SAMPLES "
+             "is not zero. ");
       break;
     default:
       printf(" Unknown error.");
@@ -19298,7 +19286,7 @@ case ERROR_UNBALANCED_ENDING_TOKEN:
   tokenid_to_string(mf -> errno_int, mf -> errno_str);
   fprintf(stderr, "%s:%s Unexpected token \"%s\" found. You are trying to "
           "close a compund command that were never opened or you have "
-	  "two or more unbalanced compound statements.", mf -> file,
+          "two or more unbalanced compound statements.", mf -> file,
           line_number, mf -> errno_str);
   break;
 @
@@ -19488,7 +19476,7 @@ And with this, we produce the error message:
 case ERROR_UNKNOWN_GLYPH_DEPENDENCY:
   fprintf(stderr,
           "%s:%s Command 'renderchar' created dependency of undefined glyph '%s'.",
-	  mf -> file, line_number, mf -> errno_str);
+          mf -> file, line_number, mf -> errno_str);
   break;
 @
 
@@ -19619,7 +19607,7 @@ case ERROR_UNSUPORTED_LENGTH_OPERAND:
     tokenid_to_string(mf -> errno_int, mf -> errno_str);
     fprintf(stderr, "%s:%s Operator 'length' expects a numeric, pair or path "
                     "expression as operand. Instead, we found a %s expression.",
-		    mf -> file, line_number, mf -> errno_str);
+                    mf -> file, line_number, mf -> errno_str);
   }
   break;
 @
@@ -19658,8 +19646,8 @@ Com estas informações, podemos gerar a devida mensagem de erro:
 case ERROR_WRONG_NUMBER_OF_PARAMETERS:
   fprintf(stderr,
           "%s:%s Statement '%s' expected %d parameters, but %d were given.",
-	  mf -> file, line_number, mf -> errno_str, mf -> errno_int >> 8,
-	  mf -> errno_int & 255);
+          mf -> file, line_number, mf -> errno_str, mf -> errno_int >> 8,
+          mf -> errno_int & 255);
   break;
 @
 
@@ -19702,6 +19690,21 @@ case ERROR_WRONG_VARIABLE_TYPE:
           found, expected);
   break;
 @
+
+\secao{References}
+
+\referencia{De Berg, M. (2000)
+``Computational geometry: algorithms and applications''.
+Springer Science \& Business Media.}
+
+\referencia{Knuth, D. E. (1984) ``Literate Programming'', The Computer
+  Journal, Volume 27, Issue 2, Pages 97--111.}
+
+\referencia{Hobby, J. D. (1986), ``Smooth, easy to compute interpolating
+ splines'', Discrete \& computational geometry, 1(2), 123-140}
+
+\referencia{Knuth, D. E. (1989) ``The METAFONT book'', Addison-Wesley
+ Longsman Publishing Co., Inc}
 
 
 \fim

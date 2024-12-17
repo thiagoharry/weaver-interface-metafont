@@ -226,112 +226,112 @@ Imagens Vazias \indice{177}
 
 11.2. Triangulação \indice{211}
 
-11.3. Interpretando o Comando \monoespaco{pickup} \indice{249}
+11.3. Interpretando o Comando \monoespaco{pickup} \indice{247}
 
 11.4. Os Operadores \monoespaco{bot}, \monoespaco{top}, \monoespaco{lft},
-\monoespaco{rt} \indice{254}
+\monoespaco{rt} \indice{252}
 
-12. O Comando \monoespaco{pickcolor} \indice{255}
+12. O Comando \monoespaco{pickcolor} \indice{253}
 
-13. O Comando \monoespaco{monowidth} \indice{257}
+13. O Comando \monoespaco{monowidth} \indice{255}
 
-14. O Comando \monoespaco{draw} e \monoespaco{erase} \indice{257}
+14. O Comando \monoespaco{draw} e \monoespaco{erase} \indice{255}
 
-14.1. Preparando o Framebuffer \indice{258}
+14.1. Preparando o Framebuffer \indice{256}
 
-14.2. Shaders de Desenho \indice{259}
+14.2. Shaders de Desenho \indice{257}
 
-14.3. Desenhando Caminhos \indice{260}
+14.3. Desenhando Caminhos \indice{258}
 
-15. Declaração Composta: Declaração de Caractere \indice{264}
+15. Declaração Composta: Declaração de Caractere \indice{262}
 
-15.1 Unicode e UTF-8 \indice{264}
+15.1 Unicode e UTF-8 \indice{262}
 
-16. Funções de API para Usar as Fontes \indice{273}
+16. Funções de API para Usar as Fontes \indice{271}
 
-17. O Comando \monoespaco{shipit} \indice{276}
+17. O Comando \monoespaco{shipit} \indice{274}
 
-18. O Comando \monoespaco{renderchar} \indice{278}
+18. O Comando \monoespaco{renderchar} \indice{276}
 
-19. Integração entre WeaveFont e Motor de Jogos Weaver \indice{282}
+19. Integração entre WeaveFont e Motor de Jogos Weaver \indice{280}
 
-Apêndice A: Tratamento de Erros \indice{285}
+Apêndice A: Tratamento de Erros \indice{283}
 
-A.1. ERROR\_DISCONTINUOUS\_PATH \indice{289}
+A.1. ERROR\_DISCONTINUOUS\_PATH \indice{287}
 
-A.2. ERROR\_DIVISION\_BY\_ZERO \indice{290}
+A.2. ERROR\_DIVISION\_BY\_ZERO \indice{288}
 
-A.3. ERROR\_DUPLICATE\_GLYPH \indice{290}
+A.3. ERROR\_DUPLICATE\_GLYPH \indice{288}
 
-A.4. ERROR\_EMPTY\_DELIMITER \indice{291}
+A.4. ERROR\_EMPTY\_DELIMITER \indice{289}
 
-A.5. ERROR\_EXPECTED\_FOUND \indice{291}
+A.5. ERROR\_EXPECTED\_FOUND \indice{289}
 
-A.6. ERROR\_FAILED\_OPENING\_FILE \indice{292}
+A.6. ERROR\_FAILED\_OPENING\_FILE \indice{290}
 
-A.7. ERROR\_INCOMPLETE\_SOURCE \indice{292}
+A.7. ERROR\_INCOMPLETE\_SOURCE \indice{290}
 
-A.8. ERROR\_INCOMPLETE\_STATEMENT \indice{293}
+A.8. ERROR\_INCOMPLETE\_STATEMENT \indice{291}
 
-A.9. ERROR\_INVALID\_CHAR \indice{293}
+A.9. ERROR\_INVALID\_CHAR \indice{291}
 
-A.10. ERROR\_INVALID\_COMPARISON \indice{295}
+A.10. ERROR\_INVALID\_COMPARISON \indice{293}
 
-A.11. ERROR\_INVALID\_DIMENSION\_GLYPH \indice{295}
+A.11. ERROR\_INVALID\_DIMENSION\_GLYPH \indice{293}
 
-A.12. ERROR\_INVALID\_NAME \indice{296}
+A.12. ERROR\_INVALID\_NAME \indice{294}
 
-A.13. ERROR\_INVALID\_TENSION \indice{296}
+A.13. ERROR\_INVALID\_TENSION \indice{294}
 
-A.14. ERROR\_MISSING\_EXPRESSION \indice{297}
+A.14. ERROR\_MISSING\_EXPRESSION \indice{295}
 
-A.15. ERROR\_MISSING\_TOKEN \indice{298}
+A.15. ERROR\_MISSING\_TOKEN \indice{296}
 
-A.16. ERROR\_NEGATIVE\_LOGARITHM \indice{298}
+A.16. ERROR\_NEGATIVE\_LOGARITHM \indice{296}
 
-A.17. ERROR\_NEGATIVE\_SQUARE\_ROOT \indice{298}
+A.17. ERROR\_NEGATIVE\_SQUARE\_ROOT \indice{296}
 
-A.18. ERROR\_NESTED\_BEGINCHAR \indice{299}
+A.18. ERROR\_NESTED\_BEGINCHAR \indice{297}
 
-A.19. ERROR\_NO\_MEMORY \indice{299}
+A.19. ERROR\_NO\_MEMORY \indice{297}
 
-A.20. ERROR\_NO\_PICKUP\_PEN \indice{300}
+A.20. ERROR\_NO\_PICKUP\_PEN \indice{298}
 
-A.21. ERROR\_NONCYCLICAL\_PEN \indice{300}
+A.21. ERROR\_NONCYCLICAL\_PEN \indice{298}
 
-A.22. ERROR\_NULL\_VECTOR\_ANGLE \indice{301}
+A.22. ERROR\_NULL\_VECTOR\_ANGLE \indice{299}
 
-A.23. ERROR\_OPENGL\_FRAMEBUFFER \indice{301}
+A.23. ERROR\_OPENGL\_FRAMEBUFFER \indice{299}
 
-A.24. ERROR\_RECURSIVE\_RENDERCHAR \indice{302}
+A.24. ERROR\_RECURSIVE\_RENDERCHAR \indice{300}
 
-A.25. ERROR\_UNBALANCED\_ENDING\_TOKEN \indice{303}
+A.25. ERROR\_UNBALANCED\_ENDING\_TOKEN \indice{300}
 
-A.26. ERROR\_UNCLOSED\_DELIMITER \indice{303}
+A.26. ERROR\_UNCLOSED\_DELIMITER \indice{301}
 
-A.27. ERROR\_UNCLOSED\_STRING \indice{303}
+A.27. ERROR\_UNCLOSED\_STRING \indice{301}
 
-A.28. ERROR\_UNDECLARED\_VARIABLE \indice{304}
+A.28. ERROR\_UNDECLARED\_VARIABLE \indice{302}
 
-A.29. ERROR\_UNEXPECTED\_TOKEN \indice{304}
+A.29. ERROR\_UNEXPECTED\_TOKEN \indice{302}
 
-A.30. ERROR\_UNINITIALIZED\_VARIABLE \indice{305}
+A.30. ERROR\_UNINITIALIZED\_VARIABLE \indice{303}
 
-A.31. ERROR\_UNKNOWN\_GLYPH\_DEPENDENCY \indice{305}
+A.31. ERROR\_UNKNOWN\_GLYPH\_DEPENDENCY \indice{303}
 
-A.32. ERROR\_UNKNOWN\_EXPRESSION \indice{306}
+A.32. ERROR\_UNKNOWN\_EXPRESSION \indice{304}
 
-A.33. ERROR\_UNKNOWN\_STATEMENT \indice{306}
+A.33. ERROR\_UNKNOWN\_STATEMENT \indice{304}
 
-A.34. ERROR\_UNOPENED\_DELIMITER \indice{307}
+A.34. ERROR\_UNOPENED\_DELIMITER \indice{304}
 
-A.35. ERROR\_UNSUPORTED\_LENGTH\_OPERAND \indice{307}
+A.35. ERROR\_UNSUPORTED\_LENGTH\_OPERAND \indice{305}
 
-A.36. ERROR\_WRONG\_NUMBER\_OF\_PARAMETERS \indice{308}
+A.36. ERROR\_WRONG\_NUMBER\_OF\_PARAMETERS \indice{305}
 
-A.37. ERROR\_WRONG\_VARIABLE\_TYPE \indice{308}
+A.37. ERROR\_WRONG\_VARIABLE\_TYPE \indice{306}
 
-Referências \indice{309}
+Referências \indice{307}
 
 \quebra
 
@@ -2945,8 +2945,8 @@ else if(begin -> type >= TYPE_T_BOOLEAN && begin -> type <= TYPE_T_NUMERIC){
        !strcmp(variable -> value, "currentpen") ||
        !strcmp(variable -> value, "currentpicture")){
       RAISE_ERROR_INVALID_NAME(mf, cx, OPTIONAL(variable -> line),
-			      (struct generic_token *) variable,
-			      variable -> type);
+                              (struct generic_token *) variable,
+                              variable -> type);
       return false;
     }
     @<Insere Variável Declarada@>
@@ -8521,7 +8521,7 @@ if(begin_j == end_j && begin_j -> type == TYPE_AMPERSAND){
   if(hypot(dif_x, dif_y) > 0.00002){
     RAISE_ERROR_DISCONTINUOUS_PATH(mf, cx, OPTIONAL(begin_j -> line),
                                    z1_point -> prov.x, z1_point -> prov.y,
-				   z2_point -> prov.x, z2_point -> prov.y);
+                                   z2_point -> prov.x, z2_point -> prov.y);
     return false;
   }
   // Isso fará o primeiro ponto de extremidade ser sobrescrito
@@ -8711,15 +8711,15 @@ else if(begin_j -> type == TYPE_JOIN && begin_j != end_j &&
   if(z1_point -> prov.tension1 < 0.75){
     RAISE_ERROR_INVALID_TENSION(mf, cx, OPTIONAL(begin_t0 -> line),
                                 z1_point -> prov.tension1, 0,
-				z1_point -> prov.x, z1_point -> prov.y,
-				z2_point -> prov.x, z2_point -> prov.y);
+                                z1_point -> prov.x, z1_point -> prov.y,
+                                z2_point -> prov.x, z2_point -> prov.y);
     return false;
   }
   if(z1_point -> prov.tension2 < 0.75){
     RAISE_ERROR_INVALID_TENSION(mf, cx, OPTIONAL(begin_t0 -> line),
                                 z1_point -> prov.tension2, 1,
-				z1_point -> prov.x, z1_point -> prov.y,
-				z2_point -> prov.x, z2_point -> prov.y);
+                                z1_point -> prov.x, z1_point -> prov.y,
+                                z2_point -> prov.x, z2_point -> prov.y);
     return false;
   }
 }
@@ -9814,16 +9814,16 @@ struct path_points *_get_point(struct path_variable *v, int n, int *count){
   for(i = 0; i < v -> length; i ++){
     if(v -> points[i].format != SUBPATH_FORMAT) {
       if(*count == n && !isnan(v -> points[i].point.x))
-	return ((struct path_points *) &(v -> points[i]));
+        return ((struct path_points *) &(v -> points[i]));
       else if(!isnan(v -> points[i].point.x))
-	(*count) ++;
+        (*count) ++;
     }
     else{
       struct path_points *r =
-	_get_point((struct path_variable *) (v -> points[i].subpath),
-		   n, count);
+        _get_point((struct path_variable *) (v -> points[i].subpath),
+                   n, count);
       if(r != NULL)
-	return r;
+        return r;
     }
   }
   return NULL;
@@ -13211,11 +13211,11 @@ else if(begin -> type == TYPE_IF){
         begin_bool = t -> next;
         end_bool = begin_bool;
         while(end_bool != NULL && end_bool != *end &&
-	      end_bool -> next -> type != TYPE_COLON)
+              end_bool -> next -> type != TYPE_COLON)
           end_bool = end_bool -> next;
-	if(end_bool == NULL){
+        if(end_bool == NULL){
           RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, OPTIONAL(begin -> line));
-	  return false;
+          return false;
         }
         if(!eval_boolean_expression(mf, cx, begin_bool, end_bool, &b))
           return false;
@@ -15134,7 +15134,7 @@ separação tem ambos os seus vizinhos à direita, mas seu ângulo interno
 vértice de junção (à esquerda) e de separação (à direita) estão
 destacados:
 
-\imagem{images/merge_split_vertices.eps}
+\vskip-6cm\imagem{images/merge_split_vertices_a.eps}\vskip6cm
 
 Os vértices de junção e de separação são a fonte de não
 monotonicidade. Todo polígono sem vértices deste tipo é um polígono
@@ -15168,7 +15168,7 @@ encontramos P2 que está entre ambas as arestas e por isso escolhemos
 P1 e P2 como os vértices onde iremos ``cortar'' nosso polígono
 particionando-o:
 
-\imagem{images/partition_polygon.eps}
+\imagem{images/partition_polygon_a.eps}\vskip5.5cm
 
 Isso significa que precisamos definir algumas flags novas para
 representar os diferentes tipos de vértices que podemos ter:
@@ -16493,8 +16493,8 @@ descrita abaixo:
 <Comando> -> <Comando 'pickcolor'> | ...
 <Comando 'pickcolor'> -> pickcolor ( <Expressão Numérica> ,
                                      <Expressão Numérica> ,
-				     <Expressão Numérica> ,
-				     <Expressão Numérica> )
+                                     <Expressão Numérica> ,
+                                     <Expressão Numérica> )
 \alinhanormal
 
 O qual requer uma palavra reservada nova:
@@ -17418,7 +17418,7 @@ else if(begin -> type == TYPE_BEGINCHAR && mf -> loading){
     if(number_of_commas != 3){
       RAISE_ERROR_WRONG_NUMBER_OF_PARAMETERS(mf, cx, OPTIONAL(t -> line),
                                              TYPE_BEGINCHAR, 4,
-					     number_of_commas + 1);
+                                             number_of_commas + 1);
       return false;
     }
     t = ((struct linked_token *) begin) -> link;
@@ -17529,7 +17529,7 @@ else if(begin -> type == TYPE_BEGINCHAR){
   if(height.value + depth.value <= 0.0 || width.value <= 0){
     RAISE_ERROR_INVALID_DIMENSION_GLYPH(mf, cx, OPTIONAL(begin -> line),
                                         width.value,
-					height.value + depth.value);
+                                        height.value + depth.value);
     return false;
   }
   *end = t;
@@ -17655,7 +17655,7 @@ bool _Wwrite_numeric_variable(struct metafont *mf, char *name, float value){
         if(n -> type != TYPE_T_NUMERIC)
           return false;
         n -> value = value;
-	updated = true;
+        updated = true;
       }
       var = var -> next;
     }
@@ -17922,7 +17922,7 @@ também. Um exemplo são os logogramas abaixo que são: ``rén'' (pessoa),
 ``dá'' (grande), ``ti{\accent22 a}n'' (céu), ``Wù'' (um sobrenome
 comum), e ``yú'' (prazer):
 
-\imagem{images/chinese.eps}
+\vskip-22.5cm\imagem{images/chinese.eps}\vskip23cm
 
 Nem sempre é adequado, mas algumas vezes um caractere pode ser
 diretamente estendido de outro existente, o que torna mais fácil e
@@ -18691,7 +18691,7 @@ case ERROR_DISCONTINUOUS_PATH:
   float *buffer = (float *) (mf -> errno_str);
   fprintf(stderr,
           "%s:%s Concatenating endpoint '(%g, %g)' with endpoint '(%g, %g)':"
-	  " discontinuous path.",
+          " discontinuous path.",
           mf -> file, line_number, buffer[0], buffer[1], buffer[2], buffer[3]);
   break;
 @
@@ -18895,7 +18895,7 @@ E esta é a mensagem de erro para este erro:
 case ERROR_INCOMPLETE_SOURCE:
   fprintf(stderr,
           "%s:%s Incomplete code. WeaveFont source code ended in middle of statement.",
-	  mf -> file, line_number);
+          mf -> file, line_number);
   break;  
 @
 
@@ -18925,8 +18925,8 @@ E a nossa mensagem de erro:
 case ERROR_INCOMPLETE_STATEMENT:
   fprintf(stderr,
           "%s:%s Incomplete statement. You ended the statement with ';' before "
-	  "fully defining it.",
-	  mf -> file, line_number);
+          "fully defining it.",
+          mf -> file, line_number);
   break;  
 @
 
@@ -19003,9 +19003,9 @@ case ERROR_INVALID_CHAR:
   else if((unsigned char) mf -> errno_str[0] >= 224 && 
           (unsigned char) mf -> errno_str[0] <= 239 &&
           (unsigned char) mf -> errno_str[1] >= 128 &&
-	  (unsigned char) mf -> errno_str[1] <= 191 &&
+          (unsigned char) mf -> errno_str[1] <= 191 &&
           (unsigned char) mf -> errno_str[2] >= 128 &&
-	  (unsigned char) mf -> errno_str[2] <= 191){
+          (unsigned char) mf -> errno_str[2] <= 191){
     code_point = (unsigned char) mf -> errno_str[2] - 128;
     code_point += ((unsigned char) mf -> errno_str[1] - 128) * 64;
     code_point += ((unsigned char) mf -> errno_str[0] - 224) * 4096;
@@ -19014,11 +19014,11 @@ case ERROR_INVALID_CHAR:
   else if((unsigned char) mf -> errno_str[0] >= 240 &&
           (unsigned char) mf -> errno_str[0] <= 247 &&
           (unsigned char) mf -> errno_str[1] >= 128 &&
-	  (unsigned char) mf -> errno_str[1] <= 191 &&
+          (unsigned char) mf -> errno_str[1] <= 191 &&
           (unsigned char) mf -> errno_str[2] >= 128 &&
-	  (unsigned char) mf -> errno_str[2] <= 191 &&
-	  (unsigned char) mf -> errno_str[3] >= 128 &&
-	  (unsigned char) mf -> errno_str[3] <= 191){
+          (unsigned char) mf -> errno_str[2] <= 191 &&
+          (unsigned char) mf -> errno_str[3] >= 128 &&
+          (unsigned char) mf -> errno_str[3] <= 191){
     code_point = (unsigned char) mf -> errno_str[3] - 128;
     code_point += ((unsigned char) mf -> errno_str[2] - 128) * 64;
     code_point += ((unsigned char) mf -> errno_str[1] - 128) * 4096;
@@ -19064,7 +19064,7 @@ case ERROR_INVALID_COMPARISON:
   tokenid_to_string(mf -> errno_int, expr_type);
   fprintf(stderr,
           "%s:%s Tried to use '%s' to compare an "
-	  "expression of type '%s', but such type is not comparable.",
+          "expression of type '%s', but such type is not comparable.",
           mf -> file, line_number, mf -> errno_str, expr_type);
   break;
 @
@@ -19098,7 +19098,7 @@ case ERROR_INVALID_DIMENSION_GLYPH:
   int *size_buffer = (int *) (mf -> errno_str);
   fprintf(stderr,
           "%s:%s Glyph with size %dx%d. Expected positive values for ",
-	  mf -> file, line_number, size_buffer[0], size_buffer[1]);
+          mf -> file, line_number, size_buffer[0], size_buffer[1]);
   if(size_buffer[0] <= 0 && size_buffer[1] <= 0)
     fprintf(stderr, "both width and height+depth.");
   else if(size_buffer[0] <= 0)
@@ -19200,7 +19200,7 @@ case ERROR_INVALID_TENSION:
   fprintf(stderr,
           "%s:%s Between path points (%g, %g) and (%g, %g) we found %s tension value '%g' smaller than minimal allowed '0.75'.",
           mf -> file, line_number, buf[0], buf[1], buf[2], buf[3],
-	  (mf -> errno_int == 0)?"first":"second", buf[4]);
+          (mf -> errno_int == 0)?"first":"second", buf[4]);
   break;
 @
 
@@ -19365,7 +19365,7 @@ devido a fatores externos. Contudo, eles também podem ser sintomas de
 vazamento de memória devido à práticas de programação questionáveis no
 programa WeaveFont. Por exemplo:
 
-\alinhacodigo
+\alinhaverbatim
 numeric i;
 path p;
 p = (0, 0);
@@ -19427,7 +19427,7 @@ case ERROR_NO_PICKUP_PEN:
   tokenid_to_string(mf -> errno_int, mf -> errno_str);
   fprintf(stderr, "%s:%s After a 'pickup' command, you should use either a "
                   "'nullpen', 'pencircle', 'pensemicircle' or a pen variable.",
-		  mf -> file, line_number);
+                  mf -> file, line_number);
   break;
 @
 
@@ -19529,8 +19529,8 @@ case ERROR_OPENGL_FRAMEBUFFER:
     case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
       printf("  GL_RENDERBUFFER_SAMPLES is not the same for all attached "
              " renderbuffers or attached images are a mix of renderbuffers "
-	     "and textures while the value of GL_RENDERBUFFER_SAMPLES "
-	     "is not zero. ");
+             "and textures while the value of GL_RENDERBUFFER_SAMPLES "
+             "is not zero. ");
       break;
     default:
       printf(" Unknown error.");
@@ -19604,7 +19604,7 @@ case ERROR_UNBALANCED_ENDING_TOKEN:
   tokenid_to_string(mf -> errno_int, mf -> errno_str);
   fprintf(stderr, "%s:%s Unexpected token \"%s\" found. You are trying to "
           "close a compund command that were never opened or you have "
-	  "two or more unbalanced compound statements.", mf -> file,
+          "two or more unbalanced compound statements.", mf -> file,
           line_number, mf -> errno_str);
   break;
 @
@@ -19792,7 +19792,7 @@ E com isso produzimos a mensagem de erro:
 case ERROR_UNKNOWN_GLYPH_DEPENDENCY:
   fprintf(stderr,
           "%s:%s Command 'renderchar' created dependency of undefined glyph '%s'.",
-	  mf -> file, line_number, mf -> errno_str);
+          mf -> file, line_number, mf -> errno_str);
   break;
 @
 
@@ -19926,7 +19926,7 @@ case ERROR_UNSUPORTED_LENGTH_OPERAND:
     tokenid_to_string(mf -> errno_int, mf -> errno_str);
     fprintf(stderr, "%s:%s Operator 'length' expects a numeric, pair or path "
                     "expression as operand. Instead, we found a %s expression.",
-		    mf -> file, line_number, mf -> errno_str);
+                    mf -> file, line_number, mf -> errno_str);
   }
   break;
 @
@@ -19963,8 +19963,8 @@ With these information, we can generate the correct errror message:
 case ERROR_WRONG_NUMBER_OF_PARAMETERS:
   fprintf(stderr,
           "%s:%s Statement '%s' expected %d parameters, but %d were given.",
-	  mf -> file, line_number, mf -> errno_str, mf -> errno_int >> 8,
-	  mf -> errno_int & 255);
+          mf -> file, line_number, mf -> errno_str, mf -> errno_int >> 8,
+          mf -> errno_int & 255);
   break;
 @
 
