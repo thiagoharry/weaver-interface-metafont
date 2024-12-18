@@ -274,6 +274,9 @@ void test(struct metafont *mf, char *font_name, char *c, int weight, int italic)
 	unsigned long loop = 0;
 	do{
 	  glClear(GL_COLOR_BUFFER_BIT);
+	  //glEnable(GL_BLEND);
+	  //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	  //glBlendEquation(GL_FUNC_ADD);
 	  _Wrender_interface(time(NULL));
 	  _Wget_window_input(time(NULL), &keyboard, &mouse);
 	  _Wrender_window();

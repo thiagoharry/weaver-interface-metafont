@@ -352,22 +352,18 @@ beginchar("2", (0.482+0.032*(weight-1)+0.112*italic-0.005*italic*(weight-1))*siz
   % Erasing:
   pickup pensemicircle scaled ((0.16+ 0.093 * (weight - 1))  * h) rotated 160;
   erase begin;
-  pickcolor(1, 0, 0, 1);
-  pickup pencircle scaled 10;
-  pair r1, r2, r3, r4, r5, r6;
-  pen eraser;
-  r1 = (1, 0) rotated -20 scaled ((0.131 + 0.093 * (weight-1)) * 0.5 * h) shifted begin;
-  r2 = (0, -1+(0.25*(weight-1))) scaled ((0.131 + 0.093 * (weight-1)) * 0.5 * h) shifted upper;
-  r3 = (-1, 0) scaled ((0.131 + 0.093 * (weight-1)) * 0.5 * h) shifted back;
-  r5 = (0, 1.2) scaled ((0.131 + 0.093 * (weight-1)) * 0.5 * h) shifted basis;
-  r4 = 0.5[r3, r5] + (0.12*w, 0);
-  r6 = 0.5[r4, r5];
   if weight-1 > 0.5:
-    eraser = makepen(r1..r2..r3..r4{-1, -1.1}..r6--r5..cycle);
+    pair r1, r2, r3, r4, r5, r8;
+    pen eraser;
+    r1 = (1, 0) rotated -20 scaled ((0.131 + 0.093 * (weight-1)) * 0.5 * h) shifted begin;
+    r2 = (0, -1+(0.25*(weight-1))) scaled ((0.131 + 0.093 * (weight-1)) * 0.5 * h) shifted upper;
+    r3 = (-1, 0) scaled ((0.131 + 0.093 * (weight-1)) * 0.5 * h) shifted back;
+    r5 = (0, 1.2) scaled ((0.131 + 0.093 * (weight-1)) * 0.5 * h) shifted basis;
+    r4 = 0.5[r3, r5] + (0.13*w, 0);
+    r8 = r4 + (0.14*w, 0.1*h);
+    eraser = makepen(r1..r2..r3..r8..r4--r5..cycle);
     pickup eraser;
     erase (0,0);
-    %pickup pencircle scaled 5;
-    %draw r1..r2..r3..r4{-1, -1.1}..r6--r5..cycle;
   fi
 endchar;
 
@@ -628,7 +624,6 @@ beginchar("@", (0.682+0.006*(weight-1))*size*pt, 0.68*size*pt, 0);
   p3 = ((0.456-0.057*italic)*w, (0.279+0.035*(weight-1)+0.017*italic)*h);
   p4=((0.554-0.016*(weight-1)-0.053*italic)*w, (0.327+0.015*(weight-1)+0.004*italic)*h);
   p5 = (-0.04*w*italic + xpart p1, (0.487-0.009*italic)*h);
-  % The angle in p4 is not this in italic
   draw p1..{0, -1}p2..{1, 0}p3.. tension (1+0.5*italic) .. p4 .. p5--p1;
   pickup pencircle yscaled (0.107*h) xscaled (0.117*h);
   p6 = ((0.005*(weight-1)*w) + xpart p5, ypart p5); % BUG: Seg fault
@@ -639,8 +634,20 @@ beginchar("@", (0.682+0.006*(weight-1))*size*pt, 0.68*size*pt, 0);
   p11 = top (0.512*w, 0);
   p12 = (0.709*w, 0.091*h);
   draw p6{-0.174+0.174*italic, -1+0.015*italic}..{1, 0}p7..{0, 1}p8..{-1, 0}p9..{0, -1}p10..{1, 0}p11..p12;
+  % Retouch:
   pickup pensquare scaled (0.117.h);
   erase rt p12;
+  if italic > 0.5:
+    pen eraser;
+    pair r0, r1, r2, r3;
+    r1 = (-0.25*(weight-1), 1+(0.2*(weight-1))) yscaled ((0.0535+0.0125*(weight-1))*h) xscaled ((0.117+0.019*(weight-1))*h) shifted p3;
+    r3 = (-1, 0) xscaled ((0.0585+0.0095*(weight-1))*h) shifted p5;
+    r0 = (-1.1, -0.7) yscaled ((0.0535+0.0125*(weight-1))*h) xscaled ((0.0585+0.0095*(weight-1))*h) shifted p1;
+    r2 = 0.5[r1, r3] + ((0.04+0.015*(weight-1))*w, -0.03-0.015*(weight-1)*h);
+    eraser = makepen(r1..r2..r3..r0--cycle);
+    pickup eraser;
+    erase (0, 0);
+  fi
 endchar;
 
 beginchar("A", (0.608+0.075*(weight-1)+0.01*italic-0.003*italic*(weight-1))*size*pt, (0.67-0.002*(weight-1)-0.002*italic+0.002*italic*(weight-1))*size*pt, 0);
@@ -868,6 +875,16 @@ beginchar("J", (0.422+0.092*(weight-1)+0.115*italic-0.012*italic*(weight-1))*siz
   draw p1..p2{cosd(ang), -sind(ang)}..{-1, 0}p3..p4;
   pickup pensemicircle rotated 20 xscaled (pen_width*1.2) yscaled (pen_height*1.2);
   erase p4;
+  % Retouch:
+  pair r1, r2, r3;
+  pen eraser;
+  r1 = (0, 1) xscaled pen_width yscaled 0.5*pen_height shifted p3;
+  r2 = (1, 0) xscaled 0.5*pen_width yscaled pen_height rotated 20 shifted p4;
+  r2 = ((length (r1-p3))/(length (r2-p4)), 0) xscaled 0.5*pen_width yscaled pen_height rotated 20 shifted p4;
+  r3 = (xpart r1, ypart r2);
+  eraser = makepen(r1{-1, 0}..{0, 1}r2--r3--cycle);
+  pickup eraser;
+  erase (0, 0);
 endchar;
 
 beginchar("K", (0.543+0.065*(weight-1)+0.115*italic+0.017*italic*(weight-1))*size*pt, 0.668*size*pt, 0);
@@ -961,13 +978,27 @@ beginchar("O", (0.63+0.065*(weight-1)+0.058*italic-0.009*italic*(weight-1))*size
   draw p1{-1, 0}..p2{0, -1}..p3{1, 0}..p4{0, 1}..cycle;
 endchar;
 
-beginchar("P", 200, 150, 0);
-  renderchar "1" between (0.25*w, 0.5*h) and (0.75*w, h);
-  %weight = totalweight currentpicture; % Expected: 18.0
-  renderchar "1" between (0.75*w, 0.5*h) and (0.25*w, h);
-  %weight = totalweight currentpicture; % Expected: ???
-  renderchar "1" between (0.25*w, 0.5*h) and (0.75*w, 0);
-  renderchar "1" between (0.75*w, 0.5*h) and (0.25*w, 0);
+beginchar("P", (0.489+0.072*(weight-1)+0.114*italic+0.003*italic*(weight-1))*size*pt, 0.667*size*pt, 0);
+  % PARAMETERS:
+  numeric pen_width, pen_height, ratio, ang;
+  pen_width = ((0.137+0.1*(weight-1))*h);
+  pen_height = ((0.13+0.07*(weight-1))*h);
+  ratio = (0.465-0.017*(weight-1)); % Ratio between 'P' leg and leg+head
+  ang = 12*italic;
+  % CONTROL POINTS
+  pickup pencircle xscaled pen_width yscaled pen_height;
+  pair p1, p2, p2b, p3, p4, p5, p6;
+  p1 = (pen_width/2, 0);    % 'P' bottom point
+  p2 = (pen_width/2  + h * sind ang, h);    % 'P' upper left point
+  p2b = (1.0-0.5*(pen_height/h))[p1, p2];
+  p3 = (0.6*w, h-(pen_height/2)); % uppermost rightmost point in horizontal line
+  p4 = ratio[p1, p2];       % Point where lower part of 'P' head split from leg
+  p5 = (0.6*w, ratio*h); % lower rightmost point in horizontal line
+  p6 = lft ((1-0.03*italic)*w, ypart(0.5[p5, p3]));
+  draw p1--p2;
+  draw bot p2 -- p3;
+  draw p4 -- p5;
+  draw p5{1, 0}..{0, 1}p6..{-1, 0}p3;
 endchar;
 
 beginchar("S", (0.517+0.057*(weight-1)+0.01*italic+0.015*italic*(weight-1))*size*pt,
