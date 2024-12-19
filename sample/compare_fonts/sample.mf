@@ -1001,6 +1001,45 @@ beginchar("P", (0.489+0.072*(weight-1)+0.114*italic+0.003*italic*(weight-1))*siz
   draw p5{1, 0}..{0, 1}p6..{-1, 0}p3;
 endchar;
 
+beginchar("Q", (0.703+0.044*(weight-1)-0.018*italic+0.015*italic*(weight-1))*size*pt, (0.68+0.016*italic+0.01*(weight-1)*italic)*size*pt, (0.045+0.01*(weight-1)+0.01*italic-0.01*italic*(weight-1))*size*pt);
+  % PARAMETERS:
+  numeric pen_width, ratio;
+  pen_width = ((0.139+0.04*(weight-1))*h);
+  ratio = 0.89+0.04*(weight-1)+0.1*italic-0.025*(weight-1)*italic;
+  % CONTROL POINTS:
+  pair p1, p2;
+  p1 = italic[((ratio*w)/2, h/2),
+              ((0.95*ratio*w)/2, (0.9*h)/2)];
+  p2 = italic[(w-0.3535*pen_width, -d+0.3535*pen_width),
+              (0.95*ratio*w-0.3535*pen_width, -d+0.3535*pen_width)];
+  % RENDERING:
+  pickup pencircle scaled pen_width;
+  renderchar "O" between (0, 0) and (ratio*w, h);
+  draw p1--p2;
+  pickup pensemicircle scaled pen_width rotated 45;
+  erase p1;
+  pickup pensemicircle scaled pen_width rotated 225;
+  erase p2;
+endchar;
+
+beginchar("R", (0.513+0.081*(weight-1)+0.092*italic-0.017*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+  % PARAMETERS:
+  numeric ratio, ratio_leg, pen_width, ratio_leg2;
+  ratio = 0.95 - 0.01*(weight-1) + 0.04*italic + 0.02*italic*(weight-1);
+  ratio_leg = (0.465-0.017*(weight-1)); % Ratio between 'P' leg and leg+head
+  ratio_leg2 = (0.45+0.035*(weight-1)) * ratio;
+  pen_width = ((0.137+0.13*(weight-1))*h);
+  % CONTROL POINTS
+  pair p1, p2;
+  p1 = (ratio_leg2*w, ratio_leg*h);
+  p2 = (w - pen_width/2 - 0.17*italic*w + 0.04*italic*(weight-1)*w, 0);
+  % RENDERING:
+  pickup pensquare xscaled pen_width;
+  renderchar "P" between (0, 0) and (ratio*w, h);
+  draw p1--p2;
+endchar;
+
 beginchar("S", (0.517+0.057*(weight-1)+0.01*italic+0.015*italic*(weight-1))*size*pt,
     0.6575*size*pt, 0);
   pair p0, p1, p2, p3, p4, p5, p6;

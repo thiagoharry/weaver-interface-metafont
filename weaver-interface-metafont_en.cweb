@@ -17847,7 +17847,7 @@ use in the rendering:
 {
   float gl_matrix[9];
   float width, height, depth;
-  float current_width, current_height, current_depth;
+  float current_width, current_height;
   current_width = cx -> internal_numeric_variables[INTERNAL_NUMERIC_W].value;
   current_height = cx -> internal_numeric_variables[INTERNAL_NUMERIC_H].value +
                  cx -> internal_numeric_variables[INTERNAL_NUMERIC_D].value;
@@ -17856,25 +17856,28 @@ use in the rendering:
   if(p1.x > p2.x){
     width = p1.x - p2.x;
     gl_matrix[0] = - (width / current_width);
-    gl_matrix[6] = ((p2.x + width / 2) / current_width) - 0.5;
+    gl_matrix[6] = ((p1.x + p2.x) / current_width) - 1.0;
   }
   else{
     width = p2.x - p1.x;
     gl_matrix[0] = (width / current_width);
-    gl_matrix[6] = ((p1.x + width / 2) / current_width) - 0.5;
+    gl_matrix[6] = ((p1.x + p2.x) / current_width) - 1.0;
   }
   if(p1.y > p2.y){
     height = p1.y - p2.y;
     depth = glyph -> depth * (height / (glyph -> height));
     gl_matrix[4] = - (height + depth) / current_height;
-    gl_matrix[7] = ((p2.y - depth / 2 + height / 2) / current_height) - 0.5;
+    gl_matrix[7] = ((p1.y + p2.y) / current_height) - 1.0;
+    gl_matrix[7] += glyph -> depth / (glyph -> height + glyph -> depth);
+    gl_matrix[7] += 2.0 * current_depth / (current_depth + current_height);
   }
   else{
     height = p2.y - p1.y;
     depth = glyph -> depth * (height / (glyph -> height));
     gl_matrix[4] = (height + depth) / current_height;
-    gl_matrix[7] = ((p1.y + current_depth - depth / 2 + height / 2) /
-                     current_height) - 0.5;
+    gl_matrix[7] = ((p1.y + p2.y) / current_height) - 1.0;
+    gl_matrix[7] += glyph -> depth / (glyph -> height + glyph -> depth);
+    gl_matrix[7] += 2.0 * current_depth / (current_depth + current_height);
   }
   @<Prepare 'currentpicture' for Drawing@>
   glEnable(GL_BLEND);
