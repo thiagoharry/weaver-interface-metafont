@@ -1110,3 +1110,147 @@ beginchar("S", (0.517+0.057*(weight-1)+0.01*italic+0.015*italic*(weight-1))*size
     yscaled ((0.13+0.05*(weight-1)) * (h+d));
   erase (point 6 of s);
 endchar;
+
+beginchar("T", (0.54+0.048*(weight-1)+0.017*italic+0.012*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+  % PARAMETERS:
+  numeric pen_width, pen_height, italic_shift;
+  pen_width = ((0.139+0.104*(weight-1))*h);
+  pen_height = ((0.12+0.088*(weight-1))*h);;
+  italic_shift = 0;
+  % CONTROL POINTS:
+  pair p1, p2, p3, p4;
+  p1 = (0, h-(pen_height/2));
+  p2 = (w, h-(pen_height/2));
+  p3 = (w/2 - 0.05 * pen_width * italic, h-(pen_height));
+  p4 = (w/2 - 0.24*w*italic+0.03*italic*(weight-1)*w, 0);
+  % RENDERING:
+  pickup pensquare slanted (0.2*italic) xscaled pen_width yscaled pen_height;
+  draw rt p1 -- lft p2;
+  pickup pensquare xscaled pen_width;
+  draw p3 -- p4;
+endchar;
+
+beginchar("U", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+  % PARAMETERS:
+  numeric pen_width, pen_height;
+  pen_width = ((0.139+0.104*(weight-1))*h);
+  pen_height = ((0.139+0.05*(weight-1))*h);
+  % CONTROL POINTS
+  pair p1, p2, p3, p4, p5;
+  p1 = (pen_width/2 + 0.18*italic*w, h);
+  p2 = (pen_width/2 + 0.03 *italic*w, 0.35*h);
+  p3 = (w - pen_width/2, h);
+  p4 = (w - pen_width/2 - 0.15*italic*w, 0.35*h);
+  p5 = (w/2 - 0.15*italic*w, pen_height/2);
+  % RENDERING:
+  pickup pensquare xscaled pen_width;
+  draw p1--p2;
+  draw p3--p4;
+  pickup pencircle xscaled pen_width yscaled pen_height;
+  draw p2{p2-p1} .. {1, 0}p5 .. {p3-p4}p4;
+endchar;
+
+beginchar("V", (0.57+0.068*(weight-1)+0.003*italic+0.002*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+  % PARAMETERS:
+  numeric pen_width, spread, basis_position;
+  pen_width = ((0.15+0.09*(weight-1))*h);
+  spread = (0.007+0.012*(weight-1))*w;
+  basis_position = (0.5-0.25*italic+0.02*italic*(weight-1))*w;
+  % CONTROL POINTS
+  pair p1, p2a, p2b, p3;
+  p1 = (pen_width/2, h);
+  p2a = (basis_position - spread, 0);
+  p2b = (basis_position + spread, 0);
+  p3 = (w - pen_width/2, h);
+  % RENDERING:
+  pickup pensquare xscaled pen_width;
+  draw p1--p2a;
+  draw p2b--p3;
+endchar;
+
+beginchar("W", (0.822+0.042*(weight-1)+0.003*italic+0.003*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+  % PARAMETERS:
+  numeric pen_width, spread, basis_position1, basis_position2, top_position;
+  pen_width = ((0.15+0.09*(weight-1))*h);
+  spread = (0.007+0.012*(weight-1))*w;
+  basis_position1 = (0.267-0.16*italic+0.03*italic*(weight-1))*w;
+  basis_position2 = (0.72-0.16*italic-0.017*italic*(weight-1))*w;
+  top_position = (0.5-0.01*italic)*w;
+  % CONTROL POINTS
+  pair p1, p2a, p2b, p3a, p3b, p4a, p4b, p5;
+  p1 = (pen_width/2, h);
+  p5 = (w - pen_width/2, h);
+  p2a = (basis_position1 - spread, 0);
+  p2b = (basis_position1 + spread, 0);
+  p3a = (top_position - spread, h);
+  p3b = (top_position + spread, h);
+  p4a = (basis_position2 - spread, 0);
+  p4b = (basis_position2 + spread, 0);
+  % RENDERING:
+  pickup pensquare xscaled pen_width;
+  draw p1--p2a;
+  draw p2b--p3a;
+  draw p3b--p4a;
+  draw p4b--p5;
+  % RETOUCH
+  pair r1, r2, r3;
+  pen eraser;
+  r1 = (pen_width, h);
+  r2 = (basis_position1+0.02*italic*w+0.01*(weight-1)*italic*w, (0.17+0.14*(weight-1)+0.023*italic)*h);
+  r3 = (top_position - pen_width/2 - spread + 0.02*(weight-1)*w, h);
+  eraser=makepen(r1--r2--r3--cycle);
+  pickup eraser;
+  erase (0, 0);
+  r1 = (top_position + pen_width/2 + spread - 0.02*(weight-1)*w, h);
+  r2 = (basis_position2+0.015*italic*w+0.03*(weight-1)*italic*w, (0.17+0.14*(weight-1)+0.01*italic)*h);
+  r3 = (w-pen_width, h);
+  eraser=makepen(r1--r2--r3--cycle);
+  pickup eraser;
+  erase (0, 0);
+  r1 = (basis_position1+pen_width/2 + spread - 0.03*italic*(weight-1)*w, 0);
+  r2 = (top_position-0.032*italic*w-0.017*italic*(weight-1)*w, (0.825-0.125*(weight-1))*h);
+  r3 = (basis_position2-pen_width/2 - spread + 0.02*italic*(weight-1)*w, 0);
+  eraser=makepen(r1--r2--r3--cycle);
+  pickup eraser;
+  erase (0, 0);
+endchar;
+
+beginchar("X", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+beginchar("Y", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+beginchar("Z", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+beginchar("[", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+%beginchar("\\\\", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+%    0.668*size*pt, 0);
+%endchar;
+
+beginchar("]", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+beginchar("^", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+beginchar("_", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+beginchar("`", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
