@@ -1219,12 +1219,43 @@ beginchar("W", (0.822+0.042*(weight-1)+0.003*italic+0.003*italic*(weight-1))*siz
   erase (0, 0);
 endchar;
 
-beginchar("X", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+beginchar("X", (0.605+0.076*(weight-1)+0.139*italic+0.01*italic*(weight-1))*size*pt,
     0.668*size*pt, 0);
+  % PARAMETERS:
+  numeric pen_width, pen_width2, top_shift, bottom_shift;
+  pen_width = ((0.17+0.12*(weight-1)+0.04*italic*(weight-1))*h);
+  pen_width2 = ((0.17+0.12*(weight-1)-0.03*italic*(weight-1))*h);
+  top_shift = (0.02+0.2*italic)*w;
+  bottom_shift = (0.193*italic-0.01*italic*(weight-1))*w;
+  % CONTROL POINTS
+  pair p1, p2, p3, p4;
+  p1 = (pen_width/2, 0);
+  p2 = (w - pen_width/2 - (top_shift*(1-italic)), h);
+  p3 = (pen_width2/2 + top_shift, h);
+  p4 = (w - pen_width2/2 - bottom_shift, 0);
+  % RENDERING
+  pickup pensquare xscaled pen_width;
+  draw p1--p2;
+  pickup pensquare xscaled pen_width2;
+  draw p3--p4;
 endchar;
 
-beginchar("Y", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+beginchar("Y", (0.576+0.093*(weight-1)+0.003*italic+0.009*italic*(weight-1))*size*pt,
     0.668*size*pt, 0);
+  % PARAMETERS
+  numeric pen_width;
+  pen_width = ((0.15+0.12*(weight-1)-0.01*italic*(weight-1))*h);
+  % CONTROL POINTS
+  pair p1, p2, p3, p4;
+  p1 = (pen_width/2, h);
+  p2 = ((0.5-0.2*italic+0.07*italic*(weight-1))*w, 0.39*h);
+  p3 = (w - pen_width/2, h);
+  p4 = ((0.5-0.27*italic+0.05*italic*(weight-1))*w, 0);
+  % RENDERING
+  pickup pensquare xscaled pen_width;
+  draw p1--p2;
+  draw p3--p2;
+  draw p2--p4;
 endchar;
 
 beginchar("Z", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
