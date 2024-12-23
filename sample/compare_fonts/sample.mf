@@ -1258,12 +1258,66 @@ beginchar("Y", (0.576+0.093*(weight-1)+0.003*italic+0.009*italic*(weight-1))*siz
   draw p2--p4;
 endchar;
 
-beginchar("Z", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+beginchar("Z", (0.52+0.038*(weight-1)+0.140*italic+0.01*italic*(weight-1))*size*pt,
     0.668*size*pt, 0);
+  % PARAMETERS
+  numeric pen_width, pen_height, top_margin, bot_margin, ang;
+  pen_width = ((0.16+0.125*(weight-1)-0.01*italic*(weight-1))*h);
+  pen_height = ((0.123+0.086*(weight-1)-0.01*italic*(weight-1))*h);
+  top_margin = (0.025+0.215*italic)*w;
+  bot_margin = (0.19*italic)*w;
+  ang=-15*italic;
+  % CONTROL POINTS
+  pair p1, p2, p3, p4, p5, p6;
+  p1 = (top_margin, h - pen_height/2 * cosd ang);
+  p2 = (w - (top_margin*(1-italic)) + 0.5*pen_height*sind ang, h - pen_height/2 * cosd ang);
+  p3 = (-0.5*pen_height*(sind ang), pen_height/2 * cosd ang);
+  p4 = (w-bot_margin, pen_height/2 * cosd ang);
+  p5 = (w - (top_margin*(1-italic)) - pen_width/2 + pen_height*sind ang, h - pen_height * cosd ang);
+  p6 = (pen_width/2 - pen_height*sind ang, pen_height * cosd ang);
+  % RENDERING
+  pickup pensquare yscaled pen_height rotated ang;
+  draw p1--p2;
+  draw p3--p4;
+  pickup pensquare xscaled pen_width;
+  draw p5--p6;
+  % RETOUCH
+  pair r1, r2, r3;
+  pen eraser;
+  r1 = p5 + (0.5*pen_width, 0);
+  r1 = (0.25*(weight-1))[r1, p2] + (0.01*w*(weight-1)*(1-italic), 0);
+  r2 = p6 + (0.5*pen_width, 0);
+  r3 = (w, ypart p6);
+  eraser = makepen(r1--r2--r3--cycle);
+  pickup eraser;
+  erase (0, 0);
 endchar;
 
-beginchar("[", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
-    0.668*size*pt, 0);
+beginchar("[", (0.207+0.05*(weight-1)+0.177*italic+0.003*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0.16*size*pt);
+  % PARAMETERS
+  numeric pen_width, pen_height, top_margin, bot_margin, ang;
+  pen_width = ((0.12+0.075*(weight-1)-0.01*italic*(weight-1))*h);
+  pen_height = ((0.111+0.066*(weight-1)-0.01*italic*(weight-1))*h);
+  top_margin = (0.43*italic)*w;
+  bot_margin = (0.43*italic)*w;
+  ang=-11*italic-2*italic*(weight-1);
+  % CONTROL POINTS
+  pair p1, p2, p3, p4, p5, p6;
+  p5 = (top_margin + pen_width/2 + 0.5*pen_height*sind(-12*italic), h - pen_height * cosd(-12*italic));
+  p6 = (-0.5*pen_height*(sind (-12*italic)), -d+pen_height * cosd (-12*italic));
+  p1 = (top_margin, h - pen_height/2 * cosd ang);
+  p2 = (w - (top_margin*(1-italic)) + 0.5*pen_height*sind ang, h - pen_height/2 * cosd ang);
+  p3 = (-0.5*pen_height*(sind ang), -d+pen_height/2 * cosd ang);
+  p4 = (w-bot_margin, -d+pen_height/2 * cosd ang);
+  p5 = (xpart p1 + pen_width/2 +0.5*pen_height*sind ang, h - pen_height * cosd ang);
+  p6 = (xpart p3 + pen_width/2 -0.5pen_height*sind ang, -d+pen_height * cosd ang);
+  % RENDERING
+  pickup pensquare yscaled pen_height rotated ang;
+  draw p1--p2;
+  draw p3--p4;
+  pickup pensquare xscaled pen_width;
+  draw p5--p6;
 endchar;
 
 %beginchar("\\\\", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
