@@ -1463,15 +1463,17 @@ if(c == 34){ // 34: ASCII para aspas duplas
 #if defined(W_DEBUG_METAFONT)
   new_token -> line = line;
 #endif
-  int i = 0, prev;
+  int i = 0, prev = 0, prev_prev;
   do{
+    prev_prev = prev;
     prev = c;
     c = fgetc(fp);
     if(i < 5 && (c !='\\' || prev == '\\')){
       new_token -> value[i] = c;
       i ++;
     }
-  } while((c != 34 || prev == '\\') && c != '\n' && c != EOF);
+  } while((c != 34 || (prev == '\\' && prev_prev != '\\')) &&
+          c != '\n' && c != EOF);
   i --;
   new_token -> value[i] = '\0';
   if(c == '\n' || c == EOF){
