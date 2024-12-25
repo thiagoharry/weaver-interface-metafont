@@ -1355,14 +1355,167 @@ beginchar("]", (0.207+0.05*(weight-1)+0.177*italic+0.003*italic*(weight-1))*size
   draw p5--p6;
 endchar;
 
-beginchar("^", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
-    0.668*size*pt, 0);
+beginchar("^", (0.447+0.038*(weight-1))*size*pt,
+    0.668*size*pt, (-0.309-0.001*(weight-1))*size*pt);
+  % PARAMETERS
+  numeric pen_width;
+  pen_width = (0.14+0.07*(weight-1))*h;
+  % CONTROL_POINTS
+  pair p1, p2, p3;
+  p1 = (pen_width/2, -d);
+  p2 = (w/2, h);
+  p3 = (w-pen_width/2, -d);
+  % RENDERING
+  pickup pensquare xscaled pen_width;
+  draw p1--p2--p3;
+  % RETOUCH
+  pair r1, r2, r3;
+  pen eraser;
+  r1 = (0, -d);
+  r2 = (xpart p2 - pen_width/2 + (0.01+0.015*(weight-1))*w, h);
+  r3 = (0, h);
+  eraser = makepen(r1--r2--r3--cycle);
+  pickup eraser;
+  erase (0, 0);
+  r1 = (w, -d);
+  r2 = (xpart p2 + pen_width/2 - (0.01+0.015*(weight-1))*w, h);
+  r3 = (w, h);
+  eraser = makepen(r1--r2--r3--cycle);
+  pickup eraser;
+  erase (0, 0);
 endchar;
 
-beginchar("_", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
-    0.668*size*pt, 0);
+beginchar("_", (0.378+0.033*(weight-1)+0.001*italic*(weight-1))*size*pt,
+    0, (0.08+0.049*(weight-1))*size*pt);
+  pickup pensquare xscaled w yscaled d;
+  draw (w/2, -d/2);
 endchar;
 
 beginchar("`", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
     0.668*size*pt, 0);
 endchar;
+
+beginchar("a", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+beginchar("b", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+beginchar("c", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+beginchar("d", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+beginchar("e", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+beginchar("f", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+beginchar("g", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+beginchar("h", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+beginchar("i", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+beginchar("j", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+beginchar("k", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+beginchar("l", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+beginchar("m", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+beginchar("n", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+beginchar("o", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+beginchar("p", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+beginchar("q", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+beginchar("r", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+beginchar("s", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+beginchar("t", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+beginchar("u", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+beginchar("v", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+beginchar("w", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+beginchar("x", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+beginchar("y", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+beginchar("z", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+beginchar("{", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+beginchar("|", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+beginchar("}", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+beginchar("~", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0);
+endchar;
+
+
+
+
+
