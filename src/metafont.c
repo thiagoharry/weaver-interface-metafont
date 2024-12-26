@@ -27,14 +27,14 @@
 
 struct pen_variable;
 /*:177*//*644:*/
-#line 18233 "weaver-interface-metafont.cweb"
+#line 18235 "weaver-interface-metafont.cweb"
 
 #if defined(WEAVER_ENGINE)
 #include "interface.h"
 #endif
-#line 18237 "weaver-interface-metafont.cweb"
+#line 18239 "weaver-interface-metafont.cweb"
 /*:644*//*678:*/
-#line 18886 "weaver-interface-metafont.cweb"
+#line 18888 "weaver-interface-metafont.cweb"
 
 #include <errno.h> 
 /*:678*/
@@ -432,7 +432,7 @@ struct pen_variable;
   last_diagonal -> next =  v2;                                \
   last_diagonal -> succ =  NULL;}
 /*:562*//*652:*/
-#line 18485 "weaver-interface-metafont.cweb"
+#line 18487 "weaver-interface-metafont.cweb"
 
 #define RAISE_GENERIC_ERROR(mf, cx, line, error_code) {\
   struct context *_cx =  cx;\
@@ -442,17 +442,17 @@ struct pen_variable;
     if(cx != NULL && _cx -> current_character[0] != '\0')\
       memcpy(mf -> errno_character, _cx -> current_character, 5);}}
 /*:652*//*653:*/
-#line 18499 "weaver-interface-metafont.cweb"
+#line 18501 "weaver-interface-metafont.cweb"
 
 #if defined(W_DEBUG_METAFONT)
 #define OPTIONAL(x) x
 #else
-#line 18503 "weaver-interface-metafont.cweb"
+#line 18505 "weaver-interface-metafont.cweb"
 #define OPTIONAL(x) 0
 #endif
-#line 18505 "weaver-interface-metafont.cweb"
+#line 18507 "weaver-interface-metafont.cweb"
 /*:653*//*661:*/
-#line 18694 "weaver-interface-metafont.cweb"
+#line 18696 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_DISCONTINUOUS_PATH(mf, cx, line, x1, y1, x2, y2) {\
   if(!mf -> err){\
@@ -463,12 +463,12 @@ struct pen_variable;
     buffer[2] =  (float) (x2);\
     buffer[3] =  (float) (y2);}}
 /*:661*//*664:*/
-#line 18727 "weaver-interface-metafont.cweb"
+#line 18729 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_DIVISION_BY_ZERO(mf, cx, line) {\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_DIVISION_BY_ZERO);}
 /*:664*//*667:*/
-#line 18751 "weaver-interface-metafont.cweb"
+#line 18753 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_DUPLICATE_GLYPH(mf, cx, line, glyph) {\
   if(!mf -> err){\
@@ -476,14 +476,14 @@ struct pen_variable;
     memcpy(mf -> errno_str, glyph, 4);\
     mf -> errno_str[4] =  '\0';}}
 /*:667*//*670:*/
-#line 18795 "weaver-interface-metafont.cweb"
+#line 18797 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_EMPTY_DELIMITER(mf, cx, line, delimiter) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_EMPTY_DELIMITER);\
     mf -> errno_int =  delimiter;}}
 /*:670*//*673:*/
-#line 18828 "weaver-interface-metafont.cweb"
+#line 18830 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_EXPECTED_FOUND(mf, cx, line, expected, found) {\
   if(!mf -> err){\
@@ -491,7 +491,7 @@ struct pen_variable;
     mf -> errno_int =  expected;\
     token_to_string(found, mf -> errno_str);}}
 /*:673*//*676:*/
-#line 18861 "weaver-interface-metafont.cweb"
+#line 18863 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_FAILED_OPENING_FILE(mf, cx, line, str) {\
   if(!mf -> err){\
@@ -502,19 +502,19 @@ struct pen_variable;
     memcpy(mf -> errno_str, str, _len);\
     mf -> errno_str[31] =  '\0';}}
 /*:676*//*680:*/
-#line 18904 "weaver-interface-metafont.cweb"
+#line 18906 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, line) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INCOMPLETE_SOURCE);}}
 /*:680*//*683:*/
-#line 18934 "weaver-interface-metafont.cweb"
+#line 18936 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_INCOMPLETE_STATEMENT(mf, cx, line) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INCOMPLETE_STATEMENT);}}
 /*:683*//*686:*/
-#line 18991 "weaver-interface-metafont.cweb"
+#line 18993 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_INVALID_CHAR(mf, cx, line, str) {\
   if(!mf -> err){\
@@ -522,7 +522,7 @@ struct pen_variable;
     memcpy(mf -> errno_str, str, 4);\
     mf -> errno_str[4] =  '\0';}}
 /*:686*//*689:*/
-#line 19069 "weaver-interface-metafont.cweb"
+#line 19071 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_INVALID_COMPARISON(mf, cx, line, operator, type) {\
   if(!mf -> err){\
@@ -530,7 +530,7 @@ struct pen_variable;
     token_to_string(operator, mf -> errno_str);\
     mf -> errno_int =  type;}}
 /*:689*//*692:*/
-#line 19103 "weaver-interface-metafont.cweb"
+#line 19105 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_INVALID_DIMENSION_GLYPH(mf, cx, line, width, height) {\
   if(!mf -> err){\
@@ -539,7 +539,7 @@ struct pen_variable;
     buffer[1] =  (int) height;\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INVALID_DIMENSION_GLYPH);}}
 /*:692*//*695:*/
-#line 19144 "weaver-interface-metafont.cweb"
+#line 19146 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_INVALID_NAME(mf, cx, line, tok, type) {\
   if(!mf -> err){\
@@ -547,7 +547,7 @@ struct pen_variable;
     token_to_string(tok, mf -> errno_str);\
     mf -> errno_int =  type;}}
 /*:695*//*698:*/
-#line 19200 "weaver-interface-metafont.cweb"
+#line 19202 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_INVALID_TENSION(mf, cx, line, value, position, x1, y1, x2, y2) {\
   if(!mf -> err){\
@@ -560,21 +560,21 @@ struct pen_variable;
     buffer[4] =  (float) (value);\
     mf -> errno_int =  position;}}
 /*:698*//*701:*/
-#line 19239 "weaver-interface-metafont.cweb"
+#line 19241 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_MISSING_EXPRESSION(mf, cx, line, type) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_MISSING_EXPRESSION);\
     tokenid_to_string(type, mf -> errno_str);}}
 /*:701*//*704:*/
-#line 19268 "weaver-interface-metafont.cweb"
+#line 19270 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_MISSING_TOKEN(mf, cx, line, tok) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_MISSING_TOKEN);\
     tokenid_to_string(tok, mf -> errno_str);}}
 /*:704*//*707:*/
-#line 19295 "weaver-interface-metafont.cweb"
+#line 19297 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_NEGATIVE_LOGARITHM(mf, cx, line, number) {\
   if(!mf -> err){\
@@ -582,7 +582,7 @@ struct pen_variable;
     snprintf(mf -> errno_str, 31, "%g", number);\
     mf -> errno_str[31] =  '\0';}}
 /*:707*//*710:*/
-#line 19323 "weaver-interface-metafont.cweb"
+#line 19325 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_NEGATIVE_SQUARE_ROOT(mf, cx, line, number) {\
   if(!mf -> err){\
@@ -590,40 +590,40 @@ struct pen_variable;
     snprintf(mf -> errno_str, 31, "%g", number);\
     mf -> errno_str[31] =  '\0';}}
 /*:710*//*713:*/
-#line 19353 "weaver-interface-metafont.cweb"
+#line 19355 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_NESTED_BEGINCHAR(mf, cx, line) {\
   RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NESTED_BEGINCHAR);}
 /*:713*//*716:*/
-#line 19404 "weaver-interface-metafont.cweb"
+#line 19406 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_NO_MEMORY(mf, cx, line) {\
   RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NO_MEMORY);}
 /*:716*//*719:*/
-#line 19435 "weaver-interface-metafont.cweb"
+#line 19437 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_NO_PICKUP_PEN(mf, cx, line) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NO_PICKUP_PEN);}}
 /*:719*//*722:*/
-#line 19463 "weaver-interface-metafont.cweb"
+#line 19465 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_NONCYCLICAL_PEN(mf, cx, line) {\
   RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NONCYCLICAL_PEN);}
 /*:722*//*725:*/
-#line 19491 "weaver-interface-metafont.cweb"
+#line 19493 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_NULL_VECTOR_ANGLE(mf, cx, line) {\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NULL_VECTOR_ANGLE);}
 /*:725*//*728:*/
-#line 19520 "weaver-interface-metafont.cweb"
+#line 19522 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_OPENGL_FRAMEBUFFER(mf, cx, line) {\
   if(!mf -> err){\
   RAISE_GENERIC_ERROR(mf, cx, line, ERROR_OPENGL_FRAMEBUFFER);\
   mf -> errno_int =  glCheckFramebufferStatus(GL_FRAMEBUFFER);}}
 /*:728*//*731:*/
-#line 19576 "weaver-interface-metafont.cweb"
+#line 19578 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_RECURSIVE_RENDERCHAR(mf, cx, line, glyph) {\
   if(!mf -> err){\
@@ -631,21 +631,21 @@ struct pen_variable;
     memcpy(mf -> errno_str, glyph, 4);\
     mf -> errno_str[4] =  '\0';}}
 /*:731*//*734:*/
-#line 19610 "weaver-interface-metafont.cweb"
+#line 19612 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_UNBALANCED_ENDING_TOKEN(mf, cx, line, tok) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNCLOSED_STRING);\
     mf -> errno_int =  tok;}}
 /*:734*//*737:*/
-#line 19642 "weaver-interface-metafont.cweb"
+#line 19644 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_UNCLOSED_DELIMITER(mf, cx, line, delimiter) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNCLOSED_DELIMITER);\
     mf -> errno_int =  delimiter;}}
 /*:737*//*740:*/
-#line 19674 "weaver-interface-metafont.cweb"
+#line 19676 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_UNCLOSED_STRING(mf, cx, line, str) {\
   if(!mf -> err){\
@@ -655,21 +655,21 @@ struct pen_variable;
     memcpy(mf -> errno_str, str, _len);\
     mf -> errno_str[31] =  '\0';}}
 /*:740*//*743:*/
-#line 19706 "weaver-interface-metafont.cweb"
+#line 19708 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, line, tok) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNDECLARED_VARIABLE);\
     token_to_string((struct generic_token *) tok, mf -> errno_str);}}
 /*:743*//*746:*/
-#line 19740 "weaver-interface-metafont.cweb"
+#line 19742 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_UNEXPECTED_TOKEN(mf, cx, line, tok) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNEXPECTED_TOKEN);\
     token_to_string(tok, mf -> errno_str);}}
 /*:746*//*749:*/
-#line 19768 "weaver-interface-metafont.cweb"
+#line 19770 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, line, var_token, var_type) {\
   if(!mf -> err){\
@@ -677,7 +677,7 @@ struct pen_variable;
     token_to_string((struct generic_token *) (var_token), mf -> errno_str);\
     mf -> errno_int =  var_type;}}
 /*:749*//*752:*/
-#line 19799 "weaver-interface-metafont.cweb"
+#line 19801 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_UNKNOWN_GLYPH_DEPENDENCY(mf, cx, line, glyph) {\
   if(!mf -> err){\
@@ -685,33 +685,33 @@ struct pen_variable;
     memcpy(mf -> errno_str, glyph, 4);\
     mf -> errno_str[4] =  '\0';}}
 /*:752*//*755:*/
-#line 19832 "weaver-interface-metafont.cweb"
+#line 19834 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, line, type) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNKNOWN_EXPRESSION);\
     mf -> errno_int =  type;}}
 /*:755*//*758:*/
-#line 19864 "weaver-interface-metafont.cweb"
+#line 19866 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_UNKNOWN_STATEMENT(mf, cx, line) {\
   RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNKNOWN_STATEMENT);}
 /*:758*//*761:*/
-#line 19893 "weaver-interface-metafont.cweb"
+#line 19895 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_UNOPENED_DELIMITER(mf, cx, line, delimiter) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNOPENED_DELIMITER);\
     mf -> errno_int =  delimiter;}}
 /*:761*//*764:*/
-#line 19928 "weaver-interface-metafont.cweb"
+#line 19930 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_UNSUPORTED_LENGTH_OPERAND(mf, cx, line, type) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNSUPORTED_LENGTH_OPERAND);\
     mf -> errno_int =  type;}}
 /*:764*//*767:*/
-#line 19970 "weaver-interface-metafont.cweb"
+#line 19972 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_WRONG_NUMBER_OF_PARAMETERS(mf, cx, line, s, e, f) {\
   if(!mf -> err){\
@@ -719,7 +719,7 @@ struct pen_variable;
     tokenid_to_string(s, mf -> errno_str);\
     mf -> errno_int =  (e << 8) + f;}}
 /*:767*//*770:*/
-#line 20007 "weaver-interface-metafont.cweb"
+#line 20009 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, line, tok, type, expected) {\
   if(!mf -> err){\
@@ -1214,161 +1214,161 @@ int kern;
 struct kerning*next;
 };
 /*:614*//*650:*/
-#line 18429 "weaver-interface-metafont.cweb"
+#line 18431 "weaver-interface-metafont.cweb"
 
 enum{
 ERROR_NO_ERROR= 0,
 
 /*660:*/
-#line 18674 "weaver-interface-metafont.cweb"
+#line 18676 "weaver-interface-metafont.cweb"
 
 ERROR_DISCONTINUOUS_PATH,
 /*:660*//*663:*/
-#line 18720 "weaver-interface-metafont.cweb"
+#line 18722 "weaver-interface-metafont.cweb"
 
 ERROR_DIVISION_BY_ZERO,
 /*:663*//*666:*/
-#line 18742 "weaver-interface-metafont.cweb"
+#line 18744 "weaver-interface-metafont.cweb"
 
 ERROR_DUPLICATE_GLYPH,
 /*:666*//*669:*/
-#line 18772 "weaver-interface-metafont.cweb"
+#line 18774 "weaver-interface-metafont.cweb"
 
 ERROR_EMPTY_DELIMITER,
 /*:669*//*672:*/
-#line 18817 "weaver-interface-metafont.cweb"
+#line 18819 "weaver-interface-metafont.cweb"
 
 ERROR_EXPECTED_FOUND,
 /*:672*//*675:*/
-#line 18851 "weaver-interface-metafont.cweb"
+#line 18853 "weaver-interface-metafont.cweb"
 
 ERROR_FAILED_OPENING_FILE,
 /*:675*//*679:*/
-#line 18892 "weaver-interface-metafont.cweb"
+#line 18894 "weaver-interface-metafont.cweb"
 
 ERROR_INCOMPLETE_SOURCE,
 /*:679*//*682:*/
-#line 18922 "weaver-interface-metafont.cweb"
+#line 18924 "weaver-interface-metafont.cweb"
 
 ERROR_INCOMPLETE_STATEMENT,
 /*:682*//*685:*/
-#line 18954 "weaver-interface-metafont.cweb"
+#line 18956 "weaver-interface-metafont.cweb"
 
 ERROR_INVALID_CHAR,
 /*:685*//*688:*/
-#line 19059 "weaver-interface-metafont.cweb"
+#line 19061 "weaver-interface-metafont.cweb"
 
 ERROR_INVALID_COMPARISON,
 /*:688*//*691:*/
-#line 19092 "weaver-interface-metafont.cweb"
+#line 19094 "weaver-interface-metafont.cweb"
 
 ERROR_INVALID_DIMENSION_GLYPH,
 /*:691*//*694:*/
-#line 19132 "weaver-interface-metafont.cweb"
+#line 19134 "weaver-interface-metafont.cweb"
 
 ERROR_INVALID_NAME,
 /*:694*//*697:*/
-#line 19178 "weaver-interface-metafont.cweb"
+#line 19180 "weaver-interface-metafont.cweb"
 
 ERROR_INVALID_TENSION,
 /*:697*//*700:*/
-#line 19227 "weaver-interface-metafont.cweb"
+#line 19229 "weaver-interface-metafont.cweb"
 
 ERROR_MISSING_EXPRESSION,
 /*:700*//*703:*/
-#line 19257 "weaver-interface-metafont.cweb"
+#line 19259 "weaver-interface-metafont.cweb"
 
 ERROR_MISSING_TOKEN,
 /*:703*//*706:*/
-#line 19287 "weaver-interface-metafont.cweb"
+#line 19289 "weaver-interface-metafont.cweb"
 
 ERROR_NEGATIVE_LOGARITHM,
 /*:706*//*709:*/
-#line 19315 "weaver-interface-metafont.cweb"
+#line 19317 "weaver-interface-metafont.cweb"
 
 ERROR_NEGATIVE_SQUARE_ROOT,
 /*:709*//*712:*/
-#line 19342 "weaver-interface-metafont.cweb"
+#line 19344 "weaver-interface-metafont.cweb"
 
 ERROR_NESTED_BEGINCHAR,
 /*:712*//*715:*/
-#line 19369 "weaver-interface-metafont.cweb"
+#line 19371 "weaver-interface-metafont.cweb"
 
 ERROR_NO_MEMORY,
 /*:715*//*718:*/
-#line 19421 "weaver-interface-metafont.cweb"
+#line 19423 "weaver-interface-metafont.cweb"
 
 ERROR_NO_PICKUP_PEN,
 /*:718*//*721:*/
-#line 19454 "weaver-interface-metafont.cweb"
+#line 19456 "weaver-interface-metafont.cweb"
 
 ERROR_NONCYCLICAL_PEN,
 /*:721*//*724:*/
-#line 19480 "weaver-interface-metafont.cweb"
+#line 19482 "weaver-interface-metafont.cweb"
 
 ERROR_NULL_VECTOR_ANGLE,
 /*:724*//*727:*/
-#line 19508 "weaver-interface-metafont.cweb"
+#line 19510 "weaver-interface-metafont.cweb"
 
 ERROR_OPENGL_FRAMEBUFFER,
 /*:727*//*730:*/
-#line 19562 "weaver-interface-metafont.cweb"
+#line 19564 "weaver-interface-metafont.cweb"
 
 ERROR_RECURSIVE_RENDERCHAR,
 /*:730*//*733:*/
-#line 19596 "weaver-interface-metafont.cweb"
+#line 19598 "weaver-interface-metafont.cweb"
 
 ERROR_UNBALANCED_ENDING_TOKEN,
 /*:733*//*736:*/
-#line 19632 "weaver-interface-metafont.cweb"
+#line 19634 "weaver-interface-metafont.cweb"
 
 ERROR_UNCLOSED_DELIMITER,
 /*:736*//*739:*/
-#line 19660 "weaver-interface-metafont.cweb"
+#line 19662 "weaver-interface-metafont.cweb"
 
 ERROR_UNCLOSED_STRING,
 /*:739*//*742:*/
-#line 19697 "weaver-interface-metafont.cweb"
+#line 19699 "weaver-interface-metafont.cweb"
 
 ERROR_UNDECLARED_VARIABLE,
 /*:742*//*745:*/
-#line 19725 "weaver-interface-metafont.cweb"
+#line 19727 "weaver-interface-metafont.cweb"
 
 ERROR_UNEXPECTED_TOKEN,
 /*:745*//*748:*/
-#line 19758 "weaver-interface-metafont.cweb"
+#line 19760 "weaver-interface-metafont.cweb"
 
 ERROR_UNINITIALIZED_VARIABLE,
 /*:748*//*751:*/
-#line 19789 "weaver-interface-metafont.cweb"
+#line 19791 "weaver-interface-metafont.cweb"
 
 ERROR_UNKNOWN_GLYPH_DEPENDENCY,
 /*:751*//*754:*/
-#line 19820 "weaver-interface-metafont.cweb"
+#line 19822 "weaver-interface-metafont.cweb"
 
 ERROR_UNKNOWN_EXPRESSION,
 /*:754*//*757:*/
-#line 19851 "weaver-interface-metafont.cweb"
+#line 19853 "weaver-interface-metafont.cweb"
 
 ERROR_UNKNOWN_STATEMENT,
 /*:757*//*760:*/
-#line 19882 "weaver-interface-metafont.cweb"
+#line 19884 "weaver-interface-metafont.cweb"
 
 ERROR_UNOPENED_DELIMITER,
 /*:760*//*763:*/
-#line 19911 "weaver-interface-metafont.cweb"
+#line 19913 "weaver-interface-metafont.cweb"
 
 ERROR_UNSUPORTED_LENGTH_OPERAND,
 /*:763*//*766:*/
-#line 19954 "weaver-interface-metafont.cweb"
+#line 19956 "weaver-interface-metafont.cweb"
 
 ERROR_WRONG_NUMBER_OF_PARAMETERS,
 /*:766*//*769:*/
-#line 19992 "weaver-interface-metafont.cweb"
+#line 19994 "weaver-interface-metafont.cweb"
 
 ERROR_WRONG_VARIABLE_TYPE,
 /*:769*/
-#line 18433 "weaver-interface-metafont.cweb"
+#line 18435 "weaver-interface-metafont.cweb"
 
 
 ERROR_UNKNOWN
@@ -2113,7 +2113,7 @@ float x,float y,float*matrix,bool erasing);
 static struct _glyph*get_glyph(struct metafont*mf,unsigned char*utf8,
 bool create_if_not_exist);
 /*:617*//*654:*/
-#line 18535 "weaver-interface-metafont.cweb"
+#line 18537 "weaver-interface-metafont.cweb"
 
 void token_to_string(struct generic_token*tok,char*dst);
 void tokenid_to_string(int token_id,char*dst);
@@ -3104,7 +3104,7 @@ mf->first_glyph= NULL;
 memset(mf->first_glyph_symbol,0,5);
 mf->number_of_glyphs= 0;
 /*:616*//*649:*/
-#line 18403 "weaver-interface-metafont.cweb"
+#line 18405 "weaver-interface-metafont.cweb"
 
 mf->err= mf->errno_line= 0;
 mf->errno_character[0]= '\0';
@@ -4735,17 +4735,19 @@ if(p1.y> p2.y){
 height= p1.y-p2.y;
 depth= glyph->depth*(height/(glyph->height));
 gl_matrix[4]= -(height+depth)/current_height;
-gl_matrix[7]= ((p1.y+p2.y)/current_height)-1.0;
-gl_matrix[7]+= glyph->depth/(glyph->height+glyph->depth);
-gl_matrix[7]+= 2.0*current_depth/(current_depth+current_height);
+gl_matrix[7]= ((p1.y+p2.y)/2)-
+(glyph->depth/2)*(height/glyph->height)-(current_height)/2;
+gl_matrix[7]= 2*(gl_matrix[7]/current_height);
+gl_matrix[7]+= 2*(current_depth/current_height);
 }
 else{
 height= p2.y-p1.y;
 depth= glyph->depth*(height/(glyph->height));
 gl_matrix[4]= (height+depth)/current_height;
-gl_matrix[7]= ((p1.y+p2.y)/current_height)-1.0;
-gl_matrix[7]+= glyph->depth/(glyph->height+glyph->depth);
-gl_matrix[7]+= 2.0*current_depth/(current_depth+current_height);
+gl_matrix[7]= ((p1.y+p2.y)/2)-
+(glyph->depth/2)*(height/glyph->height)-(current_height)/2;
+gl_matrix[7]= 2*(gl_matrix[7]/current_height);
+gl_matrix[7]+= 2*(current_depth/current_height);
 }
 /*596:*/
 #line 16688 "weaver-interface-metafont.cweb"
@@ -4777,7 +4779,7 @@ else
 glBindFramebuffer(GL_FRAMEBUFFER,cx->currentpicture_fb);
 }
 /*:596*/
-#line 18185 "weaver-interface-metafont.cweb"
+#line 18187 "weaver-interface-metafont.cweb"
 
 glEnable(GL_BLEND);
 glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
@@ -12331,18 +12333,18 @@ return NULL;
 return&(mf->glyphs[block][index]);
 }
 /*:618*//*655:*/
-#line 18540 "weaver-interface-metafont.cweb"
+#line 18542 "weaver-interface-metafont.cweb"
 
 void token_to_string(struct generic_token*tok,char*dst){
 /*656:*/
-#line 18588 "weaver-interface-metafont.cweb"
+#line 18590 "weaver-interface-metafont.cweb"
 
 if(tok->type==TYPE_NUMERIC){
 snprintf(dst,32,"%g",((struct numeric_token*)tok)->value);
 return;
 }
 /*:656*//*657:*/
-#line 18598 "weaver-interface-metafont.cweb"
+#line 18600 "weaver-interface-metafont.cweb"
 
 if(tok->type==TYPE_STRING){
 dst[0]= '"';
@@ -12351,7 +12353,7 @@ strncat(dst,"\"",2);
 return;
 }
 /*:657*//*658:*/
-#line 18611 "weaver-interface-metafont.cweb"
+#line 18613 "weaver-interface-metafont.cweb"
 
 if(tok->type==TYPE_SYMBOLIC){
 struct symbolic_token*symb= (struct symbolic_token*)tok;
@@ -12366,7 +12368,7 @@ dst[31]= '\0';
 return;
 }
 /*:658*/
-#line 18542 "weaver-interface-metafont.cweb"
+#line 18544 "weaver-interface-metafont.cweb"
 
 tokenid_to_string(tok->type,dst);
 return;
@@ -12786,17 +12788,17 @@ MUTEX_SIGNAL(mf->mutex);
 return true;
 }
 /*:630*//*645:*/
-#line 18262 "weaver-interface-metafont.cweb"
+#line 18264 "weaver-interface-metafont.cweb"
 
 #if defined(WEAVER_ENGINE)
 /*646:*/
-#line 18343 "weaver-interface-metafont.cweb"
+#line 18345 "weaver-interface-metafont.cweb"
 
 void _interface_free_metafont(void*data){
 _Wdestroy_metafont((struct metafont*)data);
 }
 /*:646*//*647:*/
-#line 18354 "weaver-interface-metafont.cweb"
+#line 18356 "weaver-interface-metafont.cweb"
 
 void _reload_texture(struct user_interface*target){
 struct metafont*mf= (struct metafont*)(target->_internal_data);
@@ -12824,7 +12826,7 @@ target->width= texture_width;
 target->height= texture_height+texture_depth;
 }
 /*:647*/
-#line 18264 "weaver-interface-metafont.cweb"
+#line 18266 "weaver-interface-metafont.cweb"
 
 void _Wmetafont_loading(void*(*permanent_alloc)(size_t),
 void(*permanent_free)(void*),
@@ -12890,9 +12892,9 @@ if(after_loading_interface!=NULL)
 after_loading_interface();
 }
 #endif
-#line 18329 "weaver-interface-metafont.cweb"
+#line 18331 "weaver-interface-metafont.cweb"
 /*:645*//*651:*/
-#line 18450 "weaver-interface-metafont.cweb"
+#line 18452 "weaver-interface-metafont.cweb"
 
 void _Wprint_metafont_error(struct metafont*mf){
 char line_number[8];
@@ -12907,7 +12909,7 @@ case ERROR_NO_ERROR:
 fprintf(stderr,"%s:%s No errors.",mf->file,line_number);
 break;
 /*662:*/
-#line 18707 "weaver-interface-metafont.cweb"
+#line 18709 "weaver-interface-metafont.cweb"
 
 case ERROR_DISCONTINUOUS_PATH:
 float*buffer= (float*)(mf->errno_str);
@@ -12917,13 +12919,13 @@ fprintf(stderr,
 mf->file,line_number,buffer[0],buffer[1],buffer[2],buffer[3]);
 break;
 /*:662*//*665:*/
-#line 18734 "weaver-interface-metafont.cweb"
+#line 18736 "weaver-interface-metafont.cweb"
 
 case ERROR_DIVISION_BY_ZERO:
 fprintf(stderr,"%s:%s Division by zero.",mf->file,line_number);
 break;
 /*:665*//*668:*/
-#line 18761 "weaver-interface-metafont.cweb"
+#line 18763 "weaver-interface-metafont.cweb"
 
 case ERROR_DUPLICATE_GLYPH:
 fprintf(stderr,
@@ -12931,7 +12933,7 @@ fprintf(stderr,
 mf->file,line_number,mf->errno_str);
 break;
 /*:668*//*671:*/
-#line 18805 "weaver-interface-metafont.cweb"
+#line 18807 "weaver-interface-metafont.cweb"
 
 case ERROR_EMPTY_DELIMITER:
 fprintf(stderr,"%s:%s Unexpected empty delimiter '%c%c'.",
@@ -12940,7 +12942,7 @@ mf->file,line_number,mf->errno_int,
 ((mf->errno_int=='[')?(']'):('}'))));
 break;
 /*:671*//*674:*/
-#line 18838 "weaver-interface-metafont.cweb"
+#line 18840 "weaver-interface-metafont.cweb"
 
 case ERROR_EXPECTED_FOUND:
 char expected_name[32];
@@ -12950,14 +12952,14 @@ fprintf(stderr,"%s:%s Expected '%s' token. Found '%s' instead.",
 mf->file,line_number,expected_name,mf->errno_str);
 break;
 /*:674*//*677:*/
-#line 18876 "weaver-interface-metafont.cweb"
+#line 18878 "weaver-interface-metafont.cweb"
 
 case ERROR_FAILED_OPENING_FILE:
 fprintf(stderr,"%s:%s Failed opening file \"%s\": %s.",mf->file,
 line_number,mf->errno_str,strerror(mf->errno_int));
 break;
 /*:677*//*681:*/
-#line 18912 "weaver-interface-metafont.cweb"
+#line 18914 "weaver-interface-metafont.cweb"
 
 case ERROR_INCOMPLETE_SOURCE:
 fprintf(stderr,
@@ -12965,7 +12967,7 @@ fprintf(stderr,
 mf->file,line_number);
 break;
 /*:681*//*684:*/
-#line 18942 "weaver-interface-metafont.cweb"
+#line 18944 "weaver-interface-metafont.cweb"
 
 case ERROR_INCOMPLETE_STATEMENT:
 fprintf(stderr,
@@ -12974,7 +12976,7 @@ fprintf(stderr,
 mf->file,line_number);
 break;
 /*:684*//*687:*/
-#line 19005 "weaver-interface-metafont.cweb"
+#line 19007 "weaver-interface-metafont.cweb"
 
 case ERROR_INVALID_CHAR:
 {
@@ -13026,7 +13028,7 @@ mf->file,line_number,mf->errno_str,code_point);
 break;
 }
 /*:687*//*690:*/
-#line 19079 "weaver-interface-metafont.cweb"
+#line 19081 "weaver-interface-metafont.cweb"
 
 case ERROR_INVALID_COMPARISON:
 char expr_type[32];
@@ -13037,7 +13039,7 @@ fprintf(stderr,
 mf->file,line_number,mf->errno_str,expr_type);
 break;
 /*:690*//*693:*/
-#line 19114 "weaver-interface-metafont.cweb"
+#line 19116 "weaver-interface-metafont.cweb"
 
 case ERROR_INVALID_DIMENSION_GLYPH:
 int*size_buffer= (int*)(mf->errno_str);
@@ -13052,7 +13054,7 @@ else if(size_buffer[1]<=0)
 fprintf(stderr,"height+depth.");
 break;
 /*:693*//*696:*/
-#line 19157 "weaver-interface-metafont.cweb"
+#line 19159 "weaver-interface-metafont.cweb"
 
 case ERROR_INVALID_NAME:
 char reason[128];
@@ -13071,7 +13073,7 @@ fprintf(stderr,"%s:%s You can not use '%s' as a variable name: %s.",
 mf->file,line_number,mf->errno_str,reason);
 break;
 /*:696*//*699:*/
-#line 19215 "weaver-interface-metafont.cweb"
+#line 19217 "weaver-interface-metafont.cweb"
 
 case ERROR_INVALID_TENSION:
 float*buf= (float*)(mf->errno_str);
@@ -13081,49 +13083,49 @@ mf->file,line_number,buf[0],buf[1],buf[2],buf[3],
 (mf->errno_int==0)?"first":"second",buf[4]);
 break;
 /*:699*//*702:*/
-#line 19248 "weaver-interface-metafont.cweb"
+#line 19250 "weaver-interface-metafont.cweb"
 
 case ERROR_MISSING_EXPRESSION:
 fprintf(stderr,"%s:%s Missing '%s' expression.",
 mf->file,line_number,mf->errno_str);
 break;
 /*:702*//*705:*/
-#line 19277 "weaver-interface-metafont.cweb"
+#line 19279 "weaver-interface-metafont.cweb"
 
 case ERROR_MISSING_TOKEN:
 fprintf(stderr,"%s:%s Missing matching token '%s'.",mf->file,line_number,
 mf->errno_str);
 break;
 /*:705*//*708:*/
-#line 19305 "weaver-interface-metafont.cweb"
+#line 19307 "weaver-interface-metafont.cweb"
 
 case ERROR_NEGATIVE_LOGARITHM:
 fprintf(stderr,"%s:%s Tried to compute logarithm of negative value '%s'.",
 mf->file,line_number,mf->errno_str);
 break;
 /*:708*//*711:*/
-#line 19333 "weaver-interface-metafont.cweb"
+#line 19335 "weaver-interface-metafont.cweb"
 
 case ERROR_NEGATIVE_SQUARE_ROOT:
 fprintf(stderr,"%s:%s Tried to compute square root of negative value '%s'.",
 mf->file,line_number,mf->errno_str);
 break;
 /*:711*//*714:*/
-#line 19360 "weaver-interface-metafont.cweb"
+#line 19362 "weaver-interface-metafont.cweb"
 
 case ERROR_NESTED_BEGINCHAR:
 fprintf(stderr,
 "%s:%s You cannot nest 'beginchar' statements.",mf->file,line_number);
 break;
 /*:714*//*717:*/
-#line 19412 "weaver-interface-metafont.cweb"
+#line 19414 "weaver-interface-metafont.cweb"
 
 case ERROR_NO_MEMORY:
 fprintf(stderr,"%s:%s Not enough memory for allocation.",mf->file,
 line_number);
 break;
 /*:717*//*720:*/
-#line 19443 "weaver-interface-metafont.cweb"
+#line 19445 "weaver-interface-metafont.cweb"
 
 case ERROR_NO_PICKUP_PEN:
 tokenid_to_string(mf->errno_int,mf->errno_str);
@@ -13132,21 +13134,21 @@ fprintf(stderr,"%s:%s After a 'pickup' command, you should use either a "
 mf->file,line_number);
 break;
 /*:720*//*723:*/
-#line 19470 "weaver-interface-metafont.cweb"
+#line 19472 "weaver-interface-metafont.cweb"
 
 case ERROR_NONCYCLICAL_PEN:
 fprintf(stderr,"%s:%s Tried to create a pen from non-cyclical path.",
 mf->file,line_number);
 break;
 /*:723*//*726:*/
-#line 19498 "weaver-interface-metafont.cweb"
+#line 19500 "weaver-interface-metafont.cweb"
 
 case ERROR_NULL_VECTOR_ANGLE:
 fprintf(stderr,"%s:%s You cannot use 'angle' operator in a null vector '(0, 0)'.",
 mf->file,line_number);
 break;
 /*:726*//*729:*/
-#line 19529 "weaver-interface-metafont.cweb"
+#line 19531 "weaver-interface-metafont.cweb"
 
 case ERROR_OPENGL_FRAMEBUFFER:
 fprintf(stderr,"%s:%s OpenGL error. Couldn't create framebuffer for image.",
@@ -13177,7 +13179,7 @@ break;
 }
 break;
 /*:729*//*732:*/
-#line 19586 "weaver-interface-metafont.cweb"
+#line 19588 "weaver-interface-metafont.cweb"
 
 case ERROR_RECURSIVE_RENDERCHAR:
 fprintf(stderr,"%s:%s Recursive 'renderchar' detected. Glyph '%s' depends on "
@@ -13185,7 +13187,7 @@ fprintf(stderr,"%s:%s Recursive 'renderchar' detected. Glyph '%s' depends on "
 line_number,mf->errno_str,mf->errno_str);
 break;
 /*:732*//*735:*/
-#line 19620 "weaver-interface-metafont.cweb"
+#line 19622 "weaver-interface-metafont.cweb"
 
 case ERROR_UNBALANCED_ENDING_TOKEN:
 tokenid_to_string(mf->errno_int,mf->errno_str);
@@ -13195,35 +13197,35 @@ fprintf(stderr,"%s:%s Unexpected token \"%s\" found. You are trying to "
 line_number,mf->errno_str);
 break;
 /*:735*//*738:*/
-#line 19651 "weaver-interface-metafont.cweb"
+#line 19653 "weaver-interface-metafont.cweb"
 
 case ERROR_UNCLOSED_DELIMITER:
 fprintf(stderr,"%s:%s Delimiter '%c' was not closed.",
 mf->file,line_number,mf->errno_int);
 break;
 /*:738*//*741:*/
-#line 19688 "weaver-interface-metafont.cweb"
+#line 19690 "weaver-interface-metafont.cweb"
 
 case ERROR_UNCLOSED_STRING:
 fprintf(stderr,"%s:%s Unclosed string \"%s\".",mf->file,
 line_number,mf->errno_str);
 break;
 /*:741*//*744:*/
-#line 19715 "weaver-interface-metafont.cweb"
+#line 19717 "weaver-interface-metafont.cweb"
 
 case ERROR_UNDECLARED_VARIABLE:
 fprintf(stderr,"%s:%s Variable '%s' was not declared.",mf->file,
 line_number,mf->errno_str);
 break;
 /*:744*//*747:*/
-#line 19749 "weaver-interface-metafont.cweb"
+#line 19751 "weaver-interface-metafont.cweb"
 
 case ERROR_UNEXPECTED_TOKEN:
 fprintf(stderr,"%s:%s We found '%s' token in a context where such "
 "token makes no sense.",mf->file,line_number,mf->errno_str);
 break;
 /*:747*//*750:*/
-#line 19778 "weaver-interface-metafont.cweb"
+#line 19780 "weaver-interface-metafont.cweb"
 
 case ERROR_UNINITIALIZED_VARIABLE:
 char var_type[32];
@@ -13232,7 +13234,7 @@ fprintf(stderr,"%s:%s Uninitialized %s variable '%s'.",
 mf->file,line_number,var_type,mf->errno_str);
 break;
 /*:750*//*753:*/
-#line 19809 "weaver-interface-metafont.cweb"
+#line 19811 "weaver-interface-metafont.cweb"
 
 case ERROR_UNKNOWN_GLYPH_DEPENDENCY:
 fprintf(stderr,
@@ -13240,14 +13242,14 @@ fprintf(stderr,
 mf->file,line_number,mf->errno_str);
 break;
 /*:753*//*756:*/
-#line 19841 "weaver-interface-metafont.cweb"
+#line 19843 "weaver-interface-metafont.cweb"
 
 case ERROR_UNKNOWN_EXPRESSION:
 fprintf(stderr,"%s:%s Unknown %s expression.",mf->file,
 line_number,list_of_keywords[mf->errno_int-10]);
 break;
 /*:756*//*759:*/
-#line 19872 "weaver-interface-metafont.cweb"
+#line 19874 "weaver-interface-metafont.cweb"
 
 case ERROR_UNKNOWN_STATEMENT:
 fprintf(stderr,"%s:%s Unknown statement. Perhaps you misspelled some "
@@ -13255,14 +13257,14 @@ fprintf(stderr,"%s:%s Unknown statement. Perhaps you misspelled some "
 "place.",mf->file,line_number);
 break;
 /*:759*//*762:*/
-#line 19902 "weaver-interface-metafont.cweb"
+#line 19904 "weaver-interface-metafont.cweb"
 
 case ERROR_UNOPENED_DELIMITER:
 fprintf(stderr,"%s:%s Delimiter '%c' was not previously opened.",
 mf->file,line_number,mf->errno_int);
 break;
 /*:762*//*765:*/
-#line 19937 "weaver-interface-metafont.cweb"
+#line 19939 "weaver-interface-metafont.cweb"
 
 case ERROR_UNSUPORTED_LENGTH_OPERAND:
 if(mf->errno_int==-1)
@@ -13277,7 +13279,7 @@ mf->file,line_number,mf->errno_str);
 }
 break;
 /*:765*//*768:*/
-#line 19980 "weaver-interface-metafont.cweb"
+#line 19982 "weaver-interface-metafont.cweb"
 
 case ERROR_WRONG_NUMBER_OF_PARAMETERS:
 fprintf(stderr,
@@ -13286,7 +13288,7 @@ mf->file,line_number,mf->errno_str,mf->errno_int>>8,
 mf->errno_int&255);
 break;
 /*:768*//*771:*/
-#line 20018 "weaver-interface-metafont.cweb"
+#line 20020 "weaver-interface-metafont.cweb"
 
 case ERROR_WRONG_VARIABLE_TYPE:
 char expected[32],found[32];
@@ -13297,7 +13299,7 @@ fprintf(stderr,"%s:%s Variable '%s' is a '%s' variable, but we expected a "
 found,expected);
 break;
 /*:771*/
-#line 18463 "weaver-interface-metafont.cweb"
+#line 18465 "weaver-interface-metafont.cweb"
 
 default:
 fprintf(stderr,"%s:%s Unknown error.",mf->file,line_number);

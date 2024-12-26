@@ -17869,17 +17869,19 @@ use in the rendering:
     height = p1.y - p2.y;
     depth = glyph -> depth * (height / (glyph -> height));
     gl_matrix[4] = - (height + depth) / current_height;
-    gl_matrix[7] = ((p1.y + p2.y) / current_height) - 1.0;
-    gl_matrix[7] += glyph -> depth / (glyph -> height + glyph -> depth);
-    gl_matrix[7] += 2.0 * current_depth / (current_depth + current_height);
+    gl_matrix[7] = ((p1.y + p2.y) / 2) -
+                   (glyph -> depth / 2) * (height/glyph -> height) - (current_height)/2;
+    gl_matrix[7] = 2 * (gl_matrix[7] / current_height);
+    gl_matrix[7] += 2 * (current_depth / current_height);
   }
   else{
     height = p2.y - p1.y;
     depth = glyph -> depth * (height / (glyph -> height));
     gl_matrix[4] = (height + depth) / current_height;
-    gl_matrix[7] = ((p1.y + p2.y) / current_height) - 1.0;
-    gl_matrix[7] += glyph -> depth / (glyph -> height + glyph -> depth);
-    gl_matrix[7] += 2.0 * current_depth / (current_depth + current_height);
+    gl_matrix[7] = ((p1.y + p2.y) / 2) -
+                   (glyph -> depth / 2) * (height/glyph -> height) - (current_height)/2;
+    gl_matrix[7] = 2 * (gl_matrix[7] / current_height);
+    gl_matrix[7] += 2 * (current_depth / current_height);
   }
   @<Prepare 'currentpicture' for Drawing@>
   glEnable(GL_BLEND);
