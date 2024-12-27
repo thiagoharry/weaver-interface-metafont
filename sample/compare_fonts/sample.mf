@@ -1391,12 +1391,59 @@ beginchar("_", (0.378+0.033*(weight-1)+0.001*italic*(weight-1))*size*pt,
   draw (w/2, -d/2);
 endchar;
 
-beginchar("`", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
-    0.668*size*pt, 0);
+beginchar("`", (0.164+0.045*(weight-1)-0.014*italic)*size*pt,
+    (0.708+0.021*(weight-1))*size*pt, -(0.572+0.003*(weight-1))*size*pt);
+  pair p1, p2, p2b, p3, p4, p5;
+  pen p;
+  p1 = (0.25*w, h);
+  p2 = (0, (0.95-0.025*(weight-1))*h);
+  p2b = (1, 0) rotated 225 xscaled (xpart p1 - xpart p2) yscaled (ypart p1 - ypart p2) shifted (xpart p1, ypart p2);
+  p3 = ((0.6-0.15*(weight-1))*w, -d);
+  p4 = (w, -d);
+  p5 = (1, 0) rotated 45 xscaled (xpart p1 - xpart p2) yscaled (ypart p1 - ypart p2) shifted (xpart p1, ypart p2);
+  p = makepen(p1{-1, 0}..{0, -1}p2..p2b--p3--p4--p5..cycle);
+  pickup p;
+  draw (0, 0);
 endchar;
 
-beginchar("a", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
-    0.668*size*pt, 0);
+beginchar("a", (0.438+0.06*(weight-1)+0.042*italic+0.002*italic*(weight-1))*size*pt,
+    (0.504+0.006*(weight-1))*size*pt, 0);
+  % PARAMETERS
+  numeric pen_width1, pen_height1, pen_width2, pen_height2;
+  pen_width1 = (0.155+0.125*(weight-1))*h;
+  pen_height1 = (0.13+0.07*(weight-1))*h;
+  pen_width2 = (0.18+0.125*(weight-1))*h;
+  pen_height2 = (0.13+0.05*(weight-1))*h;
+  % CONTROL POINTS
+  pair p1, p2, p3, p4, p5, p6;
+  pair p7, p8, p9;
+  p1 = ((0.16+0.03*(weight-1)+0.07*italic)*w, (0.74-0.02*(weight-1)-0.01*italic)*h);
+  p2 = ((0.51+0.01*(weight-1)+0.055*italic)*w, h-pen_height1/2);
+  p3 = ((0.85-0.04*(weight-1)+0.02*italic)*w, ypart p1);
+  p4 = ((0.87-0.04*(weight-1)-0.04*italic)*w, 0.54*h);
+  p6 = ((0.87-0.04*(weight-1)-0.12*italic)*w, 0.25*h);
+  p7 = (w- pen_width1/2 - 0.17*italic*w, 0);
+  p8 = (pen_width2/2, (0.26-0.03*italic)*h);
+  p5 = 0.5[p4, p8] shifted (0, 0.1*h);
+  p9 = ((0.38-0.08*italic)*w, pen_height2/2);
+  % RENDERING
+  pickup pencircle xscaled pen_width1 yscaled pen_height1;
+  draw p1..p2{1, 0}..p3..p4..p6..p7;
+  pickup pencircle xscaled pen_width2 yscaled pen_height2;
+  draw (p4 - ((pen_width2-pen_width1)/2, 0))..p5..p8{0, -1}..p9{1, 0}..{(0, 1) rotated -50}(p6 - ((pen_width2-pen_width1)/2, 0));
+  % RETOUCH
+  pickup pensemicircle xscaled (pen_width1+0.03*w) yscaled (pen_height1+0.03*h) rotated 160;
+  erase p1;
+  pair r1, r2, r3, r4, r5;
+  pen eraser;
+  r1 = p3 - ((0.075+0.05*(weight-1)+0.09*italic)*w, (0.27+0.02*(weight-1))*h);
+  r2 = r1 - ((0.035*italic-0.02*italic*(weight-1))*w, (0.25-0.1*(weight-1)-0.01*italic)*h);
+  r3 = (xpart p9, pen_height2);
+  r5 = (pen_width2, ypart p8);
+  r4 = 0.5[r3, r5] - ((0.035-0.02*(weight-1)-0.01*italic)*w, (0.035-0.02*(weight-1)-0.01*italic)*h);
+  eraser = makepen(r1--r2..r3..r4..{0, 1}r5--cycle);
+  pickup eraser;
+  erase (0, 0);
 endchar;
 
 beginchar("b", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,

@@ -165,7 +165,7 @@ void test(struct metafont *mf, char *font_name, char *c, int weight, int italic)
     }
     { // Screen rendering
       int i, j, p;
-      struct user_interface *line, *f, *m, *h, *h1, *h2;
+      struct user_interface *line, *f, *m, *h, *h1, *h2, *top;
       _Wmark_history_interface(); 
       f = _Wnew_interface(NULL, NULL,
 			  (window_width - ZOOM * face->glyph -> bitmap.width) / 2
@@ -179,6 +179,7 @@ void test(struct metafont *mf, char *font_name, char *c, int weight, int italic)
 			  (window_height + ZOOM * (height+depth)) / 2 - depth + 1,
 		          0.0, ZOOM * width, ZOOM * (height + depth));
       line = _Wnew_interface(NULL, NULL, window_width / 2, window_height / 2, 0.0, window_width, 1);
+      top = _Wnew_interface(NULL, NULL, window_width / 2, (window_height / 2) + ZOOM * height, 0.0, window_width, 1);
       h = _Wnew_interface(NULL, NULL, window_width / 2, window_height / 2, 0.0, 1, window_height);
       h1 = _Wnew_interface(NULL, NULL, (window_width - 2 * ZOOM * face->glyph -> bitmap.width) / 2, window_height / 2, 0.0, 1, window_height);
       h2 = _Wnew_interface(NULL, NULL, (window_width + 2 * ZOOM * width) / 2, window_height / 2, 0.0, 1, window_height);
@@ -200,6 +201,19 @@ void test(struct metafont *mf, char *font_name, char *c, int weight, int italic)
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
       glBindTexture(GL_TEXTURE_2D, 0);
       line -> _loaded_texture = true;
+      
+      top -> _texture1 = (GLuint *) malloc(sizeof(GLuint));
+      glGenTextures(1, top -> _texture1);
+      glBindTexture(GL_TEXTURE_2D, *(top -> _texture1));
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0,
+		   GL_RGBA, GL_UNSIGNED_BYTE, f_buffer);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+      glBindTexture(GL_TEXTURE_2D, 0);
+      top -> _loaded_texture = true;
+      
       h -> _texture1 = (GLuint *) malloc(sizeof(GLuint));
       glGenTextures(1, h -> _texture1);
       glBindTexture(GL_TEXTURE_2D, *(h -> _texture1));
