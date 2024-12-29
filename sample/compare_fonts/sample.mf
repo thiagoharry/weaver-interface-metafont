@@ -1404,6 +1404,7 @@ beginchar("`", (0.164+0.045*(weight-1)-0.014*italic)*size*pt,
   p = makepen(p1{-1, 0}..{0, -1}p2..p2b--p3--p4--p5..cycle);
   pickup p;
   draw (0, 0);
+  % NO KERNING
 endchar;
 
 beginchar("a", (0.438+0.06*(weight-1)+0.042*italic+0.002*italic*(weight-1))*size*pt,
@@ -1445,7 +1446,7 @@ beginchar("a", (0.438+0.06*(weight-1)+0.042*italic+0.002*italic*(weight-1))*size
   pickup eraser;
   erase (0, 0);
   % KERNING
-  % -23 to 'v', 'y', 'ý' and 'ÿ' when italic and bold [0.046*italic*(weight-1)*w]
+  % 'v', 'y', 'ý', 'ÿ': -23 if italic bold
 endchar;
 
 beginchar("b", (0.459+0.065*(weight-1)+0.044*italic+0.028*italic*(weight-1))*size*pt,
@@ -1487,8 +1488,29 @@ beginchar("b", (0.459+0.065*(weight-1)+0.044*italic+0.028*italic*(weight-1))*siz
   % NO KERNING
 endchar;
 
-beginchar("c", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
-    0.668*size*pt, 0);
+beginchar("c", (0.431+0.048*(weight-1)+0.046*italic+0.009*italic*(weight-1))*size*pt,
+    (0.504+0.006*(weight-1))*size*pt, 0);
+  % PARAMETERS
+  numeric pen_width, pen_height;
+  pen_width = (0.18+0.12*(weight-1))*h;
+  pen_height = (0.145+0.08*(weight-1))*h;
+  % CONTROL POINTS
+  pair p1, p2, p3, p4, p5;
+  pickup pencircle xscaled pen_width yscaled pen_height;
+  p1 = lft ((0.993+0.007*italic)*w, 0.762*h);
+  p2 = bot ((0.548+0.063*italic)*w, h);
+  p3 = rt (0.03*w*italic, (0.501-0.102*italic)*h);
+  p4 = top ((0.533-0.098*italic)*w, 0);
+  p5 = lft ((1-0.1*italic)*w, 0.238*h);
+  % RENDERING
+  draw p1..{-1, 0}p2..{0, -1}p3..{1, 0}p4..p5;
+  % RETOUCH
+  pickup pensemicircle xscaled (pen_width*1.1) yscaled (pen_height*1.1) rotated (200) ;
+  erase p1;
+  pickup pensemicircle xscaled (pen_width*1.1) yscaled (pen_height*1.1) rotated (-20);
+  erase p5;
+  % KERNING:
+  % 'w': -28
 endchar;
 
 beginchar("d", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
