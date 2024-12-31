@@ -253,7 +253,9 @@ Imagens Vazias \indice{177}
 
 18. O Comando \monoespaco{renderchar} \indice{276}
 
-19. Integração entre WeaveFont e Motor de Jogos Weaver \indice{280}
+19. O Comando \monoespaco{kerning} \indice{XX}
+
+20. Integração entre WeaveFont e Motor de Jogos Weaver \indice{280}
 
 Apêndice A: Tratamento de Erros \indice{283}
 
@@ -18206,7 +18208,22 @@ espelhada verticalmente. Isso funciona simplesmente multiplicando por
 }
 @
 
-\secao{19. Integração entre WeaveFont e Motor de Jogos Weaver}
+\secao{19. O Comando \monoespaco{kerning}}
+
+Frequentemente é preciso ajustar o espaçamento entre dois glifos
+renderizados que serão colocados lado-a-lado. Por exemplo, em
+sequências como ``VA'', o espaçamento do ``A'' costuma ser ajustado
+mais para a esquerda de modo que a ponta inferior esquerda desta letra
+comece um pouco antes da ponta superior direita da letra ``V'',
+produzindo um resultado estético mais agradável.
+
+\alinhaverbatim
+<Comando> -> ... |<Comando 'kerning'> | ...
+<Comando 'kerning'> ->  kerning ( <String> , <Expressão Numérica> )
+\alinhanormal
+
+
+\secao{20. Integração entre WeaveFont e Motor de Jogos Weaver}
 
 O motor de jogos Weaver possui um módulo responsável por carregar
 novas interfaces, que são elementos visuais a serem apresentados ao

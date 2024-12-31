@@ -238,7 +238,9 @@
 
 18. The \monoespaco{renderchar} Command \indice{279}
 
-19. Integrating WeaveFont and Weaver Game Engine \indice{284}
+19. The \mmonoespaco{kerning} Command \indice{XX}
+
+20. Integrating WeaveFont and Weaver Game Engine \indice{284}
 
 Appendix A: Handling Errors \indice{286}
 
@@ -17905,7 +17907,7 @@ use in the rendering:
 }
 @
 
-\secao{19. Integrating WeaveFont and Weaver Game Engine}
+\secao{20. Integrating WeaveFont and Weaver Game Engine}
 
 The Weaver game engine has a module responsible for loading new
 interfaces, which are visual elements to be presented to the user. The
