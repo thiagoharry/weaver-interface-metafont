@@ -35,6 +35,7 @@ beginchar("I", 100, 100, 0);
   %weight = totalweight currentpicture; % Expected: 5535.206543
   renderchar "1" between (0.75*w, 0.5*h) and (0.25*w, 0);
   weight = totalweight currentpicture; % Expected: 6127.651855
+  kerning("K", -25.4);
 endchar
 
 beginchar("1", 100, 100, 0);

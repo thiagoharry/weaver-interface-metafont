@@ -211,114 +211,114 @@
 
 11.2. Triangulation \indice{214}
 
-11.3. Reading the \monoespaco{pickup} Command\indice{250}
+11.3. Reading the \monoespaco{pickup} Command\indice{251}
 
 11.4. Operators \monoespaco{bot}, \monoespaco{top}, \monoespaco{lft},
-\monoespaco{rt}\indice{255}
+\monoespaco{rt}\indice{256}
 
-12. The \monoespaco{pickcolor} Command \indice{256}
+12. The \monoespaco{pickcolor} Command \indice{257}
 
-13. The \monoespaco{monowidth} Command \indice{258}
+13. The \monoespaco{monowidth} Command \indice{259}
 
-14. The \monoespaco{draw} and \monoespaco{erase} Command\indice{258}
+14. The \monoespaco{draw} and \monoespaco{erase} Command\indice{259}
 
-14.1. Preparing Framebuffer \indice{259}
+14.1. Preparing Framebuffer \indice{260}
 
-14.2. Drawing Shaders\indice{260}
+14.2. Drawing Shaders\indice{261}
 
-14.3. Drawing Paths \indice{261}
+14.3. Drawing Paths \indice{262}
 
-15. Compound Statement: Character Definition \indice{265}
+15. Compound Statement: Character Definition \indice{266}
 
-15.1 Unicode and UTF-8 \indice{265}
+15.1 Unicode and UTF-8 \indice{266}
 
-16. API Functions to Use the Fonts \indice{274}
+16. API Functions to Use the Fonts \indice{276}
 
-17. The \monoespaco{shipit} Command \indice{277}
+17. The \monoespaco{shipit} Command \indice{278}
 
-18. The \monoespaco{renderchar} Command \indice{279}
+18. The \monoespaco{renderchar} Command \indice{280}
 
-19. The \mmonoespaco{kerning} Command \indice{XX}
+19. The \monoespaco{kerning} Command \indice{285}
 
-20. Integrating WeaveFont and Weaver Game Engine \indice{284}
+20. Integrating WeaveFont and Weaver Game Engine \indice{287}
 
-Appendix A: Handling Errors \indice{286}
+Appendix A: Handling Errors \indice{290}
 
-A.1. ERROR\_DISCONTINUOUS\_PATH \indice{291}
+A.1. ERROR\_DISCONTINUOUS\_PATH \indice{294}
 
-A.2. ERROR\_DIVISION\_BY\_ZERO \indice{291}
+A.2. ERROR\_DIVISION\_BY\_ZERO \indice{295}
 
-A.3. ERROR\_DUPLICATE\_GLYPH \indice{292}
+A.3. ERROR\_DUPLICATE\_GLYPH \indice{295}
 
-A.4. ERROR\_EMPTY\_DELIMITER \indice{292}
+A.4. ERROR\_EMPTY\_DELIMITER \indice{296}
 
-A.5. ERROR\_EXPECTED\_FOUND \indice{293}
+A.5. ERROR\_EXPECTED\_FOUND \indice{296}
 
-A.6. ERROR\_FAILED\_OPENING\_FILE \indice{293}
+A.6. ERROR\_FAILED\_OPENING\_FILE \indice{297}
 
-A.7. ERROR\_INCOMPLETE\_SOURCE \indice{294}
+A.7. ERROR\_INCOMPLETE\_SOURCE \indice{297}
 
-A.8. ERROR\_INCOMPLETE\_STATEMENT \indice{294}
+A.8. ERROR\_INCOMPLETE\_STATEMENT \indice{298}
 
-A.9. ERROR\_INVALID\_CHAR \indice{295}
+A.9. ERROR\_INVALID\_CHAR \indice{298}
 
-A.10. ERROR\_INVALID\_COMPARISON \indice{296}
+A.10. ERROR\_INVALID\_COMPARISON \indice{300}
 
-A.11. ERROR\_INVALID\_DIMENSION\_GLYPH \indice{297}
+A.11. ERROR\_INVALID\_DIMENSION\_GLYPH \indice{300}
 
-A.12. ERROR\_INVALID\_NAME \indice{297}
+A.12. ERROR\_INVALID\_NAME \indice{301}
 
-A.13. ERROR\_INVALID\_TENSION \indice{298}
+A.13. ERROR\_INVALID\_TENSION \indice{302}
 
-A.14. ERROR\_MISSING\_EXPRESSION \indice{299}
+A.14. ERROR\_MISSING\_EXPRESSION \indice{302}
 
-A.15. ERROR\_MISSING\_TOKEN \indice{299}
+A.15. ERROR\_MISSING\_TOKEN \indice{303}
 
-A.16. ERROR\_NEGATIVE\_LOGARITHM \indice{300}
+A.16. ERROR\_NEGATIVE\_LOGARITHM \indice{303}
 
-A.17. ERROR\_NEGATIVE\_SQUARE\_ROOT \indice{300}
+A.17. ERROR\_NEGATIVE\_SQUARE\_ROOT \indice{304}
 
-A.18. ERROR\_NESTED\_BEGINCHAR \indice{300}
+A.18. ERROR\_NESTED\_BEGINCHAR \indice{304}
 
-A.19. ERROR\_NO\_MEMORY \indice{301}
+A.19. ERROR\_NO\_MEMORY \indice{304}
 
-A.20. ERROR\_NO\_PICKUP\_PEN \indice{301}
+A.20. ERROR\_NO\_PICKUP\_PEN \indice{305}
 
-A.21. ERROR\_NONCYCLICAL\_PEN \indice{302}
+A.21. ERROR\_NONCYCLICAL\_PEN \indice{305}
 
-A.22. ERROR\_NULL\_VECTOR\_ANGLE \indice{302}
+A.22. ERROR\_NULL\_VECTOR\_ANGLE \indice{306}
 
-A.23. ERROR\_OPENGL\_FRAMEBUFFER \indice{303}
+A.23. ERROR\_OPENGL\_FRAMEBUFFER \indice{306}
 
-A.24. ERROR\_RECURSIVE\_RENDERCHAR \indice{303}
+A.24. ERROR\_RECURSIVE\_RENDERCHAR \indice{307}
 
-A.25. ERROR\_UNBALANCED\_ENDING\_TOKEN \indice{304}
+A.25. ERROR\_UNBALANCED\_ENDING\_TOKEN \indice{308}
 
-A.26. ERROR\_UNCLOSED\_DELIMITER \indice{304}
+A.26. ERROR\_UNCLOSED\_DELIMITER \indice{308}
 
-A.27. ERROR\_UNCLOSED\_STRING \indice{305}
+A.27. ERROR\_UNCLOSED\_STRING \indice{309}
 
-A.28. ERROR\_UNDECLARED\_VARIABLE \indice{305}
+A.28. ERROR\_UNDECLARED\_VARIABLE \indice{309}
 
-A.29. ERROR\_UNEXPECTED\_TOKEN \indice{306}
+A.29. ERROR\_UNEXPECTED\_TOKEN \indice{309}
 
-A.30. ERROR\_UNINITIALIZED\_VARIABLE \indice{306}
+A.30. ERROR\_UNINITIALIZED\_VARIABLE \indice{310}
 
-A.31. ERROR\_UNKNOWN\_GLYPH\_DEPENDENCY \indice{307}
+A.31. ERROR\_UNKNOWN\_GLYPH\_DEPENDENCY \indice{310}
 
-A.32. ERROR\_UNKNOWN\_EXPRESSION \indice{307}
+A.32. ERROR\_UNKNOWN\_EXPRESSION \indice{311}
 
-A.33. ERROR\_UNKNOWN\_STATEMENT \indice{308}
+A.33. ERROR\_UNKNOWN\_STATEMENT \indice{311}
 
-A.34. ERROR\_UNOPENED\_DELIMITER \indice{308}
+A.34. ERROR\_UNOPENED\_DELIMITER \indice{312}
 
-A.35. ERROR\_UNSUPORTED\_LENGTH\_OPERAND \indice{308}
+A.35. ERROR\_UNSUPORTED\_LENGTH\_OPERAND \indice{312}
 
-A.36. ERROR\_WRONG\_NUMBER\_OF\_PARAMETERS \indice{309}
+A.36. ERROR\_WRONG\_NUMBER\_OF\_PARAMETERS \indice{313}
 
-A.37. ERROR\_WRONG\_VARIABLE\_TYPE \indice{310}
+A.37. ERROR\_WRONG\_VARIABLE\_TYPE \indice{313}
 
-References \indice{310}
+References \indice{314}
 
 \secao{1. Introduction}
 
@@ -16855,7 +16855,7 @@ based on which is the next character.
 @<Local Data Structures (metafont.c)@>+=
 struct kerning{
   char next_char[5];
-  int kern;
+  float kern;
   struct kerning *next;
 };
 @
@@ -17208,6 +17208,7 @@ else if(begin -> type == TYPE_BEGINCHAR){
     return false;
   }
   cx -> current_glyph = str -> glyph;
+  @<beginchar: Restart 'Kerning'@>
   memset(cx -> current_character, 0, 5);
   memcpy(cx -> current_character, str -> value, 4);
   // Reading the values in the header
@@ -17906,6 +17907,159 @@ use in the rendering:
     glDeleteTextures(1, &(glyph -> texture));
 }
 @
+
+\secao{19. The \monoespaco{kerning} Command}
+
+It is often necessary to adjust the spacing between two rendered
+glyphs that are to be placed side by side. For example, in sequences
+such as ``VA'', the spacing of the ``A'' is often adjusted further to
+the left so that the lower left tip of this letter starts slightly
+before the upper right tip of the letter ``V'', producing a more
+aesthetically pleasing result.
+
+
+In WeaveFont, these adjustments are specified using the
+\monoespaco{kerning} command, which has the following syntax:
+
+\alinhaverbatim
+<Command> -> ... |<'kerning' Command> | ...
+<'kerning' Command> ->  kerning ( <String> , <Numeric Expression> )
+\alinhanormal
+
+The command requires one more reserved word:
+
+@<WeaveFont: Symbolic Token Definition@>+=
+TYPE_KERNING,  // The 'kerning' token
+@
+
+@<List of Keywords@>+=
+"kerning",
+@
+
+The \monoespaco{kerning} command can be used only inside a glyph
+definition (between \monoespaco{beginchar} and \monoespaco{endchar}),
+otherwise an error is raised, as shown below.
+
+@<Statement: Command@>+=
+else if(begin -> type == TYPE_KERNING && mf -> loading){
+  RAISE_ERROR_UNEXPECTED_TOKEN(mf, cx, OPTIONAL(begin -> line), begin);
+  return false;
+}
+@
+
+The command indicates with a numeric expression what additional
+spacing should be placed when the next character is given by the
+string passed as argument to the command. A negative numeric value
+means an additional negative spacing, which shifts the next character
+to the left. A positive numeric value shifts it to the right. The code
+below interprets this:
+
+@<Statement: Command@>+=
+else if(begin -> type == TYPE_KERNING){
+  struct generic_token *str, *begin_expr, *end_expr;
+  struct numeric_variable numeric_result;
+  str = begin -> next;
+  if(str == NULL){
+    RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, OPTIONAL(begin -> line));
+    return false;
+  }
+  else if(str -> type != TYPE_OPEN_PARENTHESIS){
+    RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL(str -> line),
+                               TYPE_OPEN_PARENTHESIS, str);
+    return false;
+  }
+  str = str -> next;
+  if(str == NULL){
+    RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, OPTIONAL(begin -> line));
+    return false;
+  }
+  else if(str -> type != TYPE_STRING){
+    RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL(str -> line),
+                               TYPE_STRING, str);
+    return false;
+  }
+  begin_expr = str -> next;
+  if(begin_expr == NULL){
+    RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, OPTIONAL(str -> line));
+    return false;
+  }
+  else if(begin_expr -> type != TYPE_COMMA){
+    RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL(begin_expr -> line),
+                               TYPE_COMMA, begin_expr);
+    return false;
+  }
+  begin_expr = begin_expr -> next;
+  if(begin_expr == NULL){
+    RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, OPTIONAL(str -> line));
+    return false;
+  }
+  end_expr = begin_expr;
+  while(end_expr -> next != NULL && end_expr -> next -> next != NULL &&
+        end_expr -> next -> type != TYPE_SEMICOLON &&
+	end_expr -> next -> next -> type != TYPE_SEMICOLON)
+    end_expr = end_expr -> next;
+  if(end_expr -> next == NULL || end_expr -> next -> next == NULL){
+    RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, OPTIONAL(begin_expr -> line));
+    return false;
+  }
+  if(end_expr -> next -> type == TYPE_SEMICOLON){
+    RAISE_ERROR_EXPECTED_FOUND(mf, cx, OPTIONAL(begin_expr -> line),
+                               TYPE_CLOSE_PARENTHESIS, end_expr -> next);
+    return false;
+  }
+  if(!eval_numeric_expression(mf, cx, begin_expr, end_expr, &numeric_result))
+    return false;
+  @<Stores Kerning@>
+}
+@
+
+The above code checks that the command follows the grammar rules and
+interpret the numeric expression to get the kerning value. The code
+below now stores the read value in the current glyph:
+
+@<Stores Kerning@>=
+{
+  struct kerning *new_kerning, *existing_kerning;
+  struct string_token *next_char = (struct string_token *) str;
+  existing_kerning = cx -> current_glyph -> kern;
+  while(existing_kerning != NULL){
+    if(!strncmp(next_char -> value, existing_kerning -> next_char, 4)){
+      existing_kerning -> kern = numeric_result.value;
+      return true;
+    }
+    existing_kerning = existing_kerning -> next;
+  }
+  new_kerning = (struct kerning *) permanent_alloc(sizeof(struct kerning));
+  if(new_kerning == NULL){
+    RAISE_ERROR_NO_MEMORY(mf, cx, OPTIONAL(begin -> line));
+    return false;
+  }
+  memcpy(new_kerning -> next_char, next_char -> value, 4);
+  new_kerning -> next_char[4] = '\0';
+  new_kerning -> kern = numeric_result.value;
+  new_kerning -> next = cx -> current_glyph -> kern;
+  cx -> current_glyph -> kern = new_kerning;
+  return true;
+}
+@
+
+Finally, after we read a \monoespaco{beginchar} token, but before
+interpreting the glyph code, we should fill with zeroes all the stored
+kernings in the glyph. The new rendering should produce new values for
+them. If not, then this means that the kerning changed between
+different renderings and some kerning values are not necessary
+anymore:
+
+@<beginchar: Restart 'Kerning'@>=
+{
+  struct kerning *existing_kerning = cx -> current_glyph -> kern;
+  while(existing_kerning != NULL){
+    existing_kerning -> kern = 0.0;
+    existing_kerning = existing_kerning -> next;
+  }
+}
+@
+
 
 \secao{20. Integrating WeaveFont and Weaver Game Engine}
 

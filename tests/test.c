@@ -2421,12 +2421,13 @@ void test_renderchar_command(void){
     _Wprint_metafont_error(mf);
   w = (struct named_variable *) mf -> named_variables;
   numeric_w = (struct numeric_variable *) w -> var;
-  ret = _Wrender_glyph(mf, "I", NULL, &glyph, &width, &height,
+  ret = _Wrender_glyph(mf, "I", "K", &glyph, &width, &height,
 		       &depth, &italcorr, &kerning);
   if(!ret)
     _Wprint_metafont_error(mf);
   assert("Testing 'renderchar' command", ret &&
 	 ALMOST_EQUAL(numeric_w -> value, 7432.6831));
+  assert("Testing basic kerning", kerning == -25);
   ret = _Wrender_glyph(mf, "B", NULL, &glyph, &width, &height,
 		       &depth, &italcorr, &kerning);
   if(!ret)
