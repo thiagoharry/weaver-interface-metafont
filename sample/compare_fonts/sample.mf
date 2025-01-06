@@ -275,7 +275,7 @@ beginchar("/", (0.35+0.065*(weight-1)+0.14*italic)*size*pt, 0.668*size*pt, 0);
   pickup pensquare xscaled (0.14+0.09*(weight-1))*h;
   draw rt (0, 0) -- lft (w, h);
   % KERNING
-  kerning("/", (-95-91*(weight-1))*k*size);
+  kerning("/", (-95-91*(weight-1)+16*italic)*k*size);
 endchar;
 
 beginchar("0", (0.532+0.045*(weight-1)+0.055*italic-0.015*italic*(weight-1))*size*pt,
@@ -446,9 +446,11 @@ beginchar("4", (0.54+0.03*(weight-1)+0.03*italic+0.017*italic*(weight-1))*size*p
   draw p2-- rt (xpart p3 + ic, ypart p3);
   % KERNING
   kerning("°", -76*k*size);
+  kerning("%", -48*k*size*italic);
+  kerning("‰", -48*k*size*italic);
   kerning("9", -22*k*size);
-  kerning("5", -19*k*size*(2-weight));
-  kerning("4", 20*k*size*(weight-1));
+  kerning("5", -19*k*size*(2-weight)*(1-italic));
+  kerning("4", 20*k*size*(weight-1)*(1-italic));
 endchar;
 
 beginchar("5", (0.47+0.055*(weight-1)+0.07*italic-0.023*italic*(weight-1))*size*pt, 0.668*size*pt, 0);
@@ -515,6 +517,8 @@ beginchar("6", (0.483+0.05*(weight-1)+0.03*italic-0.017*italic*(weight-1))*size*
   pickup eraser xscaled ((0.13+0.09*(weight-1))*h) yscaled ((0.11+0.08*(weight-1))*h) rotated 197;
   erase p1;
   % KERNING
+  kerning("%", -32*k*size*italic);
+  kerning("‰", -32*k*size*italic);
   kerning("1", -23*k*size);
   kerning("2", -19*k*size);
 endchar;
@@ -560,10 +564,11 @@ beginchar("8", (0.497+0.054*(weight-1)+0.024*italic-0.013*italic*(weight-1))*siz
   lower = lower shifted (0.5*w, (h-udiameter)/2);
   draw lower;
   % KERNING
-  kerning("%", (-32+7*(weight-1))*k*size);
+  kerning("0", -41*k*size*italic);
+  kerning("%", (-32+7*(weight-1)-26*italic)*k*size);
+  kerning("‰", (-32+7*(weight-1)-26*italic)*k*size);
   kerning("°", -28*k*size);
-  kerning("‰", (-32+7*(weight-1))*k*size);
-  kerning("9", -23*k*size);
+  kerning("9", (-23-26*italic)*k*size);
   kerning("7", -19*k*size);
   kerning("1", -28*k*size);
 endchar;
@@ -749,12 +754,12 @@ beginchar("A", (0.608+0.075*(weight-1)+0.01*italic-0.003*italic*(weight-1))*size
   pickup triangle_pen;
   erase (0, 0);
   % KERNING
-  kerning("x", 20*k*size);
-  kerning("w", -44*k*size);
-  kerning("l", -21*k*size);
-  kerning("W", -47*k*size);
   kerning("V", (-67-22*(weight-1))*k*size);
+  kerning("W", -47*k*size);
+  kerning("w", (-44+12*italic)*k*size);
   kerning("U", -28*k*size);
+  kerning("l", -21*k*size);
+  kerning("x", 20*k*size);
 endchar;
 
 beginchar("B", (0.506+0.07*(weight-1)+0.138*italic-0.039*italic*(weight-1))*size*pt, 0.668*size*pt, 0);
@@ -1784,7 +1789,7 @@ beginchar("X", (0.605+0.076*(weight-1)+0.139*italic+0.01*italic*(weight-1))*size
   kerning("â", -19*k*size);
   kerning("à", -19*k*size);
   kerning("ā", -19*k*size);
-  kerning("a", -19*k*size);  
+  kerning("a", -19*k*size); 
   kerning("æ", -19*k*size);
   kerning("ÿ", -19*k*size);
   kerning("ý", -19*k*size);
