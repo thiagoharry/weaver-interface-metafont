@@ -2283,8 +2283,50 @@ beginchar("g", (0.453+0.069*(weight-1)+0.081*italic-0.001*italic*(weight-1))*siz
   kerning("Ÿ", -47*k*size);
 endchar;
 
-beginchar("h", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+beginchar("h", (0.41+0.063*(weight-1)+0.095*italic+0.008*italic*(weight-1))*size*pt,
     0.668*size*pt, 0);
+  % PARAMETERS
+  numeric width1;
+  width1 = (0.13+0.1*(weight-1))*h;
+  % CONTROL POINTS
+  pair p1, p2;
+  pair p3, p4, p5, p6;
+  pair p7, p8, p9;
+  p1 = ((0.2+0.05*(weight-1))*italic*w, h);
+  p2 = (0, 0);
+  % Outer left bottom:
+  p3 = ((1.0-(0.185-0.01*(weight-1))*italic)*w, 0);
+  % Outer left middle:
+  p4 = ((1.0-(0.055-0.01*(weight-1))*italic)*w, 0.47*h);
+  % Outer top:
+  p5 = ((0.59+0.05*(weight-1)+0.09*italic-0.02*italic*(weight-1))*w, (0.75+0.01*italic*(weight-1))*h);
+  % Bottleneck:
+  p6 = ((0.27+0.1*(weight-1)+0.1*italic)*w, (0.63-0.02*(weight-1))*h);
+  % Inner left bottom
+  p7 = (xpart p3 - width1, 0);
+  p8 = (xpart p4 - width1, ypart p4);
+  p9 = ((0.54-0.02*(weight-1)+0.07*italic-0.02*italic*(weight-1))*w, (0.645-0.06*(weight-1))*h);
+  % RENDERING
+  pickup pensquare xscaled width1;
+  draw rt p1 -- rt p2;
+  pickup pencircle xscaled (0.6*width1) yscaled (0.5*width1);
+  draw lft p3--lft p4{p4-p3}..{-1, 0}bot p5..p6..0.6[p1+(width1/2, 0), p2+(width1/2, 0)];
+  pickup pencircle xscaled (0.5*width1) yscaled (0.5*width1);
+  draw rt p7--rt p8{p8-p7}..{-1, 0}top p9..p6..{p1-p2}(p2+(width1/2, 0));
+  % RETOUCH
+  pair r1, r2;
+  r1 = 0.6[(p1+(width1, 0)), (p2+(width1, 0))];
+  r2 = p2 + (width1, 0);
+  path retouch;
+  retouch = p7--p8{p8-p7}..p9{-1, 0}..{r2-r1}r1--r2;
+  draw retouch;
+  retouch = retouch & r2 -- cycle;
+  pen eraser;
+  eraser = makepen(retouch);
+  pickup eraser;
+  erase (0, 0);
+  % KERNING
+  kerning("W", -28*k*size)
 endchar;
 
 beginchar("i", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
