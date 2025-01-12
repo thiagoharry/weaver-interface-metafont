@@ -92,7 +92,7 @@ void test_empty_programs(void){
   lexer(mf,  "tests/empty_statements.mf", &first, &last);
   ret = eval_program(mf, cx, first, last);
   free_token_list(first);
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
   assert("Testing program with empty statements", ret);
 }
@@ -115,7 +115,7 @@ void test_compound_statements(void){
   lexer(mf,  "tests/compound_wrong.mf", &first, &last);
   ret = eval_program(mf, cx, first, last);
   free_token_list(first);
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
   assert("Detecting wrong compound statements", !ret);
 }
@@ -156,7 +156,7 @@ void test_variables(void){
            0.0, 3.0, p -> x, p -> y);
   }
   free_token_list(first);
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
 }
 
@@ -171,7 +171,7 @@ void test_assignments(void){
   ret = eval_program(mf, cx, first, last);
   assert("Detecting wrong assignment", !ret);
   free_token_list(first);
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
 }
 
@@ -361,7 +361,7 @@ void test_lexer(void){
   ok = eval_program(mf, cx, first, last);
   assert("Wrong program not parsed", !ok);
   free_token_list(first);
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
 }
 
@@ -1289,7 +1289,7 @@ void test_path_expressions(void){
 	 path_m12 -> points[4].point.x == 2.0 &&
 	 path_m12 -> points[4].point.y == 0.0);
   free_token_list(first);
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
 }
 
@@ -1661,7 +1661,7 @@ void test_pen_expressions(void){
 	 	      -0.5 * pen_p14 -> gl_matrix[4] +
 	 	      1.0 * pen_p14 -> gl_matrix[7]));
   free_token_list(first);
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
 }
 
@@ -1705,7 +1705,7 @@ void test_numeric_expressions(void){
 	 ALMOST_EQUAL(numeric_g -> value, 5.0) &&
 	 ALMOST_EQUAL(numeric_h -> value, 6.0));
   free_token_list(first);
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
 }
 
@@ -1732,7 +1732,7 @@ void test_pair_expressions(void){
 	 ALMOST_EQUAL(pair_b -> x, 227.9591) &&
 	 ALMOST_EQUAL(pair_b -> y, 74.94846));
   free_token_list(first);
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
 }
 
@@ -1841,7 +1841,7 @@ void test_transform_expressions(void){
 	 ALMOST_EQUAL(transform_j -> value[1], -0.4) &&
 	 ALMOST_EQUAL(transform_j -> value[4], 0.2));
   free_token_list(first);
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
 }
 
@@ -1961,7 +1961,7 @@ void test_picture_expressions(void){
    	 picture_m -> width == 3 && picture_m -> height == 1 &&
   	 ALMOST_EQUAL(numeric_wm -> value, 1.0));
   free_token_list(first);
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
 }
 
@@ -2061,7 +2061,7 @@ void test_boolean_expressions(void){
   assert("Testing 'odd' operator", (!boolean_c6 -> value) && boolean_d6 -> value);
   assert("Testing 'cycle' operator", boolean_e6 -> value && !(boolean_f6 -> value));
   free_token_list(first);
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
 }
 
@@ -2089,7 +2089,7 @@ void test_if_statements(void){
 	 numeric_a -> value == 2 && numeric_b -> value == 11 &&
 	 numeric_c -> value == 17);
   free_token_list(first);
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
 }
 
@@ -2259,7 +2259,7 @@ void test_drawing_commands(void){
 	 ALMOST_EQUAL(pair_ph2 -> x, 0.4) &&
 	 ALMOST_EQUAL(pair_ph2 -> y, -0.4));
   free_token_list(first);
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
 }
 
@@ -2284,7 +2284,7 @@ void test_font_rendering(void){
   assert("Detecting missing glyph", !ret);
 
   free_token_list(first);
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
 
 }
@@ -2338,7 +2338,7 @@ void test_pen_rendering(void){
   //print_picture(picture_a);
   //print_picture(picture_b);
   free_token_list(first);
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
 }
 
@@ -2360,7 +2360,7 @@ void test_prime_computing(void){
   assert("Testing program computing primes",
 	 ret && numeric_prime -> value == 541.0);
   free_token_list(first);
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
 }
 
@@ -2400,7 +2400,7 @@ void test_shipit_command(void){
   assert("Testing correctness of 'shipit' command",
 	 ret && w1 == 18.0 && w2 == 35.0);
   free_token_list(first);
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
 }
 
@@ -2442,7 +2442,7 @@ void test_renderchar_command(void){
 		       &depth, &italcorr, &kerning);
   assert("Testing monospace glyphs", ret && width == 200);
   free_token_list(first);
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
 }
 
@@ -2489,7 +2489,7 @@ void test_errors(void){
   assert("Raising error if we have no memory",
 	 mf != NULL && mf -> err == ERROR_NO_MEMORY &&
 	 !strcmp(error_string, "/tmp/test.mf: Not enough memory for allocation.\n"));
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
   _Wfinish_weavefont();
   if(!_Winit_weavefont(malloc, free, malloc, free, my_rand, 2592)){
@@ -2508,7 +2508,7 @@ void test_errors(void){
 	 mf -> err == ERROR_FAILED_OPENING_FILE &&
 	 !strcmp(error_string, "/tmp/ççç.mf: Failed opening file \"/tmp/ççç.mf\": No such file or directory.\n"));
   free_token_list(first);
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
   // Error: Invalid char in source code ('ç')
   memset(error_string, 0, 1024);
@@ -2518,7 +2518,7 @@ void test_errors(void){
   assert("Raising error when finding invalid character in source code",
 	 mf != NULL && mf -> err == ERROR_INVALID_CHAR &&
 	 !strcmp(error_string, "/tmp/test.mf:1: Unsupported UTF-8 character in source code: 'ç' (U+0000E7).\n"));
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
   // Error: Nested beginchar
   memset(error_string, 0, 1024);
@@ -2528,7 +2528,7 @@ void test_errors(void){
   assert("Raising error when finding nested 'beginchar's",
 	 mf != NULL && mf -> err == ERROR_NESTED_BEGINCHAR &&
 	 !strcmp(error_string, "/tmp/test.mf:1: You cannot nest 'beginchar' statements.\n"));
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
   // Error: Incomplete source code
   memset(error_string, 0, 1024);
@@ -2538,7 +2538,7 @@ void test_errors(void){
   assert("Raising error if source ends in middle of statement",
 	 mf != NULL && mf -> err == ERROR_INCOMPLETE_SOURCE &&
 	 !strcmp(error_string, "/tmp/test.mf:1: Incomplete code. WeaveFont source code ended in middle of statement.\n"));
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
   // Error: Incomplete statement
   memset(error_string, 0, 1024);
@@ -2548,7 +2548,7 @@ void test_errors(void){
   assert("Raising error for incomplete statements",
 	 mf != NULL && mf -> err == ERROR_INCOMPLETE_STATEMENT &&
 	 !strcmp(error_string, "/tmp/test.mf:1: Incomplete statement. You ended the statement with ';' before fully defining it.\n"));
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
   // Error: token different than expected
   memset(error_string, 0, 1024);
@@ -2558,7 +2558,7 @@ void test_errors(void){
   assert("Raising error for tokens different than expected",
 	 mf != NULL && mf -> err == ERROR_EXPECTED_FOUND &&
 	 !strcmp(error_string, "/tmp/test.mf:1: Expected ',' token. Found 'of' instead.\n"));
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
   // Error: pickup without valid pen
   memset(error_string, 0, 1024);
@@ -2568,7 +2568,7 @@ void test_errors(void){
   assert("Raising error for 'pickup' with no pen",
 	 mf != NULL && mf -> err == ERROR_NO_PICKUP_PEN &&
 	 !strcmp(error_string, "/tmp/test.mf:1: After a 'pickup' command, you should use either a 'nullpen', 'pencircle', 'pensemicircle' or a pen variable.\n"));
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
   // Error: invalid variable name
   memset(error_string, 0, 1024);
@@ -2578,7 +2578,7 @@ void test_errors(void){
   assert("Raising error for invalid variable name",
 	 mf != NULL && mf -> err == ERROR_INVALID_NAME &&
 	 !strcmp(error_string, "/tmp/test.mf:1: You can not use 'pickup' as a variable name: it is a reserved keyword.\n"));
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
   // Error: variable not declared
   memset(error_string, 0, 1024);
@@ -2588,7 +2588,7 @@ void test_errors(void){
   assert("Raising error for undeclared variable",
 	 mf != NULL && mf -> err == ERROR_UNDECLARED_VARIABLE &&
 	 !strcmp(error_string, "/tmp/test.mf:1: Variable 'undeclared' was not declared.\n"));
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
   // Error: wrong variable type
   memset(error_string, 0, 1024);
@@ -2600,7 +2600,7 @@ void test_errors(void){
   assert("Raising error for variable with wrong type",
 	 mf != NULL && mf -> err == ERROR_WRONG_VARIABLE_TYPE &&
 	 !strcmp(error_string, "/tmp/test.mf:3: Variable 'b' is a 'picture' variable, but we expected a 'numeric' variable.\n"));
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
   // ERROR: Missing expression
   memset(error_string, 0, 1024);
@@ -2610,7 +2610,7 @@ void test_errors(void){
   assert("Raising error for missing expressions",
 	 mf != NULL && mf -> err == ERROR_MISSING_EXPRESSION &&
 	 !strcmp(error_string, "/tmp/test.mf:2: Missing 'numeric' expression.\n"));
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
   // ERROR: Unclosed delimiter:
   memset(error_string, 0, 1024);
@@ -2620,7 +2620,7 @@ void test_errors(void){
   assert("Raising error for unclosed delimiter",
 	 mf != NULL && mf -> err == ERROR_UNCLOSED_DELIMITER &&
 	 !strcmp(error_string, "/tmp/test.mf:2: Delimiter '(' was not closed.\n"));
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
   // ERROR: Unopened delimiter
   memset(error_string, 0, 1024);
@@ -2630,7 +2630,7 @@ void test_errors(void){
   assert("Raising error for unopened delimiter",
 	 mf != NULL && mf -> err == ERROR_UNOPENED_DELIMITER &&
 	 !strcmp(error_string, "/tmp/test.mf:2: Delimiter ']' was not previously opened.\n"));
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
   // ERROR: Negative square root
   memset(error_string, 0, 1024);
@@ -2640,7 +2640,7 @@ void test_errors(void){
   assert("Raising error for square root of negative number",
 	 mf != NULL && mf -> err == ERROR_NEGATIVE_SQUARE_ROOT &&
 	 !strcmp(error_string, "/tmp/test.mf:2: Tried to compute square root of negative value '-1'.\n"));
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
   // ERROR: Division by zero
   memset(error_string, 0, 1024);
@@ -2650,7 +2650,7 @@ void test_errors(void){
   assert("Raising error for division by zero",
 	 mf != NULL && mf -> err == ERROR_DIVISION_BY_ZERO &&
 	 !strcmp(error_string, "/tmp/test.mf:2: Division by zero.\n"));
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
   // ERROR: Unknown expression
   memset(error_string, 0, 1024);
@@ -2660,7 +2660,7 @@ void test_errors(void){
   assert("Raising error for unknown expression",
 	 mf != NULL && mf -> err == ERROR_UNKNOWN_EXPRESSION &&
 	 !strcmp(error_string, "/tmp/test.mf:2: Unknown numeric expression.\n"));
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
   // ERROR: 'length' with unsuported operand
   memset(error_string, 0, 1024);
@@ -2670,7 +2670,7 @@ void test_errors(void){
   assert("Raising error for unsuported 'length' operand",
 	 mf != NULL && mf -> err == ERROR_UNSUPORTED_LENGTH_OPERAND &&
 	 !strcmp(error_string, "/tmp/test.mf:2: Operator 'length' expects a numeric, pair or path expression as operand. Instead, we found a picture expression.\n"));
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
   // ERROR: Negative logarithm
   memset(error_string, 0, 1024);
@@ -2680,7 +2680,7 @@ void test_errors(void){
   assert("Raising error for negative logarithm",
 	 mf != NULL && mf -> err == ERROR_NEGATIVE_LOGARITHM &&
 	 !strcmp(error_string, "/tmp/test.mf:2: Tried to compute logarithm of negative value '-2'.\n"));
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
   // ERROR: Variable not initialized
   memset(error_string, 0, 1024);
@@ -2690,7 +2690,7 @@ void test_errors(void){
   assert("Raising error for unitialized variable",
 	 mf != NULL && mf -> err == ERROR_UNINITIALIZED_VARIABLE &&
 	 !strcmp(error_string, "/tmp/test.mf:2: Uninitialized numeric variable 'a'.\n"));
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
   // ERROR: Empty delimiter
   memset(error_string, 0, 1024);
@@ -2700,7 +2700,7 @@ void test_errors(void){
   assert("Raising error for empty delimiter",
 	 mf != NULL && mf -> err == ERROR_EMPTY_DELIMITER &&
 	 !strcmp(error_string, "/tmp/test.mf:2: Unexpected empty delimiter '()'.\n"));
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
   // ERROR: Angle of null vector
   memset(error_string, 0, 1024);
@@ -2710,7 +2710,7 @@ void test_errors(void){
   assert("Raising error when measuring angle of null vector",
 	 mf != NULL && mf -> err == ERROR_NULL_VECTOR_ANGLE &&
 	 !strcmp(error_string, "/tmp/test.mf:2: You cannot use 'angle' operator in a null vector '(0, 0)'.\n"));
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
   // ERROR: Concatenating non-adjacent paths
   memset(error_string, 0, 1024);
@@ -2720,7 +2720,7 @@ void test_errors(void){
   assert("Raising error when concatenating non-adjacent paths",
 	 mf != NULL && mf -> err == ERROR_DISCONTINUOUS_PATH &&
 	 !strcmp(error_string, "/tmp/test.mf:2: Concatenating endpoint '(1, 0)' with endpoint '(0, 1)': discontinuous path.\n"));
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
   // ERROR: Concatenating non-adjacent paths
   memset(error_string, 0, 1024);
@@ -2730,7 +2730,7 @@ void test_errors(void){
   assert("Raising error when using invalid tension values",
 	 mf != NULL && mf -> err == ERROR_INVALID_TENSION &&
 	 !strcmp(error_string, "/tmp/test.mf:2: Between path points (0, 0) and (1, 0) we found first tension value '0.5' smaller than minimal allowed '0.75'.\n"));
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
   // ERROR: Non-cyclical pen
   memset(error_string, 0, 1024);
@@ -2740,7 +2740,7 @@ void test_errors(void){
   assert("Raising error when trying to create a pen from non-cyclical path",
 	 mf != NULL && mf -> err == ERROR_NONCYCLICAL_PEN &&
 	 !strcmp(error_string, "/tmp/test.mf:2: Tried to create a pen from non-cyclical path.\n"));
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
   // ERROR: Comparing non-comparable types
   memset(error_string, 0, 1024);
@@ -2750,7 +2750,7 @@ void test_errors(void){
   assert("Raising error when comparing non-camparable types",
 	 mf != NULL && mf -> err == ERROR_INVALID_COMPARISON &&
 	 !strcmp(error_string, "/tmp/test.mf:3: Tried to use '<' to compare an expression of type 'pen', but such type is not comparable.\n"));
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
   // ERROR: Missing matching token
   memset(error_string, 0, 1024);
@@ -2760,7 +2760,7 @@ void test_errors(void){
   assert("Raising error when missing matching token",
 	 mf != NULL && mf -> err == ERROR_MISSING_TOKEN &&
 	 !strcmp(error_string, "/tmp/test.mf:2: Missing matching token 'fi'.\n"));
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
   // ERROR: Duplicate glyph
   memset(error_string, 0, 1024);
@@ -2770,7 +2770,7 @@ void test_errors(void){
   assert("Raising error for duplicate glyphs", 
 	 mf != NULL && mf -> err == ERROR_DUPLICATE_GLYPH &&
 	 !strcmp(error_string, "/tmp/test.mf:3: Glyph 'a' is being defined twice.\n"));
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
   // ERROR: Wrong number of parameters
   memset(error_string, 0, 1024);
@@ -2780,7 +2780,7 @@ void test_errors(void){
   assert("Raising error for wrong number of parameters", 
 	 mf != NULL && mf -> err == ERROR_WRONG_NUMBER_OF_PARAMETERS &&
 	 !strcmp(error_string, "/tmp/test.mf:1: Statement 'beginchar' expected 4 parameters, but 3 were given.\n"));
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
   // ERROR: Glyph with invalid dimensions
   create_metafont(&mf, &cx, "beginchar(\"a\", 0, 10, -11);\nendchar;\n");
@@ -2796,7 +2796,7 @@ void test_errors(void){
   assert("Raising error for glyphs with invalid dimensions", 
 	 mf != NULL && mf -> err == ERROR_INVALID_DIMENSION_GLYPH &&
 	 !strcmp(error_string, "/tmp/test.mf:1: Glyph with size 0x-1. Expected positive values for both width and height+depth. (while rendering 'a')\n"));
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
   // ERROR: Glyph with unknown dependency
   create_metafont(&mf, &cx, "beginchar(\"a\", 10, 10, 0);\nrenderchar \"b\" between (0,0) and (10, 10);\nendchar;\n");
@@ -2812,7 +2812,7 @@ void test_errors(void){
   assert("Raising error for unknown glyph dependency", 
 	 mf != NULL && mf -> err == ERROR_UNKNOWN_GLYPH_DEPENDENCY &&
 	 !strcmp(error_string, "/tmp/test.mf:2: Command 'renderchar' created dependency of undefined glyph 'b'. (while rendering 'a')\n"));
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
   // ERROR: Recursive 'renderchar'
   create_metafont(&mf, &cx, "beginchar(\"a\", 10, 10, 0);\nrenderchar \"b\" between (0,0) and (10, 10);\nendchar;\nbeginchar(\"b\", 10, 10, 0);\nrenderchar \"c\" between (0, 0 and (10, 10);\nendchar;\nbeginchar(\"c\", 10, 10, 0);\nrenderchar \"a\" between (0, 0 and (10, 10);\nendchar;\n");
@@ -2828,7 +2828,7 @@ void test_errors(void){
   assert("Raising error for infinite recursion in 'renderchar'", 
 	 mf != NULL && mf -> err == ERROR_RECURSIVE_RENDERCHAR &&
 	 !strcmp(error_string, "/tmp/test.mf:8: Recursive 'renderchar' detected. Glyph 'a' depends on current glyph, but current glyph depends on 'a'. (while rendering 'c')\n"));
-  destroy_context(mf, cx);
+  destroy_context(cx);
   _Wdestroy_metafont(mf);
   // End of error tests
   setbuf(stderr, NULL);

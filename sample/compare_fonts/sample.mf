@@ -2345,6 +2345,7 @@ beginchar("ı", (0.153+0.095*(weight-1)+0.039*italic-0.004*italic*(weight-1))*si
   draw rt bot p1 -- lft bot (w, h);
   pickup pensquare xscaled p_width;
   draw lft bot (w+p_height*sind(ang), h-p_height*cosd(ang))--lft p2;
+  % NO KERNING
 endchar;
 
 
@@ -2359,6 +2360,7 @@ beginchar("i", (0.174+0.087*(weight-1)+0.074*italic-0.004*italic*(weight-1))*siz
   renderchar "ı" between (0, 0) and upper_left;
   pickup pencircle scaled (2*radius);
   draw lft bot (w, h);
+  % NO KERNING
 endchar;
 
 beginchar("j", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,

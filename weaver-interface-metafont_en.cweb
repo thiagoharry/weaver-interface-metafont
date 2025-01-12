@@ -1692,7 +1692,7 @@ in this list:
 
 @<Lexer: New Reserved Symbolic Token@>=
 {
-  int i, token_type = 0;
+  int token_type = 0;
   for(i = 0; list_of_keywords[i] != NULL; i ++)
     if(!strcmp(buffer, list_of_keywords[i]))
       token_type = i + TYPE_SEMICOLON + 1; // Keywords come after ';'
@@ -2214,7 +2214,7 @@ user):
 @<Local Function Declaration (metafont.c)@>+=
 struct metafont *init_metafont(char *filename);
 struct context *init_context(struct metafont *mf);
-void destroy_context(struct metafont *mf, struct context *cx);
+void destroy_context(struct context *cx);
 @
 
 The structure \monoespaco{metafont} needs to store more informations,
@@ -2269,7 +2269,7 @@ void _Wdestroy_metafont(struct metafont *mf){
 @
 
 @<Auxiliary Local Functions (metafont.c)@>+=
-void destroy_context(struct metafont *mf, struct context *cx){
+void destroy_context(struct context *cx){
   if(temporary_free != NULL){
     // TO be defined in the future:
     @<Finalization (struct context)@>
@@ -2909,13 +2909,12 @@ means:
   void *variable_pointer;
   if(mf -> loading){ // Variable should be stored in 'struct metafont'
     if(cx -> nesting_level != 0 || variable -> value[0] == '_')
-      variable_pointer = insert_variable(mf, type, variable,
-                                         &(mf -> variables));
+      variable_pointer = insert_variable(mf, type, &(mf -> variables));
     else
       variable_pointer = insert_named_global_variable(mf, type, variable);
   }
   else
-    variable_pointer = insert_variable(mf, type, variable, &(cx -> variables));
+    variable_pointer = insert_variable(mf, type, &(cx -> variables));
   if(variable_pointer == NULL){
     RAISE_ERROR_NO_MEMORY(mf, cx, OPTIONAL(variable -> line));
     return false;
@@ -2929,7 +2928,6 @@ The function that inserts a new global variable without its name is:
 @<Local Function Declaration (metafont.c)@>+=
 struct variable *insert_variable(struct metafont *mf,
                                  int type,
-                                 struct symbolic_token *variable,
                                  struct variable **target);
 @
 
@@ -2939,7 +2937,6 @@ by \monoespaco{target}:
 @<Auxiliary Local Functions (metafont.c)@>+=
 struct variable *insert_variable(struct metafont *mf,
                                  int type,
-                                 struct symbolic_token *variable,
                                  struct variable **target){
   struct variable *var;
   size_t var_sizes[] = {
@@ -3004,7 +3001,7 @@ struct variable *insert_named_global_variable(struct metafont *mf,
   memcpy(named -> name, var -> value, name_size);
   named -> next = NULL;
   named -> var = NULL;
-  new_var = insert_variable(mf, type, var, &(named -> var));
+  new_var = insert_variable(mf, type, &(named -> var));
   if(new_var == NULL){
     if(permanent_free != NULL){
       permanent_free(named -> name);
@@ -10634,7 +10631,7 @@ render will be rectangular textures, we will need only the following
 vertices for all the rendering:
 
 @<Local Variables (metafont.c)@>+=
-const static float square[20] = {
+static const float square[20] = {
   -1.0, -1.0, // First vertice
   0.0, 0.0,  // Texture coordinate
   1.0, -1.0, // Second vertice
@@ -16397,10 +16394,10 @@ initializes it:
 @<Prepare 'currentpicture' for Drawing@>=
 {
   if(cx -> currentpicture_fb == 0){
-    int width, height;
+    int pic_width, pic_height;
     GLuint texture;
-    width = cx -> currentpicture -> width;
-    height = cx -> currentpicture -> height;
+    pic_width = cx -> currentpicture -> width;
+    pic_height = cx -> currentpicture -> height;
     texture = cx -> currentpicture -> texture;
     glGenFramebuffers(1, &(cx -> currentpicture_fb));
     glBindTexture(GL_TEXTURE_2D, texture);
@@ -16408,7 +16405,7 @@ initializes it:
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, pic_width, pic_height, 0, GL_RGBA,
                  GL_UNSIGNED_BYTE, NULL);
     glBindFramebuffer(GL_FRAMEBUFFER, cx -> currentpicture_fb);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
@@ -17286,7 +17283,7 @@ else if(begin -> type == TYPE_BEGINCHAR){
     // Making a new white texture
     memset(data, 255, size);
     { // And turning it transparent
-      int i;
+      size_t i;
       for(i = 3; i < size; i += 4)
         data[i] = 0;
     }
@@ -17433,7 +17430,7 @@ struct metafont *_Wnew_metafont(char *filename){
   lexer(mf, filename, &first, &last);
   cx = init_context(mf);
   ret = eval_program(mf, cx, first, last);
-  destroy_context(mf, cx);
+  destroy_context(cx);
   if(!ret){
     _Wdestroy_metafont(mf);
     return NULL;
@@ -17477,7 +17474,7 @@ bool _Wrender_glyph(struct metafont *mf, char *glyph,
       return false;
     }
     if(!eval_list_of_statements(mf, cx, current -> begin, current -> end)){
-      destroy_context(mf, cx);
+      destroy_context(cx);
       MUTEX_SIGNAL(mf -> mutex);
       return false;
     }
@@ -17498,7 +17495,7 @@ bool _Wrender_glyph(struct metafont *mf, char *glyph,
     k = k -> next;
   }
   if(cx != NULL)
-    destroy_context(mf, cx);
+    destroy_context(cx);
   MUTEX_SIGNAL(mf -> mutex);
   return true;
 }
@@ -17746,11 +17743,11 @@ if(glyph -> need_rendering){
     return false;
   }
   if(!eval_list_of_statements(mf, new_cx, glyph -> begin, glyph -> end)){
-    destroy_context(mf, new_cx);
+    destroy_context(new_cx);
     return false;
   }
   glyph -> is_being_rendered = false;
-  destroy_context(mf, new_cx);
+  destroy_context(new_cx);
 }
 @
 
