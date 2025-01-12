@@ -2326,11 +2326,39 @@ beginchar("h", (0.41+0.063*(weight-1)+0.095*italic+0.008*italic*(weight-1))*size
   pickup eraser;
   erase (0, 0);
   % KERNING
-  kerning("W", -28*k*size)
+  kerning("W", -28*k*size);
 endchar;
 
-beginchar("i", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
-    0.668*size*pt, 0);
+beginchar("ı", (0.153+0.095*(weight-1)+0.039*italic-0.004*italic*(weight-1))*size*pt,
+    0.497*size*pt, 0);
+  % PARAMETERS
+  numeric ang, p_width, p_height;
+  ang = -12*italic;
+  p_width=(0.175+0.13*(weight-1))*h;
+  p_height=(0.136+0.095*(weight-1))*h;
+  % CONTROL POINTS
+  pair p1, p2;
+  p1 = ((0.04-0.04*(weight-1))*italic*w, h);
+  p2 = italic[(w, 0), (p_width, 0)] + (0.07*italic*(weight-1)*w, 0);
+  % RENDERING
+  pickup pensquare yscaled p_height rotated ang;
+  draw rt bot p1 -- lft bot (w, h);
+  pickup pensquare xscaled p_width;
+  draw lft bot (w+p_height*sind(ang), h-p_height*cosd(ang))--lft p2;
+endchar;
+
+
+beginchar("i", (0.174+0.087*(weight-1)+0.074*italic-0.004*italic*(weight-1))*size*pt,
+    (0.716+0.043*(weight-1)+0.001*italic-0.002*italic*(weight-1))*size*pt, 0);
+  % PARAMETERS
+  pair upper_left;
+  numeric radius;
+  upper_left = ((0.85+0.08*(weight-1)-0.08*italic)*w, (0.694-0.04*(weight-1))*h);
+  radius = (0.087+0.033*(weight-1))*h;
+  % RENDERING
+  renderchar "ı" between (0, 0) and upper_left;
+  pickup pencircle scaled (2*radius);
+  draw lft bot (w, h);
 endchar;
 
 beginchar("j", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
