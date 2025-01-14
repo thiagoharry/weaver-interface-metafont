@@ -2393,8 +2393,101 @@ beginchar("j", (0.254+0.039*(weight-1)+0.175*italic+0.005*italic*(weight-1))*siz
   kerning("j", (24+20*(weight-1))*k*size);
 endchar;
 
-beginchar("k", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+beginchar("k", (0.411+0.104*(weight-1)+0.083*italic+0.011*italic*(weight-1))*size*pt,
     0.668*size*pt, 0);
+  % PARAMETERS
+  numeric width1, width2, width3;
+  width1 = (0.13+0.1*(weight-1))*h;
+  width2 = (0.15+0.12*(weight-1)+0.03*italic)*h;
+  width3 = (0.15+0.12*(weight-1)-0.01*italic-0.02*italic*(weight-1))*h;
+  % CONTROL POINTS
+  pair p1, p2, p3, p4, p5, p6;
+  p1 = (0, 0);
+  p2 = ((0.3-0.06*(weight-1))*italic*w, h);
+  p3 = (w - width2/2 - (0.06-0.02*(weight-1))*(1-italic)*w, (0.74+0.004*(weight-1))*h);
+  p4 = (0.19-0.14*(weight-1)-0.02*italic+0.02*italic*(weight-1))[p1, p2];
+  p5 = (w - width3/2 - 0.17*italic*w, 0);
+  p6 = (0.44+0.06*(weight-1)-0.01*italic)[p4, p3];
+  % RENDERING
+  pickup pensquare xscaled width1;
+  draw rt p1--rt p2;
+  pickup pensquare xscaled width2;
+  draw p3--p4;
+  pickup pensquare xscaled width3;
+  draw p5--p6;
+  % RETOUCH
+  p3 = (0, h);
+  pen eraser;
+  eraser = makepen(p1--p2--p3--cycle);
+  pickup eraser;
+  erase (0, 0);
+  % KERNING
+  kerning("Ö", -19*k*size);
+  kerning("Õ", -19*k*size);
+  kerning("Ô", -19*k*size);
+  kerning("Ó", -19*k*size);
+  kerning("Ò", -19*k*size);
+  kerning("O", -19*k*size);
+  kerning("Œ", -19*k*size);
+  kerning("Q", -19*k*size);
+  kerning("Č", -19*k*size);
+  kerning("Ċ", -19*k*size);
+  kerning("Ć", -19*k*size);
+  kerning("Ç", -19*k*size);
+  kerning("C", -19*k*size);
+  kerning("Ģ", -19*k*size);
+  kerning("Ġ", -19*k*size);
+  kerning("Ğ", -19*k*size);
+  kerning("G", -19*k*size);
+  kerning("č", (-15-14*(weight-1))*k*size);
+  kerning("ċ", (-15-14*(weight-1))*k*size);
+  kerning("ć", (-15-14*(weight-1))*k*size);
+  kerning("ç", (-15-14*(weight-1))*k*size);
+  kerning("c", (-15-14*(weight-1))*k*size);
+  kerning("ď", (-15-14*(weight-1))*k*size);
+  kerning("đ", (-15-14*(weight-1))*k*size);
+  kerning("d", (-15-14*(weight-1))*k*size);
+  kerning("ě", (-15-14*(weight-1))*k*size);
+  kerning("ę", (-15-14*(weight-1))*k*size);
+  kerning("ė", (-15-14*(weight-1))*k*size);
+  kerning("ē", (-15-14*(weight-1))*k*size);
+  kerning("ë", (-15-14*(weight-1))*k*size);
+  kerning("ê", (-15-14*(weight-1))*k*size);
+  kerning("é", (-15-14*(weight-1))*k*size);
+  kerning("è", (-15-14*(weight-1))*k*size);
+  kerning("e", (-15-14*(weight-1))*k*size);
+  kerning("ö", (-15-14*(weight-1))*k*size);
+  kerning("õ", (-15-14*(weight-1))*k*size);
+  kerning("ô", (-15-14*(weight-1))*k*size);
+  kerning("ó", (-15-14*(weight-1))*k*size);
+  kerning("ò", (-15-14*(weight-1))*k*size);
+  kerning("o", (-15-14*(weight-1))*k*size);
+  kerning("œ", (-15-14*(weight-1))*k*size);
+  kerning("ð", (-15-14*(weight-1))*k*size);
+  kerning("ø", (-15-14*(weight-1))*k*size);
+  kerning("q", (-15-14*(weight-1))*k*size);
+  kerning("ţ", -12*k*size);
+  kerning("ť", -12*k*size);
+  kerning("ț", -12*k*size);
+  kerning("t", -12*k*size);
+  kerning("ī", -12*k*size*(weight-1));
+  kerning("ï", -12*k*size*(weight-1));
+  kerning("į", -12*k*size*(weight-1));
+  kerning("î", -12*k*size*(weight-1));
+  kerning("í", -12*k*size*(weight-1));
+  kerning("ì", -12*k*size*(weight-1));
+  kerning("ı", -12*k*size*(weight-1));
+  kerning("i", -12*k*size*(weight-1));  
+  kerning("Ą", 28*k*size);
+  kerning("Ă", 28*k*size);
+  kerning("Ā", 28*k*size);
+  kerning("Á", 28*k*size);
+  kerning("À", 28*k*size);
+  kerning("Å", 28*k*size);
+  kerning("Ä", 28*k*size);
+  kerning("Ã", 28*k*size);
+  kerning("Â", 28*k*size);
+  kerning("A", 28*k*size);
 endchar;
 
 beginchar("l", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
