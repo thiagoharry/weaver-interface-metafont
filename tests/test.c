@@ -2838,7 +2838,7 @@ void test_opengl(void){
   assert("No errors in OpenGL", glGetError() == GL_NO_ERROR);
 }
 
-int main(int argc, char **argv){
+int main(void){
   _Wcreate_window(&keyboard, &mouse);
   if(!_Winit_weavefont(malloc, free, malloc, free, my_rand, 2592)){
     fprintf(stderr, "ERROR: Test cannot be done. Initialization failed.\n");

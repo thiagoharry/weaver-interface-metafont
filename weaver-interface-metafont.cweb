@@ -78,262 +78,264 @@
 
 \def\indice#1{\leaders\hbox{.}\hfill #1}
 
-1. Introdução \indice{5}
+1. Introdução \indice{6}
 
-1.1. Programação Literária \indice{6}
+1.1. Programação Literária \indice{7}
 
-2. Código Auxiliar Geral \indice{7}
+2. Código Auxiliar Geral \indice{8}
 
-2.1. Código de Álgebra Linear \indice{7}
+2.1. Código de Álgebra Linear \indice{8}
 
-2.1.1. Resolvendo Sistemas de Equações Lineares \indice{10}
+2.1.1. Resolvendo Sistemas de Equações Lineares \indice{11}
 
-2.2. Mutexes e Seções Críticas \indice{12}
+2.2. Mutexes e Seções Críticas \indice{13}
 
-2.3. Lidando com Erros \indice{14}
+2.3. Lidando com Erros \indice{15}
 
-3. Inicialização e Finalização \indice{14}
+3. Inicialização e Finalização \indice{15}
 
-4. Analisador Léxico \indice{15}
+4. Analisador Léxico \indice{16}
 
-4.1. Tipos de Tokens \indice{15}
+4.1. Tipos de Tokens \indice{16}
 
-4.2. A Análise Léxica \indice{18}
+4.2. A Análise Léxica \indice{19}
 
-5. Programas WeaveFont \indice{32}
+5. Programas WeaveFont \indice{33}
 
-5.1. Executando Programas \indice{32}
+5.1. Executando Programas \indice{33}
 
-5.2. Separando Lista de Instruções em Instruções Individuais \indice{34}
+5.2. Separando Lista de Instruções em Instruções Individuais \indice{35}
 
-6. Uma Instrução Composta: O Bloco Composto \indice{36}
+6. Uma Instrução Composta: O Bloco Composto \indice{37}
 
-6.1. Suportando Instruções Compostas \indice{36}
+6.1. Suportando Instruções Compostas \indice{37}
 
-6.2. A Instrução \monoespaco{begingroup}$\ldots$\monoespaco{endgroup}\indice{39}
+6.2. A Instrução \monoespaco{begingroup}$\ldots$\monoespaco{endgroup}\indice{40}
 
-7. Declaração de Variáveis \indice{40}
+7. Declaração de Variáveis \indice{41}
 
-7.1. Variáveis Numéricas \indice{46}
+7.1. Variáveis Numéricas \indice{47}
 
-7.2. Variáveis de Pares \indice{49}
+7.2. Variáveis de Pares \indice{50}
 
-7.3. Variáveis de Transformação \indice{49}
+7.3. Variáveis de Transformação \indice{50}
 
-7.4. Variáveis de Caminhos \indice{50}
+7.4. Variáveis de Caminhos \indice{51}
 
-7.4.1. Removendo Recursão de Variáveis de Caminho \indice{53}
+7.4.1. Removendo Recursão de Variáveis de Caminho \indice{54}
 
-7.4.2. Tensão e Especificadores de Direção \indice{55}
+7.4.2. Tensão e Especificadores de Direção \indice{56}
 
-7.4.3. Deduzindo Especificadores de Direção \indice{60}
+7.4.3. Deduzindo Especificadores de Direção \indice{61}
 
-7.4.4. Normalização de Caminhos \indice{69}
+7.4.4. Normalização de Caminhos \indice{70}
 
-7.5. Variáveis de Caneta \indice{71}
+7.5. Variáveis de Caneta \indice{72}
 
-7.6. Variáveis de Imagens \indice{75}
+7.6. Variáveis de Imagens \indice{76}
 
-7.7. Variáveis Booleanas \indice{76}
+7.7. Variáveis Booleanas \indice{77}
 
-8. Atribuições \indice{76}
+8. Atribuições \indice{77}
 
-8.1. Atribuições e Expressões Numéricas \indice{78}
+8.1. Atribuições e Expressões Numéricas \indice{79}
 
-8.1.1. Soma e Subtração: Normal e Pitagórica \indice{79}
+8.1.1. Soma e Subtração: Normal e Pitagórica \indice{80}
 
-8.1.2. Multiplicação e Divisão \indice{83}
+8.1.2. Multiplicação e Divisão \indice{84}
 
-8.1.3. Módulo, Seno, Cosseno, Exponenciais, Piso e Aleatórios Uniformes \indice{85}
+8.1.3. Módulo, Seno, Cosseno, Exponenciais, Piso e Aleatórios Uniformes \indice{86}
 
-8.1.4. Números Isolados e Valores Aleatórios Normais \indice{89}
+8.1.4. Números Isolados e Valores Aleatórios Normais \indice{90}
 
-8.2. Atribuições e Expressões de Pares \indice{92}
+8.2. Atribuições e Expressões de Pares \indice{93}
 
-8.2.1. Soma e Subtração \indice{93}
+8.2.1. Soma e Subtração \indice{94}
 
-8.2.2. Transformações, Multiplicação e Divisão Escalar \indice{94}
+8.2.2. Transformações, Multiplicação e Divisão Escalar \indice{95}
 
-8.2.3. Valores Intermediários de Pares, Literais e Variáveis \indice{98}
+8.2.3. Valores Intermediários de Pares, Literais e Variáveis \indice{99}
 
-8.2.4. Pares em Expressões Numéricas \indice{103}
+8.2.4. Pares em Expressões Numéricas \indice{104}
 
-8.3. Atribuições e Expressões de Transformação \indice{104}
+8.3. Atribuições e Expressões de Transformação \indice{105}
 
-8.3.1. Transformações sobre Transformadores \indice{105}
+8.3.1. Transformações sobre Transformadores \indice{106}
 
-8.3.2 Expressões Primárias de Transformação: Literais e Variáveis \indice{108}
+8.3.2 Expressões Primárias de Transformação: Literais e Variáveis \indice{109}
 
-8.3.3. Transformações em Expressões Numéricas \indice{111}
+8.3.3. Transformações em Expressões Numéricas \indice{112}
 
-8.3.4. Transformações em Expressões de Pares \indice{112}
+8.3.4. Transformações em Expressões de Pares \indice{113}
 
-8.4. Atribuições e Expressões de Caminhos \indice{113}
+8.4. Atribuições e Expressões de Caminhos \indice{114}
 
-8.4.1. Junção de Caminhos \indice{113}
+8.4.1. Junção de Caminhos \indice{114}
 
-8.4.2. Expressões Terciárias de Caminhos \indice{132}
+8.4.2. Expressões Terciárias de Caminhos \indice{133}
 
-8.4.3. Expressões Secundárias de Caminhos: Transformadores \indice{133}
+8.4.3. Expressões Secundárias de Caminhos: Transformadores \indice{134}
 
-8.4.4. Expressões Primárias: Variáveis, Reversos e Subcaminhos \indice{139}
+8.4.4. Expressões Primárias: Variáveis, Reversos e Subcaminhos \indice{140}
 
-8.4.5. Caminhos em Expressões Numéricas \indice{145}
+8.4.5. Caminhos em Expressões Numéricas \indice{146}
 
 8.4.6. Caminhos em Expressões de Pares \indice{145}
 
-8.5. Atribuições e Expressões de Caneta \indice{148}
+8.5. Atribuições e Expressões de Caneta \indice{149}
 
-8.5.1. Expressão Terciária de Caneta \indice{149}
+8.5.1. Expressão Terciária de Caneta \indice{150}
 
-8.5.2. Transformadores de Caneta \indice{150}
+8.5.2. Transformadores de Caneta \indice{151}
 
 8.5.3. Expressões Primárias: Caneta Nula, Circular,
-Arbitrária e Variáveis \indice{154}
+Arbitrária e Variáveis \indice{155}
 
-8.5.4. Canetas em Expressões de Caminho \indice{158}
+8.5.4. Canetas em Expressões de Caminho \indice{159}
 
-8.6. Atribuições e Expressões de Imagens \indice{162}
+8.6. Atribuições e Expressões de Imagens \indice{163}
 
-8.6.1. Expressões Terciárias de Imagem: Soma e Subtração \indice{168}
+8.6.1. Expressões Terciárias de Imagem: Soma e Subtração \indice{169}
 
-8.6.2. Expressões Secundárias de Imagem: Transformadores \indice{171}
+8.6.2. Expressões Secundárias de Imagem: Transformadores \indice{172}
 
 8.6.3. Expressões Primárias: Inversores, Identidade e
-Imagens Vazias \indice{177}
+Imagens Vazias \indice{178}
 
-8.6.4. Imagens em Expressões Numéricas \indice{182}
+8.6.4. Imagens em Expressões Numéricas \indice{183}
 
-8.7. Atribuições e Expressões Booleanas \indice{185}
+8.7. Atribuições e Expressões Booleanas \indice{186}
 
-8.7.1. Comparações \indice{185}
+8.7.1. Comparações \indice{186}
 
-8.7.2. A Operação OR \indice{189}
+8.7.2. A Operação OR \indice{190}
 
-8.7.3. A Operação AND \indice{191}
+8.7.3. A Operação AND \indice{192}
 
-8.7.4. Expressões Primárias Booleanas: Literais e Predicados Simples \indice{192}
+8.7.4. Expressões Primárias Booleanas: Literais e Predicados Simples \indice{193}
 
-8.8. Identificando Tipos de Expressões \indice{194}
+8.8. Identificando Tipos de Expressões \indice{195}
 
-9. Declaração Composta: Declaração Condicional \indice{199}
+9. Declaração Composta: Declaração Condicional \indice{200}
 
-10. Declaração Composta: Iterações \indice{202}
+10. Declaração Composta: Iterações \indice{203}
 
-11. O Comando \monoespaco{pickup} \indice{206}
+11. O Comando \monoespaco{pickup} \indice{207}
 
-11.1. Pontos de Extremidade de Caneta \indice{206}
+11.1. Pontos de Extremidade de Caneta \indice{207}
 
-11.2. Triangulação \indice{212}
+11.2. Triangulação \indice{213}
 
-11.3. Interpretando o Comando \monoespaco{pickup} \indice{248}
+11.3. Interpretando o Comando \monoespaco{pickup} \indice{249}
 
 11.4. Os Operadores \monoespaco{bot}, \monoespaco{top}, \monoespaco{lft},
-\monoespaco{rt} \indice{253}
+\monoespaco{rt} \indice{254}
 
-12. O Comando \monoespaco{pickcolor} \indice{254}
+12. O Comando \monoespaco{pickcolor} \indice{255}
 
-13. O Comando \monoespaco{monowidth} \indice{256}
+13. O Comando \monoespaco{monowidth} \indice{257}
 
-14. O Comando \monoespaco{draw} e \monoespaco{erase} \indice{256}
+14. O Comando \monoespaco{draw} e \monoespaco{erase} \indice{257}
 
-14.1. Preparando o Framebuffer \indice{257}
+14.1. Preparando o Framebuffer \indice{258}
 
-14.2. Shaders de Desenho \indice{258}
+14.2. Shaders de Desenho \indice{259}
 
-14.3. Desenhando Caminhos \indice{259}
+14.3. Desenhando Caminhos \indice{260}
 
-15. Declaração Composta: Declaração de Caractere \indice{263}
+15. Declaração Composta: Declaração de Caractere \indice{264}
 
 15.1 Unicode e UTF-8 \indice{263}
 
-16. Funções de API para Usar as Fontes \indice{272}
+16. Funções de API para Usar as Fontes \indice{273}
 
-17. O Comando \monoespaco{shipit} \indice{275}
+17. O Comando \monoespaco{shipit} \indice{276}
 
-18. O Comando \monoespaco{renderchar} \indice{277}
+18. O Comando \monoespaco{renderchar} \indice{278}
 
-19. O Comando \monoespaco{kerning} \indice{281}
+19. O Comando \monoespaco{kerning} \indice{282}
 
-20. Integração entre WeaveFont e Motor de Jogos Weaver \indice{284}
+20. O Comando \monoespaco{debug} \indice{285}
 
-Apêndice A: Tratamento de Erros \indice{286}
+21. Integração entre WeaveFont e Motor de Jogos Weaver \indice{288}
 
-A.1. ERROR\_DISCONTINUOUS\_PATH \indice{291}
+Apêndice A: Tratamento de Erros \indice{291}
 
-A.2. ERROR\_DIVISION\_BY\_ZERO \indice{291}
+A.1. ERROR\_DISCONTINUOUS\_PATH \indice{295}
 
-A.3. ERROR\_DUPLICATE\_GLYPH \indice{292}
+A.2. ERROR\_DIVISION\_BY\_ZERO \indice{296}
 
-A.4. ERROR\_EMPTY\_DELIMITER \indice{292}
+A.3. ERROR\_DUPLICATE\_GLYPH \indice{296}
 
-A.5. ERROR\_EXPECTED\_FOUND \indice{293}
+A.4. ERROR\_EMPTY\_DELIMITER \indice{297}
 
-A.6. ERROR\_FAILED\_OPENING\_FILE \indice{293}
+A.5. ERROR\_EXPECTED\_FOUND \indice{297}
 
-A.7. ERROR\_INCOMPLETE\_SOURCE \indice{294}
+A.6. ERROR\_FAILED\_OPENING\_FILE \indice{298}
 
-A.8. ERROR\_INCOMPLETE\_STATEMENT \indice{294}
+A.7. ERROR\_INCOMPLETE\_SOURCE \indice{298}
 
-A.9. ERROR\_INVALID\_CHAR \indice{295}
+A.8. ERROR\_INCOMPLETE\_STATEMENT \indice{299}
 
-A.10. ERROR\_INVALID\_COMPARISON \indice{296}
+A.9. ERROR\_INVALID\_CHAR \indice{299}
 
-A.11. ERROR\_INVALID\_DIMENSION\_GLYPH \indice{297}
+A.10. ERROR\_INVALID\_COMPARISON \indice{301}
 
-A.12. ERROR\_INVALID\_NAME \indice{297}
+A.11. ERROR\_INVALID\_DIMENSION\_GLYPH \indice{301}
 
-A.13. ERROR\_INVALID\_TENSION \indice{298}
+A.12. ERROR\_INVALID\_NAME \indice{302}
 
-A.14. ERROR\_MISSING\_EXPRESSION \indice{299}
+A.13. ERROR\_INVALID\_TENSION \indice{303}
 
-A.15. ERROR\_MISSING\_TOKEN \indice{299}
+A.14. ERROR\_MISSING\_EXPRESSION \indice{303}
 
-A.16. ERROR\_NEGATIVE\_LOGARITHM \indice{300}
+A.15. ERROR\_MISSING\_TOKEN \indice{304}
 
-A.17. ERROR\_NEGATIVE\_SQUARE\_ROOT \indice{300}
+A.16. ERROR\_NEGATIVE\_LOGARITHM \indice{304}
 
-A.18. ERROR\_NESTED\_BEGINCHAR \indice{300}
+A.17. ERROR\_NEGATIVE\_SQUARE\_ROOT \indice{305}
 
-A.19. ERROR\_NO\_MEMORY \indice{301}
+A.18. ERROR\_NESTED\_BEGINCHAR \indice{305}
 
-A.20. ERROR\_NO\_PICKUP\_PEN \indice{301}
+A.19. ERROR\_NO\_MEMORY \indice{305}
 
-A.21. ERROR\_NONCYCLICAL\_PEN \indice{302}
+A.20. ERROR\_NO\_PICKUP\_PEN \indice{306}
 
-A.22. ERROR\_NULL\_VECTOR\_ANGLE \indice{302}
+A.21. ERROR\_NONCYCLICAL\_PEN \indice{307}
 
-A.23. ERROR\_OPENGL\_FRAMEBUFFER \indice{303}
+A.22. ERROR\_NULL\_VECTOR\_ANGLE \indice{307}
 
-A.24. ERROR\_RECURSIVE\_RENDERCHAR \indice{304}
+A.23. ERROR\_OPENGL\_FRAMEBUFFER \indice{307}
 
-A.25. ERROR\_UNBALANCED\_ENDING\_TOKEN \indice{304}
+A.24. ERROR\_RECURSIVE\_RENDERCHAR \indice{308}
 
-A.26. ERROR\_UNCLOSED\_DELIMITER \indice{304}
+A.25. ERROR\_UNBALANCED\_ENDING\_TOKEN \indice{309}
 
-A.27. ERROR\_UNCLOSED\_STRING \indice{305}
+A.26. ERROR\_UNCLOSED\_DELIMITER \indice{309}
 
-A.28. ERROR\_UNDECLARED\_VARIABLE \indice{305}
+A.27. ERROR\_UNCLOSED\_STRING \indice{310}
 
-A.29. ERROR\_UNEXPECTED\_TOKEN \indice{306}
+A.28. ERROR\_UNDECLARED\_VARIABLE \indice{310}
 
-A.30. ERROR\_UNINITIALIZED\_VARIABLE \indice{306}
+A.29. ERROR\_UNEXPECTED\_TOKEN \indice{310}
 
-A.31. ERROR\_UNKNOWN\_GLYPH\_DEPENDENCY \indice{307}
+A.30. ERROR\_UNINITIALIZED\_VARIABLE \indice{311}
 
-A.32. ERROR\_UNKNOWN\_EXPRESSION \indice{307}
+A.31. ERROR\_UNKNOWN\_GLYPH\_DEPENDENCY \indice{311}
 
-A.33. ERROR\_UNKNOWN\_STATEMENT \indice{308}
+A.32. ERROR\_UNKNOWN\_EXPRESSION \indice{312}
 
-A.34. ERROR\_UNOPENED\_DELIMITER \indice{308}
+A.33. ERROR\_UNKNOWN\_STATEMENT \indice{312}
 
-A.35. ERROR\_UNSUPORTED\_LENGTH\_OPERAND \indice{308}
+A.34. ERROR\_UNOPENED\_DELIMITER \indice{313}
 
-A.36. ERROR\_WRONG\_NUMBER\_OF\_PARAMETERS \indice{309}
+A.35. ERROR\_UNSUPORTED\_LENGTH\_OPERAND \indice{313}
 
-A.37. ERROR\_WRONG\_VARIABLE\_TYPE \indice{310}
+A.36. ERROR\_WRONG\_NUMBER\_OF\_PARAMETERS \indice{314}
 
-Referências \indice{310}
+A.37. ERROR\_WRONG\_VARIABLE\_TYPE \indice{314}
+
+Referências \indice{315}
 
 \quebra
 
@@ -10163,10 +10165,10 @@ A transformação de deslocamento que desloca a caneta na horizontal e
 vertical é tratada abaixo:
 
 @<Secundário de Caneta: Deslocamento@>=
-struct pair_variable p;
-if(!eval_pair_primary(mf, cx, last_transformer -> next, end, &p))
+struct pair_variable pair;
+if(!eval_pair_primary(mf, cx, last_transformer -> next, end, &pair))
   return false;
-TRANSFORM_SHIFT(pen -> gl_matrix, p.x, p.y);
+TRANSFORM_SHIFT(pen -> gl_matrix, pair.x, pair.y);
 return true;
 @
 
@@ -10232,10 +10234,10 @@ $$
 Podemos então realizar a operação acima usando o código abaixo:
 
 @<Secundário de Caneta: Z-Escala@>=
-struct pair_variable p;
-if(!eval_pair_primary(mf, cx, last_transformer -> next, end, &p))
+struct pair_variable pair;
+if(!eval_pair_primary(mf, cx, last_transformer -> next, end, &pair))
   return false;
-TRANSFORM_SCALE_Z(pen -> gl_matrix, p.x, p.y);
+TRANSFORM_SCALE_Z(pen -> gl_matrix, pair.x, pair.y);
 // Canetas curvas devem ser retrianguladas neste caso:
 if(pen -> gl_vbo != 0 && !(pen -> flags & FLAG_STRAIGHT)){
   glDeleteBuffers(1, &(pen -> gl_vbo));
@@ -11521,12 +11523,12 @@ então antes de aplicá-lo à matriz, devemos convertê-lo para
 coordenadas OpenGL que dependem do tamanho da imagem:
 
 @<Secundário de Imagem: Deslocamento@>=
-struct pair_variable p;
-if(!eval_pair_primary(mf, cx, last_transformer -> next, end, &p))
+struct pair_variable pair;
+if(!eval_pair_primary(mf, cx, last_transformer -> next, end, &pair))
   return false;
-p.x = 2.0 * (p.x / result -> width);
-p.y = 2.0 * (p.y / result -> height);
-TRANSFORM_SHIFT(matrix, p.x, p.y);
+pair.x = 2.0 * (pair.x / result -> width);
+pair.y = 2.0 * (pair.y / result -> height);
+TRANSFORM_SHIFT(matrix, pair.x, pair.y);
 *modified = true;
 return true;
 @
@@ -11568,10 +11570,10 @@ Mudança de escala usando o plano complexo e multiplicaçãop por número
 complexo:
 
 @<Secundário de Imagem: Z-Escala@>=
-struct pair_variable p;
-if(!eval_pair_primary(mf, cx, last_transformer -> next, end, &p))
+struct pair_variable pair;
+if(!eval_pair_primary(mf, cx, last_transformer -> next, end, &pair))
   return false;
-TRANSFORM_SCALE_Z(matrix, p.x, p.y);
+TRANSFORM_SCALE_Z(matrix, pair.x, pair.y);
 *modified = true;
 return true;
 @
@@ -11679,8 +11681,10 @@ bool apply_image_transformation(struct metafont *mf,
   // Gerando textura inicial, framebuffer
   glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &previous_framebuffer);
   if(!get_new_framebuffer(&temporary_framebuffer, &(dst -> texture), dst -> width,
-                         dst -> height))
+                         dst -> height)){
+    RAISE_ERROR_OPENGL_FRAMEBUFFER(mf, NULL, 0);
     return false;
+  }
   // Renderizando:
   render_picture(origin, matrix, dst -> width, dst -> height, true);
   // Finalização
@@ -13651,7 +13655,7 @@ transformação linear representada por uma matriz. A função abaixo pode
 ser usada para obter os pontos de extremidade para esta caneta:
 
 @<Declaração de Função Local (metafont.c)@>+=
-void pencircular_extremity_points(struct metafont *mf, struct context *cx,
+void pencircular_extremity_points(struct context *cx,
                                   float *matrix, bool fullcircle);
 @
 
@@ -13761,7 +13765,7 @@ Após revisar toda a teoria, podemos enfim implementar a função que
 obtém os pontos de extremidade de uma caneta redonda:
 
 @<Funções Auxiliares Locais (metafont.c)@>+=
-void pencircular_extremity_points(struct metafont *mf, struct context *cx,
+void pencircular_extremity_points(struct context *cx,
                                   float *matrix, bool fullcircle){
   DECLARE_PEN_EXTREMITIES();
   int i, index[4] = {0, 3, 4, 1};
@@ -13843,7 +13847,7 @@ círculo ou semicírculo, mas para um caminho definido como curvas de
 Bézier:
 
 @<Declaração de Função Local (metafont.c)@>+=
-void path_extremity_points(struct metafont *mf, struct context *cx,
+void path_extremity_points(struct context *cx,
                            struct path_variable *p, float *matrix);
 @
 
@@ -13874,7 +13878,7 @@ armazenados após passar pela transformação linear da matriz
 correspondente:
 
 @<Funções Auxiliares Locais (metafont.c)@>+=
-void path_extremity_points(struct metafont *mf, struct context *cx,
+void path_extremity_points(struct context *cx,
                            struct path_variable *p, float *matrix){
   int i, j, length = p -> length;
   DECLARE_PEN_EXTREMITIES();
@@ -14226,7 +14230,7 @@ if((pen -> flags & FLAG_CIRCULAR) || (pen -> flags & FLAG_SEMICIRCULAR)){
   float radius;
   GLsizei size;
   // Obter pontos de extremidade:
-  pencircular_extremity_points(mf, cx, transform_matrix,
+  pencircular_extremity_points(cx, transform_matrix,
                                (pen -> flags & FLAG_CIRCULAR));
   // Checando resolução (raio):
   {
@@ -14253,7 +14257,7 @@ if((pen -> flags & FLAG_CIRCULAR) || (pen -> flags & FLAG_SEMICIRCULAR)){
     return false;
   }
   {
-    int i;
+    size_t i;
     float angle = 0.0;
     data[0] = 0.0;
     data[1] = 0.0; // Centro do círculo
@@ -14327,8 +14331,7 @@ if((pen -> flags & FLAG_CONVEX)){
   bool counterclockwise = is_pen_counterclockwise(pen);
   int i, number_of_vertices = 1;
   // Obtém pontos de extremidade:
-  path_extremity_points(mf, cx, pen -> format, transform_matrix);
-
+  path_extremity_points(cx, pen -> format, transform_matrix);
   for(i = 0; i < pen -> format -> length - 1; i ++){
     int distance = 0;
     float x0, y0, u_x, u_y, v_x, v_y, x1, y1;
@@ -15842,7 +15845,7 @@ triangular polígonos não monótonos e côncavos:
 @<Triangulação: Forma Não-Monótona Côncava@>=
 {
   int i;
-  float *last_triang = triang;
+  float *last_triangle = triang;
   struct polygon_edge *list_of_subpolygons = NULL, *imaginary_line = NULL;
   struct polygon_vertex *current_vertex = poly, *last_vertex;
   struct polygon_vertex *list_of_diagonals = NULL, *last_diagonal = NULL;
@@ -15875,7 +15878,7 @@ triangular polígonos não monótonos e côncavos:
     current_vertex = current_vertex -> succ;
     DESTROY_POLYGON_VERTEX(last_vertex);
   }
-  triangulate_polygon_tree(list_of_subpolygons, &last_triang,
+  triangulate_polygon_tree(list_of_subpolygons, &last_triangle,
                            &number_of_triangles, buffer);
   //destroy_edge_tree(list_of_subpolygons);
   glGenBuffers(1, &(pen -> gl_vbo));
@@ -16118,7 +16121,6 @@ else{
     below = find_edge_below(imaginary_line, current_vertex -> x,
                             current_vertex -> y);
     if(below == NULL){
-      printf("Below (%f %f): %p\n", current_vertex -> x, current_vertex -> y, below);
       print_tree(imaginary_line);
     }
     if(GET_VERTEX_TYPE(below -> helper) == TYPE_MERGE_VERTEX){
@@ -16921,13 +16923,13 @@ bool drawing_commands(struct metafont *mf, struct context *cx,
                 3*(1-t)*(1-t)*t * path -> points[i].point.u_y +
                 3*(1-t)*t*t * path -> points[i].point.v_y +
                 t*t*t * path -> points[(i + 1) % (path -> length)].point.y;
-      drawpoint(mf, cx,currentpen, currentpicture, x, y, transform_matrix,
+      drawpoint(cx,currentpen, currentpicture, x, y, transform_matrix,
                 flags & ERASE_FLAG);
     }
   }
   // Quando é um único ponto e o loop acima não foi executado:
   if(path -> length == 1)
-    drawpoint(mf, cx, currentpen, currentpicture, path -> points[0].point.x,
+    drawpoint(cx, currentpen, currentpicture, path -> points[0].point.x,
               path -> points[0].point.y, transform_matrix, flags & ERASE_FLAG);
   return true;
 }
@@ -16959,7 +16961,7 @@ Resta apenas definir a função \monoespaco{drawpoint}. O seu cabeçalho
 é:
 
 @<Declaração de Função Local (metafont.c)@>+=
-void drawpoint(struct metafont *mf, struct context *cx,
+void drawpoint(struct context *cx,
                struct pen_variable *pen, struct picture_variable *pic, 
                float x, float y, float *matrix, bool erasing);
 @
@@ -17029,7 +17031,7 @@ que renderizar o resultado, e aqui também devemos usar programas de
 shaders diferentes se estamos desenhando ou apagando:
 
 @<Funções Auxiliares Locais (metafont.c)@>+=
-void drawpoint(struct metafont *mf, struct context *cx,
+void drawpoint(struct context *cx,
                struct pen_variable *pen, struct picture_variable *pic, 
                float x, float y, float *matrix, bool erasing){
   float gl_matrix[9];
@@ -18300,7 +18302,7 @@ else if(begin -> type == TYPE_KERNING){
   end_expr = begin_expr;
   while(end_expr -> next != NULL && end_expr -> next -> next != NULL &&
         end_expr -> next -> type != TYPE_SEMICOLON &&
-	end_expr -> next -> next -> type != TYPE_SEMICOLON)
+        end_expr -> next -> next -> type != TYPE_SEMICOLON)
     end_expr = end_expr -> next;
   if(end_expr -> next == NULL || end_expr -> next -> next == NULL){
     RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, OPTIONAL(begin_expr -> line));
@@ -18365,7 +18367,238 @@ produzir, assumimos que o espaçamento adicional será zero:
 @
 
 
-\secao{20. Integração entre WeaveFont e Motor de Jogos Weaver}
+\secao{20. O Comando \monoespaco{debug}}
+
+O comando \monoespaco{debug} pode ter dois comportamentos diferentes,
+dependendo se estamos em modo de depuração ou não. Se estivermos,
+então ele lê a expressão que é passada para ele, extrai o resultado e
+imprime na saída padrão o resultado obtido. Se não estivermos em modo
+de depuração, a expressão que o segue é simplesmente ignorada e o
+comando não faz nada.
+
+A sintaxe gramatical do comando é:
+
+\alinhaverbatim
+<Comando> -> ... |<Comando 'debug'> | ...
+<Comando 'debug'> ->  debug <Expressão ou String Vazia>
+\alinhanormal
+
+E para isso, adicionamos \monoespaco{debug} como palavra reservada:
+
+@<WeaveFont: Definição de Token Simbólico@>+=
+TYPE_DEBUG,  // O token simbólico 'debug'
+@
+
+@<Lista de Palavras Reservadas@>+=
+"debug",
+@
+
+O comando \monoespaco{debug} não é feito para ser muito eficiente. Ele
+é uma ajuda ocasional para depurar código que apresenta problemas, e
+deve ser removido quando o processo de depuração termina. Segue abaixo
+a estrutura do comando. Ele funciona primeiro buscando identificar
+qual o tipo da expressão que o segue e, dependendo do tipo, ele
+executa as funções adequadas para interpretar e obter o resultado:
+
+@<Instrução: Comando@>=
+else if(begin -> type == TYPE_DEBUG){
+#if defined(W_DEBUG_METAFONT)
+  struct generic_token *begin_expr, *end_expr;
+  int type;
+  if(begin == *end)
+    return true;
+  begin_expr = begin -> next;
+  end_expr = *end;
+  type = get_tertiary_expression_type(mf, cx, begin_expr, end_expr);
+  switch(type){
+  case TYPE_T_NUMERIC:
+    @<Debug: Expressão Numérica@>
+    break;
+  case TYPE_T_PAIR:
+    @<Debug: Expressão de Par@>
+    break;
+  case TYPE_T_TRANSFORM:
+    @<Debug: Expressão de Transformação@>
+    break;
+  case TYPE_T_PATH:
+    @<Debug: Expressão de Caminho@>
+    break;
+  case TYPE_T_PEN:
+    @<Debug: Expressão de Caneta@>
+    break;
+  case TYPE_T_PICTURE:
+    @<Debug: Expressão de Imagem@>
+    break;
+  case TYPE_T_BOOLEAN:
+    @<Debug: Expressão Booleana@>
+    break;
+  default:
+    RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(begin -> line),
+                                   type);
+    return false;
+  }
+#else
+  return true;
+#endif
+}
+@
+
+No caso de uma expressão numérica, assim é como a interpretamos e
+geramos a mensage de depuração:
+
+@<Debug: Expressão Numérica@>=
+{
+  struct numeric_variable result;
+  if(!eval_numeric_expression(mf, cx, begin_expr, end_expr, &result))
+    return false;
+  printf("DEBUG: %s: %d: Numeric Expression: %f\n", mf -> file, 
+         begin_expr -> line, result.value);
+  return true;
+}
+@
+
+No caso de uma expressão de par:
+
+@<Debug: Expressão de Par@>=
+{
+  struct pair_variable result;
+  if(!eval_pair_expression(mf, cx, begin_expr, end_expr, &result))
+    return false;
+  printf("DEBUG: %s: %d: Pair Expression: (%f, %f)\n", mf -> file, 
+         begin_expr -> line, result.x, result.y);
+  return true;
+}
+@
+
+No caso de uma expressão de transformação:
+
+@<Debug: Expressão de Transformação@>=
+{
+  struct transform_variable result;
+  if(!eval_transform_expression(mf, cx, begin_expr, end_expr, &result))
+    return false;
+  printf("DEBUG: %s: %d: Pair Expression: "
+         "(%f, %f, %f, %f, %f, %f, %f, %f, %f)\n", mf -> file, 
+         begin_expr -> line, result.value[0], result.value[1], result.value[2],
+         result.value[3], result.value[4], result.value[5], result.value[6],
+         result.value[7], result.value[8]);
+  return true;
+}
+@
+
+No caso de um Caminho:
+
+@<Debug: Expressão de Caminho@>=
+{
+  struct path_variable result;
+  int j;
+  if(!eval_path_expression(mf, cx, begin_expr, end_expr, &result))
+    return false;
+  printf("DEBUG: %s: %d: Path Expression: ", mf -> file, begin_expr -> line);
+  for(j = 0; j < result.length; j ++){
+    if(j == result.length - 1 && result.cyclic)
+      printf("cycle");
+    else
+      printf("(%f, %f)", result.points[j].point.x, result.points[j].point.y);
+    if(j < result.length - 1){
+      printf(" .. controls (%f, %f) and (%f, %f) .. ",
+             result.points[j].point.u_x, result.points[j].point.u_y,
+             result.points[j].point.v_x, result.points[j].point.v_y);
+    }
+  }
+  printf("\n");
+  return true;
+}
+@
+
+No caso de uma Caneta:
+
+@<Debug: Expressão de Caneta@>=
+{
+  struct pen_variable result;
+  struct path_variable *format;
+  int j;
+  if(!eval_pen_expression(mf, cx, begin_expr, end_expr, &result))
+    return false;
+  printf("DEBUG: %s: %d: Pen Expression: ", mf -> file, begin_expr -> line);
+  switch(result.flags){
+  case FLAG_CIRCULAR:
+    printf("pencricle");
+    break;
+  case FLAG_SEMICIRCULAR:
+    printf("pensemicircle");
+    break;
+  case FLAG_SQUARE:
+    printf("pensquare");
+    break;
+  case FLAG_NULL:
+    printf("nullpen");
+    break;
+  default:
+    printf("makepen(");
+    format = result.format;
+    for(j = 0; j < format -> length; j ++){
+      if(j == format -> length - 1 && format -> cyclic)
+        printf("cycle");
+      else
+        printf("(%f, %f)", format -> points[j].point.x,
+                           format -> points[j].point.y);
+      if(j < format -> length - 1){
+        printf(" .. controls (%f, %f) and (%f, %f) .. ",
+               format -> points[j].point.u_x, format -> points[j].point.u_y,
+               format -> points[j].point.v_x, format -> points[j].point.v_y);
+      }
+    }
+    printf(")");  
+  }
+  printf(" transformed (%f, %f, %f, %f, %f, %f)\n", 
+         result.gl_matrix[6], result.gl_matrix[7], result.gl_matrix[0],
+         result.gl_matrix[3], result.gl_matrix[1], result.gl_matrix[4]);
+  return true;
+}
+@
+
+Até então, buscamos criar uma representação em string para cada tipo
+de variável que fôsse compatível com um literal, ou uma expressão
+necessária para criar uma cópia daquela variável. Infelizemente isso
+não pode ser feito com imagens, pois exceno no caso de
+\monoespaco{nullpicture}, não existem literais ou expressões capazes de
+recriar uma imagem. Pois imagens são tipicamente manipuladas por
+comandos ao invés de expressões. Ainda assim, produzimos uma
+representação de uma expressão que gera uma imagem de mesma largura e
+altura.
+
+@<Debug: Expressão de Imagem@>=
+{
+  struct picture_variable result;
+  if(!eval_picture_expression(mf, cx, begin_expr, end_expr, &result))
+    return false;
+  printf("DEBUG: %s: %d: Picture Expression: ", mf -> file, begin_expr -> line);
+  printf("nullpicture(%d, %d)\n", result.width, result.height);
+  return true;
+}
+@
+
+Já no caso de uma expressão Booleana, o valor só pode ser verdadeiro
+ou falso:
+
+
+@<Debug: Expressão Booleana@>=
+{
+  struct boolean_variable result;
+  if(!eval_boolean_expression(mf, cx, begin_expr, end_expr, &result))
+    return false;
+  printf("DEBUG: %s: %d: Boolean Expression: ", mf -> file, begin_expr -> line);
+  if(result.value)
+    printf("true\n");
+  else
+    printf("false\n");
+  return true;
+}
+@
+
+
+\secao{21. Integração entre WeaveFont e Motor de Jogos Weaver}
 
 O motor de jogos Weaver possui um módulo responsável por carregar
 novas interfaces, que são elementos visuais a serem apresentados ao
@@ -18423,10 +18656,10 @@ Definimos tal função como:
 @<Definição de Funções da API (metafont.c)@>+=
 #if defined(WEAVER_ENGINE)
 @<Funções a Serem Colocadas na Interface de Usuário@>
-void _Wmetafont_loading(void *(*permanent_alloc)(size_t),
-                        void (*permanent_free)(void *),
-                        void *(*temporary_alloc)(size_t),
-                        void (*temporary_free)(void *),
+void _Wmetafont_loading(void *(*p_alloc)(size_t), //Não usado
+                        void (*p_free)(void *), // Não usado
+                        void *(*t_alloc)(size_t), // Não usado
+                        void (*t_free)(void *), // Não usado
                         void (*before_loading_interface)(void),
                         void (*after_loading_interface)(void),
                         char *source_filename,
@@ -18434,6 +18667,12 @@ void _Wmetafont_loading(void *(*permanent_alloc)(size_t),
   struct metafont *mf;
   float size;
   int texture_width, texture_height, texture_depth, ignore_this;
+  if(p_alloc != permanent_alloc || p_free != permanent_free ||
+     t_alloc != temporary_alloc || t_free != temporary_free){
+    fprintf(stderr, "Weaver Interface Metafont Submodule: ERROR: Inconsistent "
+                    "usage of memory allocators.\n");
+    exit(1);
+  }
   if(before_loading_interface != NULL)
       before_loading_interface();
   mf = _Wnew_metafont(source_filename);

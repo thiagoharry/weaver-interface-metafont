@@ -240,83 +240,85 @@
 
 19. The \monoespaco{kerning} Command \indice{285}
 
-20. Integrating WeaveFont and Weaver Game Engine \indice{287}
+20. The \monoespaco{debug} Command \indice{287}
 
-Appendix A: Handling Errors \indice{290}
+21. Integrating WeaveFont and Weaver Game Engine \indice{291}
 
-A.1. ERROR\_DISCONTINUOUS\_PATH \indice{294}
+Appendix A: Handling Errors \indice{294}
 
-A.2. ERROR\_DIVISION\_BY\_ZERO \indice{295}
+A.1. ERROR\_DISCONTINUOUS\_PATH \indice{298}
 
-A.3. ERROR\_DUPLICATE\_GLYPH \indice{295}
+A.2. ERROR\_DIVISION\_BY\_ZERO \indice{299}
 
-A.4. ERROR\_EMPTY\_DELIMITER \indice{296}
+A.3. ERROR\_DUPLICATE\_GLYPH \indice{299}
 
-A.5. ERROR\_EXPECTED\_FOUND \indice{296}
+A.4. ERROR\_EMPTY\_DELIMITER \indice{300}
 
-A.6. ERROR\_FAILED\_OPENING\_FILE \indice{297}
+A.5. ERROR\_EXPECTED\_FOUND \indice{300}
 
-A.7. ERROR\_INCOMPLETE\_SOURCE \indice{297}
+A.6. ERROR\_FAILED\_OPENING\_FILE \indice{301}
 
-A.8. ERROR\_INCOMPLETE\_STATEMENT \indice{298}
+A.7. ERROR\_INCOMPLETE\_SOURCE \indice{301}
 
-A.9. ERROR\_INVALID\_CHAR \indice{298}
+A.8. ERROR\_INCOMPLETE\_STATEMENT \indice{302}
 
-A.10. ERROR\_INVALID\_COMPARISON \indice{300}
+A.9. ERROR\_INVALID\_CHAR \indice{302}
 
-A.11. ERROR\_INVALID\_DIMENSION\_GLYPH \indice{300}
+A.10. ERROR\_INVALID\_COMPARISON \indice{304}
 
-A.12. ERROR\_INVALID\_NAME \indice{301}
+A.11. ERROR\_INVALID\_DIMENSION\_GLYPH \indice{304}
 
-A.13. ERROR\_INVALID\_TENSION \indice{302}
+A.12. ERROR\_INVALID\_NAME \indice{305}
 
-A.14. ERROR\_MISSING\_EXPRESSION \indice{302}
+A.13. ERROR\_INVALID\_TENSION \indice{305}
 
-A.15. ERROR\_MISSING\_TOKEN \indice{303}
+A.14. ERROR\_MISSING\_EXPRESSION \indice{306}
 
-A.16. ERROR\_NEGATIVE\_LOGARITHM \indice{303}
+A.15. ERROR\_MISSING\_TOKEN \indice{307}
 
-A.17. ERROR\_NEGATIVE\_SQUARE\_ROOT \indice{304}
+A.16. ERROR\_NEGATIVE\_LOGARITHM \indice{307}
 
-A.18. ERROR\_NESTED\_BEGINCHAR \indice{304}
+A.17. ERROR\_NEGATIVE\_SQUARE\_ROOT \indice{307}
 
-A.19. ERROR\_NO\_MEMORY \indice{304}
+A.18. ERROR\_NESTED\_BEGINCHAR \indice{308}
 
-A.20. ERROR\_NO\_PICKUP\_PEN \indice{305}
+A.19. ERROR\_NO\_MEMORY \indice{308}
 
-A.21. ERROR\_NONCYCLICAL\_PEN \indice{305}
+A.20. ERROR\_NO\_PICKUP\_PEN \indice{309}
 
-A.22. ERROR\_NULL\_VECTOR\_ANGLE \indice{306}
+A.21. ERROR\_NONCYCLICAL\_PEN \indice{309}
 
-A.23. ERROR\_OPENGL\_FRAMEBUFFER \indice{306}
+A.22. ERROR\_NULL\_VECTOR\_ANGLE \indice{310}
 
-A.24. ERROR\_RECURSIVE\_RENDERCHAR \indice{307}
+A.23. ERROR\_OPENGL\_FRAMEBUFFER \indice{310}
 
-A.25. ERROR\_UNBALANCED\_ENDING\_TOKEN \indice{308}
+A.24. ERROR\_RECURSIVE\_RENDERCHAR \indice{311}
 
-A.26. ERROR\_UNCLOSED\_DELIMITER \indice{308}
+A.25. ERROR\_UNBALANCED\_ENDING\_TOKEN \indice{311}
 
-A.27. ERROR\_UNCLOSED\_STRING \indice{309}
+A.26. ERROR\_UNCLOSED\_DELIMITER \indice{312}
 
-A.28. ERROR\_UNDECLARED\_VARIABLE \indice{309}
+A.27. ERROR\_UNCLOSED\_STRING \indice{312}
 
-A.29. ERROR\_UNEXPECTED\_TOKEN \indice{309}
+A.28. ERROR\_UNDECLARED\_VARIABLE \indice{313}
 
-A.30. ERROR\_UNINITIALIZED\_VARIABLE \indice{310}
+A.29. ERROR\_UNEXPECTED\_TOKEN \indice{313}
 
-A.31. ERROR\_UNKNOWN\_GLYPH\_DEPENDENCY \indice{310}
+A.30. ERROR\_UNINITIALIZED\_VARIABLE \indice{314}
 
-A.32. ERROR\_UNKNOWN\_EXPRESSION \indice{311}
+A.31. ERROR\_UNKNOWN\_GLYPH\_DEPENDENCY \indice{314}
 
-A.33. ERROR\_UNKNOWN\_STATEMENT \indice{311}
+A.32. ERROR\_UNKNOWN\_EXPRESSION \indice{315}
 
-A.34. ERROR\_UNOPENED\_DELIMITER \indice{312}
+A.33. ERROR\_UNKNOWN\_STATEMENT \indice{315}
 
-A.35. ERROR\_UNSUPORTED\_LENGTH\_OPERAND \indice{312}
+A.34. ERROR\_UNOPENED\_DELIMITER \indice{315}
 
-A.36. ERROR\_WRONG\_NUMBER\_OF\_PARAMETERS \indice{313}
+A.35. ERROR\_UNSUPORTED\_LENGTH\_OPERAND \indice{316}
 
-A.37. ERROR\_WRONG\_VARIABLE\_TYPE \indice{313}
+A.36. ERROR\_WRONG\_NUMBER\_OF\_PARAMETERS \indice{317}
+
+A.37. ERROR\_WRONG\_VARIABLE\_TYPE \indice{318}
 
 References \indice{314}
 
@@ -9969,10 +9971,10 @@ The shift transformer shifts each point in the pen adding a pair to
 it.
 
 @<Pen Secondary: Shift@>=
-struct pair_variable p;
-if(!eval_pair_primary(mf, cx, last_transformer -> next, end, &p))
+struct pair_variable pair;
+if(!eval_pair_primary(mf, cx, last_transformer -> next, end, &pair))
   return false;
-TRANSFORM_SHIFT(pen -> gl_matrix, p.x, p.y);
+TRANSFORM_SHIFT(pen -> gl_matrix, pair.x, pair.y);
 return true;
 @
 
@@ -10037,10 +10039,10 @@ $$
 We can perform the operation above with the following code:
 
 @<Pen Secondary: Z-Scaling@>=
-struct pair_variable p;
-if(!eval_pair_primary(mf, cx, last_transformer -> next, end, &p))
+struct pair_variable pair;
+if(!eval_pair_primary(mf, cx, last_transformer -> next, end, &pair))
   return false;
-TRANSFORM_SCALE_Z(pen -> gl_matrix, p.x, p.y);
+TRANSFORM_SCALE_Z(pen -> gl_matrix, pair.x, pair.y);
 // Curved pens need retriangulation in this case:
 if(pen -> gl_vbo != 0 && !(pen -> flags & FLAG_STRAIGHT)){
   glDeleteBuffers(1, &(pen -> gl_vbo));
@@ -11309,12 +11311,12 @@ conver the pixels in OpenGL coordinates that depend on the picture
 size:
 
 @<Picture Secondary: Shifting@>=
-struct pair_variable p;
-if(!eval_pair_primary(mf, cx, last_transformer -> next, end, &p))
+struct pair_variable pair;
+if(!eval_pair_primary(mf, cx, last_transformer -> next, end, &pair))
   return false;
-p.x = 2.0 * (p.x / result -> width);
-p.y = 2.0 * (p.y / result -> height);
-TRANSFORM_SHIFT(matrix, p.x, p.y);
+pair.x = 2.0 * (pair.x / result -> width);
+pair.y = 2.0 * (pair.y / result -> height);
+TRANSFORM_SHIFT(matrix, pair.x, pair.y);
 *modified = true;
 return true;
 @
@@ -11355,10 +11357,10 @@ return true;
 The z-scaling which changes the scale in the complex plane:
 
 @<Picture Secondary: Z-Scaling@>=
-struct pair_variable p;
-if(!eval_pair_primary(mf, cx, last_transformer -> next, end, &p))
+struct pair_variable pair;
+if(!eval_pair_primary(mf, cx, last_transformer -> next, end, &pair))
   return false;
-TRANSFORM_SCALE_Z(matrix, p.x, p.y);
+TRANSFORM_SCALE_Z(matrix, pair.x, pair.y);
 *modified = true;
 return true;
 @
@@ -11468,8 +11470,10 @@ bool apply_image_transformation(struct metafont *mf,
   // Generating framebuffer and initial texture
   glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &previous_framebuffer);
   if(!get_new_framebuffer(&temporary_framebuffer, &(dst -> texture), dst -> width,
-                          dst -> height))
+                          dst -> height)){
+    RAISE_ERROR_OPENGL_FRAMEBUFFER(mf, NULL, 0);
     return false;
+  }
   // Rendering:
   render_picture(origin, matrix, dst -> width, dst -> height, true);
   // Finalization:
@@ -13433,7 +13437,7 @@ matrix. The function below can be used to get this pen extremity
 points:
 
 @<Local Function Declaration (metafont.c)@>+=
-void pencircular_extremity_points(struct metafont *mf, struct context *cx,
+void pencircular_extremity_points(struct context *cx,
                                   float *matrix, bool fullcircle);
 @
 
@@ -13537,7 +13541,7 @@ After reviewing the theory, we finally can write the function that
 gets the extremity points for \monoespaco{pencircle}:
 
 @<Auxiliary Local Functions (metafont.c)@>+=
-void pencircular_extremity_points(struct metafont *mf, struct context *cx,
+void pencircular_extremity_points(struct context *cx,
                                   float *matrix, bool fullcircle){
   DECLARE_PEN_EXTREMITIES();
   int i, index[4] = {0, 3, 4, 1};
@@ -13618,7 +13622,7 @@ We also could want to find the extremity points in a pen defined as a
 list of Bézier Curves:
 
 @<Local Function Declaration (metafont.c)@>+=
-void path_extremity_points(struct metafont *mf, struct context *cx,
+void path_extremity_points(struct context *cx,
                            struct path_variable *p, float *matrix);
 @
 
@@ -13647,7 +13651,7 @@ $z_1, z_2, z_3, z_4$ that we use are the stored ones in the pen, after
 applying the linear transform of the corresponding matrix:
 
 @<Auxiliary Local Functions (metafont.c)@>+=
-void path_extremity_points(struct metafont *mf, struct context *cx,
+void path_extremity_points(struct context *cx,
                            struct path_variable *p, float *matrix){
   int i, j, length = p -> length;
   DECLARE_PEN_EXTREMITIES();
@@ -13988,7 +13992,7 @@ if((pen -> flags & FLAG_CIRCULAR) || (pen -> flags & FLAG_SEMICIRCULAR)){
   float radius;
   GLsizei size;
   // Get extremity points:
-  pencircular_extremity_points(mf, cx, transform_matrix,
+  pencircular_extremity_points(cx, transform_matrix,
                                (pen -> flags & FLAG_CIRCULAR));
   // Checking resolution (radius):
   {
@@ -14015,7 +14019,7 @@ if((pen -> flags & FLAG_CIRCULAR) || (pen -> flags & FLAG_SEMICIRCULAR)){
     return false;
   }
   {
-    int i;
+    size_t i;
     float angle = 0.0;
     data[0] = 0.0;
     data[1] = 0.0; // Circle center
@@ -14086,7 +14090,7 @@ if((pen -> flags & FLAG_CONVEX)){
   bool counterclockwise = is_pen_counterclockwise(pen);
   int i, number_of_vertices = 1;
   // Get extremity points:
-  path_extremity_points(mf, cx, pen -> format, transform_matrix);
+  path_extremity_points(cx, pen -> format, transform_matrix);
   for(i = 0; i < pen -> format -> length - 1; i ++){
     int distance = 0;
     float x0, y0, u_x, u_y, v_x, v_y, x1, y1;
@@ -15581,7 +15585,7 @@ triangulate non-monotonous concave polygons:
 @<Triangulation: Non-monotonous concave form@>=
 {
   int i;
-  float *last_triang = triang;
+  float *last_triangle = triang;
   struct polygon_edge *list_of_subpolygons = NULL, *imaginary_line = NULL;
   struct polygon_vertex *current_vertex = poly, *last_vertex;
   struct polygon_vertex *list_of_diagonals = NULL, *last_diagonal = NULL;
@@ -15614,7 +15618,7 @@ triangulate non-monotonous concave polygons:
     current_vertex = current_vertex -> succ;
     DESTROY_POLYGON_VERTEX(last_vertex);
   }
-  triangulate_polygon_tree(list_of_subpolygons, &last_triang,
+  triangulate_polygon_tree(list_of_subpolygons, &last_triangle,
                            &number_of_triangles, buffer);
   //destroy_edge_tree(list_of_subpolygons);
   glGenBuffers(1, &(pen -> gl_vbo));
@@ -16235,7 +16239,7 @@ between 0 and 1 (rounded to the nearest value in the interval if it is
 not in it) and which is assigned respectively to the red, green, blue
 and alpha (transparency) channels.
 
-@<Statement: Command@>=
+@<Statement: Command@>+=
 else if(begin -> type == TYPE_PICKCOLOR){
   struct numeric_variable result;
   int i;
@@ -16622,13 +16626,13 @@ bool drawing_commands(struct metafont *mf, struct context *cx,
                 3*(1-t)*(1-t)*t * path -> points[i].point.u_y +
                 3*(1-t)*t*t * path -> points[i].point.v_y +
                 t*t*t * path -> points[(i + 1) % (path -> length)].point.y;
-      drawpoint(mf, cx, currentpen, currentpicture, x, y, transform_matrix,
+      drawpoint(cx, currentpen, currentpicture, x, y, transform_matrix,
                 flags & ERASE_FLAG);
     }
   }
   // When the path has a single point and the loop above do not run:
   if(path -> length == 1)
-    drawpoint(mf, cx, currentpen, currentpicture, path -> points[0].point.x,
+    drawpoint(cx, currentpen, currentpicture, path -> points[0].point.x,
               path -> points[0].point.y, transform_matrix, flags & ERASE_FLAG);
   return true;
 }
@@ -16658,7 +16662,7 @@ two control points.
 Now we just need to define \monoespaco{drawpoint}. Its header is:
 
 @<Local Function Declaration (metafont.c)@>+=
-void drawpoint(struct metafont *mf, struct context *cx,
+void drawpoint(struct context *cx,
                struct pen_variable *pen, struct picture_variable *pic, 
                float x, float y, float *matrix, bool erasing);
 @
@@ -16729,7 +16733,7 @@ drawing. After getting the correct matrix, we can render the result,
 using different shader programs if we are drawing or erasing:
 
 @<Auxiliary Local Functions (metafont.c)@>+=
-void drawpoint(struct metafont *mf, struct context *cx,
+void drawpoint(struct context *cx,
                struct pen_variable *pen, struct picture_variable *pic, 
                float x, float y, float *matrix, bool erasing){
   float gl_matrix[9];
@@ -17993,7 +17997,7 @@ else if(begin -> type == TYPE_KERNING){
   end_expr = begin_expr;
   while(end_expr -> next != NULL && end_expr -> next -> next != NULL &&
         end_expr -> next -> type != TYPE_SEMICOLON &&
-	end_expr -> next -> next -> type != TYPE_SEMICOLON)
+        end_expr -> next -> next -> type != TYPE_SEMICOLON)
     end_expr = end_expr -> next;
   if(end_expr -> next == NULL || end_expr -> next -> next == NULL){
     RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, OPTIONAL(begin_expr -> line));
@@ -18057,8 +18061,235 @@ anymore:
 }
 @
 
+\secao{20. The \monoespaco{debug} Command}
 
-\secao{20. Integrating WeaveFont and Weaver Game Engine}
+The \monoespaco{debug} command can have two different behaviors,
+depending on whether we are in debug mode or not. If we are, then it
+reads the expression that is passed to it, extracts the result and
+prints details about it on standard output. If we are not in debug
+mode, the expression that follows it is simply ignored and the command
+does nothing.
+
+The command syntax is:
+
+\alinhaverbatim
+<Command> -> ... |<'debug' Command> | ...
+<'debug' Command> ->  debug <Expression>
+\alinhanormal
+
+For this, we add \monoespaco{debug} as a reserved keyword:
+
+@<WeaveFont: Symbolic Token Definition@>+=
+TYPE_DEBUG,  // O token simbólico 'debug'
+@
+
+@<List of Keywords@>+=
+"debug",
+@
+
+The \monoespaco{debug} command is not designed to be very
+efficient. It is an occasional aid to debug code that has problems,
+and should be removed when the debugging process is finished. Below is
+the structure of the command. It works by first trying to identify the
+type of the expression that follows it and, depending on the type, it
+executes the appropriate functions to interpret and obtain the result:
+
+@<Statement: Command@>+=
+else if(begin -> type == TYPE_DEBUG){
+#if defined(W_DEBUG_METAFONT)
+  struct generic_token *begin_expr, *end_expr;
+  int type;
+  if(begin == *end)
+    return true;
+  begin_expr = begin -> next;
+  end_expr = *end;
+  type = get_tertiary_expression_type(mf, cx, begin_expr, end_expr);
+  switch(type){
+  case TYPE_T_NUMERIC:
+    @<Debug: Numeric Expression@>
+    break;
+  case TYPE_T_PAIR:
+    @<Debug: Pair Expression@>
+    break;
+  case TYPE_T_TRANSFORM:
+    @<Debug: Transform Expression@>
+    break;
+  case TYPE_T_PATH:
+    @<Debug: Path Expression@>
+    break;
+  case TYPE_T_PEN:
+    @<Debug: Pen Expression@>
+    break;
+  case TYPE_T_PICTURE:
+    @<Debug: Picture Expression@>
+    break;
+  case TYPE_T_BOOLEAN:
+    @<Debug: Boolean Expression@>
+    break;
+  default:
+    RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, OPTIONAL(begin -> line),
+                                   type);
+    return false;
+  }
+#else
+  return true;
+#endif
+}
+@
+
+In the case of a numeric expression, this is how we interpret it and
+generate the debug message:
+
+@<Debug: Numeric Expression@>=
+{
+  struct numeric_variable result;
+  if(!eval_numeric_expression(mf, cx, begin_expr, end_expr, &result))
+    return false;
+  printf("DEBUG: %s: %d: Numeric Expression: %f\n", mf -> file, 
+         begin_expr -> line, result.value);
+  return true;
+}
+@
+
+In the case of a Pair Expression:
+
+@<Debug: Pair Expression@>=
+{
+  struct pair_variable result;
+  if(!eval_pair_expression(mf, cx, begin_expr, end_expr, &result))
+    return false;
+  printf("DEBUG: %s: %d: Pair Expression: (%f, %f)\n", mf -> file, 
+         begin_expr -> line, result.x, result.y);
+  return true;
+}
+@
+
+In the case of a Transform Expression:
+
+@<Debug: Transform Expression@>=
+{
+  struct transform_variable result;
+  if(!eval_transform_expression(mf, cx, begin_expr, end_expr, &result))
+    return false;
+  printf("DEBUG: %s: %d: Pair Expression: "
+         "(%f, %f, %f, %f, %f, %f, %f, %f, %f)\n", mf -> file, 
+         begin_expr -> line, result.value[0], result.value[1], result.value[2],
+         result.value[3], result.value[4], result.value[5], result.value[6],
+         result.value[7], result.value[8]);
+  return true;
+}
+@
+
+In the case of Path Expression:
+
+@<Debug: Path Expression@>=
+{
+  struct path_variable result;
+  int j;
+  if(!eval_path_expression(mf, cx, begin_expr, end_expr, &result))
+    return false;
+  printf("DEBUG: %s: %d: Path Expression: ", mf -> file, begin_expr -> line);
+  for(j = 0; j < result.length; j ++){
+    if(j == result.length - 1 && result.cyclic)
+      printf("cycle");
+    else
+      printf("(%f, %f)", result.points[j].point.x, result.points[j].point.y);
+    if(j < result.length - 1){
+      printf(" .. controls (%f, %f) and (%f, %f) .. ",
+             result.points[j].point.u_x, result.points[j].point.u_y,
+             result.points[j].point.v_x, result.points[j].point.v_y);
+    }
+  }
+  printf("\n");
+  return true;
+}
+@
+
+In case of Pen Expression:
+
+@<Debug: Pen Expression@>=
+{
+  struct pen_variable result;
+  struct path_variable *format;
+  int j;
+  if(!eval_pen_expression(mf, cx, begin_expr, end_expr, &result))
+    return false;
+  printf("DEBUG: %s: %d: Pen Expression: ", mf -> file, begin_expr -> line);
+  switch(result.flags){
+  case FLAG_CIRCULAR:
+    printf("pencricle");
+    break;
+  case FLAG_SEMICIRCULAR:
+    printf("pensemicircle");
+    break;
+  case FLAG_SQUARE:
+    printf("pensquare");
+    break;
+  case FLAG_NULL:
+    printf("nullpen");
+    break;
+  default:
+    printf("makepen(");
+    format = result.format;
+    for(j = 0; j < format -> length; j ++){
+      if(j == format -> length - 1 && format -> cyclic)
+        printf("cycle");
+      else
+        printf("(%f, %f)", format -> points[j].point.x,
+                           format -> points[j].point.y);
+      if(j < format -> length - 1){
+        printf(" .. controls (%f, %f) and (%f, %f) .. ",
+               format -> points[j].point.u_x, format -> points[j].point.u_y,
+               format -> points[j].point.v_x, format -> points[j].point.v_y);
+      }
+    }
+    printf(")");  
+  }
+  printf(" transformed (%f, %f, %f, %f, %f, %f)\n", 
+         result.gl_matrix[6], result.gl_matrix[7], result.gl_matrix[0],
+         result.gl_matrix[3], result.gl_matrix[1], result.gl_matrix[4]);
+  return true;
+}
+@
+
+So far, we have sought to create a string representation for each type
+of variable that is compatible with a literal, or an expression needed
+to create a copy of that variable. Unfortunately, this cannot be done
+with images, because except in the case of \monoespaco{nullpicture}, there
+are no literals or expressions capable of recreating an image. Images
+are typically manipulated by commands rather than
+expressions. Nevertheless, we have produced a representation of an
+expression that generates an image of the same width and height.
+
+
+@<Debug: Picture Expression@>=
+{
+  struct picture_variable result;
+  if(!eval_picture_expression(mf, cx, begin_expr, end_expr, &result))
+    return false;
+  printf("DEBUG: %s: %d: Picture Expression: ", mf -> file, begin_expr -> line);
+  printf("nullpicture(%d, %d)\n", result.width, result.height);
+  return true;
+}
+@
+
+And finally, in the case of Boolean Expression:
+
+@<Debug: Boolean Expression@>=
+{
+  struct boolean_variable result;
+  if(!eval_boolean_expression(mf, cx, begin_expr, end_expr, &result))
+    return false;
+  printf("DEBUG: %s: %d: Boolean Expression: ", mf -> file, begin_expr -> line);
+  if(result.value)
+    printf("true\n");
+  else
+    printf("false\n");
+  return true;
+}
+@
+
+\secao{21. Integrating WeaveFont and Weaver Game Engine}
 
 The Weaver game engine has a module responsible for loading new
 interfaces, which are visual elements to be presented to the user. The
@@ -18106,10 +18337,10 @@ We define such function as:
 @<API Functions Definition (metafont.c)@>+=
 #if defined(WEAVER_ENGINE)
 @<Functions to be Stored in User Interface@>
-void _Wmetafont_loading(void *(*permanent_alloc)(size_t),
-                        void (*permanent_free)(void *),
-                        void *(*temporary_alloc)(size_t),
-                        void (*temporary_free)(void *),
+void _Wmetafont_loading(void *(*p_alloc)(size_t),
+                        void (*p_free)(void *),
+                        void *(*t_alloc)(size_t),
+                        void (*t_free)(void *),
                         void (*before_loading_interface)(void),
                         void (*after_loading_interface)(void),
                         char *source_filename,
@@ -18117,6 +18348,12 @@ void _Wmetafont_loading(void *(*permanent_alloc)(size_t),
   struct metafont *mf;
   float size;
   int texture_width, texture_height, texture_depth, ignore_this;
+  if(p_alloc != permanent_alloc || p_free != permanent_free ||
+     t_alloc != temporary_alloc || t_free != temporary_free){
+    fprintf(stderr, "Weaver Interface Metafont Submodule: ERROR: Inconsistent "
+                    "usage of memory allocators.\n");
+    exit(1);
+  }
   if(before_loading_interface != NULL)
       before_loading_interface();
   mf = _Wnew_metafont(source_filename);
@@ -18515,7 +18752,7 @@ enum { // Types of tokens
 @
 
 
-\subsecao{A.X. ERROR\_DISCONTINUOUS\_PATH}
+\subsecao{A.1. ERROR\_DISCONTINUOUS\_PATH}
 
 @<Types of Error@>+=
 ERROR_DISCONTINUOUS_PATH,
@@ -18559,7 +18796,7 @@ case ERROR_DISCONTINUOUS_PATH:
 @
 
 
-\subsecao{A.X. ERROR\_DIVISION\_BY\_ZERO}
+\subsecao{A.2. ERROR\_DIVISION\_BY\_ZERO}
 
 @<Types of Error@>+=
 ERROR_DIVISION_BY_ZERO,
@@ -18581,7 +18818,7 @@ case ERROR_DIVISION_BY_ZERO:
   break;
 @
 
-\subsecao{A.X. ERROR\_DUPLICATE\_GLYPH}
+\subsecao{A.3. ERROR\_DUPLICATE\_GLYPH}
 
 @<Types of Error@>+=
 ERROR_DUPLICATE_GLYPH,
@@ -18610,7 +18847,7 @@ case ERROR_DUPLICATE_GLYPH:
 @
 
 
-\subsecao{A.X. ERROR\_EMPTY\_DELIMITER}
+\subsecao{A.4. ERROR\_EMPTY\_DELIMITER}
 
 @<Types of Error@>+=
 ERROR_EMPTY_DELIMITER,
@@ -18655,7 +18892,7 @@ case ERROR_EMPTY_DELIMITER:
 @
 
 
-\subsecao{A.X. ERROR\_EXPECTED\_FOUND}
+\subsecao{A.5. ERROR\_EXPECTED\_FOUND}
 
 @<Types of Error@>+=
 ERROR_EXPECTED_FOUND,
@@ -18690,7 +18927,7 @@ case ERROR_EXPECTED_FOUND:
 @
 
 
-\subsecao{A.X. ERROR\_FAILED\_OPENING\_FILE}
+\subsecao{A.6. ERROR\_FAILED\_OPENING\_FILE}
 
 @<Types of Error@>+=
 ERROR_FAILED_OPENING_FILE,
@@ -18732,7 +18969,7 @@ But this means that we need to include the header with
 @
 
 
-\subsecao{A.X. ERROR\_INCOMPLETE\_SOURCE}
+\subsecao{A.7. ERROR\_INCOMPLETE\_SOURCE}
 
 @<Types of Error@>=
 ERROR_INCOMPLETE_SOURCE,
@@ -18762,7 +18999,7 @@ case ERROR_INCOMPLETE_SOURCE:
 @
 
 
-\subsecao{A.X. ERROR\_INCOMPLETE\_STATEMENT}
+\subsecao{A.8. ERROR\_INCOMPLETE\_STATEMENT}
 
 @<Types of Error@>=
 ERROR_INCOMPLETE_STATEMENT,
@@ -18793,7 +19030,7 @@ case ERROR_INCOMPLETE_STATEMENT:
   break;  
 @
 
-\subsecao{A.X. ERROR\_INVALID\_CHAR}
+\subsecao{A.9. ERROR\_INVALID\_CHAR}
 
 @<Types of Error@>=
 ERROR_INVALID_CHAR,
@@ -18894,7 +19131,7 @@ case ERROR_INVALID_CHAR:
 }
 @
 
-\subsecao{A.X. ERROR\_INVALID\_COMPARISON}
+\subsecao{A.10. ERROR\_INVALID\_COMPARISON}
 
 @<Types of Error@>+=
 ERROR_INVALID_COMPARISON,
@@ -18926,7 +19163,7 @@ case ERROR_INVALID_COMPARISON:
   break;
 @
 
-\subsecao{A.X. ERROR\_INVALID\_DIMENSION\_GLYPH}
+\subsecao{A.11. ERROR\_INVALID\_DIMENSION\_GLYPH}
 
 @<Types of Error@>+=
 ERROR_INVALID_DIMENSION_GLYPH,
@@ -18965,7 +19202,7 @@ case ERROR_INVALID_DIMENSION_GLYPH:
   break;
 @
 
-\subsecao{A.X. ERROR\_INVALID\_NAME}
+\subsecao{A.12. ERROR\_INVALID\_NAME}
 
 @<Types of Error@>+=
 ERROR_INVALID_NAME,
@@ -19011,7 +19248,7 @@ case ERROR_INVALID_NAME:
   break;
 @
 
-\subsecao{A.X. ERROR\_INVALID\_TENSION}
+\subsecao{A.13. ERROR\_INVALID\_TENSION}
 
 @<Types of Error@>+=
 ERROR_INVALID_TENSION,
@@ -19063,7 +19300,7 @@ case ERROR_INVALID_TENSION:
 @
 
 
-\subsecao{A.X. ERROR\_MISSING\_EXPRESSION}
+\subsecao{A.14. ERROR\_MISSING\_EXPRESSION}
 
 @<Types of Error@>+=
 ERROR_MISSING_EXPRESSION,
@@ -19093,7 +19330,7 @@ case ERROR_MISSING_EXPRESSION:
   break;
 @
 
-\subsecao{A.X. ERROR\_MISSING\_TOKEN}
+\subsecao{A.15. ERROR\_MISSING\_TOKEN}
 
 @<Types of Error@>+=
 ERROR_MISSING_TOKEN,
@@ -19122,7 +19359,7 @@ case ERROR_MISSING_TOKEN:
   break;
 @
 
-\subsecao{A.X. ERROR\_NEGATIVE\_LOGARITHM}
+\subsecao{A.16. ERROR\_NEGATIVE\_LOGARITHM}
 
 @<Types of Error@>+=
 ERROR_NEGATIVE_LOGARITHM,
@@ -19149,7 +19386,7 @@ case ERROR_NEGATIVE_LOGARITHM:
   break;
 @
 
-\subsecao{A.X. ERROR\_NEGATIVE\_SQUARE\_ROOT}
+\subsecao{A.17. ERROR\_NEGATIVE\_SQUARE\_ROOT}
 
 @<Types of Error@>+=
 ERROR_NEGATIVE_SQUARE_ROOT,
@@ -19177,7 +19414,7 @@ case ERROR_NEGATIVE_SQUARE_ROOT:
 @
 
 
-\subsecao{A.X. ERROR\_NESTED\_BEGINCHAR}
+\subsecao{A.18. ERROR\_NESTED\_BEGINCHAR}
 
 @<Types of Error@>+=
 ERROR_NESTED_BEGINCHAR,
@@ -19205,7 +19442,7 @@ case ERROR_NESTED_BEGINCHAR:
 @
 
 
-\subsecao{A.X. ERROR\_NO\_MEMORY}
+\subsecao{A.19. ERROR\_NO\_MEMORY}
 
 @<Types of Error@>+=
 ERROR_NO_MEMORY,
@@ -19255,7 +19492,7 @@ case ERROR_NO_MEMORY:
   break;
 @
 
-\subsecao{A.X. ERROR\_NO\_PICKUP\_PEN}
+\subsecao{A.20. ERROR\_NO\_PICKUP\_PEN}
 
 @<Types of Error@>+=
 ERROR_NO_PICKUP_PEN,
@@ -19287,7 +19524,7 @@ case ERROR_NO_PICKUP_PEN:
   break;
 @
 
-\subsecao{A.X. ERROR\_NONCYCLICAL\_PEN}
+\subsecao{A.21. ERROR\_NONCYCLICAL\_PEN}
 
 @<Types of Error@>+=
 ERROR_NONCYCLICAL_PEN,
@@ -19313,7 +19550,7 @@ case ERROR_NONCYCLICAL_PEN:
 @
 
 
-\subsecao{A.X. ERROR\_NULL\_VECTOR\_ANGLE}
+\subsecao{A.22. ERROR\_NULL\_VECTOR\_ANGLE}
 
 @<Types of Error@>+=
 ERROR_NULL_VECTOR_ANGLE,
@@ -19341,7 +19578,7 @@ case ERROR_NULL_VECTOR_ANGLE:
   break;
 @
 
-\subsecao{A.X. ERROR\_OPENGL\_FRAMEBUFFER}
+\subsecao{A.23. ERROR\_OPENGL\_FRAMEBUFFER}
 
 @<Types of Error@>+=
 ERROR_OPENGL_FRAMEBUFFER,
@@ -19395,7 +19632,7 @@ case ERROR_OPENGL_FRAMEBUFFER:
   break;
 @
 
-\subsecao{A.X. ERROR\_RECURSIVE\_RENDERCHAR}
+\subsecao{A.24. ERROR\_RECURSIVE\_RENDERCHAR}
 
 @<Types of Error@>+=
 ERROR_RECURSIVE_RENDERCHAR,
@@ -19429,7 +19666,7 @@ case ERROR_RECURSIVE_RENDERCHAR:
   break;
 @
 
-\subsecao{A.X. ERROR\_UNBALANCED\_ENDING\_TOKEN}
+\subsecao{A.25. ERROR\_UNBALANCED\_ENDING\_TOKEN}
 
 @<Types of Error@>+=
 ERROR_UNBALANCED_ENDING_TOKEN,
@@ -19464,7 +19701,7 @@ case ERROR_UNBALANCED_ENDING_TOKEN:
   break;
 @
 
-\subsecao{A.X. ERROR\_UNCLOSED\_DELIMITER}
+\subsecao{A.26. ERROR\_UNCLOSED\_DELIMITER}
 
 @<Types of Error@>+=
 ERROR_UNCLOSED_DELIMITER,
@@ -19493,7 +19730,7 @@ case ERROR_UNCLOSED_DELIMITER:
 @
 
 
-\subsecao{A.X. ERROR\_UNCLOSED\_STRING}
+\subsecao{A.27. ERROR\_UNCLOSED\_STRING}
 
 @<Types of Error@>+=
 ERROR_UNCLOSED_STRING,
@@ -19530,7 +19767,7 @@ case ERROR_UNCLOSED_STRING:
   break;
 @
 
-\subsecao{A.X. ERROR\_UNDECLARED\_VARIABLE}
+\subsecao{A.28. ERROR\_UNDECLARED\_VARIABLE}
 
 @<Types of Error@>+=
 ERROR_UNDECLARED_VARIABLE,
@@ -19558,7 +19795,7 @@ case ERROR_UNDECLARED_VARIABLE:
 @
 
 
-\subsecao{A.X. ERROR\_UNEXPECTED\_TOKEN}
+\subsecao{A.29. ERROR\_UNEXPECTED\_TOKEN}
 
 @<Types of Error@>+=
 ERROR_UNEXPECTED_TOKEN,
@@ -19590,7 +19827,7 @@ case ERROR_UNEXPECTED_TOKEN:
   break;
 @
 
-\subsecao{A.X. ERROR\_UNINITIALIZED\_VARIABLE}
+\subsecao{A.30. ERROR\_UNINITIALIZED\_VARIABLE}
 
 @<Types of Error@>+=
 ERROR_UNINITIALIZED_VARIABLE,
@@ -19623,7 +19860,7 @@ case ERROR_UNINITIALIZED_VARIABLE:
 @
 
 
-\subsecao{A.X. ERROR\_UNKNOWN\_GLYPH\_DEPENDENCY}
+\subsecao{A.31. ERROR\_UNKNOWN\_GLYPH\_DEPENDENCY}
 
 @<Types of Error@>+=
 ERROR_UNKNOWN_GLYPH_DEPENDENCY,
@@ -19654,7 +19891,7 @@ case ERROR_UNKNOWN_GLYPH_DEPENDENCY:
 @
 
 
-\subsecao{A.X. ERROR\_UNKNOWN\_EXPRESSION}
+\subsecao{A.32. ERROR\_UNKNOWN\_EXPRESSION}
 
 @<Types of Error@>+=
 ERROR_UNKNOWN_EXPRESSION,
@@ -19684,7 +19921,7 @@ case ERROR_UNKNOWN_EXPRESSION:
   break;
 @
 
-\subsecao{A.X. ERROR\_UNKNOWN\_STATEMENT}
+\subsecao{A.33. ERROR\_UNKNOWN\_STATEMENT}
 
 @<Types of Error@>+=
 ERROR_UNKNOWN_STATEMENT,
@@ -19714,7 +19951,7 @@ case ERROR_UNKNOWN_STATEMENT:
   break;
 @
 
-\subsecao{A.X. ERROR\_UNOPENED\_DELIMITER}
+\subsecao{A.34. ERROR\_UNOPENED\_DELIMITER}
 
 @<Types of Error@>+=
 ERROR_UNOPENED_DELIMITER,
@@ -19743,7 +19980,7 @@ case ERROR_UNOPENED_DELIMITER:
   break;
 @
 
-\subsecao{A.X. ERROR\_UNSUPORTED\_LENGTH\_OPERAND}
+\subsecao{A.35. ERROR\_UNSUPORTED\_LENGTH\_OPERAND}
 
 @<Types of Error@>+=
 ERROR_UNSUPORTED_LENGTH_OPERAND,
@@ -19785,7 +20022,7 @@ case ERROR_UNSUPORTED_LENGTH_OPERAND:
   break;
 @
 
-\subsecao{A.X. ERROR\_WRONG\_NUMBER\_OF\_PARAMETERS}
+\subsecao{A.36. ERROR\_WRONG\_NUMBER\_OF\_PARAMETERS}
 
 @<Types of Error@>+=
 ERROR_WRONG_NUMBER_OF_PARAMETERS,
@@ -19825,7 +20062,7 @@ case ERROR_WRONG_NUMBER_OF_PARAMETERS:
 @
 
 
-\subsecao{A.X. ERROR\_WRONG\_VARIABLE\_TYPE}
+\subsecao{A.37. ERROR\_WRONG\_VARIABLE\_TYPE}
 
 @<Types of Error@>+=
 ERROR_WRONG_VARIABLE_TYPE,

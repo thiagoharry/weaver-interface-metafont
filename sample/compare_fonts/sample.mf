@@ -2490,8 +2490,49 @@ beginchar("k", (0.411+0.104*(weight-1)+0.083*italic+0.011*italic*(weight-1))*siz
   kerning("A", 28*k*size);
 endchar;
 
-beginchar("l", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
+beginchar("l", (0.156+0.107*(weight-1)+0.063*italic-0.033*italic*(weight-1))*size*pt,
     0.668*size*pt, 0);
+  % PARAMETERS
+  numeric pen_width, pen_height, curvature, ang;
+  pen_width = (0.13+0.1*(weight-1))*h;
+  pen_height = (0.111+0.075*(weight-1)-0.002*italic)*h;
+  curvature = 0.1*h;
+  ang = -90 - 12*italic;
+  % CONTROL POINTS
+  pair p1, p2, p3, p4, p5;
+  p1 = (pen_width/2 + (w-pen_width)*italic, h);
+  p2 = (pen_width/2 +(0.03+0.05*(weight-1))*italic*w, (0.135+0.08*(weight-1))*h);
+  p3 = ((1.0-0.24*italic+0.14*italic*(weight-1))*w, pen_height/2);
+  p4 = ((0.75+0.03*(weight-1)-0.17*italic+0.14*italic*(weight-1))*w, pen_height/2);
+  p5 = (xpart p2 + 0.1*w, ypart p4 + 0.02*h);
+  % RENDERING
+  pickup pencircle xscaled pen_width yscaled pen_height;
+  draw p1--p2{p2-p1}..p5..{p3-p4}p4--p3;
+  % RETOUCH
+  pickup pensemicircle rotated ang xscaled (1.1*pen_width) yscaled (1.1*pen_height);
+  erase p3;
+  pair r1, r2, r3, r4;
+  r1 = (xpart p2 + pen_width/2, ypart p2);
+  r2 = (xpart p4, ypart p4 + pen_height/2);
+  pickup pensquare scaled 0.03*h;
+  draw r1{0, -1}..{1, 0}r2;
+  pen eraser;
+  r1 = (xpart r1, ypart r1 + 0.015*h);
+  r2 = (xpart r2  + 0.015*h, ypart r2);
+  r3 = (xpart p1 + pen_width/2, h);
+  r4 = (w, ypart p4 + pen_height/2);
+  eraser = makepen(r1{0, -1}..{1, 0}r2--r3--r4--cycle);
+  pickup eraser; % SEGFAULT
+  %erase (0, 0);
+  % DEBUG
+  pickcolor (1, 0, 0, 1);
+  pickup pencircle scaled 10;
+  draw p1; draw p2; draw p3; draw p4; draw p5;
+  pickcolor (0, 0, 1, 1);
+  pickup pencircle scaled 10;
+  %draw r1{0, -1}..{1, 0}r2--cycle;
+  draw r1; draw r2; draw r3; draw r4;
+  %draw r1{0, -1}..{1, 0}r2;
 endchar;
 
 beginchar("m", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
