@@ -2521,22 +2521,94 @@ beginchar("l", (0.156+0.107*(weight-1)+0.063*italic-0.033*italic*(weight-1))*siz
   r2 = (xpart r2  + 0.015*h, ypart r2);
   r3 = (xpart p1 + pen_width/2, h);
   r4 = (w, ypart p4 + pen_height/2);
-  eraser = makepen(r1{0, -1}..{1, 0}r2--r3--r4--cycle);
-  pickup eraser; % SEGFAULT
-  %erase (0, 0);
-  % DEBUG
-  pickcolor (1, 0, 0, 1);
-  pickup pencircle scaled 10;
-  draw p1; draw p2; draw p3; draw p4; draw p5;
-  pickcolor (0, 0, 1, 1);
-  pickup pencircle scaled 10;
-  %draw r1{0, -1}..{1, 0}r2--cycle;
-  draw r1; draw r2; draw r3; draw r4;
-  %draw r1{0, -1}..{1, 0}r2;
+  eraser = makepen(r1{0, -1}..{1, 0}r2--r4--r3--cycle);
+  pickup eraser;
+  erase (0, 0);
+  % KERNING
+  kerning("”", (-25*(weight-1))*k*size);
+  kerning("’", (-25*(weight-1))*k*size);
+  kerning("ī", (-19-8*(weight-1)-4*italic+4*italic*(weight-1))*k*size);
+  kerning("ï", (-19-8*(weight-1)-4*italic+4*italic*(weight-1))*k*size);
+  kerning("į", (-19-8*(weight-1)-4*italic+4*italic*(weight-1))*k*size);
+  kerning("î", (-19-8*(weight-1)-4*italic+4*italic*(weight-1))*k*size);
+  kerning("í", (-19-8*(weight-1)-4*italic+4*italic*(weight-1))*k*size);
+  kerning("ì", (-19-8*(weight-1)-4*italic+4*italic*(weight-1))*k*size);
+  kerning("ı", (-19-8*(weight-1)-4*italic+4*italic*(weight-1))*k*size);
+  kerning("i", (-19-8*(weight-1)-4*italic+4*italic*(weight-1))*k*size);
+  kerning("ÿ", 12*(2-weight)*k*size);
+  kerning("ý", 12*(2-weight)*k*size);
+  kerning("y", 12*(2-weight)*k*size);
+  kerning("v", 12*(2-weight)*k*size);
+  kerning("X", 19*k*size);
+  kerning("p", (21-9*(weight-1))*k*size);
+  kerning(".", (34-9*(weight-1)-3*italic+6*italic*(weight-1))*k*size);
+  kerning(",", (34-9*(weight-1)-3*italic+6*italic*(weight-1))*k*size);
+  kerning("…", (34-9*(weight-1)-3*italic+6*italic*(weight-1))*k*size);
+  kerning("„", (34-9*(weight-1)-3*italic+6*italic*(weight-1))*k*size);
+  kerning("‚", (34-9*(weight-1)-3*italic+6*italic*(weight-1))*k*size);
+  kerning("ą", 22*(weight-1)*k*size);
+  kerning("ă", 22*(weight-1)*k*size);
+  kerning("á", 22*(weight-1)*k*size);
+  kerning("å", 22*(weight-1)*k*size);
+  kerning("ä", 22*(weight-1)*k*size);
+  kerning("ã", 22*(weight-1)*k*size);
+  kerning("â", 22*(weight-1)*k*size);
+  kerning("à", 22*(weight-1)*k*size);
+  kerning("ā", 22*(weight-1)*k*size);
+  kerning("a", 22*(weight-1)*k*size); 
+  kerning("æ", 22*(weight-1)*k*size);
+  kerning("/", (29-29*italic)*(weight-1)*k*size);
 endchar;
 
-beginchar("m", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
-    0.668*size*pt, 0);
+beginchar("m", (0.705+0.083*(weight-1)+0.109*italic-0.012*italic*(weight-1))*size*pt,
+    (0.504+0.006*(weight-1))*size*pt, 0);
+  pair p1, p2, p3, p4;
+  p1 = ((0.13-0.018*(weight-1))*w*italic, (0.98-0.01*(weight-1))*h);
+  p2 = ((0.08+0.09*(weight-1)+0.12*italic-0.03*italic*(weight-1))*w, (0.98-0.01*(weight-1))*h);
+  p4 = (0.85+0.02*(weight-1)+0.01*italic)[(0, 0), p1];
+  p3 = ((0.12+0.07*(weight-1)+0.095*italic-0.01*italic*(weight-1))*w, ypart p4);
+  numeric shift_x, shift_y, wid, hei, ang;
+  shift_x = (xpart p3 + xpart p4) / 2;
+  shift_y = (ypart p1 + ypart p4) / 2;
+  wid = xpart p3 - xpart p4;
+  hei = ypart p1 - ypart p3;
+  pen pen1;
+  pen1 = makepen(p1--p2--p3--p4--cycle) shifted (-shift_x, -shift_y);
+  pickup pen1;
+  draw (shift_x, shift_y) -- top rt (0, 0);
+  ang = angle((shift_x, shift_y) - top rt (0, 0));
+  % First lower part
+  p1 = 2 * (rt (0, 0));
+  p2 = (0.5-0.01*(weight-1)+0.1*italic+0.005*italic*(weight-1))[top rt (0, 0), (shift_x, shift_y)] shifted (0.5*xpart(p3-p4), 0);
+  p2 = p2 shifted (0.5*hei*cosd(ang), 0);
+  p3 = ((0.3+0.01*(weight-1)+0.07*italic-0.013*italic*(weight-1))*w, (0.86-0.09*(weight-1))*h);
+  pair p5;
+  p5 = ((0.44-0.04*(weight-1)-0.065*italic+0.03*italic*(weight-1))*w, 0);
+  p4 = p5 + (p2-p1);
+  pickup pencircle scaled 0.1*h;
+  draw lft p1--lft p2{p2-p1}..top p3{1, 0}..{p5-p4}rt p4--rt p5;
+  % First upper part
+  pair p6, p7, p8, p9, p10, p11;
+  p6 = ((0.327+0.065*(weight-1)+0.08*italic-0.01*italic*(weight-1))*w, h);
+  p8 = ((0.56+0.04*(weight-1)-0.077*italic+0.007*italic*(weight-1))*w, 0);
+  p7 = p8 + (p2-p1);
+  draw lft p1--lft p2{p2-p1}..bot p6{1, 0}..{p8-p7}lft p7--lft p8;
+  pickup pencircle scaled (0.1+0.05*(weight-1))*h;
+  p9 = 0.5[p3, p6];
+  p10 = 0.5[p4, p7];
+  p11 = 0.5[p5, p8];
+  draw p9{1, 0}..{0, -1}p10--p11;
+  % Second part
+  pair shifting;
+  shifting = ((w, 0)-p8);
+  shifting = shifting - ((0.125-0.025*(weight-1))*w*italic, 0);
+  pickup pencircle scaled 0.1*h;
+  draw (lft p1--lft p2{p2-p1}..top p3{1, 0}..{p5-p4}rt p4--rt p5) shifted shifting;
+  draw (lft p1--lft p2{p2-p1}..bot p6{1, 0}..{p8-p7}lft p7--lft p8) shifted shifting;
+  pickup pencircle scaled (0.1+0.05*(weight-1))*h;
+  draw (p9{1, 0}..{0, -1}p10--p11) shifted shifting;
+  % KERNING
+  kerning("W", -28*k*size);
 endchar;
 
 beginchar("n", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
