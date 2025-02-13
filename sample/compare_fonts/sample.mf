@@ -2611,8 +2611,46 @@ beginchar("m", (0.705+0.083*(weight-1)+0.109*italic-0.012*italic*(weight-1))*siz
   kerning("W", -28*k*size);
 endchar;
 
-beginchar("n", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
-    0.668*size*pt, 0);
+beginchar("n", (0.41+0.063*(weight-1)+0.095*italic+0.008*italic*(weight-1))*size*pt,
+    (0.504+0.006*(weight-1))*size*pt, 0);
+  pair p1, p2, p3, p4;
+  p1 = ((0.2-0.00*(weight-1))*w*italic, (0.98-0.01*(weight-1))*h);
+  p2 = p1 + ((0.11+0.15*(weight-1))*h, 0);
+  p4 = (0.85+0.02*(weight-1)+0.01*italic)[(0, 0), p1];
+  p3 = (xpart p4 + (0.16+0.13*(weight-1)+0.01*(weight-1)*italic)*h, ypart p4);
+  numeric shift_x, shift_y, wid, hei, ang;
+  shift_x = (xpart p3 + xpart p4) / 2;
+  shift_y = (ypart p1 + ypart p4) / 2;
+  wid = xpart p3 - xpart p4;
+  hei = ypart p1 - ypart p3;
+  pen pen1;
+  pen1 = makepen(p1--p2--p3--p4--cycle) shifted (-shift_x, -shift_y);
+  pickup pen1;
+  draw (shift_x, shift_y) -- top rt (0, 0);
+  ang = angle((shift_x, shift_y) - top rt (0, 0));
+  % First lower part
+  p1 = 2 * (rt (0, 0));
+  p2 = (0.5-0.01*(weight-1)+0.1*italic+0.005*italic*(weight-1))[top rt (0, 0), (shift_x, shift_y)] shifted (0.5*xpart(p3-p4), 0);
+  p2 = p2 shifted (0.5*hei*cosd(ang), 0);
+  p3 = ((0.52+0.0*(weight-1)+0.1*italic-0.04*italic*(weight-1))*w, (0.86-0.09*(weight-1))*h);
+  pair p5;
+  p5 = ((0.79-0.115*(weight-1)-0.15*italic+0.035*italic*(weight-1))*w, 0);
+  p4 = p5 + (p2-p1);
+  pickup pencircle scaled (0.1+0.05*(weight-1))*h;
+  draw lft p1--lft p2{p2-p1}..top p3{1, 0}..{p5-p4}rt p4--rt p5;
+  % First upper part
+  pair p6, p7, p8, p9, p10, p11;
+  p6 = ((0.58+0.07*(weight-1)+0.11*italic-0.035*italic*(weight-1))*w, h);
+  p8 = ((1-0.2*italic+0.03*italic*(weight-1))*w, 0);
+  p7 = p8 + (p2-p1);
+  draw lft p1--lft p2{p2-p1}..bot p6{1, 0}..{p8-p7}lft p7--lft p8;
+  pickup pencircle scaled (0.1+0.05*(weight-1))*h;
+  p9 = 0.5[p3, p6];
+  p10 = 0.5[p4, p7];
+  p11 = 0.5[p5, p8];
+  draw p9{1, 0}..{0, -1}p10--p11;
+  % KERNING
+  kerning("W", -28*k*size);
 endchar;
 
 beginchar("o", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
