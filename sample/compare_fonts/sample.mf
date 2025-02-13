@@ -2653,8 +2653,16 @@ beginchar("n", (0.41+0.063*(weight-1)+0.095*italic+0.008*italic*(weight-1))*size
   kerning("W", -28*k*size);
 endchar;
 
-beginchar("o", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
-    0.668*size*pt, 0);
+beginchar("o", (0.477+0.048*(weight-1)+0.042*italic+0.004*italic*(weight-1))*size*pt,
+    (0.504+0.006*(weight-1))*size*pt, 0);
+  pickup pencircle xscaled ((0.18+0.13*(weight-1))*h) yscaled ((0.145+0.085*(weight-1))*h);
+  pair p1, p2, p3, p4;
+  p1 = bot ((0.5+0.086*italic)*w, h);
+  p2 = rt ((0.03-0.01*(weight-1))*italic*w, (0.5-0.094*italic)*h);
+  p3 = top ((0.5-0.088*italic)*w, 0);
+  p4 = lft ((1-0.05*italic)*w, (0.5+0.1*italic)*h);
+  draw p1{-1, 0}..p2{0, -1}..p3{1, 0}..p4{0, 1}..cycle;
+  % NO KERNING
 endchar;
 
 beginchar("p", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
