@@ -2665,8 +2665,52 @@ beginchar("o", (0.477+0.048*(weight-1)+0.042*italic+0.004*italic*(weight-1))*siz
   % NO KERNING
 endchar;
 
-beginchar("p", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
-    0.668*size*pt, 0);
+beginchar("p", (0.459+0.065*(weight-1)+0.084*italic+0.018*italic*(weight-1))*size*pt,
+    (0.504+0.006*(weight-1))*size*pt,
+    (0.162+0.002*italic-0.002*italic*(weight-1))*size*pt);
+  pair p1, p2, p3, p4;
+  p1 = (0.25*w*italic, (0.98-0.01*(weight-1))*h);
+  p2 = p1 + ((0.118+0.15*(weight-1))*h, 0);
+  p4 = (0.85+0.02*(weight-1)+0.01*italic)[(0, 0), p1];
+  p3 = (xpart p4 + (0.17+0.13*(weight-1)+0.01*(weight-1)*italic)*h, ypart p4);
+  numeric shift_x, shift_y, wid, hei, ang;
+  shift_x = (xpart p3 + xpart p4) / 2;
+  shift_y = (ypart p1 + ypart p4) / 2;
+  wid = xpart p3 - xpart p4;
+  hei = ypart p1 - ypart p3;
+  pen pen1;
+  pen1 = makepen(p1--p2--p3--p4--cycle) shifted (-shift_x, -shift_y);
+  pickup pen1;
+  draw (shift_x, shift_y) -- top rt (0, -d);
+  ang = angle((shift_x, shift_y) - top rt (0, -d));
+  % Internal body
+  numeric pos_y;
+  pos_y = (0.48-0.07*italic) * h;
+  p1 = ((xpart p3) - ((ypart p3) - pos_y) * cosd ang, pos_y);
+  p2 = ((0.485-0.01*(weight-1)+0.13*italic-0.03*(weight-1)*italic) * w, (0.86-0.09*(weight-1)) * h);
+  p3 = ((0.79-0.1*(weight-1)+0.03*italic) * w, (0.48+0.115*italic) * h);
+  p4 = ((0.485 - 0.01*(weight-1)+0.03*italic-0.005*italic*(weight-1)) * w, (0.12+0.09*(weight-1))* h);
+  pickup pencircle scaled (0.1+0.01*(weight-1))*h;
+  draw lft p1 {0, 1} .. top p2 {1, 0} .. rt p3 {0, -1}  .. bot p4 {-1, 0} .. cycle;
+  erase rt p1 {0, 1} .. bot p2 {1, 0} .. lft p3 {0, -1}  .. top p4 {-1, 0} .. cycle;
+  % External body
+  pair p5, p6, p7, p8;
+  p5 = p1;
+  p6 = ((0.52+0.07*(weight-1)+0.15*italic-0.05*italic*(weight-1)) * w, h);
+  p7 = ((1-0.02*italic-0.01*italic*(weight-1))*w, (0.48+0.115*italic) * h);
+  p8 = ((0.53+0.05*(weight-1)+0.01*italic-0.045*italic*(weight-1))*w, 0);
+  draw lft p5 {0, 1} .. bot p6 {1, 0} .. lft p7 {0, -1}  .. top p8 {-1, 0} .. cycle;
+  % Middle
+  pair p9, p10, p11;
+  p9 = 0.5[p2, p6];
+  p10 = 0.5[p3, p7];
+  p11 = 0.5[p4, p8];
+  draw lft p5 {0, 1} .. p9 {1, 0} .. p10 {0, -1}  .. p11 {-1, 0} .. cycle;
+  % DEBUG
+  pickup pencircle scaled 10;
+  pickcolor (1, 0, 0, 1);
+  draw p1; draw p2; draw p3; draw p4;
+  draw p5; draw p6; draw p7; draw p8;
 endchar;
 
 beginchar("q", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
