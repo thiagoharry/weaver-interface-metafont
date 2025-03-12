@@ -2711,10 +2711,69 @@ beginchar("p", (0.459+0.065*(weight-1)+0.084*italic+0.018*italic*(weight-1))*siz
   pickcolor (1, 0, 0, 1);
   draw p1; draw p2; draw p3; draw p4;
   draw p5; draw p6; draw p7; draw p8;
+  % No Kerning
 endchar;
 
-beginchar("q", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
-    0.668*size*pt, 0);
+beginchar("q", (0.591+0.06*(weight-1)-0.051*italic+0.018*italic*(weight-1))*size*pt,
+    (0.504+0.006*(weight-1)+0.001*italic-0.001*italic*(weight-1))*size*pt,
+      (0.173+0.001*italic-0.001*italic*(weight-1))*size*pt);
+  % Outer Body
+  pair p1, p2, p3, p4;
+  p1 = (0.02*italic*w, (0.5-0.125*italic)*h);
+  p2 = ((0.35-0.025*(weight-1)+0.13*italic-0.02*italic*(weight-1))*w, h);
+  p3 = ((0.64-0.06*(weight-1)+0.11*italic-0.07*italic*(weight-1))*w, (0.5+0.05*italic)*h);
+  p4 = ((0.35-0.025*(weight-1))*w, 0);
+  pickup pencircle scaled ((0.09+0.1*(weight-1)+0.001*italic)*h);
+  draw rt p1{0, 1} .. bot p2{1, 0} .. rt p3{0, -1} .. top p4{-1, 0} .. cycle;
+  % Inner body
+  pair p5, p6, p7, p8;
+  p5 = ((0.15+0.085*(weight-1)+0.04*italic)*w, (0.5-0.125*italic+0.05*italic*(weight-1))*h);
+  p6 = ((0.385+0.025*(weight-1)+0.11*italic-0.03*italic*(weight-1))*w, (0.9-0.135*(weight-1)-0.03*italic+0.03*italic*(weight-1))*h);
+  p7 = (xpart p3 - 0.05*w*italic + 0.05*w*italic*(weight-1), ypart p3);
+  p8 = ((0.385+0.025*(weight-1)+0.01*italic)*w, (0.12+0.1*(weight-1))*h);
+  draw lft p5{0, 1} .. top p6{1, 0} .. rt p7{0, -1} .. bot p8{-1, 0} .. cycle;
+  % Upper leg
+  numeric upper_width, lower_width, pen_height;
+  %   upper_width
+  %   +---+
+  %  /    | height
+  % +-----+
+  % lower_width
+  upper_width = (0.115+0.145*(weight-1))*h;
+  lower_width = (0.155+0.145*(weight-1))*h;
+  pen_height = 0.15h;
+  pen leg;
+  numeric slanting, ang, max_height, min_height;
+  pair pp1, pp2, pp3;
+  max_height = (0.985-0.01*(weight-1))*h - pen_height/2;
+  min_height = pen_height/2;
+  slanting = 0.2 * italic;
+  ang = angle(pen_height * slanting, pen_height);
+  leg = makepen((-(lower_width/2) + (lower_width-upper_width), pen_height/2)--
+      (lower_width/2, pen_height/2)--(lower_width/2, -pen_height/2)--
+      (-lower_width/2, -pen_height/2)--cycle);
+  pickup leg slanted slanting;
+  pp2 = rt p7;
+  pp1 = (xpart pp2 + (max_height - ypart pp2) * cosd ang, max_height);
+  pp3 = (xpart pp2 - (ypart pp2 - min_height) * cosd ang, min_height);
+  draw pp1--pp3;
+  % Tail
+  pair p9, p10, p11;
+  p9 = (xpart pp3 - pen_height*0.5*cosd(ang), 0);
+  p10 = (0.85*w, -d);
+  p11 = (w, -0.9*d);
+  pickup pencircle scaled lower_width;
+  draw p9{p9-pp1} .. top p10{1,0} .. top p11;
+  % Retouch
+  pair p12, p13, p14;
+  p12 = ((xpart p9) + lower_width/2, 0);
+  p13 = ((xpart p12 + w)*0.5, (-0.55+0.35*(weight-1))*d);
+  p14 = (w, (-0.49+0.35*(weight-1))*d);
+  pickup pencircle scaled 0.1h;
+  erase rt p12{0, -1} .. top p13{1, 0} .. top p14;
+  pickup pensemicircle scaled (lower_width*1.5) rotated (-90 - italic * 15);
+  erase bot (xpart p14 -0.03*italic*w-0.01*italic*(weight-1)*w, ypart p14);
+  % No Kerning
 endchar;
 
 beginchar("r", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,

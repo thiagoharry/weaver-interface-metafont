@@ -27,14 +27,14 @@
 
 struct pen_variable;
 /*:177*//*660:*/
-#line 18627 "weaver-interface-metafont.cweb"
+#line 18628 "weaver-interface-metafont.cweb"
 
 #if defined(WEAVER_ENGINE)
 #include "interface.h"
 #endif
-#line 18631 "weaver-interface-metafont.cweb"
+#line 18632 "weaver-interface-metafont.cweb"
 /*:660*//*694:*/
-#line 19286 "weaver-interface-metafont.cweb"
+#line 19287 "weaver-interface-metafont.cweb"
 
 #include <errno.h> 
 /*:694*/
@@ -327,12 +327,12 @@ struct pen_variable;
           prev -> type != TYPE_POSTCONTROL &&           \
           prev -> type != TYPE_UNIFORMDEVIATE))
 /*:211*//*505:*/
-#line 13605 "weaver-interface-metafont.cweb"
+#line 13606 "weaver-interface-metafont.cweb"
 
 #define DECLARE_PEN_EXTREMITIES() float _max_x =  -INFINITY, _min_x =  INFINITY,\
                                   _max_y =  -INFINITY, _min_y =  INFINITY;
 /*:505*//*506:*/
-#line 13615 "weaver-interface-metafont.cweb"
+#line 13616 "weaver-interface-metafont.cweb"
 
 #define CHECK_PEN_EXTREMITIES(x, y, matrix) {\
    float _x, _y;\
@@ -351,7 +351,7 @@ struct pen_variable;
    if(y >  _max_y) _max_y =  y;\
   }
 /*:506*//*507:*/
-#line 13637 "weaver-interface-metafont.cweb"
+#line 13638 "weaver-interface-metafont.cweb"
 
 #define UPDATE_PEN_EXTREMITIES() {\
   cx -> pen_lft =  _min_x;\
@@ -360,12 +360,12 @@ struct pen_variable;
   cx -> pen_bot =  _min_y;\
 }
 /*:507*//*512:*/
-#line 13972 "weaver-interface-metafont.cweb"
+#line 13973 "weaver-interface-metafont.cweb"
 
 #define FLAG_ORIENTATION      64
 #define FLAG_COUNTERCLOCKWISE 128
 /*:512*//*537:*/
-#line 14993 "weaver-interface-metafont.cweb"
+#line 14994 "weaver-interface-metafont.cweb"
 
 #define ADD_DIAGONAL(data, v1, v2) \
         if(v1 -> prev == v2 -> next){\
@@ -386,7 +386,7 @@ struct pen_variable;
         }\
         else printf("WARNING (%d): This should not happen (%p<-v1->%p)(%p<-v2->%p)!\n", __LINE__, v1->prev, v1->next,v2->prev,v2->next);
 /*:537*//*538:*/
-#line 15020 "weaver-interface-metafont.cweb"
+#line 15021 "weaver-interface-metafont.cweb"
 
 #define ADD_TRIANGLE(data, x1, y1, x2, y2, x3, y3) \
   if(x1*y2+y1*x3+x2*y3-x3*y2-x2*y1-x1*y3 >  0){\
@@ -401,7 +401,7 @@ struct pen_variable;
   (*number_of_triangles) ++;\
   data +=  6;
 /*:538*//*539:*/
-#line 15042 "weaver-interface-metafont.cweb"
+#line 15043 "weaver-interface-metafont.cweb"
 
 #define COMMON_VERTEX(v1, v2) ((v1 -> next == v2 -> prev)?\
                                (v1 -> next):(v1 -> prev))
@@ -415,7 +415,7 @@ struct pen_variable;
     (COMMON_VERTEX(v1, v2)->x)*(v2->x-v1->x)/(v2->y-v1->y)+v1->y >  \
      COMMON_VERTEX(v1,v2)->y)))
 /*:539*//*562:*/
-#line 15802 "weaver-interface-metafont.cweb"
+#line 15803 "weaver-interface-metafont.cweb"
 
 #define ADD_CUT(v1, v2) {                                    \
   if(last_diagonal == NULL){                                 \
@@ -432,7 +432,7 @@ struct pen_variable;
   last_diagonal -> next =  v2;                                \
   last_diagonal -> succ =  NULL;}
 /*:562*//*668:*/
-#line 18885 "weaver-interface-metafont.cweb"
+#line 18886 "weaver-interface-metafont.cweb"
 
 #define RAISE_GENERIC_ERROR(mf, cx, line, error_code) {\
   struct context *_cx =  cx;\
@@ -442,17 +442,17 @@ struct pen_variable;
     if(cx != NULL && _cx -> current_character[0] != '\0')\
       memcpy(mf -> errno_character, _cx -> current_character, 5);}}
 /*:668*//*669:*/
-#line 18899 "weaver-interface-metafont.cweb"
+#line 18900 "weaver-interface-metafont.cweb"
 
 #if defined(W_DEBUG_METAFONT)
 #define OPTIONAL(x) x
 #else
-#line 18903 "weaver-interface-metafont.cweb"
+#line 18904 "weaver-interface-metafont.cweb"
 #define OPTIONAL(x) 0
 #endif
-#line 18905 "weaver-interface-metafont.cweb"
+#line 18906 "weaver-interface-metafont.cweb"
 /*:669*//*677:*/
-#line 19094 "weaver-interface-metafont.cweb"
+#line 19095 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_DISCONTINUOUS_PATH(mf, cx, line, x1, y1, x2, y2) {\
   if(!mf -> err){\
@@ -463,12 +463,12 @@ struct pen_variable;
     buffer[2] =  (float) (x2);\
     buffer[3] =  (float) (y2);}}
 /*:677*//*680:*/
-#line 19127 "weaver-interface-metafont.cweb"
+#line 19128 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_DIVISION_BY_ZERO(mf, cx, line) {\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_DIVISION_BY_ZERO);}
 /*:680*//*683:*/
-#line 19151 "weaver-interface-metafont.cweb"
+#line 19152 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_DUPLICATE_GLYPH(mf, cx, line, glyph) {\
   if(!mf -> err){\
@@ -476,14 +476,14 @@ struct pen_variable;
     memcpy(mf -> errno_str, glyph, 4);\
     mf -> errno_str[4] =  '\0';}}
 /*:683*//*686:*/
-#line 19195 "weaver-interface-metafont.cweb"
+#line 19196 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_EMPTY_DELIMITER(mf, cx, line, delimiter) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_EMPTY_DELIMITER);\
     mf -> errno_int =  delimiter;}}
 /*:686*//*689:*/
-#line 19228 "weaver-interface-metafont.cweb"
+#line 19229 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_EXPECTED_FOUND(mf, cx, line, expected, found) {\
   if(!mf -> err){\
@@ -491,7 +491,7 @@ struct pen_variable;
     mf -> errno_int =  expected;\
     token_to_string(found, mf -> errno_str);}}
 /*:689*//*692:*/
-#line 19261 "weaver-interface-metafont.cweb"
+#line 19262 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_FAILED_OPENING_FILE(mf, cx, line, str) {\
   if(!mf -> err){\
@@ -502,19 +502,19 @@ struct pen_variable;
     memcpy(mf -> errno_str, str, _len);\
     mf -> errno_str[31] =  '\0';}}
 /*:692*//*696:*/
-#line 19304 "weaver-interface-metafont.cweb"
+#line 19305 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_INCOMPLETE_SOURCE(mf, cx, line) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INCOMPLETE_SOURCE);}}
 /*:696*//*699:*/
-#line 19334 "weaver-interface-metafont.cweb"
+#line 19335 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_INCOMPLETE_STATEMENT(mf, cx, line) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INCOMPLETE_STATEMENT);}}
 /*:699*//*702:*/
-#line 19391 "weaver-interface-metafont.cweb"
+#line 19392 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_INVALID_CHAR(mf, cx, line, str) {\
   if(!mf -> err){\
@@ -522,7 +522,7 @@ struct pen_variable;
     memcpy(mf -> errno_str, str, 4);\
     mf -> errno_str[4] =  '\0';}}
 /*:702*//*705:*/
-#line 19469 "weaver-interface-metafont.cweb"
+#line 19470 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_INVALID_COMPARISON(mf, cx, line, operator, type) {\
   if(!mf -> err){\
@@ -530,7 +530,7 @@ struct pen_variable;
     token_to_string(operator, mf -> errno_str);\
     mf -> errno_int =  type;}}
 /*:705*//*708:*/
-#line 19503 "weaver-interface-metafont.cweb"
+#line 19504 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_INVALID_DIMENSION_GLYPH(mf, cx, line, width, height) {\
   if(!mf -> err){\
@@ -539,7 +539,7 @@ struct pen_variable;
     buffer[1] =  (int) height;\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_INVALID_DIMENSION_GLYPH);}}
 /*:708*//*711:*/
-#line 19544 "weaver-interface-metafont.cweb"
+#line 19545 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_INVALID_NAME(mf, cx, line, tok, type) {\
   if(!mf -> err){\
@@ -547,7 +547,7 @@ struct pen_variable;
     token_to_string(tok, mf -> errno_str);\
     mf -> errno_int =  type;}}
 /*:711*//*714:*/
-#line 19600 "weaver-interface-metafont.cweb"
+#line 19601 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_INVALID_TENSION(mf, cx, line, value, position, x1, y1, x2, y2) {\
   if(!mf -> err){\
@@ -560,21 +560,21 @@ struct pen_variable;
     buffer[4] =  (float) (value);\
     mf -> errno_int =  position;}}
 /*:714*//*717:*/
-#line 19639 "weaver-interface-metafont.cweb"
+#line 19640 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_MISSING_EXPRESSION(mf, cx, line, type) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_MISSING_EXPRESSION);\
     tokenid_to_string(type, mf -> errno_str);}}
 /*:717*//*720:*/
-#line 19668 "weaver-interface-metafont.cweb"
+#line 19669 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_MISSING_TOKEN(mf, cx, line, tok) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_MISSING_TOKEN);\
     tokenid_to_string(tok, mf -> errno_str);}}
 /*:720*//*723:*/
-#line 19695 "weaver-interface-metafont.cweb"
+#line 19696 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_NEGATIVE_LOGARITHM(mf, cx, line, number) {\
   if(!mf -> err){\
@@ -582,7 +582,7 @@ struct pen_variable;
     snprintf(mf -> errno_str, 31, "%g", number);\
     mf -> errno_str[31] =  '\0';}}
 /*:723*//*726:*/
-#line 19723 "weaver-interface-metafont.cweb"
+#line 19724 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_NEGATIVE_SQUARE_ROOT(mf, cx, line, number) {\
   if(!mf -> err){\
@@ -590,40 +590,40 @@ struct pen_variable;
     snprintf(mf -> errno_str, 31, "%g", number);\
     mf -> errno_str[31] =  '\0';}}
 /*:726*//*729:*/
-#line 19753 "weaver-interface-metafont.cweb"
+#line 19754 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_NESTED_BEGINCHAR(mf, cx, line) {\
   RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NESTED_BEGINCHAR);}
 /*:729*//*732:*/
-#line 19804 "weaver-interface-metafont.cweb"
+#line 19805 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_NO_MEMORY(mf, cx, line) {\
   RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NO_MEMORY);}
 /*:732*//*735:*/
-#line 19835 "weaver-interface-metafont.cweb"
+#line 19836 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_NO_PICKUP_PEN(mf, cx, line) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NO_PICKUP_PEN);}}
 /*:735*//*738:*/
-#line 19863 "weaver-interface-metafont.cweb"
+#line 19864 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_NONCYCLICAL_PEN(mf, cx, line) {\
   RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NONCYCLICAL_PEN);}
 /*:738*//*741:*/
-#line 19891 "weaver-interface-metafont.cweb"
+#line 19892 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_NULL_VECTOR_ANGLE(mf, cx, line) {\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_NULL_VECTOR_ANGLE);}
 /*:741*//*744:*/
-#line 19920 "weaver-interface-metafont.cweb"
+#line 19921 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_OPENGL_FRAMEBUFFER(mf, cx, line) {\
   if(!mf -> err){\
   RAISE_GENERIC_ERROR(mf, cx, line, ERROR_OPENGL_FRAMEBUFFER);\
   mf -> errno_int =  glCheckFramebufferStatus(GL_FRAMEBUFFER);}}
 /*:744*//*747:*/
-#line 19976 "weaver-interface-metafont.cweb"
+#line 19977 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_RECURSIVE_RENDERCHAR(mf, cx, line, glyph) {\
   if(!mf -> err){\
@@ -631,21 +631,21 @@ struct pen_variable;
     memcpy(mf -> errno_str, glyph, 4);\
     mf -> errno_str[4] =  '\0';}}
 /*:747*//*750:*/
-#line 20010 "weaver-interface-metafont.cweb"
+#line 20011 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_UNBALANCED_ENDING_TOKEN(mf, cx, line, tok) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNCLOSED_STRING);\
     mf -> errno_int =  tok;}}
 /*:750*//*753:*/
-#line 20042 "weaver-interface-metafont.cweb"
+#line 20043 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_UNCLOSED_DELIMITER(mf, cx, line, delimiter) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNCLOSED_DELIMITER);\
     mf -> errno_int =  delimiter;}}
 /*:753*//*756:*/
-#line 20074 "weaver-interface-metafont.cweb"
+#line 20075 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_UNCLOSED_STRING(mf, cx, line, str) {\
   if(!mf -> err){\
@@ -655,21 +655,21 @@ struct pen_variable;
     memcpy(mf -> errno_str, str, _len);\
     mf -> errno_str[31] =  '\0';}}
 /*:756*//*759:*/
-#line 20106 "weaver-interface-metafont.cweb"
+#line 20107 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_UNDECLARED_VARIABLE(mf, cx, line, tok) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNDECLARED_VARIABLE);\
     token_to_string((struct generic_token *) tok, mf -> errno_str);}}
 /*:759*//*762:*/
-#line 20140 "weaver-interface-metafont.cweb"
+#line 20141 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_UNEXPECTED_TOKEN(mf, cx, line, tok) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNEXPECTED_TOKEN);\
     token_to_string(tok, mf -> errno_str);}}
 /*:762*//*765:*/
-#line 20168 "weaver-interface-metafont.cweb"
+#line 20169 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_UNINITIALIZED_VARIABLE(mf, cx, line, var_token, var_type) {\
   if(!mf -> err){\
@@ -677,7 +677,7 @@ struct pen_variable;
     token_to_string((struct generic_token *) (var_token), mf -> errno_str);\
     mf -> errno_int =  var_type;}}
 /*:765*//*768:*/
-#line 20199 "weaver-interface-metafont.cweb"
+#line 20200 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_UNKNOWN_GLYPH_DEPENDENCY(mf, cx, line, glyph) {\
   if(!mf -> err){\
@@ -685,33 +685,33 @@ struct pen_variable;
     memcpy(mf -> errno_str, glyph, 4);\
     mf -> errno_str[4] =  '\0';}}
 /*:768*//*771:*/
-#line 20232 "weaver-interface-metafont.cweb"
+#line 20233 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_UNKNOWN_EXPRESSION(mf, cx, line, type) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNKNOWN_EXPRESSION);\
     mf -> errno_int =  type;}}
 /*:771*//*774:*/
-#line 20264 "weaver-interface-metafont.cweb"
+#line 20265 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_UNKNOWN_STATEMENT(mf, cx, line) {\
   RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNKNOWN_STATEMENT);}
 /*:774*//*777:*/
-#line 20293 "weaver-interface-metafont.cweb"
+#line 20294 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_UNOPENED_DELIMITER(mf, cx, line, delimiter) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNOPENED_DELIMITER);\
     mf -> errno_int =  delimiter;}}
 /*:777*//*780:*/
-#line 20328 "weaver-interface-metafont.cweb"
+#line 20329 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_UNSUPORTED_LENGTH_OPERAND(mf, cx, line, type) {\
   if(!mf -> err){\
     RAISE_GENERIC_ERROR(mf, cx, line, ERROR_UNSUPORTED_LENGTH_OPERAND);\
     mf -> errno_int =  type;}}
 /*:780*//*783:*/
-#line 20370 "weaver-interface-metafont.cweb"
+#line 20371 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_WRONG_NUMBER_OF_PARAMETERS(mf, cx, line, s, e, f) {\
   if(!mf -> err){\
@@ -719,7 +719,7 @@ struct pen_variable;
     tokenid_to_string(s, mf -> errno_str);\
     mf -> errno_int =  (e << 8) + f;}}
 /*:783*//*786:*/
-#line 20407 "weaver-interface-metafont.cweb"
+#line 20408 "weaver-interface-metafont.cweb"
 
 #define RAISE_ERROR_WRONG_VARIABLE_TYPE(mf, cx, line, tok, type, expected) {\
   if(!mf -> err){\
@@ -818,18 +818,18 @@ TYPE_XPART,
 TYPE_YPART,
 TYPE_ANGLE,
 /*:267*//*274:*/
-#line 7151 "weaver-interface-metafont.cweb"
+#line 7152 "weaver-interface-metafont.cweb"
 
 TYPE_TRANSFORMED,
 /*:274*//*293:*/
-#line 7558 "weaver-interface-metafont.cweb"
+#line 7559 "weaver-interface-metafont.cweb"
 
 TYPE_XXPART,
 TYPE_XYPART,
 TYPE_YXPART,
 TYPE_YYPART,
 /*:293*//*300:*/
-#line 7714 "weaver-interface-metafont.cweb"
+#line 7715 "weaver-interface-metafont.cweb"
 
 TYPE_CYCLE,
 TYPE_AMPERSAND,
@@ -841,41 +841,41 @@ TYPE_CONTROLS,
 TYPE_CURL,
 TYPE_STRAIGHT_JOIN,
 /*:300*//*361:*/
-#line 9381 "weaver-interface-metafont.cweb"
+#line 9382 "weaver-interface-metafont.cweb"
 
 TYPE_REVERSE,
 TYPE_SUBPATH,
 TYPE_OF,
 /*:361*//*373:*/
-#line 9760 "weaver-interface-metafont.cweb"
+#line 9761 "weaver-interface-metafont.cweb"
 
 TYPE_POINT,
 TYPE_PRECONTROL,
 TYPE_POSTCONTROL,
 /*:373*//*395:*/
-#line 10281 "weaver-interface-metafont.cweb"
+#line 10282 "weaver-interface-metafont.cweb"
 
 TYPE_NULLPEN,
 TYPE_PENCIRCLE,
 TYPE_PENSEMICIRCLE,
 TYPE_MAKEPEN,
 /*:395*//*407:*/
-#line 10562 "weaver-interface-metafont.cweb"
+#line 10563 "weaver-interface-metafont.cweb"
 
 TYPE_MAKEPATH,
 /*:407*//*451:*/
-#line 11714 "weaver-interface-metafont.cweb"
+#line 11715 "weaver-interface-metafont.cweb"
 
 TYPE_NULLPICTURE,
 TYPE_SUBPICTURE,
 /*:451*//*463:*/
-#line 12082 "weaver-interface-metafont.cweb"
+#line 12083 "weaver-interface-metafont.cweb"
 
 TYPE_TOTALWEIGHT,
 TYPE_WIDTH,
 TYPE_HEIGHT,
 /*:463*//*469:*/
-#line 12249 "weaver-interface-metafont.cweb"
+#line 12250 "weaver-interface-metafont.cweb"
 
 TYPE_LT,
 TYPE_LEQ,
@@ -883,66 +883,66 @@ TYPE_GT,
 TYPE_GEQ,
 TYPE_NEQ,
 /*:469*//*473:*/
-#line 12488 "weaver-interface-metafont.cweb"
+#line 12489 "weaver-interface-metafont.cweb"
 
 TYPE_OR,
 /*:473*//*479:*/
-#line 12639 "weaver-interface-metafont.cweb"
+#line 12640 "weaver-interface-metafont.cweb"
 
 TYPE_TRUE,
 TYPE_FALSE,
 TYPE_ODD,
 TYPE_NOT,
 /*:479*//*487:*/
-#line 13126 "weaver-interface-metafont.cweb"
+#line 13127 "weaver-interface-metafont.cweb"
 
 TYPE_ELSEIF,
 TYPE_ELSE,
 TYPE_COLON,
 /*:487*//*492:*/
-#line 13330 "weaver-interface-metafont.cweb"
+#line 13331 "weaver-interface-metafont.cweb"
 
 TYPE_STEP,
 TYPE_UNTIL,
 /*:492*//*501:*/
-#line 13554 "weaver-interface-metafont.cweb"
+#line 13555 "weaver-interface-metafont.cweb"
 
 TYPE_PICKUP,
 /*:501*//*576:*/
-#line 16403 "weaver-interface-metafont.cweb"
+#line 16404 "weaver-interface-metafont.cweb"
 
 TYPE_BOT,
 TYPE_TOP,
 TYPE_LFT,
 TYPE_RT,
 /*:576*//*584:*/
-#line 16523 "weaver-interface-metafont.cweb"
+#line 16524 "weaver-interface-metafont.cweb"
 
 TYPE_PICKCOLOR,
 /*:584*//*587:*/
-#line 16605 "weaver-interface-metafont.cweb"
+#line 16606 "weaver-interface-metafont.cweb"
 
 TYPE_MONOWIDTH,
 /*:587*//*592:*/
-#line 16659 "weaver-interface-metafont.cweb"
+#line 16660 "weaver-interface-metafont.cweb"
 
 TYPE_DRAW,
 TYPE_ERASE,
 /*:592*//*631:*/
-#line 17858 "weaver-interface-metafont.cweb"
+#line 17859 "weaver-interface-metafont.cweb"
 
 TYPE_SHIPIT,
 /*:631*//*635:*/
-#line 17963 "weaver-interface-metafont.cweb"
+#line 17964 "weaver-interface-metafont.cweb"
 
 TYPE_RENDERCHAR,
 TYPE_BETWEEN,
 /*:635*//*644:*/
-#line 18235 "weaver-interface-metafont.cweb"
+#line 18236 "weaver-interface-metafont.cweb"
 
 TYPE_KERNING,
 /*:644*//*650:*/
-#line 18388 "weaver-interface-metafont.cweb"
+#line 18389 "weaver-interface-metafont.cweb"
 
 TYPE_DEBUG,
 /*:650*/
@@ -1137,7 +1137,7 @@ void*next;
 short value;
 };
 /*:199*//*525:*/
-#line 14547 "weaver-interface-metafont.cweb"
+#line 14548 "weaver-interface-metafont.cweb"
 
 #define FLAG_UPPER 1
 #define FLAG_LOWER 2
@@ -1150,23 +1150,23 @@ int flag;
 float x,y;
 struct polygon_vertex*prev,*next;
 /*533:*/
-#line 14869 "weaver-interface-metafont.cweb"
+#line 14870 "weaver-interface-metafont.cweb"
 
 struct polygon_vertex*succ;
 /*:533*//*542:*/
-#line 15212 "weaver-interface-metafont.cweb"
+#line 15213 "weaver-interface-metafont.cweb"
 
 struct polygon_vertex*pred;
 /*:542*/
-#line 14558 "weaver-interface-metafont.cweb"
+#line 14559 "weaver-interface-metafont.cweb"
 
 };
 /*:525*//*526:*/
-#line 14566 "weaver-interface-metafont.cweb"
+#line 14567 "weaver-interface-metafont.cweb"
 
 #define XMONOTONE_LEQ(v1, v2) ((v1->x==v2->x)?(v1->y<=v2->y):(v1->x<=v2->x))
 /*:526*//*541:*/
-#line 15193 "weaver-interface-metafont.cweb"
+#line 15194 "weaver-interface-metafont.cweb"
 
 #define TYPE_UNKNOWN_VERTEX  0
 #define TYPE_REGULAR_VERTEX  4
@@ -1176,7 +1176,7 @@ struct polygon_vertex*pred;
 #define TYPE_MERGE_VERTEX   20
 #define GET_VERTEX_TYPE(v) (((v -> flag) >> 2) << 2)
 /*:541*//*549:*/
-#line 15416 "weaver-interface-metafont.cweb"
+#line 15417 "weaver-interface-metafont.cweb"
 
 struct polygon_edge{
 float x1,y1,x2,y2;
@@ -1192,7 +1192,7 @@ struct polygon_edge*parent,*left,*right;
 #define DESTROY_POLYGON_EDGE(p) \
   ((temporary_free != NULL)?(temporary_free(p)):(true))
 /*:549*//*613:*/
-#line 17128 "weaver-interface-metafont.cweb"
+#line 17129 "weaver-interface-metafont.cweb"
 
 struct _glyph{
 struct generic_token*begin,*end;
@@ -1214,7 +1214,7 @@ bool need_rendering,is_being_rendered;
                             a.is_being_rendered =  false; \
                             }
 /*:613*//*614:*/
-#line 17154 "weaver-interface-metafont.cweb"
+#line 17155 "weaver-interface-metafont.cweb"
 
 struct kerning{
 char next_char[5];
@@ -1222,161 +1222,161 @@ float kern;
 struct kerning*next;
 };
 /*:614*//*666:*/
-#line 18829 "weaver-interface-metafont.cweb"
+#line 18830 "weaver-interface-metafont.cweb"
 
 enum{
 ERROR_NO_ERROR= 0,
 
 /*676:*/
-#line 19074 "weaver-interface-metafont.cweb"
+#line 19075 "weaver-interface-metafont.cweb"
 
 ERROR_DISCONTINUOUS_PATH,
 /*:676*//*679:*/
-#line 19120 "weaver-interface-metafont.cweb"
+#line 19121 "weaver-interface-metafont.cweb"
 
 ERROR_DIVISION_BY_ZERO,
 /*:679*//*682:*/
-#line 19142 "weaver-interface-metafont.cweb"
+#line 19143 "weaver-interface-metafont.cweb"
 
 ERROR_DUPLICATE_GLYPH,
 /*:682*//*685:*/
-#line 19172 "weaver-interface-metafont.cweb"
+#line 19173 "weaver-interface-metafont.cweb"
 
 ERROR_EMPTY_DELIMITER,
 /*:685*//*688:*/
-#line 19217 "weaver-interface-metafont.cweb"
+#line 19218 "weaver-interface-metafont.cweb"
 
 ERROR_EXPECTED_FOUND,
 /*:688*//*691:*/
-#line 19251 "weaver-interface-metafont.cweb"
+#line 19252 "weaver-interface-metafont.cweb"
 
 ERROR_FAILED_OPENING_FILE,
 /*:691*//*695:*/
-#line 19292 "weaver-interface-metafont.cweb"
+#line 19293 "weaver-interface-metafont.cweb"
 
 ERROR_INCOMPLETE_SOURCE,
 /*:695*//*698:*/
-#line 19322 "weaver-interface-metafont.cweb"
+#line 19323 "weaver-interface-metafont.cweb"
 
 ERROR_INCOMPLETE_STATEMENT,
 /*:698*//*701:*/
-#line 19354 "weaver-interface-metafont.cweb"
+#line 19355 "weaver-interface-metafont.cweb"
 
 ERROR_INVALID_CHAR,
 /*:701*//*704:*/
-#line 19459 "weaver-interface-metafont.cweb"
+#line 19460 "weaver-interface-metafont.cweb"
 
 ERROR_INVALID_COMPARISON,
 /*:704*//*707:*/
-#line 19492 "weaver-interface-metafont.cweb"
+#line 19493 "weaver-interface-metafont.cweb"
 
 ERROR_INVALID_DIMENSION_GLYPH,
 /*:707*//*710:*/
-#line 19532 "weaver-interface-metafont.cweb"
+#line 19533 "weaver-interface-metafont.cweb"
 
 ERROR_INVALID_NAME,
 /*:710*//*713:*/
-#line 19578 "weaver-interface-metafont.cweb"
+#line 19579 "weaver-interface-metafont.cweb"
 
 ERROR_INVALID_TENSION,
 /*:713*//*716:*/
-#line 19627 "weaver-interface-metafont.cweb"
+#line 19628 "weaver-interface-metafont.cweb"
 
 ERROR_MISSING_EXPRESSION,
 /*:716*//*719:*/
-#line 19657 "weaver-interface-metafont.cweb"
+#line 19658 "weaver-interface-metafont.cweb"
 
 ERROR_MISSING_TOKEN,
 /*:719*//*722:*/
-#line 19687 "weaver-interface-metafont.cweb"
+#line 19688 "weaver-interface-metafont.cweb"
 
 ERROR_NEGATIVE_LOGARITHM,
 /*:722*//*725:*/
-#line 19715 "weaver-interface-metafont.cweb"
+#line 19716 "weaver-interface-metafont.cweb"
 
 ERROR_NEGATIVE_SQUARE_ROOT,
 /*:725*//*728:*/
-#line 19742 "weaver-interface-metafont.cweb"
+#line 19743 "weaver-interface-metafont.cweb"
 
 ERROR_NESTED_BEGINCHAR,
 /*:728*//*731:*/
-#line 19769 "weaver-interface-metafont.cweb"
+#line 19770 "weaver-interface-metafont.cweb"
 
 ERROR_NO_MEMORY,
 /*:731*//*734:*/
-#line 19821 "weaver-interface-metafont.cweb"
+#line 19822 "weaver-interface-metafont.cweb"
 
 ERROR_NO_PICKUP_PEN,
 /*:734*//*737:*/
-#line 19854 "weaver-interface-metafont.cweb"
+#line 19855 "weaver-interface-metafont.cweb"
 
 ERROR_NONCYCLICAL_PEN,
 /*:737*//*740:*/
-#line 19880 "weaver-interface-metafont.cweb"
+#line 19881 "weaver-interface-metafont.cweb"
 
 ERROR_NULL_VECTOR_ANGLE,
 /*:740*//*743:*/
-#line 19908 "weaver-interface-metafont.cweb"
+#line 19909 "weaver-interface-metafont.cweb"
 
 ERROR_OPENGL_FRAMEBUFFER,
 /*:743*//*746:*/
-#line 19962 "weaver-interface-metafont.cweb"
+#line 19963 "weaver-interface-metafont.cweb"
 
 ERROR_RECURSIVE_RENDERCHAR,
 /*:746*//*749:*/
-#line 19996 "weaver-interface-metafont.cweb"
+#line 19997 "weaver-interface-metafont.cweb"
 
 ERROR_UNBALANCED_ENDING_TOKEN,
 /*:749*//*752:*/
-#line 20032 "weaver-interface-metafont.cweb"
+#line 20033 "weaver-interface-metafont.cweb"
 
 ERROR_UNCLOSED_DELIMITER,
 /*:752*//*755:*/
-#line 20060 "weaver-interface-metafont.cweb"
+#line 20061 "weaver-interface-metafont.cweb"
 
 ERROR_UNCLOSED_STRING,
 /*:755*//*758:*/
-#line 20097 "weaver-interface-metafont.cweb"
+#line 20098 "weaver-interface-metafont.cweb"
 
 ERROR_UNDECLARED_VARIABLE,
 /*:758*//*761:*/
-#line 20125 "weaver-interface-metafont.cweb"
+#line 20126 "weaver-interface-metafont.cweb"
 
 ERROR_UNEXPECTED_TOKEN,
 /*:761*//*764:*/
-#line 20158 "weaver-interface-metafont.cweb"
+#line 20159 "weaver-interface-metafont.cweb"
 
 ERROR_UNINITIALIZED_VARIABLE,
 /*:764*//*767:*/
-#line 20189 "weaver-interface-metafont.cweb"
+#line 20190 "weaver-interface-metafont.cweb"
 
 ERROR_UNKNOWN_GLYPH_DEPENDENCY,
 /*:767*//*770:*/
-#line 20220 "weaver-interface-metafont.cweb"
+#line 20221 "weaver-interface-metafont.cweb"
 
 ERROR_UNKNOWN_EXPRESSION,
 /*:770*//*773:*/
-#line 20251 "weaver-interface-metafont.cweb"
+#line 20252 "weaver-interface-metafont.cweb"
 
 ERROR_UNKNOWN_STATEMENT,
 /*:773*//*776:*/
-#line 20282 "weaver-interface-metafont.cweb"
+#line 20283 "weaver-interface-metafont.cweb"
 
 ERROR_UNOPENED_DELIMITER,
 /*:776*//*779:*/
-#line 20311 "weaver-interface-metafont.cweb"
+#line 20312 "weaver-interface-metafont.cweb"
 
 ERROR_UNSUPORTED_LENGTH_OPERAND,
 /*:779*//*782:*/
-#line 20354 "weaver-interface-metafont.cweb"
+#line 20355 "weaver-interface-metafont.cweb"
 
 ERROR_WRONG_NUMBER_OF_PARAMETERS,
 /*:782*//*785:*/
-#line 20392 "weaver-interface-metafont.cweb"
+#line 20393 "weaver-interface-metafont.cweb"
 
 ERROR_WRONG_VARIABLE_TYPE,
 /*:785*/
-#line 18833 "weaver-interface-metafont.cweb"
+#line 18834 "weaver-interface-metafont.cweb"
 
 
 ERROR_UNKNOWN
@@ -1431,99 +1431,99 @@ static char*list_of_keywords[]= {
 "rotated","scaled","shifted","slanted","xscaled","yscaled",
 "zscaled",
 /*:248*//*268:*/
-#line 7020 "weaver-interface-metafont.cweb"
+#line 7021 "weaver-interface-metafont.cweb"
 
 "xpart","ypart","angle",
 /*:268*//*275:*/
-#line 7157 "weaver-interface-metafont.cweb"
+#line 7158 "weaver-interface-metafont.cweb"
 
 "transformed",
 /*:275*//*294:*/
-#line 7567 "weaver-interface-metafont.cweb"
+#line 7568 "weaver-interface-metafont.cweb"
 
 "xxpart","xypart","yxpart","yypart",
 /*:294*//*301:*/
-#line 7729 "weaver-interface-metafont.cweb"
+#line 7730 "weaver-interface-metafont.cweb"
 
 "cycle","&","..","tension","and","atleast","controls","curl","--",
 /*:301*//*362:*/
-#line 9390 "weaver-interface-metafont.cweb"
+#line 9391 "weaver-interface-metafont.cweb"
 
 "reverse","subpath","of",
 /*:362*//*374:*/
-#line 9768 "weaver-interface-metafont.cweb"
+#line 9769 "weaver-interface-metafont.cweb"
 
 "point","precontrol","postcontrol",
 /*:374*//*396:*/
-#line 10291 "weaver-interface-metafont.cweb"
+#line 10292 "weaver-interface-metafont.cweb"
 
 "nullpen","pencircle","pensemicircle","makepen",
 /*:396*//*408:*/
-#line 10568 "weaver-interface-metafont.cweb"
+#line 10569 "weaver-interface-metafont.cweb"
 
 "makepath",
 /*:408*//*452:*/
-#line 11721 "weaver-interface-metafont.cweb"
+#line 11722 "weaver-interface-metafont.cweb"
 
 "nullpicture","subpicture",
 /*:452*//*464:*/
-#line 12090 "weaver-interface-metafont.cweb"
+#line 12091 "weaver-interface-metafont.cweb"
 
 "totalweight","width","height",
 /*:464*//*470:*/
-#line 12259 "weaver-interface-metafont.cweb"
+#line 12260 "weaver-interface-metafont.cweb"
 
 "<","<=",">",">=","<>",
 /*:470*//*474:*/
-#line 12494 "weaver-interface-metafont.cweb"
+#line 12495 "weaver-interface-metafont.cweb"
 
 "or",
 /*:474*//*480:*/
-#line 12649 "weaver-interface-metafont.cweb"
+#line 12650 "weaver-interface-metafont.cweb"
 
 "true","false","odd","not",
 /*:480*//*488:*/
-#line 13134 "weaver-interface-metafont.cweb"
+#line 13135 "weaver-interface-metafont.cweb"
 
 "elseif","else",":",
 /*:488*//*493:*/
-#line 13337 "weaver-interface-metafont.cweb"
+#line 13338 "weaver-interface-metafont.cweb"
 
 "step","until",
 /*:493*//*502:*/
-#line 13558 "weaver-interface-metafont.cweb"
+#line 13559 "weaver-interface-metafont.cweb"
 
 "pickup",
 /*:502*//*577:*/
-#line 16412 "weaver-interface-metafont.cweb"
+#line 16413 "weaver-interface-metafont.cweb"
 
 "bot","top","lft","rt",
 /*:577*//*585:*/
-#line 16527 "weaver-interface-metafont.cweb"
+#line 16528 "weaver-interface-metafont.cweb"
 
 "pickcolor",
 /*:585*//*588:*/
-#line 16609 "weaver-interface-metafont.cweb"
+#line 16610 "weaver-interface-metafont.cweb"
 
 "monowidth",
 /*:588*//*593:*/
-#line 16664 "weaver-interface-metafont.cweb"
+#line 16665 "weaver-interface-metafont.cweb"
 
 "draw","erase",
 /*:593*//*632:*/
-#line 17862 "weaver-interface-metafont.cweb"
+#line 17863 "weaver-interface-metafont.cweb"
 
 "shipit",
 /*:632*//*636:*/
-#line 17968 "weaver-interface-metafont.cweb"
+#line 17969 "weaver-interface-metafont.cweb"
 
 "renderchar","between",
 /*:636*//*645:*/
-#line 18239 "weaver-interface-metafont.cweb"
+#line 18240 "weaver-interface-metafont.cweb"
 
 "kerning",
 /*:645*//*651:*/
-#line 18392 "weaver-interface-metafont.cweb"
+#line 18393 "weaver-interface-metafont.cweb"
 
 "debug",
 /*:651*/
@@ -1531,7 +1531,7 @@ static char*list_of_keywords[]= {
 
 NULL};
 /*:62*//*417:*/
-#line 10839 "weaver-interface-metafont.cweb"
+#line 10840 "weaver-interface-metafont.cweb"
 
 static const float square[20]= {
 -1.0,-1.0,
@@ -1544,7 +1544,7 @@ static const float square[20]= {
 0.0,1.0};
 static GLuint vbo;
 /*:417*//*420:*/
-#line 10888 "weaver-interface-metafont.cweb"
+#line 10889 "weaver-interface-metafont.cweb"
 
 static const char vertex_shader[]= 
 "#version 100\n"
@@ -1558,7 +1558,7 @@ static const char vertex_shader[]=
 "  texture_coordinate = vertex_data.zw;\n"
 "}\n";
 /*:420*//*421:*/
-#line 10905 "weaver-interface-metafont.cweb"
+#line 10906 "weaver-interface-metafont.cweb"
 
 static const char fragment_shader[]= 
 "#version 100\n"
@@ -1572,7 +1572,7 @@ static GLuint program;
 GLint uniform_matrix;
 GLint uniform_texture;
 /*:421*//*434:*/
-#line 11255 "weaver-interface-metafont.cweb"
+#line 11256 "weaver-interface-metafont.cweb"
 
 static const char fragment_shader_inverse[]= 
 "#version 100\n"
@@ -1588,15 +1588,15 @@ static GLuint inv_program;
 static GLint uniform_inv_texture;
 static GLint uniform_inv_matrix;
 /*:434*//*518:*/
-#line 14089 "weaver-interface-metafont.cweb"
+#line 14090 "weaver-interface-metafont.cweb"
 
 static GLuint pensquare_vbo;
 /*:518*//*598:*/
-#line 16750 "weaver-interface-metafont.cweb"
+#line 16751 "weaver-interface-metafont.cweb"
 
 static GLint previous_fb;
 /*:598*//*601:*/
-#line 16786 "weaver-interface-metafont.cweb"
+#line 16787 "weaver-interface-metafont.cweb"
 
 static const char pen_vertex_shader[]= 
 "#version 100\n"
@@ -1608,7 +1608,7 @@ static const char pen_vertex_shader[]=
 "  gl_Position = vec4(coord.x, coord.y, 0.0, 1.0);\n"
 "}\n";
 /*:601*//*602:*/
-#line 16801 "weaver-interface-metafont.cweb"
+#line 16802 "weaver-interface-metafont.cweb"
 
 static const char pen_erase_fragment_shader[]= 
 "#version 100\n"
@@ -1780,167 +1780,167 @@ struct generic_token*begin,
 struct generic_token*end,
 struct pair_variable*result);
 /*:260*//*276:*/
-#line 7172 "weaver-interface-metafont.cweb"
+#line 7173 "weaver-interface-metafont.cweb"
 
 bool eval_transform_expression(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
 struct generic_token*end,
 struct transform_variable*result);
 /*:276*//*278:*/
-#line 7192 "weaver-interface-metafont.cweb"
+#line 7193 "weaver-interface-metafont.cweb"
 
 bool eval_transform_secondary(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
 struct generic_token*end,
 struct transform_variable*result);
 /*:278*//*288:*/
-#line 7386 "weaver-interface-metafont.cweb"
+#line 7387 "weaver-interface-metafont.cweb"
 
 bool eval_transform_primary(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
 struct generic_token*end,
 struct transform_variable*result);
 /*:288*//*302:*/
-#line 7742 "weaver-interface-metafont.cweb"
+#line 7743 "weaver-interface-metafont.cweb"
 
 int count_path_joins(struct generic_token*begin,struct generic_token*end);
 /*:302*//*304:*/
-#line 7786 "weaver-interface-metafont.cweb"
+#line 7787 "weaver-interface-metafont.cweb"
 
 bool eval_path_expression(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
 struct generic_token*end,
 struct path_variable*result);
 /*:304*//*318:*/
-#line 8253 "weaver-interface-metafont.cweb"
+#line 8254 "weaver-interface-metafont.cweb"
 
 bool eval_direction_specifier(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
 struct generic_token*end,float*w_x,
 float*w_y);
 /*:318*//*337:*/
-#line 8896 "weaver-interface-metafont.cweb"
+#line 8897 "weaver-interface-metafont.cweb"
 
 bool eval_path_tertiary(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
 struct generic_token*end,
 struct path_variable*result);
 /*:337*//*339:*/
-#line 8979 "weaver-interface-metafont.cweb"
+#line 8980 "weaver-interface-metafont.cweb"
 
 bool eval_path_secondary(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
 struct generic_token*end,
 struct path_variable*result);
 /*:339*//*342:*/
-#line 9111 "weaver-interface-metafont.cweb"
+#line 9112 "weaver-interface-metafont.cweb"
 
 void path_rotate(struct path_variable*p,double sin_theta,
 double cos_theta);
 /*:342*//*345:*/
-#line 9153 "weaver-interface-metafont.cweb"
+#line 9154 "weaver-interface-metafont.cweb"
 
 void path_xyscale(struct path_variable*p,float x,float y);
 /*:345*//*348:*/
-#line 9192 "weaver-interface-metafont.cweb"
+#line 9193 "weaver-interface-metafont.cweb"
 
 void path_shift(struct path_variable*p,float x,float y);
 /*:348*//*351:*/
-#line 9226 "weaver-interface-metafont.cweb"
+#line 9227 "weaver-interface-metafont.cweb"
 
 void path_slant(struct path_variable*p,float s);
 /*:351*//*356:*/
-#line 9292 "weaver-interface-metafont.cweb"
+#line 9293 "weaver-interface-metafont.cweb"
 
 void path_zscale(struct path_variable*p,float x,float y);
 /*:356*//*359:*/
-#line 9336 "weaver-interface-metafont.cweb"
+#line 9337 "weaver-interface-metafont.cweb"
 
 void path_transform(struct path_variable*p,float*M);
 /*:359*//*363:*/
-#line 9403 "weaver-interface-metafont.cweb"
+#line 9404 "weaver-interface-metafont.cweb"
 
 bool eval_path_primary(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
 struct generic_token*end,
 struct path_variable*result);
 /*:363*//*366:*/
-#line 9463 "weaver-interface-metafont.cweb"
+#line 9464 "weaver-interface-metafont.cweb"
 
 bool reverse_path(struct metafont*mf,struct context*cx,
 struct path_variable*dst,
 struct path_variable*origin);
 /*:366*//*375:*/
-#line 9782 "weaver-interface-metafont.cweb"
+#line 9783 "weaver-interface-metafont.cweb"
 
 struct path_points*get_point(struct path_variable*v,int n);
 /*:375*//*377:*/
-#line 9808 "weaver-interface-metafont.cweb"
+#line 9809 "weaver-interface-metafont.cweb"
 
 struct path_points*_get_point(struct path_variable*v,int n,int*count);
 /*:377*//*381:*/
-#line 9947 "weaver-interface-metafont.cweb"
+#line 9948 "weaver-interface-metafont.cweb"
 
 bool assign_pen_variable(struct metafont*mf,struct context*cx,
 struct pen_variable*target,
 struct pen_variable*source);
 /*:381*//*383:*/
-#line 10007 "weaver-interface-metafont.cweb"
+#line 10008 "weaver-interface-metafont.cweb"
 
 bool eval_pen_expression(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
 struct generic_token*end,
 struct pen_variable*result);
 /*:383*//*385:*/
-#line 10057 "weaver-interface-metafont.cweb"
+#line 10058 "weaver-interface-metafont.cweb"
 
 bool eval_pen_secondary(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
 struct generic_token*end,
 struct pen_variable*result);
 /*:385*//*397:*/
-#line 10297 "weaver-interface-metafont.cweb"
+#line 10298 "weaver-interface-metafont.cweb"
 
 bool eval_pen_primary(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
 struct generic_token*end,
 struct pen_variable*result);
 /*:397*//*405:*/
-#line 10473 "weaver-interface-metafont.cweb"
+#line 10474 "weaver-interface-metafont.cweb"
 
 int read_flags(struct path_variable*path);
 /*:405*//*422:*/
-#line 10922 "weaver-interface-metafont.cweb"
+#line 10923 "weaver-interface-metafont.cweb"
 
 GLuint compile_shader_program(const char*vertex_shader_source,
 const char*fragment_shader_source);
 /*:422*//*426:*/
-#line 11001 "weaver-interface-metafont.cweb"
+#line 11002 "weaver-interface-metafont.cweb"
 
 bool get_new_framebuffer(GLuint*new_framebuffer,GLuint*new_texture,
 int width,int height);
 /*:426*//*428:*/
-#line 11034 "weaver-interface-metafont.cweb"
+#line 11035 "weaver-interface-metafont.cweb"
 
 void render_picture(struct picture_variable*pic,float*matrix,int dst_width,
 int dst_height,bool clear_background);
 
 void print_picture(struct picture_variable*pic);
 /*:428*//*430:*/
-#line 11091 "weaver-interface-metafont.cweb"
+#line 11092 "weaver-interface-metafont.cweb"
 
 bool assign_picture_variable(struct metafont*mf,struct context*cx,
 struct picture_variable*target,
 struct picture_variable*source);
 /*:430*//*432:*/
-#line 11154 "weaver-interface-metafont.cweb"
+#line 11155 "weaver-interface-metafont.cweb"
 
 bool eval_picture_expression(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
 struct generic_token*end,
 struct picture_variable*result);
 /*:432*//*439:*/
-#line 11415 "weaver-interface-metafont.cweb"
+#line 11416 "weaver-interface-metafont.cweb"
 
 bool eval_picture_secondary(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
@@ -1948,49 +1948,49 @@ struct generic_token*end,
 struct picture_variable*result,
 float*matrix,bool*modified);
 /*:439*//*449:*/
-#line 11598 "weaver-interface-metafont.cweb"
+#line 11599 "weaver-interface-metafont.cweb"
 
 bool apply_image_transformation(struct metafont*mf,
 struct picture_variable*dst,
 struct picture_variable*origin,
 float*matrix);
 /*:449*//*453:*/
-#line 11727 "weaver-interface-metafont.cweb"
+#line 11728 "weaver-interface-metafont.cweb"
 
 bool eval_picture_primary(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
 struct generic_token*end,
 struct picture_variable*result);
 /*:453*//*471:*/
-#line 12265 "weaver-interface-metafont.cweb"
+#line 12266 "weaver-interface-metafont.cweb"
 
 bool eval_boolean_expression(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
 struct generic_token*end,
 struct boolean_variable*result);
 /*:471*//*475:*/
-#line 12500 "weaver-interface-metafont.cweb"
+#line 12501 "weaver-interface-metafont.cweb"
 
 bool eval_boolean_tertiary(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
 struct generic_token*end,
 struct boolean_variable*result);
 /*:475*//*477:*/
-#line 12567 "weaver-interface-metafont.cweb"
+#line 12568 "weaver-interface-metafont.cweb"
 
 bool eval_boolean_secondary(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
 struct generic_token*end,
 struct boolean_variable*result);
 /*:477*//*481:*/
-#line 12655 "weaver-interface-metafont.cweb"
+#line 12656 "weaver-interface-metafont.cweb"
 
 bool eval_boolean_primary(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
 struct generic_token*end,
 struct boolean_variable*result);
 /*:481*//*483:*/
-#line 12782 "weaver-interface-metafont.cweb"
+#line 12783 "weaver-interface-metafont.cweb"
 
 int get_primary_expression_type(struct metafont*mf,struct context*cx,
 struct generic_token*begin_expr,
@@ -2002,58 +2002,58 @@ int get_tertiary_expression_type(struct metafont*mf,struct context*cx,
 struct generic_token*begin_expr,
 struct generic_token*end_expr);
 /*:483*//*508:*/
-#line 13657 "weaver-interface-metafont.cweb"
+#line 13658 "weaver-interface-metafont.cweb"
 
 void pencircular_extremity_points(struct context*cx,
 float*matrix,bool fullcircle);
 /*:508*//*510:*/
-#line 13849 "weaver-interface-metafont.cweb"
+#line 13850 "weaver-interface-metafont.cweb"
 
 void path_extremity_points(struct context*cx,
 struct path_variable*p,float*matrix);
 /*:510*//*513:*/
-#line 13985 "weaver-interface-metafont.cweb"
+#line 13986 "weaver-interface-metafont.cweb"
 
 bool is_pen_counterclockwise(struct pen_variable*pen);
 /*:513*//*515:*/
-#line 14048 "weaver-interface-metafont.cweb"
+#line 14049 "weaver-interface-metafont.cweb"
 
 bool triangulate_pen(struct metafont*mf,struct context*cx,
 struct pen_variable*pen,float*transform_matrix);
 /*:515*//*527:*/
-#line 14573 "weaver-interface-metafont.cweb"
+#line 14574 "weaver-interface-metafont.cweb"
 
 void destroy_vertex_linked_list(struct polygon_vertex*poly);
 /*:527*//*529:*/
-#line 14595 "weaver-interface-metafont.cweb"
+#line 14596 "weaver-interface-metafont.cweb"
 
 struct polygon_vertex*polygon_from_pen(struct metafont*mf,
 struct pen_variable*,
 float*transform_matrix,
 int*number_of_vertices);
 /*:529*//*531:*/
-#line 14750 "weaver-interface-metafont.cweb"
+#line 14751 "weaver-interface-metafont.cweb"
 
 bool is_xmonotone(struct polygon_vertex*poly);
 /*:531*//*535:*/
-#line 14898 "weaver-interface-metafont.cweb"
+#line 14899 "weaver-interface-metafont.cweb"
 
 static bool triangulate_xmonotone_polygon(struct polygon_vertex*p,
 float**triangles,
 int*number_of_triangles,
 struct polygon_vertex**stack);
 /*:535*//*545:*/
-#line 15317 "weaver-interface-metafont.cweb"
+#line 15318 "weaver-interface-metafont.cweb"
 
 void prepare_non_monotonous(struct polygon_vertex*p,int number_of_vertices);
 /*:545*//*547:*/
-#line 15365 "weaver-interface-metafont.cweb"
+#line 15366 "weaver-interface-metafont.cweb"
 
 static bool is_turning_left(struct polygon_vertex*p1,
 struct polygon_vertex*p2,
 struct polygon_vertex*p3);
 /*:547*//*550:*/
-#line 15443 "weaver-interface-metafont.cweb"
+#line 15444 "weaver-interface-metafont.cweb"
 
 static struct polygon_edge*insert_polygon_edge(struct polygon_edge**,
 float,float,float,float,
@@ -2063,15 +2063,15 @@ struct polygon_edge*),
 bool(*)(struct polygon_edge*,
 struct polygon_edge*));
 /*:550*//*552:*/
-#line 15504 "weaver-interface-metafont.cweb"
+#line 15505 "weaver-interface-metafont.cweb"
 
 static bool leq_by_vertex(struct polygon_edge*,struct polygon_edge*);
 /*:552*//*554:*/
-#line 15569 "weaver-interface-metafont.cweb"
+#line 15570 "weaver-interface-metafont.cweb"
 
 static bool eq_by_vertex(struct polygon_edge*,struct polygon_edge*);
 /*:554*//*556:*/
-#line 15584 "weaver-interface-metafont.cweb"
+#line 15585 "weaver-interface-metafont.cweb"
 
 static struct polygon_edge*remove_polygon_edge(struct polygon_edge**,
 float,float,float,float,
@@ -2080,23 +2080,23 @@ struct polygon_edge*),
 bool(*)(struct polygon_edge*,
 struct polygon_edge*));
 /*:556*//*558:*/
-#line 15657 "weaver-interface-metafont.cweb"
+#line 15658 "weaver-interface-metafont.cweb"
 
 static struct polygon_edge*find_edge_below(struct polygon_edge*,
 float,float);
 /*:558*//*560:*/
-#line 15691 "weaver-interface-metafont.cweb"
+#line 15692 "weaver-interface-metafont.cweb"
 
 static bool cut_polygon(struct polygon_vertex*v1,struct polygon_vertex*v2,
 struct polygon_vertex**new1,
 struct polygon_vertex**new2);
 /*:560*//*563:*/
-#line 15828 "weaver-interface-metafont.cweb"
+#line 15829 "weaver-interface-metafont.cweb"
 
 static bool leq_by_helper(struct polygon_edge*p1,struct polygon_edge*p2);
 static bool eq_by_helper(struct polygon_edge*p1,struct polygon_edge*p2);
 /*:563*//*566:*/
-#line 15902 "weaver-interface-metafont.cweb"
+#line 15903 "weaver-interface-metafont.cweb"
 
 static void triangulate_polygon_tree(struct polygon_edge*tree,
 float**triangles,
@@ -2112,23 +2112,23 @@ print_tree(tree->right);
 else printf("right nil\n");
 }
 /*:566*//*606:*/
-#line 16878 "weaver-interface-metafont.cweb"
+#line 16879 "weaver-interface-metafont.cweb"
 
 bool drawing_commands(struct metafont*mf,struct context*cx,
 struct path_variable*path,unsigned int flags);
 /*:606*//*608:*/
-#line 16963 "weaver-interface-metafont.cweb"
+#line 16964 "weaver-interface-metafont.cweb"
 
 void drawpoint(struct context*cx,
 struct pen_variable*pen,struct picture_variable*pic,
 float x,float y,float*matrix,bool erasing);
 /*:608*//*617:*/
-#line 17192 "weaver-interface-metafont.cweb"
+#line 17193 "weaver-interface-metafont.cweb"
 
 static struct _glyph*get_glyph(struct metafont*mf,unsigned char*utf8,
 bool create_if_not_exist);
 /*:617*//*670:*/
-#line 18935 "weaver-interface-metafont.cweb"
+#line 18936 "weaver-interface-metafont.cweb"
 
 void token_to_string(struct generic_token*tok,char*dst);
 void tokenid_to_string(int token_id,char*dst);
@@ -3108,18 +3108,18 @@ INITIALIZE_IDENTITY_MATRIX(mf->internal_pen_variables[0].gl_matrix);
 
 mf->have_stored_normaldeviate= false;
 /*:240*//*590:*/
-#line 16624 "weaver-interface-metafont.cweb"
+#line 16625 "weaver-interface-metafont.cweb"
 
 mf->mono_expr_begin= mf->mono_expr_end= NULL;
 /*:590*//*616:*/
-#line 17182 "weaver-interface-metafont.cweb"
+#line 17183 "weaver-interface-metafont.cweb"
 
 memset(mf->glyphs,0,sizeof(struct _glyph*)*332);
 mf->first_glyph= NULL;
 memset(mf->first_glyph_symbol,0,5);
 mf->number_of_glyphs= 0;
 /*:616*//*665:*/
-#line 18803 "weaver-interface-metafont.cweb"
+#line 18804 "weaver-interface-metafont.cweb"
 
 mf->err= mf->errno_line= 0;
 mf->errno_character[0]= '\0';
@@ -3196,22 +3196,22 @@ cx->currentpicture->width= -1;
 cx->currentpicture->height= -1;
 cx->currentpicture->texture= 0;
 /*:197*//*504:*/
-#line 13590 "weaver-interface-metafont.cweb"
+#line 13591 "weaver-interface-metafont.cweb"
 
 cx->pen_lft= cx->pen_rt= cx->pen_top= cx->pen_bot= 0.0;
 /*:504*//*583:*/
-#line 16502 "weaver-interface-metafont.cweb"
+#line 16503 "weaver-interface-metafont.cweb"
 
 cx->color[0]= mf->internal_numeric_variables[INTERNAL_NUMERIC_R].value;
 cx->color[1]= mf->internal_numeric_variables[INTERNAL_NUMERIC_G].value;
 cx->color[2]= mf->internal_numeric_variables[INTERNAL_NUMERIC_B].value;
 cx->color[3]= mf->internal_numeric_variables[INTERNAL_NUMERIC_A].value;
 /*:583*//*595:*/
-#line 16686 "weaver-interface-metafont.cweb"
+#line 16687 "weaver-interface-metafont.cweb"
 
 cx->currentpicture_fb= 0;
 /*:595*//*610:*/
-#line 17001 "weaver-interface-metafont.cweb"
+#line 17002 "weaver-interface-metafont.cweb"
 
 cx->current_depth= 0;
 /*:610*/
@@ -3327,7 +3327,7 @@ struct generic_token*end_list){
 struct generic_token*begin,*end= NULL;
 begin= begin_list;
 /*599:*/
-#line 16760 "weaver-interface-metafont.cweb"
+#line 16761 "weaver-interface-metafont.cweb"
 
 GLint _viewport[4];
 glGetIntegerv(GL_VIEWPORT,_viewport);
@@ -3362,7 +3362,7 @@ begin= NULL;
 }
 }
 /*600:*/
-#line 16769 "weaver-interface-metafont.cweb"
+#line 16770 "weaver-interface-metafont.cweb"
 
 glBindFramebuffer(GL_FRAMEBUFFER,previous_fb);
 glViewport(_viewport[0],_viewport[1],_viewport[2],_viewport[3]);
@@ -3395,7 +3395,7 @@ return false;
 return true;
 }
 /*:95*//*489:*/
-#line 13181 "weaver-interface-metafont.cweb"
+#line 13182 "weaver-interface-metafont.cweb"
 
 else if(begin->type==TYPE_IF){
 struct generic_token*begin_bool,*end_bool;
@@ -3468,7 +3468,7 @@ RAISE_ERROR_INCOMPLETE_SOURCE(mf,cx,OPTIONAL(begin->line));
 return false;
 }
 /*:489*//*490:*/
-#line 13267 "weaver-interface-metafont.cweb"
+#line 13268 "weaver-interface-metafont.cweb"
 
 else if(begin->type==TYPE_ELSEIF||begin->type==TYPE_ELSE){
 struct generic_token*t;
@@ -3486,14 +3486,14 @@ RAISE_ERROR_INCOMPLETE_SOURCE(mf,cx,OPTIONAL(begin->line));
 return false;
 }
 /*:490*//*491:*/
-#line 13289 "weaver-interface-metafont.cweb"
+#line 13290 "weaver-interface-metafont.cweb"
 
 else if(begin->type==TYPE_FI){
 *end= begin;
 return true;
 }
 /*:491*//*494:*/
-#line 13346 "weaver-interface-metafont.cweb"
+#line 13347 "weaver-interface-metafont.cweb"
 
 else if(begin->type==TYPE_FOR){
 struct numeric_variable*control;
@@ -3503,7 +3503,7 @@ struct generic_token*current_token= begin,*begin_expr,*end_expr;
 if(!(for_token->running)){
 begin_nesting_level(mf,cx,begin);
 /*495:*/
-#line 13365 "weaver-interface-metafont.cweb"
+#line 13366 "weaver-interface-metafont.cweb"
 
 {
 struct symbolic_token*var_token= (struct symbolic_token*)for_token->next;
@@ -3531,7 +3531,7 @@ return false;
 for_token->control_var= &(control->value);
 }
 /*:495*//*496:*/
-#line 13396 "weaver-interface-metafont.cweb"
+#line 13397 "weaver-interface-metafont.cweb"
 
 {
 current_token= for_token->next->next;
@@ -3547,7 +3547,7 @@ return false;
 }
 }
 /*:496*//*497:*/
-#line 13419 "weaver-interface-metafont.cweb"
+#line 13420 "weaver-interface-metafont.cweb"
 
 {
 begin_expr= current_token->next;
@@ -3563,11 +3563,11 @@ return false;
 current_token= end_expr;
 }
 /*:497*/
-#line 13354 "weaver-interface-metafont.cweb"
+#line 13355 "weaver-interface-metafont.cweb"
 
 }
 /*498:*/
-#line 13443 "weaver-interface-metafont.cweb"
+#line 13444 "weaver-interface-metafont.cweb"
 
 {
 while(current_token!=NULL&&current_token->type!=TYPE_STEP)
@@ -3600,7 +3600,7 @@ for_token->running= true;
 current_token= end_expr;
 }
 /*:498*//*499:*/
-#line 13480 "weaver-interface-metafont.cweb"
+#line 13481 "weaver-interface-metafont.cweb"
 
 {
 struct numeric_variable limit;
@@ -3642,11 +3642,11 @@ return true;
 }
 }
 /*:499*/
-#line 13356 "weaver-interface-metafont.cweb"
+#line 13357 "weaver-interface-metafont.cweb"
 
 }
 /*:494*//*500:*/
-#line 13530 "weaver-interface-metafont.cweb"
+#line 13531 "weaver-interface-metafont.cweb"
 
 else if(begin->type==TYPE_ENDFOR){
 struct linked_token*endfor_token= (struct linked_token*)begin;
@@ -3654,7 +3654,7 @@ struct linked_token*endfor_token= (struct linked_token*)begin;
 return true;
 }
 /*:500*//*620:*/
-#line 17369 "weaver-interface-metafont.cweb"
+#line 17370 "weaver-interface-metafont.cweb"
 
 else if(begin->type==TYPE_BEGINCHAR&&mf->loading){
 DECLARE_NESTING_CONTROL();
@@ -3739,14 +3739,14 @@ mf->number_of_glyphs++;
 return true;
 }
 /*:620*//*621:*/
-#line 17461 "weaver-interface-metafont.cweb"
+#line 17462 "weaver-interface-metafont.cweb"
 
 else if(begin->type==TYPE_ENDCHAR&&mf->loading){
 RAISE_ERROR_UNEXPECTED_TOKEN(mf,cx,OPTIONAL(begin->line),begin);
 return false;
 }
 /*:621*//*623:*/
-#line 17495 "weaver-interface-metafont.cweb"
+#line 17496 "weaver-interface-metafont.cweb"
 
 else if(begin->type==TYPE_BEGINCHAR){
 DECLARE_NESTING_CONTROL();
@@ -3765,7 +3765,7 @@ return false;
 }
 cx->current_glyph= str->glyph;
 /*649:*/
-#line 18359 "weaver-interface-metafont.cweb"
+#line 18360 "weaver-interface-metafont.cweb"
 
 {
 struct kerning*existing_kerning= cx->current_glyph->kern;
@@ -3775,7 +3775,7 @@ existing_kerning= existing_kerning->next;
 }
 }
 /*:649*/
-#line 17512 "weaver-interface-metafont.cweb"
+#line 17513 "weaver-interface-metafont.cweb"
 
 memset(cx->current_character,0,5);
 memcpy(cx->current_character,str->value,4);
@@ -3838,7 +3838,7 @@ vars[INTERNAL_NUMERIC_W].value= round(width.value);
 vars[INTERNAL_NUMERIC_H].value= round(height.value);
 vars[INTERNAL_NUMERIC_D].value= round(depth.value);
 #else
-#line 17574 "weaver-interface-metafont.cweb"
+#line 17575 "weaver-interface-metafont.cweb"
  cx->current_depth= 2*round(depth.value);
 pic->width= 2*round(width.value);
 pic->height= 2*(round(height.value)+round(depth.value));
@@ -3846,7 +3846,7 @@ vars[INTERNAL_NUMERIC_W].value= 2*round(width.value);
 vars[INTERNAL_NUMERIC_H].value= 2*round(height.value);
 vars[INTERNAL_NUMERIC_D].value= 2*round(depth.value);
 #endif
-#line 17581 "weaver-interface-metafont.cweb"
+#line 17582 "weaver-interface-metafont.cweb"
  size= pic->width*pic->height*4;
 data= temporary_alloc(size);
 if(data==NULL){
@@ -3872,7 +3872,7 @@ glBindTexture(GL_TEXTURE_2D,0);
 if(temporary_free!=NULL)
 temporary_free(data);
 /*597:*/
-#line 16726 "weaver-interface-metafont.cweb"
+#line 16727 "weaver-interface-metafont.cweb"
 
 {
 if(cx->currentpicture_fb!=0){
@@ -3883,13 +3883,13 @@ glDeleteFramebuffers(1,&(cx->currentpicture_fb));
 cx->currentpicture_fb= 0;
 }
 /*:597*/
-#line 17605 "weaver-interface-metafont.cweb"
+#line 17606 "weaver-interface-metafont.cweb"
 
 }
 return true;
 }
 /*:623*//*624:*/
-#line 17620 "weaver-interface-metafont.cweb"
+#line 17621 "weaver-interface-metafont.cweb"
 
 else if(begin->type==TYPE_ENDCHAR){
 struct picture_variable*currentpicture= cx->currentpicture;
@@ -3905,7 +3905,7 @@ cx->current_glyph->width/= 2;
 cx->current_glyph->depth/= 2;
 cx->current_glyph->height/= 2;
 #endif
-#line 17635 "weaver-interface-metafont.cweb"
+#line 17636 "weaver-interface-metafont.cweb"
  cx->current_glyph->need_rendering= false;
 currentpicture->width= -1;
 currentpicture->height= -1;
@@ -4089,7 +4089,7 @@ var= (struct symbolic_token*)(var->next);
 #line 5382 "weaver-interface-metafont.cweb"
 
 /*273:*/
-#line 7109 "weaver-interface-metafont.cweb"
+#line 7110 "weaver-interface-metafont.cweb"
 
 else if(type==TYPE_T_TRANSFORM){
 int i;
@@ -4108,7 +4108,7 @@ var= (struct symbolic_token*)(var->next);
 #line 5383 "weaver-interface-metafont.cweb"
 
 /*299:*/
-#line 7651 "weaver-interface-metafont.cweb"
+#line 7652 "weaver-interface-metafont.cweb"
 
 else if(type==TYPE_T_PATH){
 int i;
@@ -4144,7 +4144,7 @@ path_recursive_free(temporary_free,&result,false);
 #line 5384 "weaver-interface-metafont.cweb"
 
 /*380:*/
-#line 9924 "weaver-interface-metafont.cweb"
+#line 9925 "weaver-interface-metafont.cweb"
 
 else if(type==TYPE_T_PEN){
 int i;
@@ -4168,7 +4168,7 @@ glDeleteBuffers(1,&(result.gl_vbo));
 #line 5385 "weaver-interface-metafont.cweb"
 
 /*416:*/
-#line 10798 "weaver-interface-metafont.cweb"
+#line 10799 "weaver-interface-metafont.cweb"
 
 else if(type==TYPE_T_PICTURE){
 int i;
@@ -4189,7 +4189,7 @@ pic->type= TYPE_T_PICTURE;
 if(pic==cx->currentpicture){
 
 /*597:*/
-#line 16726 "weaver-interface-metafont.cweb"
+#line 16727 "weaver-interface-metafont.cweb"
 
 {
 if(cx->currentpicture_fb!=0){
@@ -4200,7 +4200,7 @@ glDeleteFramebuffers(1,&(cx->currentpicture_fb));
 cx->currentpicture_fb= 0;
 }
 /*:597*/
-#line 10817 "weaver-interface-metafont.cweb"
+#line 10818 "weaver-interface-metafont.cweb"
 
 }
 }
@@ -4215,7 +4215,7 @@ var= (struct symbolic_token*)(var->next);
 #line 5386 "weaver-interface-metafont.cweb"
 
 /*468:*/
-#line 12202 "weaver-interface-metafont.cweb"
+#line 12203 "weaver-interface-metafont.cweb"
 
 else if(type==TYPE_T_BOOLEAN){
 int i;
@@ -4240,7 +4240,7 @@ return true;
 #line 2558 "weaver-interface-metafont.cweb"
 
 /*573:*/
-#line 16148 "weaver-interface-metafont.cweb"
+#line 16149 "weaver-interface-metafont.cweb"
 
 else if(begin->type==TYPE_PICKUP){
 struct generic_token*end_expression= *end;
@@ -4292,7 +4292,7 @@ cx->currentpen->referenced= var;
 }
 INITIALIZE_IDENTITY_MATRIX(cx->currentpen->gl_matrix);
 /*574:*/
-#line 16213 "weaver-interface-metafont.cweb"
+#line 16214 "weaver-interface-metafont.cweb"
 
 while(next_token!=end_expression){
 struct generic_token*begin_subexpr,*end_subexpr;
@@ -4438,7 +4438,7 @@ return false;
 next_token= end_subexpr;
 }
 /*:574*//*575:*/
-#line 16368 "weaver-interface-metafont.cweb"
+#line 16369 "weaver-interface-metafont.cweb"
 
 {
 float final_transform_matrix[9];
@@ -4459,12 +4459,12 @@ return false;
 }
 }
 /*:575*/
-#line 16198 "weaver-interface-metafont.cweb"
+#line 16199 "weaver-interface-metafont.cweb"
 
 return true;
 }
 /*:573*//*586:*/
-#line 16538 "weaver-interface-metafont.cweb"
+#line 16539 "weaver-interface-metafont.cweb"
 
 else if(begin->type==TYPE_PICKCOLOR){
 struct numeric_variable result;
@@ -4511,7 +4511,7 @@ begin_expr= end_expr->next->next;
 return true;
 }
 /*:586*//*591:*/
-#line 16632 "weaver-interface-metafont.cweb"
+#line 16633 "weaver-interface-metafont.cweb"
 
 else if(begin->type==TYPE_MONOWIDTH){
 if(begin==*end){
@@ -4523,7 +4523,7 @@ mf->mono_expr_end= *end;
 return true;
 }
 /*:591*//*605:*/
-#line 16850 "weaver-interface-metafont.cweb"
+#line 16851 "weaver-interface-metafont.cweb"
 
 else if(begin->type==TYPE_DRAW){
 struct path_variable path;
@@ -4548,14 +4548,14 @@ path_recursive_free(temporary_free,&path,false);
 return true;
 }
 /*:605*//*633:*/
-#line 17869 "weaver-interface-metafont.cweb"
+#line 17870 "weaver-interface-metafont.cweb"
 
 else if(begin->type==TYPE_SHIPIT&&mf->loading){
 RAISE_ERROR_UNEXPECTED_TOKEN(mf,cx,OPTIONAL(begin->line),begin);
 return false;
 }
 /*:633*//*634:*/
-#line 17883 "weaver-interface-metafont.cweb"
+#line 17884 "weaver-interface-metafont.cweb"
 
 else if(begin->type==TYPE_SHIPIT){
 struct picture_variable*currentpicture;
@@ -4580,7 +4580,7 @@ cx->current_glyph->width/= 2;
 cx->current_glyph->depth/= 2;
 cx->current_glyph->height/= 2;
 #endif
-#line 17907 "weaver-interface-metafont.cweb"
+#line 17908 "weaver-interface-metafont.cweb"
  currentpicture->width= -1;
 currentpicture->height= -1;
 currentpicture->texture= 0;
@@ -4600,21 +4600,21 @@ end_nesting_level(mf,cx,(struct generic_token*)aux);
 return true;
 }
 /*:634*//*637:*/
-#line 17976 "weaver-interface-metafont.cweb"
+#line 17977 "weaver-interface-metafont.cweb"
 
 else if(begin->type==TYPE_RENDERCHAR&&mf->loading){
 RAISE_ERROR_UNEXPECTED_TOKEN(mf,cx,OPTIONAL(begin->line),begin);
 return false;
 }
 /*:637*//*638:*/
-#line 17988 "weaver-interface-metafont.cweb"
+#line 17989 "weaver-interface-metafont.cweb"
 
 else if(begin->type==TYPE_RENDERCHAR){
 struct _glyph*glyph;
 struct string_token*str;
 struct pair_variable p1,p2;
 /*639:*/
-#line 18003 "weaver-interface-metafont.cweb"
+#line 18004 "weaver-interface-metafont.cweb"
 
 {
 str= (struct string_token*)(begin->next);
@@ -4640,7 +4640,7 @@ str->glyph= glyph;
 }
 }
 /*:639*//*640:*/
-#line 18036 "weaver-interface-metafont.cweb"
+#line 18037 "weaver-interface-metafont.cweb"
 
 if(glyph->is_being_rendered){
 RAISE_ERROR_RECURSIVE_RENDERCHAR(mf,cx,OPTIONAL(str->line),
@@ -4648,7 +4648,7 @@ str->value);
 return false;
 }
 /*:640*//*641:*/
-#line 18047 "weaver-interface-metafont.cweb"
+#line 18048 "weaver-interface-metafont.cweb"
 
 if(glyph->need_rendering){
 struct context*new_cx;
@@ -4666,10 +4666,10 @@ glyph->is_being_rendered= false;
 destroy_context(new_cx);
 }
 /*:641*/
-#line 17993 "weaver-interface-metafont.cweb"
+#line 17994 "weaver-interface-metafont.cweb"
 
 /*642:*/
-#line 18070 "weaver-interface-metafont.cweb"
+#line 18071 "weaver-interface-metafont.cweb"
 
 {
 DECLARE_NESTING_CONTROL();
@@ -4742,7 +4742,7 @@ return false;
 }
 }
 /*:642*//*643:*/
-#line 18156 "weaver-interface-metafont.cweb"
+#line 18157 "weaver-interface-metafont.cweb"
 
 {
 float gl_matrix[9];
@@ -4782,7 +4782,7 @@ gl_matrix[7]= 2*(gl_matrix[7]/current_height);
 gl_matrix[7]+= 2*(current_depth/current_height);
 }
 /*596:*/
-#line 16694 "weaver-interface-metafont.cweb"
+#line 16695 "weaver-interface-metafont.cweb"
 
 {
 if(cx->currentpicture_fb==0){
@@ -4811,7 +4811,7 @@ else
 glBindFramebuffer(GL_FRAMEBUFFER,cx->currentpicture_fb);
 }
 /*:596*/
-#line 18194 "weaver-interface-metafont.cweb"
+#line 18195 "weaver-interface-metafont.cweb"
 
 glEnable(GL_BLEND);
 glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
@@ -4833,19 +4833,19 @@ if(glyph->need_rendering)
 glDeleteTextures(1,&(glyph->texture));
 }
 /*:643*/
-#line 17994 "weaver-interface-metafont.cweb"
+#line 17995 "weaver-interface-metafont.cweb"
 
 return true;
 }
 /*:638*//*646:*/
-#line 18248 "weaver-interface-metafont.cweb"
+#line 18249 "weaver-interface-metafont.cweb"
 
 else if(begin->type==TYPE_KERNING&&mf->loading){
 RAISE_ERROR_UNEXPECTED_TOKEN(mf,cx,OPTIONAL(begin->line),begin);
 return false;
 }
 /*:646*//*647:*/
-#line 18263 "weaver-interface-metafont.cweb"
+#line 18264 "weaver-interface-metafont.cweb"
 
 else if(begin->type==TYPE_KERNING){
 struct generic_token*str,*begin_expr,*end_expr;
@@ -4902,7 +4902,7 @@ return false;
 if(!eval_numeric_expression(mf,cx,begin_expr,end_expr,&numeric_result))
 return false;
 /*648:*/
-#line 18327 "weaver-interface-metafont.cweb"
+#line 18328 "weaver-interface-metafont.cweb"
 
 {
 struct kerning*new_kerning,*existing_kerning;
@@ -4928,11 +4928,11 @@ cx->current_glyph->kern= new_kerning;
 return true;
 }
 /*:648*/
-#line 18318 "weaver-interface-metafont.cweb"
+#line 18319 "weaver-interface-metafont.cweb"
 
 }
 /*:647*//*652:*/
-#line 18403 "weaver-interface-metafont.cweb"
+#line 18404 "weaver-interface-metafont.cweb"
 
 else if(begin->type==TYPE_DEBUG){
 #if defined(W_DEBUG_METAFONT)
@@ -4946,7 +4946,7 @@ type= get_tertiary_expression_type(mf,cx,begin_expr,end_expr);
 switch(type){
 case TYPE_T_NUMERIC:
 /*653:*/
-#line 18449 "weaver-interface-metafont.cweb"
+#line 18450 "weaver-interface-metafont.cweb"
 
 {
 struct numeric_variable result;
@@ -4957,12 +4957,12 @@ begin_expr->line,result.value);
 return true;
 }
 /*:653*/
-#line 18415 "weaver-interface-metafont.cweb"
+#line 18416 "weaver-interface-metafont.cweb"
 
 break;
 case TYPE_T_PAIR:
 /*654:*/
-#line 18462 "weaver-interface-metafont.cweb"
+#line 18463 "weaver-interface-metafont.cweb"
 
 {
 struct pair_variable result;
@@ -4973,12 +4973,12 @@ begin_expr->line,result.x,result.y);
 return true;
 }
 /*:654*/
-#line 18418 "weaver-interface-metafont.cweb"
+#line 18419 "weaver-interface-metafont.cweb"
 
 break;
 case TYPE_T_TRANSFORM:
 /*655:*/
-#line 18475 "weaver-interface-metafont.cweb"
+#line 18476 "weaver-interface-metafont.cweb"
 
 {
 struct transform_variable result;
@@ -4992,12 +4992,12 @@ result.value[7],result.value[8]);
 return true;
 }
 /*:655*/
-#line 18421 "weaver-interface-metafont.cweb"
+#line 18422 "weaver-interface-metafont.cweb"
 
 break;
 case TYPE_T_PATH:
 /*656:*/
-#line 18491 "weaver-interface-metafont.cweb"
+#line 18492 "weaver-interface-metafont.cweb"
 
 {
 struct path_variable result;
@@ -5020,12 +5020,12 @@ printf("\n");
 return true;
 }
 /*:656*/
-#line 18424 "weaver-interface-metafont.cweb"
+#line 18425 "weaver-interface-metafont.cweb"
 
 break;
 case TYPE_T_PEN:
 /*657:*/
-#line 18516 "weaver-interface-metafont.cweb"
+#line 18517 "weaver-interface-metafont.cweb"
 
 {
 struct pen_variable result;
@@ -5070,12 +5070,12 @@ result.gl_matrix[3],result.gl_matrix[1],result.gl_matrix[4]);
 return true;
 }
 /*:657*/
-#line 18427 "weaver-interface-metafont.cweb"
+#line 18428 "weaver-interface-metafont.cweb"
 
 break;
 case TYPE_T_PICTURE:
 /*658:*/
-#line 18571 "weaver-interface-metafont.cweb"
+#line 18572 "weaver-interface-metafont.cweb"
 
 {
 struct picture_variable result;
@@ -5086,12 +5086,12 @@ printf("nullpicture(%d, %d)\n",result.width,result.height);
 return true;
 }
 /*:658*/
-#line 18430 "weaver-interface-metafont.cweb"
+#line 18431 "weaver-interface-metafont.cweb"
 
 break;
 case TYPE_T_BOOLEAN:
 /*659:*/
-#line 18586 "weaver-interface-metafont.cweb"
+#line 18587 "weaver-interface-metafont.cweb"
 
 {
 struct boolean_variable result;
@@ -5105,7 +5105,7 @@ printf("false\n");
 return true;
 }
 /*:659*/
-#line 18433 "weaver-interface-metafont.cweb"
+#line 18434 "weaver-interface-metafont.cweb"
 
 break;
 default:
@@ -5114,10 +5114,10 @@ type);
 return false;
 }
 #else
-#line 18441 "weaver-interface-metafont.cweb"
+#line 18442 "weaver-interface-metafont.cweb"
  return true;
 #endif
-#line 18443 "weaver-interface-metafont.cweb"
+#line 18444 "weaver-interface-metafont.cweb"
 }
 /*:652*/
 #line 2559 "weaver-interface-metafont.cweb"
@@ -6273,7 +6273,7 @@ result->value= ((num.value> 0)?(num.value):(-num.value));
 return true;
 }
 /*269:*/
-#line 7029 "weaver-interface-metafont.cweb"
+#line 7030 "weaver-interface-metafont.cweb"
 
 else if(expr_type==TYPE_T_PAIR){
 struct pair_variable p;
@@ -6283,7 +6283,7 @@ result->value= (float)hypot(p.x,p.y);
 return true;
 }
 /*:269*//*372:*/
-#line 9734 "weaver-interface-metafont.cweb"
+#line 9735 "weaver-interface-metafont.cweb"
 
 else if(expr_type==TYPE_T_PATH){
 struct path_variable p;
@@ -6413,7 +6413,7 @@ return true;
 #line 5871 "weaver-interface-metafont.cweb"
 
 /*270:*/
-#line 7045 "weaver-interface-metafont.cweb"
+#line 7046 "weaver-interface-metafont.cweb"
 
 else if(begin->type==TYPE_XPART){
 struct pair_variable p;
@@ -6426,7 +6426,7 @@ return true;
 }
 else{
 /*296:*/
-#line 7597 "weaver-interface-metafont.cweb"
+#line 7598 "weaver-interface-metafont.cweb"
 
 struct transform_variable t;
 if(!eval_transform_primary(mf,cx,begin->next,end,&t))
@@ -6434,12 +6434,12 @@ return false;
 result->value= t.value[6];
 return true;
 /*:296*/
-#line 7056 "weaver-interface-metafont.cweb"
+#line 7057 "weaver-interface-metafont.cweb"
 
 }
 }
 /*:270*//*271:*/
-#line 7065 "weaver-interface-metafont.cweb"
+#line 7066 "weaver-interface-metafont.cweb"
 
 else if(begin->type==TYPE_YPART){
 struct pair_variable p;
@@ -6452,7 +6452,7 @@ return true;
 }
 else{
 /*297:*/
-#line 7607 "weaver-interface-metafont.cweb"
+#line 7608 "weaver-interface-metafont.cweb"
 
 struct transform_variable t;
 if(!eval_transform_primary(mf,cx,begin->next,end,&t))
@@ -6460,12 +6460,12 @@ return false;
 result->value= t.value[7];
 return true;
 /*:297*/
-#line 7076 "weaver-interface-metafont.cweb"
+#line 7077 "weaver-interface-metafont.cweb"
 
 }
 }
 /*:271*//*272:*/
-#line 7086 "weaver-interface-metafont.cweb"
+#line 7087 "weaver-interface-metafont.cweb"
 
 else if(begin->type==TYPE_ANGLE){
 struct pair_variable p;
@@ -6480,7 +6480,7 @@ result->value*= 57.2958;
 return true;
 }
 /*:272*//*295:*/
-#line 7574 "weaver-interface-metafont.cweb"
+#line 7575 "weaver-interface-metafont.cweb"
 
 else if(begin->type>=TYPE_XXPART&&begin->type<=TYPE_YYPART){
 struct transform_variable t;
@@ -6497,7 +6497,7 @@ result->value= t.value[4];
 return true;
 }
 /*:295*//*465:*/
-#line 12098 "weaver-interface-metafont.cweb"
+#line 12099 "weaver-interface-metafont.cweb"
 
 else if(begin->type==TYPE_TOTALWEIGHT){
 struct picture_variable p;
@@ -6559,7 +6559,7 @@ glDeleteFramebuffers(1,&temporary_framebuffer);
 return true;
 }
 /*:465*//*466:*/
-#line 12164 "weaver-interface-metafont.cweb"
+#line 12165 "weaver-interface-metafont.cweb"
 
 else if(begin->type==TYPE_WIDTH){
 struct picture_variable p;
@@ -6574,7 +6574,7 @@ result->value= (float)p.width;
 return true;
 }
 /*:466*//*467:*/
-#line 12181 "weaver-interface-metafont.cweb"
+#line 12182 "weaver-interface-metafont.cweb"
 
 else if(begin->type==TYPE_HEIGHT){
 struct picture_variable p;
@@ -7010,7 +7010,7 @@ return true;
 #line 6536 "weaver-interface-metafont.cweb"
 
 /*298:*/
-#line 7632 "weaver-interface-metafont.cweb"
+#line 7633 "weaver-interface-metafont.cweb"
 
 else if(last_mul->type==TYPE_TRANSFORMED){
 struct pair_variable a;
@@ -7131,7 +7131,7 @@ return eval_pair_expression(mf,cx,begin_a,end_a,result);
 
 }
 /*379:*/
-#line 9849 "weaver-interface-metafont.cweb"
+#line 9850 "weaver-interface-metafont.cweb"
 
 if(begin->type==TYPE_POINT||
 begin->type==TYPE_PRECONTROL||
@@ -7201,7 +7201,7 @@ path_recursive_free(temporary_free,&b,false);
 return true;
 }
 /*:379*//*578:*/
-#line 16425 "weaver-interface-metafont.cweb"
+#line 16426 "weaver-interface-metafont.cweb"
 
 else if(begin->type==TYPE_BOT){
 if(!eval_pair_primary(mf,cx,(struct generic_token*)
@@ -7212,7 +7212,7 @@ result->y+= cx->pen_bot;
 return true;
 }
 /*:578*//*579:*/
-#line 16440 "weaver-interface-metafont.cweb"
+#line 16441 "weaver-interface-metafont.cweb"
 
 else if(begin->type==TYPE_TOP){
 if(!eval_pair_primary(mf,cx,(struct generic_token*)
@@ -7223,7 +7223,7 @@ result->y+= cx->pen_top;
 return true;
 }
 /*:579*//*580:*/
-#line 16458 "weaver-interface-metafont.cweb"
+#line 16459 "weaver-interface-metafont.cweb"
 
 else if(begin->type==TYPE_LFT){
 if(!eval_pair_primary(mf,cx,(struct generic_token*)
@@ -7234,7 +7234,7 @@ result->x+= cx->pen_lft;
 return true;
 }
 /*:580*//*581:*/
-#line 16474 "weaver-interface-metafont.cweb"
+#line 16475 "weaver-interface-metafont.cweb"
 
 else if(begin->type==TYPE_RT){
 if(!eval_pair_primary(mf,cx,(struct generic_token*)
@@ -7354,7 +7354,7 @@ RAISE_ERROR_UNKNOWN_EXPRESSION(mf,cx,OPTIONAL(begin->line),TYPE_T_PAIR);
 return false;
 }
 /*:261*//*277:*/
-#line 7181 "weaver-interface-metafont.cweb"
+#line 7182 "weaver-interface-metafont.cweb"
 
 bool eval_transform_expression(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
@@ -7363,7 +7363,7 @@ struct transform_variable*result){
 return eval_transform_secondary(mf,cx,begin,end,result);
 }
 /*:277*//*279:*/
-#line 7208 "weaver-interface-metafont.cweb"
+#line 7209 "weaver-interface-metafont.cweb"
 
 bool eval_transform_secondary(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
@@ -7399,7 +7399,7 @@ return false;
 if(!eval_transform_secondary(mf,cx,begin,end_secondary,result))
 return false;
 /*280:*/
-#line 7257 "weaver-interface-metafont.cweb"
+#line 7258 "weaver-interface-metafont.cweb"
 
 if(last_transform->type==TYPE_ROTATED){
 struct numeric_variable theta;
@@ -7412,7 +7412,7 @@ TRANSFORM_ROTATE(result->value,angle_radian);
 return true;
 }
 /*:280*//*281:*/
-#line 7273 "weaver-interface-metafont.cweb"
+#line 7274 "weaver-interface-metafont.cweb"
 
 else if(last_transform->type==TYPE_SCALED){
 struct numeric_variable scale;
@@ -7422,7 +7422,7 @@ TRANSFORM_SCALE(result->value,scale.value);
 return true;
 }
 /*:281*//*282:*/
-#line 7286 "weaver-interface-metafont.cweb"
+#line 7287 "weaver-interface-metafont.cweb"
 
 else if(last_transform->type==TYPE_SHIFTED){
 struct pair_variable shift;
@@ -7432,7 +7432,7 @@ TRANSFORM_SHIFT(result->value,shift.x,shift.y);
 return true;
 }
 /*:282*//*283:*/
-#line 7299 "weaver-interface-metafont.cweb"
+#line 7300 "weaver-interface-metafont.cweb"
 
 else if(last_transform->type==TYPE_SLANTED){
 struct numeric_variable slant;
@@ -7442,7 +7442,7 @@ TRANSFORM_SLANT(result->value,slant.value);
 return true;
 }
 /*:283*//*284:*/
-#line 7312 "weaver-interface-metafont.cweb"
+#line 7313 "weaver-interface-metafont.cweb"
 
 else if(last_transform->type==TYPE_XSCALED){
 struct numeric_variable scale;
@@ -7452,7 +7452,7 @@ TRANSFORM_SCALE_X(result->value,scale.value);
 return true;
 }
 /*:284*//*285:*/
-#line 7325 "weaver-interface-metafont.cweb"
+#line 7326 "weaver-interface-metafont.cweb"
 
 else if(last_transform->type==TYPE_YSCALED){
 struct numeric_variable scale;
@@ -7462,7 +7462,7 @@ TRANSFORM_SCALE_Y(result->value,scale.value);
 return true;
 }
 /*:285*//*286:*/
-#line 7340 "weaver-interface-metafont.cweb"
+#line 7341 "weaver-interface-metafont.cweb"
 
 else if(last_transform->type==TYPE_ZSCALED){
 struct pair_variable scale;
@@ -7472,7 +7472,7 @@ TRANSFORM_SCALE_Z(result->value,scale.x,scale.y);
 return true;
 }
 /*:286*//*287:*/
-#line 7355 "weaver-interface-metafont.cweb"
+#line 7356 "weaver-interface-metafont.cweb"
 
 else if(last_transform->type==TYPE_TRANSFORMED){
 struct transform_variable b;
@@ -7482,7 +7482,7 @@ MATRIX_MULTIPLICATION(result->value,b.value);
 return true;
 }
 /*:287*/
-#line 7242 "weaver-interface-metafont.cweb"
+#line 7243 "weaver-interface-metafont.cweb"
 
 }
 else
@@ -7492,7 +7492,7 @@ TYPE_T_TRANSFORM);
 return false;
 }
 /*:279*//*289:*/
-#line 7395 "weaver-interface-metafont.cweb"
+#line 7396 "weaver-interface-metafont.cweb"
 
 bool eval_transform_primary(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
@@ -7500,7 +7500,7 @@ struct generic_token*end,
 struct transform_variable*result){
 if(begin==end&&begin->type==TYPE_SYMBOLIC){
 /*290:*/
-#line 7447 "weaver-interface-metafont.cweb"
+#line 7448 "weaver-interface-metafont.cweb"
 
 struct symbolic_token*v= (struct symbolic_token*)begin;
 struct transform_variable*content= v->var;
@@ -7522,7 +7522,7 @@ return false;
 memcpy(result->value,content->value,sizeof(float)*9);
 return true;
 /*:290*/
-#line 7401 "weaver-interface-metafont.cweb"
+#line 7402 "weaver-interface-metafont.cweb"
 
 }
 else if(begin!=end&&begin->type==TYPE_OPEN_PARENTHESIS&&
@@ -7548,7 +7548,7 @@ p= NULL;
 }while(p!=NULL&&p!=end);
 if(has_comma){
 /*292:*/
-#line 7483 "weaver-interface-metafont.cweb"
+#line 7484 "weaver-interface-metafont.cweb"
 
 int i;
 struct generic_token*begin_numeric_expr,*end_numeric_expr;
@@ -7592,19 +7592,19 @@ result->value[6]= values[0];result->value[7]= values[1];
 result->value[8]= 1.0;
 return true;
 /*:292*/
-#line 7425 "weaver-interface-metafont.cweb"
+#line 7426 "weaver-interface-metafont.cweb"
 
 }
 else{
 /*291:*/
-#line 7473 "weaver-interface-metafont.cweb"
+#line 7474 "weaver-interface-metafont.cweb"
 
 struct generic_token*end_expr;
 for(end_expr= begin->next;end_expr->next!=end;
 end_expr= end_expr->next);
 return eval_transform_expression(mf,cx,begin->next,end_expr,result);
 /*:291*/
-#line 7428 "weaver-interface-metafont.cweb"
+#line 7429 "weaver-interface-metafont.cweb"
 
 }
 }
@@ -7613,7 +7613,7 @@ TYPE_T_TRANSFORM);
 return false;
 }
 /*:289*//*303:*/
-#line 7752 "weaver-interface-metafont.cweb"
+#line 7753 "weaver-interface-metafont.cweb"
 
 int count_path_joins(struct generic_token*begin,struct generic_token*end){
 int count= 0;
@@ -7641,7 +7641,7 @@ p= NULL;
 return count;
 }
 /*:303*//*305:*/
-#line 7796 "weaver-interface-metafont.cweb"
+#line 7797 "weaver-interface-metafont.cweb"
 
 bool eval_path_expression(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
@@ -7651,7 +7651,7 @@ int expected_length;
 int number_of_joins= count_path_joins(begin,end);
 expected_length= number_of_joins+1;
 /*306:*/
-#line 7843 "weaver-interface-metafont.cweb"
+#line 7844 "weaver-interface-metafont.cweb"
 
 if(number_of_joins==0){
 if(end->type==TYPE_CLOSE_BRACES){
@@ -7677,10 +7677,10 @@ return false;
 return normalize_path(mf,cx,result);
 }
 /*:306*/
-#line 7804 "weaver-interface-metafont.cweb"
+#line 7805 "weaver-interface-metafont.cweb"
 
 /*307:*/
-#line 7874 "weaver-interface-metafont.cweb"
+#line 7875 "weaver-interface-metafont.cweb"
 
 result->points= (struct path_points*)
 temporary_alloc(sizeof(struct path_points)*
@@ -7694,10 +7694,10 @@ result->permanent= false;
 result->number_of_points= 0;
 result->cyclic= false;
 /*:307*/
-#line 7805 "weaver-interface-metafont.cweb"
+#line 7806 "weaver-interface-metafont.cweb"
 
 /*308:*/
-#line 7900 "weaver-interface-metafont.cweb"
+#line 7901 "weaver-interface-metafont.cweb"
 
 {
 struct generic_token*begin_z1,*end_z1= NULL,*begin_z2,*end_z2;
@@ -7708,7 +7708,7 @@ struct path_variable*z1_parent;
 begin_z1= begin;
 end_z1= begin_z1;
 /*309:*/
-#line 7930 "weaver-interface-metafont.cweb"
+#line 7931 "weaver-interface-metafont.cweb"
 
 {
 DECLARE_NESTING_CONTROL();
@@ -7725,7 +7725,7 @@ end_z1= (struct generic_token*)end_z1->next;
 RAISE_ERROR_AND_EXIT_IF_WRONG_NESTING(mf,cx,OPTIONAL(begin->line));
 }
 /*:309*//*314:*/
-#line 8087 "weaver-interface-metafont.cweb"
+#line 8088 "weaver-interface-metafont.cweb"
 
 {
 struct path_variable z1;
@@ -7757,11 +7757,11 @@ if(temporary_free!=NULL)
 path_recursive_free(temporary_free,&z1,false);
 }
 /*:314*/
-#line 7909 "weaver-interface-metafont.cweb"
+#line 7910 "weaver-interface-metafont.cweb"
 
 while(end_z1!=end||result->length<expected_length){
 /*310:*/
-#line 7952 "weaver-interface-metafont.cweb"
+#line 7953 "weaver-interface-metafont.cweb"
 
 begin_d= end_z1->next;
 if(begin_d->type!=TYPE_OPEN_BRACES){
@@ -7788,7 +7788,7 @@ return false;
 RAISE_ERROR_AND_EXIT_IF_WRONG_NESTING(mf,cx,OPTIONAL(begin_d->line));
 }
 /*:310*//*311:*/
-#line 7986 "weaver-interface-metafont.cweb"
+#line 7987 "weaver-interface-metafont.cweb"
 
 if(end_d==NULL)
 begin_j= end_z1->next;
@@ -7824,7 +7824,7 @@ TYPE_T_PATH);
 return false;
 }
 /*:311*//*312:*/
-#line 8025 "weaver-interface-metafont.cweb"
+#line 8026 "weaver-interface-metafont.cweb"
 
 begin_e= end_j->next;
 if(begin_e->type!=TYPE_OPEN_BRACES){
@@ -7850,7 +7850,7 @@ return false;
 RAISE_ERROR_AND_EXIT_IF_WRONG_NESTING(mf,cx,OPTIONAL(begin_e->line));
 }
 /*:312*//*313:*/
-#line 8056 "weaver-interface-metafont.cweb"
+#line 8057 "weaver-interface-metafont.cweb"
 
 {
 DECLARE_NESTING_CONTROL();
@@ -7874,10 +7874,10 @@ COUNT_NESTING(end_z2);
 RAISE_ERROR_AND_EXIT_IF_WRONG_NESTING(mf,cx,OPTIONAL(begin_z2->line));
 }
 /*:313*/
-#line 7911 "weaver-interface-metafont.cweb"
+#line 7912 "weaver-interface-metafont.cweb"
 
 /*315:*/
-#line 8133 "weaver-interface-metafont.cweb"
+#line 8134 "weaver-interface-metafont.cweb"
 
 if(begin_z2==end_z2&&begin_z2->type==TYPE_CYCLE){
 struct path_points*p= result->points;
@@ -7922,7 +7922,7 @@ if(temporary_free!=NULL)
 path_recursive_free(temporary_free,&z2,false);
 }
 /*:315*//*316:*/
-#line 8206 "weaver-interface-metafont.cweb"
+#line 8207 "weaver-interface-metafont.cweb"
 
 
 z1_point= &(result->points[result->length-2]);
@@ -7948,10 +7948,10 @@ struct path_variable*p= (struct path_variable*)z2_point->subpath;
 z2_point= &(p->points[0]);
 }
 /*:316*/
-#line 7912 "weaver-interface-metafont.cweb"
+#line 7913 "weaver-interface-metafont.cweb"
 
 /*317:*/
-#line 8240 "weaver-interface-metafont.cweb"
+#line 8241 "weaver-interface-metafont.cweb"
 
 if(!eval_direction_specifier(mf,cx,begin_d,end_d,
 &(z1_point->prov.dir1_x),
@@ -7962,7 +7962,7 @@ if(!eval_direction_specifier(mf,cx,begin_e,end_e,
 &(z1_point->prov.dir2_y)))
 return false;
 /*:317*//*324:*/
-#line 8404 "weaver-interface-metafont.cweb"
+#line 8405 "weaver-interface-metafont.cweb"
 
 if((begin_j==end_j&&(begin_j->type==TYPE_AMPERSAND||
 begin_j->type==TYPE_STRAIGHT_JOIN))||
@@ -7988,7 +7988,7 @@ z1_point->point.u_y= z1_point->point.v_y= z1_point->point.y;
 }
 }
 /*:324*//*326:*/
-#line 8488 "weaver-interface-metafont.cweb"
+#line 8489 "weaver-interface-metafont.cweb"
 
 if(!isnan(z1_point->prov.dir2_y)&&
 z2_point->format==PROVISIONAL_FORMAT&&isnan(z2_point->prov.dir1_y)){
@@ -8001,10 +8001,10 @@ z0_point->prov.dir2_x= z1_point->prov.dir1_x;
 z0_point->prov.dir2_y= z1_point->prov.dir1_y;
 }
 /*:326*/
-#line 7913 "weaver-interface-metafont.cweb"
+#line 7914 "weaver-interface-metafont.cweb"
 
 /*327:*/
-#line 8520 "weaver-interface-metafont.cweb"
+#line 8521 "weaver-interface-metafont.cweb"
 
 if(begin_j==end_j&&begin_j->type==TYPE_AMPERSAND){
 double dif_x= z1_point->prov.x-z2_point->prov.x;
@@ -8025,7 +8025,7 @@ z1_point->point.x= NAN;
 z1_point->point.y= NAN;
 }
 /*:327*//*328:*/
-#line 8547 "weaver-interface-metafont.cweb"
+#line 8548 "weaver-interface-metafont.cweb"
 
 else if(begin_j==end_j&&begin_j->type==TYPE_STRAIGHT_JOIN){
 z1_point->format= FINAL_FORMAT;
@@ -8039,14 +8039,14 @@ z1_point->point.v_y= z1_point->point.y+(2.0/3.0)*
 (z2_point->prov.y-z1_point->point.y);
 }
 /*:328*//*329:*/
-#line 8572 "weaver-interface-metafont.cweb"
+#line 8573 "weaver-interface-metafont.cweb"
 
 else if(begin_j==end_j&&begin_j->type==TYPE_JOIN){
 z1_point->prov.tension1= 1.0;
 z1_point->prov.tension2= 1.0;
 }
 /*:329*//*330:*/
-#line 8591 "weaver-interface-metafont.cweb"
+#line 8592 "weaver-interface-metafont.cweb"
 
 else if(begin_j->type==TYPE_JOIN&&begin_j!=end_j&&
 begin_j->next->type==TYPE_CONTROLS){
@@ -8093,7 +8093,7 @@ z1_point->point.v_x= u.x;
 z1_point->point.v_y= u.y;
 }
 /*325:*/
-#line 8450 "weaver-interface-metafont.cweb"
+#line 8451 "weaver-interface-metafont.cweb"
 
 if(z0_point!=NULL&&z0_point->format==PROVISIONAL_FORMAT&&
 isnan(z0_point->prov.dir2_y)){
@@ -8113,11 +8113,11 @@ z2_point->prov.dir1_y= 1.0;
 }
 }
 /*:325*/
-#line 8636 "weaver-interface-metafont.cweb"
+#line 8637 "weaver-interface-metafont.cweb"
 
 }
 /*:330*//*331:*/
-#line 8654 "weaver-interface-metafont.cweb"
+#line 8655 "weaver-interface-metafont.cweb"
 
 else if(begin_j->type==TYPE_JOIN&&begin_j!=end_j&&
 begin_j->next->type==TYPE_TENSION){
@@ -8194,14 +8194,14 @@ return false;
 }
 }
 /*:331*/
-#line 7914 "weaver-interface-metafont.cweb"
+#line 7915 "weaver-interface-metafont.cweb"
 
 begin_z1= begin_z2;
 end_z1= end_z2;
 }
 
 /*332:*/
-#line 8743 "weaver-interface-metafont.cweb"
+#line 8744 "weaver-interface-metafont.cweb"
 
 z0_point= &(result->points[0]);
 while(z0_point->format==SUBPATH_FORMAT){
@@ -8209,7 +8209,7 @@ struct path_variable*p= (struct path_variable*)z0_point->subpath;
 z0_point= &(p->points[0]);
 }
 /*:332*//*333:*/
-#line 8760 "weaver-interface-metafont.cweb"
+#line 8761 "weaver-interface-metafont.cweb"
 
 if(end_z1!=end){
 float w_x= NAN,w_y= NAN;
@@ -8226,7 +8226,7 @@ z1_point->prov.dir1_y= w_y;
 }
 }
 /*:333*//*334:*/
-#line 8796 "weaver-interface-metafont.cweb"
+#line 8797 "weaver-interface-metafont.cweb"
 
 if(!(result->cyclic)){
 if(z0_point->format==PROVISIONAL_FORMAT&&
@@ -8246,7 +8246,7 @@ z2_point->point.u_y= z2_point->point.v_y= z2_point->point.y;
 }
 }
 /*:334*//*335:*/
-#line 8822 "weaver-interface-metafont.cweb"
+#line 8823 "weaver-interface-metafont.cweb"
 
 if(result->cyclic&&z0_point->format==FINAL_FORMAT){
 memcpy(z2_point,z0_point,sizeof(struct path_points));
@@ -8261,7 +8261,7 @@ z1_point->prov.dir2_x= 1.0;
 }
 }
 /*:335*//*336:*/
-#line 8851 "weaver-interface-metafont.cweb"
+#line 8852 "weaver-interface-metafont.cweb"
 
 else if(result->cyclic){
 if(!isnan(z0_point->prov.dir1_y)){
@@ -8281,17 +8281,17 @@ z2_point->prov.dir2_x= z0_point->prov.dir2_x;
 z2_point->prov.dir2_y= z0_point->prov.dir2_y;
 }
 /*:336*/
-#line 7919 "weaver-interface-metafont.cweb"
+#line 7920 "weaver-interface-metafont.cweb"
 
 }
 /*:308*/
-#line 7806 "weaver-interface-metafont.cweb"
+#line 7807 "weaver-interface-metafont.cweb"
 
 
 return normalize_path(mf,cx,result);
 }
 /*:305*//*319:*/
-#line 8265 "weaver-interface-metafont.cweb"
+#line 8266 "weaver-interface-metafont.cweb"
 
 bool eval_direction_specifier(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
@@ -8303,15 +8303,15 @@ RAISE_ERROR_EMPTY_DELIMITER(mf,cx,OPTIONAL(begin->line),'{');
 return false;
 }
 /*320:*/
-#line 8286 "weaver-interface-metafont.cweb"
+#line 8287 "weaver-interface-metafont.cweb"
 
 if(begin==NULL||end==NULL)
 return true;
 /*:320*/
-#line 8275 "weaver-interface-metafont.cweb"
+#line 8276 "weaver-interface-metafont.cweb"
 
 /*321:*/
-#line 8296 "weaver-interface-metafont.cweb"
+#line 8297 "weaver-interface-metafont.cweb"
 
 if(begin->next->type==TYPE_CURL){
 struct numeric_variable gamma;
@@ -8332,10 +8332,10 @@ return false;
 return true;
 }
 /*:321*/
-#line 8276 "weaver-interface-metafont.cweb"
+#line 8277 "weaver-interface-metafont.cweb"
 
 /*322:*/
-#line 8322 "weaver-interface-metafont.cweb"
+#line 8323 "weaver-interface-metafont.cweb"
 
 DECLARE_NESTING_CONTROL();
 struct generic_token*begin_a,*end_a,*begin_b= NULL,*end_b;
@@ -8363,10 +8363,10 @@ return false;
 return true;
 }
 /*:322*/
-#line 8277 "weaver-interface-metafont.cweb"
+#line 8278 "weaver-interface-metafont.cweb"
 
 /*323:*/
-#line 8356 "weaver-interface-metafont.cweb"
+#line 8357 "weaver-interface-metafont.cweb"
 
 else{
 COUNT_NESTING(end_a);
@@ -8379,12 +8379,12 @@ return false;
 return true;
 }
 /*:323*/
-#line 8278 "weaver-interface-metafont.cweb"
+#line 8279 "weaver-interface-metafont.cweb"
 
 return false;
 }
 /*:319*//*338:*/
-#line 8905 "weaver-interface-metafont.cweb"
+#line 8906 "weaver-interface-metafont.cweb"
 
 bool eval_path_tertiary(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
@@ -8432,7 +8432,7 @@ else
 return eval_path_secondary(mf,cx,begin,end,result);
 }
 /*:338*//*340:*/
-#line 8988 "weaver-interface-metafont.cweb"
+#line 8989 "weaver-interface-metafont.cweb"
 
 bool eval_path_secondary(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
@@ -8482,7 +8482,7 @@ return false;
 if(!eval_path_secondary(mf,cx,begin,before_transform,result))
 return false;
 /*341:*/
-#line 9095 "weaver-interface-metafont.cweb"
+#line 9096 "weaver-interface-metafont.cweb"
 
 if(transform_op->type==TYPE_ROTATED){
 struct numeric_variable a;
@@ -8496,10 +8496,10 @@ path_rotate(result,sin_theta,cos_theta);
 return true;
 }
 /*:341*/
-#line 9036 "weaver-interface-metafont.cweb"
+#line 9037 "weaver-interface-metafont.cweb"
 
 /*344:*/
-#line 9140 "weaver-interface-metafont.cweb"
+#line 9141 "weaver-interface-metafont.cweb"
 
 else if(transform_op->type==TYPE_SCALED){
 struct numeric_variable a;
@@ -8509,10 +8509,10 @@ path_xyscale(result,a.value,a.value);
 return true;
 }
 /*:344*/
-#line 9037 "weaver-interface-metafont.cweb"
+#line 9038 "weaver-interface-metafont.cweb"
 
 /*347:*/
-#line 9180 "weaver-interface-metafont.cweb"
+#line 9181 "weaver-interface-metafont.cweb"
 
 else if(transform_op->type==TYPE_SHIFTED){
 struct pair_variable a;
@@ -8522,10 +8522,10 @@ path_shift(result,a.x,a.y);
 return true;
 }
 /*:347*/
-#line 9038 "weaver-interface-metafont.cweb"
+#line 9039 "weaver-interface-metafont.cweb"
 
 /*350:*/
-#line 9214 "weaver-interface-metafont.cweb"
+#line 9215 "weaver-interface-metafont.cweb"
 
 else if(transform_op->type==TYPE_SLANTED){
 struct numeric_variable a;
@@ -8535,10 +8535,10 @@ path_slant(result,a.value);
 return true;
 }
 /*:350*/
-#line 9039 "weaver-interface-metafont.cweb"
+#line 9040 "weaver-interface-metafont.cweb"
 
 /*353:*/
-#line 9245 "weaver-interface-metafont.cweb"
+#line 9246 "weaver-interface-metafont.cweb"
 
 else if(transform_op->type==TYPE_XSCALED){
 struct numeric_variable a;
@@ -8548,10 +8548,10 @@ path_xyscale(result,a.value,1.0);
 return true;
 }
 /*:353*/
-#line 9040 "weaver-interface-metafont.cweb"
+#line 9041 "weaver-interface-metafont.cweb"
 
 /*354:*/
-#line 9259 "weaver-interface-metafont.cweb"
+#line 9260 "weaver-interface-metafont.cweb"
 
 else if(transform_op->type==TYPE_YSCALED){
 struct numeric_variable a;
@@ -8561,10 +8561,10 @@ path_xyscale(result,1.0,a.value);
 return true;
 }
 /*:354*/
-#line 9041 "weaver-interface-metafont.cweb"
+#line 9042 "weaver-interface-metafont.cweb"
 
 /*355:*/
-#line 9280 "weaver-interface-metafont.cweb"
+#line 9281 "weaver-interface-metafont.cweb"
 
 else if(transform_op->type==TYPE_ZSCALED){
 struct pair_variable a;
@@ -8574,10 +8574,10 @@ path_zscale(result,a.x,a.y);
 return true;
 }
 /*:355*/
-#line 9042 "weaver-interface-metafont.cweb"
+#line 9043 "weaver-interface-metafont.cweb"
 
 /*358:*/
-#line 9320 "weaver-interface-metafont.cweb"
+#line 9321 "weaver-interface-metafont.cweb"
 
 else if(transform_op->type==TYPE_TRANSFORMED){
 struct transform_variable a;
@@ -8591,7 +8591,7 @@ RAISE_ERROR_UNKNOWN_EXPRESSION(mf,cx,OPTIONAL(begin->line),TYPE_T_PATH);
 return false;
 }
 /*:358*/
-#line 9043 "weaver-interface-metafont.cweb"
+#line 9044 "weaver-interface-metafont.cweb"
 
 }
 else if(have_pair_operator){
@@ -8620,7 +8620,7 @@ else
 return eval_path_primary(mf,cx,begin,end,result);
 }
 /*:340*//*343:*/
-#line 9116 "weaver-interface-metafont.cweb"
+#line 9117 "weaver-interface-metafont.cweb"
 
 void path_rotate(struct path_variable*p,double sin_theta,
 double cos_theta){
@@ -8640,7 +8640,7 @@ p->points[i].point.v_y= x*sin_theta+y*cos_theta;
 }
 }
 /*:343*//*346:*/
-#line 9162 "weaver-interface-metafont.cweb"
+#line 9163 "weaver-interface-metafont.cweb"
 
 void path_xyscale(struct path_variable*p,float x,float y){
 int i;
@@ -8654,7 +8654,7 @@ p->points[i].point.v_y*= y;
 }
 }
 /*:346*//*349:*/
-#line 9196 "weaver-interface-metafont.cweb"
+#line 9197 "weaver-interface-metafont.cweb"
 
 void path_shift(struct path_variable*p,float x,float y){
 int i;
@@ -8668,7 +8668,7 @@ p->points[i].point.v_y+= y;
 }
 }
 /*:349*//*352:*/
-#line 9230 "weaver-interface-metafont.cweb"
+#line 9231 "weaver-interface-metafont.cweb"
 
 void path_slant(struct path_variable*p,float s){
 int i;
@@ -8679,7 +8679,7 @@ p->points[i].point.v_x+= s*p->points[i].point.v_y;
 }
 }
 /*:352*//*357:*/
-#line 9296 "weaver-interface-metafont.cweb"
+#line 9297 "weaver-interface-metafont.cweb"
 
 void path_zscale(struct path_variable*p,float x,float y){
 int i;
@@ -8699,7 +8699,7 @@ p->points[i].point.v_x= x0*y+y0*x;
 }
 }
 /*:357*//*360:*/
-#line 9342 "weaver-interface-metafont.cweb"
+#line 9343 "weaver-interface-metafont.cweb"
 
 void path_transform(struct path_variable*p,float*M){
 int i;
@@ -8719,7 +8719,7 @@ p->points[i].point.v_x= LINEAR_TRANSFORM_Y(x0,y0,M);
 }
 }
 /*:360*//*364:*/
-#line 9412 "weaver-interface-metafont.cweb"
+#line 9413 "weaver-interface-metafont.cweb"
 
 bool eval_path_primary(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
@@ -8727,7 +8727,7 @@ struct generic_token*end,
 struct path_variable*result){
 if(begin->type==TYPE_REVERSE){
 /*365:*/
-#line 9446 "weaver-interface-metafont.cweb"
+#line 9447 "weaver-interface-metafont.cweb"
 
 struct path_variable tmp;
 if(begin->next==NULL||begin==end){
@@ -8742,12 +8742,12 @@ if(temporary_free!=NULL)
 path_recursive_free(temporary_free,&tmp,false);
 return true;
 /*:365*/
-#line 9418 "weaver-interface-metafont.cweb"
+#line 9419 "weaver-interface-metafont.cweb"
 
 }
 else if(begin->type==TYPE_SUBPATH){
 /*368:*/
-#line 9533 "weaver-interface-metafont.cweb"
+#line 9534 "weaver-interface-metafont.cweb"
 
 DECLARE_NESTING_CONTROL();
 struct pair_variable a;
@@ -8831,12 +8831,12 @@ result->points= c.points;
 return true;
 }
 /*:368*/
-#line 9421 "weaver-interface-metafont.cweb"
+#line 9422 "weaver-interface-metafont.cweb"
 
 }
 else if(begin==end&&begin->type==TYPE_SYMBOLIC){
 /*369:*/
-#line 9622 "weaver-interface-metafont.cweb"
+#line 9623 "weaver-interface-metafont.cweb"
 
 {
 struct symbolic_token*v= (struct symbolic_token*)begin;
@@ -8880,13 +8880,13 @@ return false;
 }
 }
 /*:369*/
-#line 9424 "weaver-interface-metafont.cweb"
+#line 9425 "weaver-interface-metafont.cweb"
 
 }
 else if(begin->type==TYPE_OPEN_PARENTHESIS&&
 end->type==TYPE_CLOSE_PARENTHESIS){
 /*370:*/
-#line 9672 "weaver-interface-metafont.cweb"
+#line 9673 "weaver-interface-metafont.cweb"
 
 struct generic_token*t= begin->next;
 bool found_comma= false;
@@ -8907,11 +8907,11 @@ if(!found_comma){
 return eval_path_expression(mf,cx,begin->next,t,result);
 }
 /*:370*/
-#line 9428 "weaver-interface-metafont.cweb"
+#line 9429 "weaver-interface-metafont.cweb"
 
 }
 /*409:*/
-#line 10580 "weaver-interface-metafont.cweb"
+#line 10581 "weaver-interface-metafont.cweb"
 
 else if(begin->type==TYPE_MAKEPATH){
 struct pen_variable tmp;
@@ -8924,7 +8924,7 @@ if(!eval_pen_primary(mf,cx,begin->next,end,&tmp))
 return false;
 if(tmp.flags&FLAG_NULL){
 /*410:*/
-#line 10613 "weaver-interface-metafont.cweb"
+#line 10614 "weaver-interface-metafont.cweb"
 
 result->length= 1;
 result->number_of_points= 1;
@@ -8939,12 +8939,12 @@ result->points[0].point.u_y= 0.0;
 result->points[0].point.v_x= 0.0;
 result->points[0].point.v_y= 0.0;
 /*:410*/
-#line 10591 "weaver-interface-metafont.cweb"
+#line 10592 "weaver-interface-metafont.cweb"
 
 }
 else if(tmp.flags&FLAG_CIRCULAR){
 /*411:*/
-#line 10633 "weaver-interface-metafont.cweb"
+#line 10634 "weaver-interface-metafont.cweb"
 
 result->length= 9;
 result->number_of_points= 9;
@@ -8989,12 +8989,12 @@ result->points[8].point.v_x= 0.44733;result->points[8].point.v_y= 0.2598;
 result->points[8].format= FINAL_FORMAT;
 result->cyclic= true;
 /*:411*/
-#line 10594 "weaver-interface-metafont.cweb"
+#line 10595 "weaver-interface-metafont.cweb"
 
 }
 else if(tmp.flags&FLAG_SEMICIRCULAR){
 /*412:*/
-#line 10680 "weaver-interface-metafont.cweb"
+#line 10681 "weaver-interface-metafont.cweb"
 
 result->length= 5;
 result->number_of_points= 5;
@@ -9022,12 +9022,12 @@ result->points[4].point.u_x= -0.33333;result->points[4].point.u_y= 0.0;
 result->points[4].point.v_x= 0.33333;result->points[4].point.v_y= 0.0;
 result->cyclic= true;
 /*:412*/
-#line 10597 "weaver-interface-metafont.cweb"
+#line 10598 "weaver-interface-metafont.cweb"
 
 }
 else if(tmp.flags&FLAG_SQUARE){
 /*413:*/
-#line 10711 "weaver-interface-metafont.cweb"
+#line 10712 "weaver-interface-metafont.cweb"
 
 result->length= 5;
 result->number_of_points= 5;
@@ -9065,12 +9065,12 @@ result->points[4].point.v_x= (-0.5+(2.0/3.0));
 result->points[4].point.v_y= -0.5;
 result->cyclic= true;
 /*:413*/
-#line 10600 "weaver-interface-metafont.cweb"
+#line 10601 "weaver-interface-metafont.cweb"
 
 }
 else{
 /*414:*/
-#line 10753 "weaver-interface-metafont.cweb"
+#line 10754 "weaver-interface-metafont.cweb"
 
 if(!recursive_copy_points(mf,cx,temporary_alloc,&result,tmp.format,false))
 return false;
@@ -9079,11 +9079,11 @@ temporary_free(tmp.format->points);
 temporary_free(tmp.format);
 }
 /*:414*/
-#line 10603 "weaver-interface-metafont.cweb"
+#line 10604 "weaver-interface-metafont.cweb"
 
 }
 /*415:*/
-#line 10766 "weaver-interface-metafont.cweb"
+#line 10767 "weaver-interface-metafont.cweb"
 
 {
 int i;
@@ -9102,16 +9102,16 @@ result->points[i].point.v_y= LINEAR_TRANSFORM_Y(x0,y0,tmp.gl_matrix);
 }
 }
 /*:415*/
-#line 10605 "weaver-interface-metafont.cweb"
+#line 10606 "weaver-interface-metafont.cweb"
 
 return true;
 }
 /*:409*/
-#line 9430 "weaver-interface-metafont.cweb"
+#line 9431 "weaver-interface-metafont.cweb"
 
 {
 /*371:*/
-#line 9698 "weaver-interface-metafont.cweb"
+#line 9699 "weaver-interface-metafont.cweb"
 
 struct pair_variable v;
 if(!eval_pair_primary(mf,cx,begin,end,&v))
@@ -9130,14 +9130,14 @@ result->points[0].point.v_x= v.x;
 result->points[0].point.v_y= v.y;
 return true;
 /*:371*/
-#line 9432 "weaver-interface-metafont.cweb"
+#line 9433 "weaver-interface-metafont.cweb"
 
 }
 RAISE_ERROR_UNKNOWN_EXPRESSION(mf,cx,OPTIONAL(begin->line),TYPE_T_PATH);
 return false;
 }
 /*:364*//*367:*/
-#line 9469 "weaver-interface-metafont.cweb"
+#line 9470 "weaver-interface-metafont.cweb"
 
 bool reverse_path(struct metafont*mf,struct context*cx,
 struct path_variable*dst,
@@ -9171,7 +9171,7 @@ dst->points[i].point.v_y= origin->points[0].point.y;
 return true;
 }
 /*:367*//*376:*/
-#line 9786 "weaver-interface-metafont.cweb"
+#line 9787 "weaver-interface-metafont.cweb"
 
 struct path_points*get_point(struct path_variable*v,int n){
 if(v->length==v->number_of_points){
@@ -9186,7 +9186,7 @@ return _get_point(v,n,&count);
 }
 }
 /*:376*//*378:*/
-#line 9814 "weaver-interface-metafont.cweb"
+#line 9815 "weaver-interface-metafont.cweb"
 
 struct path_points*_get_point(struct path_variable*v,int n,int*count){
 int i;
@@ -9208,7 +9208,7 @@ return r;
 return NULL;
 }
 /*:378*//*382:*/
-#line 9955 "weaver-interface-metafont.cweb"
+#line 9956 "weaver-interface-metafont.cweb"
 
 bool assign_pen_variable(struct metafont*mf,struct context*cx,
 struct pen_variable*target,
@@ -9247,7 +9247,7 @@ triangulate_pen(mf,cx,target,target->gl_matrix);
 return true;
 }
 /*:382*//*384:*/
-#line 10014 "weaver-interface-metafont.cweb"
+#line 10015 "weaver-interface-metafont.cweb"
 
 bool eval_pen_expression(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
@@ -9264,7 +9264,7 @@ return false;
 return eval_pen_secondary(mf,cx,begin,end,result);
 }
 /*:384*//*386:*/
-#line 10070 "weaver-interface-metafont.cweb"
+#line 10071 "weaver-interface-metafont.cweb"
 
 bool eval_pen_secondary(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
@@ -9297,7 +9297,7 @@ if(!eval_pen_secondary(mf,cx,begin,before_last_transformer,pen))
 return false;
 if(last_transformer->type==TYPE_ROTATED){
 /*387:*/
-#line 10137 "weaver-interface-metafont.cweb"
+#line 10138 "weaver-interface-metafont.cweb"
 
 struct numeric_variable r;
 double rotation;
@@ -9307,12 +9307,12 @@ rotation= 0.017453292519943295*r.value;
 TRANSFORM_ROTATE(pen->gl_matrix,rotation);
 return true;
 /*:387*/
-#line 10101 "weaver-interface-metafont.cweb"
+#line 10102 "weaver-interface-metafont.cweb"
 
 }
 else if(last_transformer->type==TYPE_SCALED){
 /*388:*/
-#line 10150 "weaver-interface-metafont.cweb"
+#line 10151 "weaver-interface-metafont.cweb"
 
 struct numeric_variable a;
 if(!eval_numeric_primary(mf,cx,last_transformer->next,end,&a))
@@ -9326,12 +9326,12 @@ pen->indices= 0;
 }
 return true;
 /*:388*/
-#line 10104 "weaver-interface-metafont.cweb"
+#line 10105 "weaver-interface-metafont.cweb"
 
 }
 else if(last_transformer->type==TYPE_SHIFTED){
 /*389:*/
-#line 10167 "weaver-interface-metafont.cweb"
+#line 10168 "weaver-interface-metafont.cweb"
 
 struct pair_variable pair;
 if(!eval_pair_primary(mf,cx,last_transformer->next,end,&pair))
@@ -9339,12 +9339,12 @@ return false;
 TRANSFORM_SHIFT(pen->gl_matrix,pair.x,pair.y);
 return true;
 /*:389*/
-#line 10107 "weaver-interface-metafont.cweb"
+#line 10108 "weaver-interface-metafont.cweb"
 
 }
 else if(last_transformer->type==TYPE_SLANTED){
 /*390:*/
-#line 10177 "weaver-interface-metafont.cweb"
+#line 10178 "weaver-interface-metafont.cweb"
 
 struct numeric_variable a;
 if(!eval_numeric_primary(mf,cx,last_transformer->next,end,&a))
@@ -9359,12 +9359,12 @@ pen->indices= 0;
 }
 return true;
 /*:390*/
-#line 10110 "weaver-interface-metafont.cweb"
+#line 10111 "weaver-interface-metafont.cweb"
 
 }
 else if(last_transformer->type==TYPE_XSCALED){
 /*391:*/
-#line 10196 "weaver-interface-metafont.cweb"
+#line 10197 "weaver-interface-metafont.cweb"
 
 struct numeric_variable a;
 if(!eval_numeric_primary(mf,cx,last_transformer->next,end,&a))
@@ -9378,12 +9378,12 @@ pen->indices= 0;
 }
 return true;
 /*:391*/
-#line 10113 "weaver-interface-metafont.cweb"
+#line 10114 "weaver-interface-metafont.cweb"
 
 }
 else if(last_transformer->type==TYPE_YSCALED){
 /*392:*/
-#line 10213 "weaver-interface-metafont.cweb"
+#line 10214 "weaver-interface-metafont.cweb"
 
 struct numeric_variable a;
 if(!eval_numeric_primary(mf,cx,last_transformer->next,end,&a))
@@ -9397,12 +9397,12 @@ pen->indices= 0;
 }
 return true;
 /*:392*/
-#line 10116 "weaver-interface-metafont.cweb"
+#line 10117 "weaver-interface-metafont.cweb"
 
 }
 else if(last_transformer->type==TYPE_ZSCALED){
 /*393:*/
-#line 10236 "weaver-interface-metafont.cweb"
+#line 10237 "weaver-interface-metafont.cweb"
 
 struct pair_variable pair;
 if(!eval_pair_primary(mf,cx,last_transformer->next,end,&pair))
@@ -9416,12 +9416,12 @@ pen->indices= 0;
 }
 return true;
 /*:393*/
-#line 10119 "weaver-interface-metafont.cweb"
+#line 10120 "weaver-interface-metafont.cweb"
 
 }
 else if(last_transformer->type==TYPE_TRANSFORMED){
 /*394:*/
-#line 10253 "weaver-interface-metafont.cweb"
+#line 10254 "weaver-interface-metafont.cweb"
 
 struct transform_variable t;
 if(!eval_transform_primary(mf,cx,last_transformer->next,end,&t))
@@ -9435,7 +9435,7 @@ pen->indices= 0;
 }
 return true;
 /*:394*/
-#line 10122 "weaver-interface-metafont.cweb"
+#line 10123 "weaver-interface-metafont.cweb"
 
 }
 RAISE_ERROR_UNKNOWN_EXPRESSION(mf,cx,OPTIONAL(begin->line),
@@ -9444,7 +9444,7 @@ return false;
 }
 }
 /*:386*//*398:*/
-#line 10306 "weaver-interface-metafont.cweb"
+#line 10307 "weaver-interface-metafont.cweb"
 
 bool eval_pen_primary(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
@@ -9453,7 +9453,7 @@ struct pen_variable*result){
 if(begin==end){
 if(begin->type==TYPE_SYMBOLIC){
 /*399:*/
-#line 10347 "weaver-interface-metafont.cweb"
+#line 10348 "weaver-interface-metafont.cweb"
 
 struct symbolic_token*v= (struct symbolic_token*)begin;
 struct pen_variable*content= v->var,*to_copy= v->var;
@@ -9487,12 +9487,12 @@ if(to_copy!=content)
 MATRIX_MULTIPLICATION(result->gl_matrix,content->gl_matrix);
 return true;
 /*:399*/
-#line 10313 "weaver-interface-metafont.cweb"
+#line 10314 "weaver-interface-metafont.cweb"
 
 }
 else if(begin->type==TYPE_NULLPEN){
 /*400:*/
-#line 10385 "weaver-interface-metafont.cweb"
+#line 10386 "weaver-interface-metafont.cweb"
 
 result->format= NULL;
 result->flags= FLAG_NULL;
@@ -9502,12 +9502,12 @@ result->indices= 0;
 INITIALIZE_IDENTITY_MATRIX(result->gl_matrix);
 return true;
 /*:400*/
-#line 10316 "weaver-interface-metafont.cweb"
+#line 10317 "weaver-interface-metafont.cweb"
 
 }
 else if(begin->type==TYPE_PENCIRCLE){
 /*401:*/
-#line 10399 "weaver-interface-metafont.cweb"
+#line 10400 "weaver-interface-metafont.cweb"
 
 result->format= NULL;
 result->flags= FLAG_CONVEX|FLAG_CIRCULAR;
@@ -9517,12 +9517,12 @@ result->indices= 0;
 INITIALIZE_IDENTITY_MATRIX(result->gl_matrix);
 return true;
 /*:401*/
-#line 10319 "weaver-interface-metafont.cweb"
+#line 10320 "weaver-interface-metafont.cweb"
 
 }
 else if(begin->type==TYPE_PENSEMICIRCLE){
 /*402:*/
-#line 10411 "weaver-interface-metafont.cweb"
+#line 10412 "weaver-interface-metafont.cweb"
 
 result->format= NULL;
 result->flags= FLAG_CONVEX|FLAG_SEMICIRCULAR;
@@ -9532,7 +9532,7 @@ result->indices= 0;
 INITIALIZE_IDENTITY_MATRIX(result->gl_matrix);
 return true;
 /*:402*/
-#line 10322 "weaver-interface-metafont.cweb"
+#line 10323 "weaver-interface-metafont.cweb"
 
 }
 
@@ -9541,7 +9541,7 @@ else{
 if(begin->type==TYPE_OPEN_PARENTHESIS&&
 end->type==TYPE_CLOSE_PARENTHESIS){
 /*403:*/
-#line 10425 "weaver-interface-metafont.cweb"
+#line 10426 "weaver-interface-metafont.cweb"
 
 struct generic_token*t= begin->next;
 DECLARE_NESTING_CONTROL();
@@ -9556,12 +9556,12 @@ t= t->next;
 RAISE_ERROR_AND_EXIT_IF_WRONG_NESTING(mf,cx,OPTIONAL(begin->line));
 return eval_pen_expression(mf,cx,begin->next,t,result);
 /*:403*/
-#line 10329 "weaver-interface-metafont.cweb"
+#line 10330 "weaver-interface-metafont.cweb"
 
 }
 else if(begin->type==TYPE_MAKEPEN){
 /*404:*/
-#line 10445 "weaver-interface-metafont.cweb"
+#line 10446 "weaver-interface-metafont.cweb"
 
 struct generic_token*p= begin->next;
 result->format= 
@@ -9583,7 +9583,7 @@ result->indices= 0;
 INITIALIZE_IDENTITY_MATRIX(result->gl_matrix);
 return true;
 /*:404*/
-#line 10332 "weaver-interface-metafont.cweb"
+#line 10333 "weaver-interface-metafont.cweb"
 
 }
 }
@@ -9592,7 +9592,7 @@ TYPE_T_PEN);
 return false;
 }
 /*:398*//*406:*/
-#line 10481 "weaver-interface-metafont.cweb"
+#line 10482 "weaver-interface-metafont.cweb"
 
 int read_flags(struct path_variable*path){
 int i,positive_cross_product= -1;
@@ -9660,7 +9660,7 @@ break;
 return flag;
 }
 /*:406*//*423:*/
-#line 10931 "weaver-interface-metafont.cweb"
+#line 10932 "weaver-interface-metafont.cweb"
 
 GLuint compile_shader_program(const char*vertex_shader_source,
 const char*fragment_shader_source){
@@ -9706,7 +9706,7 @@ glDeleteShader(fragment);
 return prog;
 }
 /*:423*//*427:*/
-#line 11006 "weaver-interface-metafont.cweb"
+#line 11007 "weaver-interface-metafont.cweb"
 
 bool get_new_framebuffer(GLuint*new_framebuffer,GLuint*new_texture,
 int width,int height){
@@ -9730,7 +9730,7 @@ glBindTexture(GL_TEXTURE_2D,0);
 return true;
 }
 /*:427*//*429:*/
-#line 11041 "weaver-interface-metafont.cweb"
+#line 11042 "weaver-interface-metafont.cweb"
 
 void render_picture(struct picture_variable*pic,float*matrix,int dst_width,
 int dst_height,bool clear_background){
@@ -9776,7 +9776,7 @@ printf("\n");
 }
 }
 /*:429*//*431:*/
-#line 11099 "weaver-interface-metafont.cweb"
+#line 11100 "weaver-interface-metafont.cweb"
 
 bool assign_picture_variable(struct metafont*mf,struct context*cx,
 struct picture_variable*target,
@@ -9802,7 +9802,7 @@ glDeleteFramebuffers(1,&temporary_framebuffer);
 if(target==cx->currentpicture){
 
 /*597:*/
-#line 16726 "weaver-interface-metafont.cweb"
+#line 16727 "weaver-interface-metafont.cweb"
 
 {
 if(cx->currentpicture_fb!=0){
@@ -9813,13 +9813,13 @@ glDeleteFramebuffers(1,&(cx->currentpicture_fb));
 cx->currentpicture_fb= 0;
 }
 /*:597*/
-#line 11123 "weaver-interface-metafont.cweb"
+#line 11124 "weaver-interface-metafont.cweb"
 
 }
 return true;
 }
 /*:431*//*433:*/
-#line 11168 "weaver-interface-metafont.cweb"
+#line 11169 "weaver-interface-metafont.cweb"
 
 bool eval_picture_expression(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
@@ -9843,7 +9843,7 @@ if(last_operator==NULL||before_last_operator==NULL){
 struct picture_variable a;
 struct picture_variable*sec= &a;
 /*438:*/
-#line 11385 "weaver-interface-metafont.cweb"
+#line 11386 "weaver-interface-metafont.cweb"
 
 {
 float matrix[9];
@@ -9871,7 +9871,7 @@ result->texture= sec->texture;
 }
 }
 /*:438*/
-#line 11190 "weaver-interface-metafont.cweb"
+#line 11191 "weaver-interface-metafont.cweb"
 
 return true;
 }
@@ -9886,7 +9886,7 @@ return false;
 if(!eval_picture_expression(mf,cx,begin,before_last_operator,&a))
 return false;
 /*438:*/
-#line 11385 "weaver-interface-metafont.cweb"
+#line 11386 "weaver-interface-metafont.cweb"
 
 {
 float matrix[9];
@@ -9914,10 +9914,10 @@ result->texture= sec->texture;
 }
 }
 /*:438*/
-#line 11203 "weaver-interface-metafont.cweb"
+#line 11204 "weaver-interface-metafont.cweb"
 
 /*437:*/
-#line 11292 "weaver-interface-metafont.cweb"
+#line 11293 "weaver-interface-metafont.cweb"
 
 
 GLuint temporary_framebuffer= 0;
@@ -9963,7 +9963,7 @@ glBindFramebuffer(GL_FRAMEBUFFER,previous_framebuffer);
 glBindTexture(GL_TEXTURE_2D,0);
 glDeleteFramebuffers(1,&temporary_framebuffer);
 /*:437*/
-#line 11204 "weaver-interface-metafont.cweb"
+#line 11205 "weaver-interface-metafont.cweb"
 
 if(a.texture!=0)
 glDeleteTextures(1,&(a.texture));
@@ -9973,7 +9973,7 @@ return true;
 }
 }
 /*:433*//*440:*/
-#line 11429 "weaver-interface-metafont.cweb"
+#line 11430 "weaver-interface-metafont.cweb"
 
 bool eval_picture_secondary(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
@@ -10008,7 +10008,7 @@ matrix,modified))
 return false;
 if(last_transformer->type==TYPE_ROTATED){
 /*442:*/
-#line 11509 "weaver-interface-metafont.cweb"
+#line 11510 "weaver-interface-metafont.cweb"
 
 struct numeric_variable r;
 double rotation;
@@ -10019,12 +10019,12 @@ TRANSFORM_ROTATE(matrix,rotation);
 *modified= true;
 return true;
 /*:442*/
-#line 11462 "weaver-interface-metafont.cweb"
+#line 11463 "weaver-interface-metafont.cweb"
 
 }
 else if(last_transformer->type==TYPE_SCALED){
 /*441:*/
-#line 11498 "weaver-interface-metafont.cweb"
+#line 11499 "weaver-interface-metafont.cweb"
 
 struct numeric_variable a;
 if(!eval_numeric_primary(mf,cx,last_transformer->next,end,&a))
@@ -10033,12 +10033,12 @@ TRANSFORM_SCALE(matrix,a.value);
 *modified= true;
 return true;
 /*:441*/
-#line 11465 "weaver-interface-metafont.cweb"
+#line 11466 "weaver-interface-metafont.cweb"
 
 }
 else if(last_transformer->type==TYPE_SHIFTED){
 /*443:*/
-#line 11525 "weaver-interface-metafont.cweb"
+#line 11526 "weaver-interface-metafont.cweb"
 
 struct pair_variable pair;
 if(!eval_pair_primary(mf,cx,last_transformer->next,end,&pair))
@@ -10049,12 +10049,12 @@ TRANSFORM_SHIFT(matrix,pair.x,pair.y);
 *modified= true;
 return true;
 /*:443*/
-#line 11468 "weaver-interface-metafont.cweb"
+#line 11469 "weaver-interface-metafont.cweb"
 
 }
 else if(last_transformer->type==TYPE_SLANTED){
 /*444:*/
-#line 11538 "weaver-interface-metafont.cweb"
+#line 11539 "weaver-interface-metafont.cweb"
 
 struct numeric_variable a;
 if(!eval_numeric_primary(mf,cx,last_transformer->next,end,&a))
@@ -10063,12 +10063,12 @@ TRANSFORM_SLANT(matrix,a.value);
 *modified= true;
 return true;
 /*:444*/
-#line 11471 "weaver-interface-metafont.cweb"
+#line 11472 "weaver-interface-metafont.cweb"
 
 }
 else if(last_transformer->type==TYPE_XSCALED){
 /*445:*/
-#line 11549 "weaver-interface-metafont.cweb"
+#line 11550 "weaver-interface-metafont.cweb"
 
 struct numeric_variable a;
 if(!eval_numeric_primary(mf,cx,last_transformer->next,end,&a))
@@ -10077,12 +10077,12 @@ TRANSFORM_SCALE_X(matrix,a.value);
 *modified= true;
 return true;
 /*:445*/
-#line 11474 "weaver-interface-metafont.cweb"
+#line 11475 "weaver-interface-metafont.cweb"
 
 }
 else if(last_transformer->type==TYPE_YSCALED){
 /*446:*/
-#line 11560 "weaver-interface-metafont.cweb"
+#line 11561 "weaver-interface-metafont.cweb"
 
 struct numeric_variable a;
 if(!eval_numeric_primary(mf,cx,last_transformer->next,end,&a))
@@ -10091,12 +10091,12 @@ TRANSFORM_SCALE_Y(matrix,a.value);
 *modified= true;
 return true;
 /*:446*/
-#line 11477 "weaver-interface-metafont.cweb"
+#line 11478 "weaver-interface-metafont.cweb"
 
 }
 else if(last_transformer->type==TYPE_ZSCALED){
 /*447:*/
-#line 11572 "weaver-interface-metafont.cweb"
+#line 11573 "weaver-interface-metafont.cweb"
 
 struct pair_variable pair;
 if(!eval_pair_primary(mf,cx,last_transformer->next,end,&pair))
@@ -10105,12 +10105,12 @@ TRANSFORM_SCALE_Z(matrix,pair.x,pair.y);
 *modified= true;
 return true;
 /*:447*/
-#line 11480 "weaver-interface-metafont.cweb"
+#line 11481 "weaver-interface-metafont.cweb"
 
 }
 else if(last_transformer->type==TYPE_TRANSFORMED){
 /*448:*/
-#line 11584 "weaver-interface-metafont.cweb"
+#line 11585 "weaver-interface-metafont.cweb"
 
 struct transform_variable t;
 if(!eval_transform_primary(mf,cx,last_transformer->next,end,&t))
@@ -10119,7 +10119,7 @@ MATRIX_MULTIPLICATION(matrix,t.value);
 *modified= true;
 return true;
 /*:448*/
-#line 11483 "weaver-interface-metafont.cweb"
+#line 11484 "weaver-interface-metafont.cweb"
 
 }
 RAISE_ERROR_UNKNOWN_EXPRESSION(mf,cx,OPTIONAL(begin->line),
@@ -10128,7 +10128,7 @@ return false;
 }
 }
 /*:440*//*450:*/
-#line 11633 "weaver-interface-metafont.cweb"
+#line 11634 "weaver-interface-metafont.cweb"
 
 bool apply_image_transformation(struct metafont*mf,
 struct picture_variable*dst,
@@ -10192,7 +10192,7 @@ glDeleteFramebuffers(1,&temporary_framebuffer);
 return true;
 }
 /*:450*//*454:*/
-#line 11736 "weaver-interface-metafont.cweb"
+#line 11737 "weaver-interface-metafont.cweb"
 
 bool eval_picture_primary(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
@@ -10201,7 +10201,7 @@ struct picture_variable*result){
 if(begin==end){
 if(begin->type==TYPE_SYMBOLIC){
 /*455:*/
-#line 11774 "weaver-interface-metafont.cweb"
+#line 11775 "weaver-interface-metafont.cweb"
 
 GLuint temporary_framebuffer= 0;
 GLint previous_framebuffer;
@@ -10240,7 +10240,7 @@ glBindFramebuffer(GL_FRAMEBUFFER,previous_framebuffer);
 glDeleteFramebuffers(1,&temporary_framebuffer);
 return true;
 /*:455*/
-#line 11743 "weaver-interface-metafont.cweb"
+#line 11744 "weaver-interface-metafont.cweb"
 
 }
 }
@@ -10248,7 +10248,7 @@ else{
 if(begin->type==TYPE_OPEN_PARENTHESIS&&
 end->type==TYPE_CLOSE_PARENTHESIS){
 /*456:*/
-#line 11818 "weaver-interface-metafont.cweb"
+#line 11819 "weaver-interface-metafont.cweb"
 
 struct generic_token*t= begin->next;
 if(begin->next==end){
@@ -10259,12 +10259,12 @@ while(t!=NULL&&t->next!=end)
 t= t->next;
 return eval_picture_expression(mf,cx,begin->next,t,result);
 /*:456*/
-#line 11749 "weaver-interface-metafont.cweb"
+#line 11750 "weaver-interface-metafont.cweb"
 
 }
 else if(begin->type==TYPE_NULLPICTURE){
 /*457:*/
-#line 11835 "weaver-interface-metafont.cweb"
+#line 11836 "weaver-interface-metafont.cweb"
 
 struct generic_token*begin_pair_expression,*end_pair_expression;
 struct pair_variable p;
@@ -10304,12 +10304,12 @@ if(temporary_free!=NULL)
 temporary_free(data);
 return true;
 /*:457*/
-#line 11752 "weaver-interface-metafont.cweb"
+#line 11753 "weaver-interface-metafont.cweb"
 
 }
 else if(begin->type==TYPE_SUM){
 /*458:*/
-#line 11880 "weaver-interface-metafont.cweb"
+#line 11881 "weaver-interface-metafont.cweb"
 
 struct generic_token*p= begin->next;
 if(begin==end){
@@ -10319,12 +10319,12 @@ return false;
 }
 return eval_picture_primary(mf,cx,p,end,result);
 /*:458*/
-#line 11755 "weaver-interface-metafont.cweb"
+#line 11756 "weaver-interface-metafont.cweb"
 
 }
 else if(begin->type==TYPE_SUBTRACT){
 /*459:*/
-#line 11897 "weaver-interface-metafont.cweb"
+#line 11898 "weaver-interface-metafont.cweb"
 
 struct picture_variable p;
 GLuint temporary_framebuffer= 0;
@@ -10361,17 +10361,17 @@ glBindFramebuffer(GL_FRAMEBUFFER,previous_framebuffer);
 glDeleteFramebuffers(1,&temporary_framebuffer);
 return true;
 /*:459*/
-#line 11758 "weaver-interface-metafont.cweb"
+#line 11759 "weaver-interface-metafont.cweb"
 
 }
 else if(begin->type==TYPE_SUBPICTURE){
 /*460:*/
-#line 11945 "weaver-interface-metafont.cweb"
+#line 11946 "weaver-interface-metafont.cweb"
 
 struct pair_variable pair_offset,subpicture_size;
 struct picture_variable original_picture;
 /*461:*/
-#line 11960 "weaver-interface-metafont.cweb"
+#line 11961 "weaver-interface-metafont.cweb"
 
 {
 DECLARE_NESTING_CONTROL();
@@ -10425,10 +10425,10 @@ if(!eval_picture_primary(mf,cx,begin_pic,end_pic,&original_picture))
 return false;
 }
 /*:461*/
-#line 11948 "weaver-interface-metafont.cweb"
+#line 11949 "weaver-interface-metafont.cweb"
 
 /*462:*/
-#line 12019 "weaver-interface-metafont.cweb"
+#line 12020 "weaver-interface-metafont.cweb"
 
 {
 GLuint temporary_framebuffer= 0;
@@ -10465,11 +10465,11 @@ glDeleteFramebuffers(1,&temporary_framebuffer);
 return true;
 }
 /*:462*/
-#line 11949 "weaver-interface-metafont.cweb"
+#line 11950 "weaver-interface-metafont.cweb"
 
 return false;
 /*:460*/
-#line 11761 "weaver-interface-metafont.cweb"
+#line 11762 "weaver-interface-metafont.cweb"
 
 }
 }
@@ -10478,7 +10478,7 @@ TYPE_T_PICTURE);
 return false;
 }
 /*:454*//*472:*/
-#line 12285 "weaver-interface-metafont.cweb"
+#line 12286 "weaver-interface-metafont.cweb"
 
 bool eval_boolean_expression(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
@@ -10667,7 +10667,7 @@ return true;
 }
 }
 /*:472*//*476:*/
-#line 12514 "weaver-interface-metafont.cweb"
+#line 12515 "weaver-interface-metafont.cweb"
 
 bool eval_boolean_tertiary(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
@@ -10704,7 +10704,7 @@ return true;
 }
 }
 /*:476*//*478:*/
-#line 12580 "weaver-interface-metafont.cweb"
+#line 12581 "weaver-interface-metafont.cweb"
 
 bool eval_boolean_secondary(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
@@ -10741,7 +10741,7 @@ return true;
 }
 }
 /*:478*//*482:*/
-#line 12667 "weaver-interface-metafont.cweb"
+#line 12668 "weaver-interface-metafont.cweb"
 
 bool eval_boolean_primary(struct metafont*mf,struct context*cx,
 struct generic_token*begin,
@@ -10831,7 +10831,7 @@ return false;
 }
 }
 /*:482*//*484:*/
-#line 12847 "weaver-interface-metafont.cweb"
+#line 12848 "weaver-interface-metafont.cweb"
 
 int get_primary_expression_type(struct metafont*mf,struct context*cx,
 struct generic_token*begin_expr,
@@ -10944,7 +10944,7 @@ return-1;
 }
 }
 /*:484*//*485:*/
-#line 12987 "weaver-interface-metafont.cweb"
+#line 12988 "weaver-interface-metafont.cweb"
 
 int get_secondary_expression_type(struct metafont*mf,struct context*cx,
 struct generic_token*begin_expr,
@@ -10996,7 +10996,7 @@ else return-1;
 else return get_primary_expression_type(mf,cx,begin_expr,end_expr);
 }
 /*:485*//*486:*/
-#line 13068 "weaver-interface-metafont.cweb"
+#line 13069 "weaver-interface-metafont.cweb"
 
 int get_tertiary_expression_type(struct metafont*mf,struct context*cx,
 struct generic_token*begin_expr,
@@ -11033,7 +11033,7 @@ return get_secondary_expression_type(mf,cx,last_op->next,end_expr);
 else return get_secondary_expression_type(mf,cx,begin_expr,end_expr);
 }
 /*:486*//*509:*/
-#line 13767 "weaver-interface-metafont.cweb"
+#line 13768 "weaver-interface-metafont.cweb"
 
 void pencircular_extremity_points(struct context*cx,
 float*matrix,bool fullcircle){
@@ -11111,7 +11111,7 @@ CHECK_PEN_EXTREMITIES(-sqrt(0.25-x0*x0),-x0,matrix);
 UPDATE_PEN_EXTREMITIES();
 }
 /*:509*//*511:*/
-#line 13880 "weaver-interface-metafont.cweb"
+#line 13881 "weaver-interface-metafont.cweb"
 
 void path_extremity_points(struct context*cx,
 struct path_variable*p,float*matrix){
@@ -11174,7 +11174,7 @@ CHECK_PEN_EXTREMITIES_I(x,y);
 UPDATE_PEN_EXTREMITIES();
 }
 /*:511*//*514:*/
-#line 13996 "weaver-interface-metafont.cweb"
+#line 13997 "weaver-interface-metafont.cweb"
 
 bool is_pen_counterclockwise(struct pen_variable*pen){
 int i,index= 0;
@@ -11224,12 +11224,12 @@ return(prod> 0);
 }
 }
 /*:514*//*516:*/
-#line 14055 "weaver-interface-metafont.cweb"
+#line 14056 "weaver-interface-metafont.cweb"
 
 bool triangulate_pen(struct metafont*mf,struct context*cx,
 struct pen_variable*pen,float*transform_matrix){
 /*517:*/
-#line 14074 "weaver-interface-metafont.cweb"
+#line 14075 "weaver-interface-metafont.cweb"
 
 if((pen->flags&FLAG_NULL)){
 pen->indices= 0;
@@ -11239,10 +11239,10 @@ UPDATE_PEN_EXTREMITIES();
 return true;
 }
 /*:517*/
-#line 14058 "weaver-interface-metafont.cweb"
+#line 14059 "weaver-interface-metafont.cweb"
 
 /*521:*/
-#line 14118 "weaver-interface-metafont.cweb"
+#line 14119 "weaver-interface-metafont.cweb"
 
 if((pen->flags&FLAG_SQUARE)){
 float square_vertices[8]= {-0.5,-0.5,0.5,-0.5,0.5,0.5,-0.5,0.5};
@@ -11256,10 +11256,10 @@ UPDATE_PEN_EXTREMITIES();
 return true;
 }
 /*:521*/
-#line 14059 "weaver-interface-metafont.cweb"
+#line 14060 "weaver-interface-metafont.cweb"
 
 /*522:*/
-#line 14144 "weaver-interface-metafont.cweb"
+#line 14145 "weaver-interface-metafont.cweb"
 
 if((pen->flags&FLAG_STRAIGHT)&&(pen->flags&FLAG_CONVEX)){
 int i,index,increment;
@@ -11296,10 +11296,10 @@ UPDATE_PEN_EXTREMITIES();
 return true;
 }
 /*:522*/
-#line 14060 "weaver-interface-metafont.cweb"
+#line 14061 "weaver-interface-metafont.cweb"
 
 /*523:*/
-#line 14228 "weaver-interface-metafont.cweb"
+#line 14229 "weaver-interface-metafont.cweb"
 
 if((pen->flags&FLAG_CIRCULAR)||(pen->flags&FLAG_SEMICIRCULAR)){
 float radius;
@@ -11354,10 +11354,10 @@ temporary_free(data);
 return true;
 }
 /*:523*/
-#line 14061 "weaver-interface-metafont.cweb"
+#line 14062 "weaver-interface-metafont.cweb"
 
 /*524:*/
-#line 14329 "weaver-interface-metafont.cweb"
+#line 14330 "weaver-interface-metafont.cweb"
 
 if((pen->flags&FLAG_CONVEX)){
 bool counterclockwise= is_pen_counterclockwise(pen);
@@ -11493,10 +11493,10 @@ temporary_free(data);
 return true;
 }
 /*:524*/
-#line 14062 "weaver-interface-metafont.cweb"
+#line 14063 "weaver-interface-metafont.cweb"
 
 /*540:*/
-#line 15065 "weaver-interface-metafont.cweb"
+#line 15066 "weaver-interface-metafont.cweb"
 
 if(!(pen->flags&FLAG_CONVEX)){
 struct polygon_vertex*poly;
@@ -11548,7 +11548,7 @@ return true;
 }
 else{
 /*565:*/
-#line 15845 "weaver-interface-metafont.cweb"
+#line 15846 "weaver-interface-metafont.cweb"
 
 {
 int i;
@@ -11570,7 +11570,7 @@ prepare_non_monotonous(poly,number_of_vertices);
 for(i= 0;i<number_of_vertices;i++){
 
 /*568:*/
-#line 15949 "weaver-interface-metafont.cweb"
+#line 15950 "weaver-interface-metafont.cweb"
 
 if(GET_VERTEX_TYPE(current_vertex)==TYPE_BEGIN_VERTEX){
 if(current_vertex->prev->y<=current_vertex->next->y){
@@ -11587,7 +11587,7 @@ current_vertex,leq_by_vertex,NULL);
 }
 }
 /*:568*//*569:*/
-#line 15973 "weaver-interface-metafont.cweb"
+#line 15974 "weaver-interface-metafont.cweb"
 
 else if(GET_VERTEX_TYPE(current_vertex)==TYPE_END_VERTEX){
 struct polygon_edge*removed;
@@ -11611,7 +11611,7 @@ ADD_CUT(current_vertex,removed->helper);
 DESTROY_POLYGON_EDGE(removed);
 }
 /*:569*//*570:*/
-#line 16006 "weaver-interface-metafont.cweb"
+#line 16007 "weaver-interface-metafont.cweb"
 
 else if(GET_VERTEX_TYPE(current_vertex)==TYPE_SPLIT_VERTEX){
 struct polygon_edge*below;
@@ -11633,7 +11633,7 @@ current_vertex,leq_by_vertex,NULL);
 }
 }
 /*:570*//*571:*/
-#line 16039 "weaver-interface-metafont.cweb"
+#line 16040 "weaver-interface-metafont.cweb"
 
 else if(GET_VERTEX_TYPE(current_vertex)==TYPE_MERGE_VERTEX){
 struct polygon_edge*removed,*below;
@@ -11663,7 +11663,7 @@ ADD_CUT(current_vertex,below->helper);
 below->helper= current_vertex;
 }
 /*:571*//*572:*/
-#line 16087 "weaver-interface-metafont.cweb"
+#line 16088 "weaver-interface-metafont.cweb"
 
 else{
 struct polygon_edge*removed;
@@ -11710,7 +11710,7 @@ below->helper= current_vertex;
 }
 }
 /*:572*/
-#line 15865 "weaver-interface-metafont.cweb"
+#line 15866 "weaver-interface-metafont.cweb"
 
 current_vertex= current_vertex->succ;
 }
@@ -11742,17 +11742,17 @@ temporary_free(triang);
 return true;
 }
 /*:565*/
-#line 15115 "weaver-interface-metafont.cweb"
+#line 15116 "weaver-interface-metafont.cweb"
 
 }
 }
 return false;
 /*:540*/
-#line 14063 "weaver-interface-metafont.cweb"
+#line 14064 "weaver-interface-metafont.cweb"
 
 }
 /*:516*//*528:*/
-#line 14579 "weaver-interface-metafont.cweb"
+#line 14580 "weaver-interface-metafont.cweb"
 
 void destroy_vertex_linked_list(struct polygon_vertex*poly){
 if(temporary_alloc!=NULL&&poly!=NULL){
@@ -11765,7 +11765,7 @@ temporary_free(poly);
 }
 }
 /*:528*//*530:*/
-#line 14604 "weaver-interface-metafont.cweb"
+#line 14605 "weaver-interface-metafont.cweb"
 
 struct polygon_vertex*polygon_from_pen(struct metafont*mf,
 struct pen_variable*p,
@@ -11894,7 +11894,7 @@ last->next= first;
 return leftmost;
 }
 /*:530*//*532:*/
-#line 14763 "weaver-interface-metafont.cweb"
+#line 14764 "weaver-interface-metafont.cweb"
 
 bool is_xmonotone(struct polygon_vertex*poly){
 bool clockwise;
@@ -11936,7 +11936,7 @@ upper->flag= (FLAG_UPPER|FLAG_LOWER);
 return true;
 }
 /*:532*//*534:*/
-#line 14876 "weaver-interface-metafont.cweb"
+#line 14877 "weaver-interface-metafont.cweb"
 
 static void order_vertices_on_xmonotone_polygon(struct polygon_vertex*p){
 struct polygon_vertex*upper,*lower,*last;
@@ -11956,7 +11956,7 @@ lower= lower->prev;
 last->succ= NULL;
 }
 /*:534*//*536:*/
-#line 14914 "weaver-interface-metafont.cweb"
+#line 14915 "weaver-interface-metafont.cweb"
 
 static bool triangulate_xmonotone_polygon(struct polygon_vertex*p,
 float**triangles,
@@ -12026,7 +12026,7 @@ DESTROY_POLYGON_VERTEX(p);
 return true;
 }
 /*:536*//*543:*/
-#line 15228 "weaver-interface-metafont.cweb"
+#line 15229 "weaver-interface-metafont.cweb"
 
 struct polygon_vertex*merge(struct polygon_vertex*begin1,
 struct polygon_vertex*begin2){
@@ -12068,7 +12068,7 @@ begin2= begin2->succ;
 return ret;
 }
 /*:543*//*544:*/
-#line 15272 "weaver-interface-metafont.cweb"
+#line 15273 "weaver-interface-metafont.cweb"
 
 struct polygon_vertex*merge_sort(struct polygon_vertex*p,int size){
 if(size==1)
@@ -12089,7 +12089,7 @@ return p;
 }
 }
 /*:544*//*546:*/
-#line 15321 "weaver-interface-metafont.cweb"
+#line 15322 "weaver-interface-metafont.cweb"
 
 void prepare_non_monotonous(struct polygon_vertex*p,int number_of_vertices){
 bool turn_left= (p->next->y<p->y);
@@ -12125,7 +12125,7 @@ p->pred= NULL;
 p= merge_sort(first_vertex,number_of_vertices);
 }
 /*:546*//*548:*/
-#line 15371 "weaver-interface-metafont.cweb"
+#line 15372 "weaver-interface-metafont.cweb"
 
 static bool is_turning_left(struct polygon_vertex*p1,
 struct polygon_vertex*p2,
@@ -12138,7 +12138,7 @@ v2_y= p3->y-p2->y;
 return((v1_x*v2_y-v1_y*v2_x)> 0);
 }
 /*:548*//*551:*/
-#line 15453 "weaver-interface-metafont.cweb"
+#line 15454 "weaver-interface-metafont.cweb"
 
 static void insert_polygon_edge_aux(struct polygon_edge*tree,
 struct polygon_edge*new_edge,
@@ -12185,7 +12185,7 @@ insert_polygon_edge_aux(current,new_edge,leq,eq);
 return new_edge;
 }
 /*:551*//*553:*/
-#line 15524 "weaver-interface-metafont.cweb"
+#line 15525 "weaver-interface-metafont.cweb"
 
 static bool leq_by_vertex(struct polygon_edge*p1,struct polygon_edge*p2){
 if(p1->x1==p1->x2&&p2->x1==p2->x2){
@@ -12226,7 +12226,7 @@ return(p1->y2<=slope*p1->x2+b);
 }
 }
 /*:553*//*555:*/
-#line 15573 "weaver-interface-metafont.cweb"
+#line 15574 "weaver-interface-metafont.cweb"
 
 static bool eq_by_vertex(struct polygon_edge*p1,struct polygon_edge*p2){
 return(p1->x1==p2->x1&&p1->y1==p2->y1&&
@@ -12235,7 +12235,7 @@ p1->x2==p2->x2&&p1->y2==p2->y2)||
 p1->x2==p2->x1&&p1->y2==p2->y1);
 }
 /*:555*//*557:*/
-#line 15593 "weaver-interface-metafont.cweb"
+#line 15594 "weaver-interface-metafont.cweb"
 
 static struct polygon_edge*remove_polygon_edge(struct polygon_edge**tree,
 float x1,float y1,float x2,
@@ -12295,7 +12295,7 @@ return NULL;
 }
 }
 /*:557*//*559:*/
-#line 15662 "weaver-interface-metafont.cweb"
+#line 15663 "weaver-interface-metafont.cweb"
 
 static struct polygon_edge*find_edge_below(struct polygon_edge*tree,
 float x,float y){
@@ -12315,7 +12315,7 @@ else return tree;
 else return find_edge_below(tree->left,x,y);
 }
 /*:559*//*561:*/
-#line 15697 "weaver-interface-metafont.cweb"
+#line 15698 "weaver-interface-metafont.cweb"
 
 static bool cut_polygon(struct polygon_vertex*v1,struct polygon_vertex*v2,
 struct polygon_vertex**new1,
@@ -12374,7 +12374,7 @@ v1= v1->next;
 return true;
 }
 /*:561*//*564:*/
-#line 15833 "weaver-interface-metafont.cweb"
+#line 15834 "weaver-interface-metafont.cweb"
 
 static bool leq_by_helper(struct polygon_edge*p1,struct polygon_edge*p2){
 return(p1->helper<=p2->helper);
@@ -12383,7 +12383,7 @@ static bool eq_by_helper(struct polygon_edge*p1,struct polygon_edge*p2){
 return(p1->helper==p2->helper);
 }
 /*:564*//*567:*/
-#line 15918 "weaver-interface-metafont.cweb"
+#line 15919 "weaver-interface-metafont.cweb"
 
 static void triangulate_polygon_tree(struct polygon_edge*tree,
 float**triangles,
@@ -12405,7 +12405,7 @@ DESTROY_POLYGON_EDGE(tree);
 return;
 }
 /*:567*//*607:*/
-#line 16883 "weaver-interface-metafont.cweb"
+#line 16884 "weaver-interface-metafont.cweb"
 
 #define ERASE_FLAG 1
 bool drawing_commands(struct metafont*mf,struct context*cx,
@@ -12424,7 +12424,7 @@ currentpen= currentpen->referenced;
 else
 memcpy(transform_matrix,currentpen->gl_matrix,9*sizeof(float));
 /*596:*/
-#line 16694 "weaver-interface-metafont.cweb"
+#line 16695 "weaver-interface-metafont.cweb"
 
 {
 if(cx->currentpicture_fb==0){
@@ -12453,7 +12453,7 @@ else
 glBindFramebuffer(GL_FRAMEBUFFER,cx->currentpicture_fb);
 }
 /*:596*/
-#line 16900 "weaver-interface-metafont.cweb"
+#line 16901 "weaver-interface-metafont.cweb"
 
 
 for(i= 0;i<path->length-1;i++){
@@ -12491,7 +12491,7 @@ path->points[0].point.y,transform_matrix,flags&ERASE_FLAG);
 return true;
 }
 /*:607*//*611:*/
-#line 17033 "weaver-interface-metafont.cweb"
+#line 17034 "weaver-interface-metafont.cweb"
 
 void drawpoint(struct context*cx,
 struct pen_variable*pen,struct picture_variable*pic,
@@ -12533,7 +12533,7 @@ else
 glDrawArrays(GL_TRIANGLES,0,pen->indices);
 }
 /*:611*//*618:*/
-#line 17209 "weaver-interface-metafont.cweb"
+#line 17210 "weaver-interface-metafont.cweb"
 
 static const uint32_t greatest_point[332]= {
 
@@ -12646,18 +12646,18 @@ return NULL;
 return&(mf->glyphs[block][index]);
 }
 /*:618*//*671:*/
-#line 18940 "weaver-interface-metafont.cweb"
+#line 18941 "weaver-interface-metafont.cweb"
 
 void token_to_string(struct generic_token*tok,char*dst){
 /*672:*/
-#line 18988 "weaver-interface-metafont.cweb"
+#line 18989 "weaver-interface-metafont.cweb"
 
 if(tok->type==TYPE_NUMERIC){
 snprintf(dst,32,"%g",((struct numeric_token*)tok)->value);
 return;
 }
 /*:672*//*673:*/
-#line 18998 "weaver-interface-metafont.cweb"
+#line 18999 "weaver-interface-metafont.cweb"
 
 if(tok->type==TYPE_STRING){
 dst[0]= '"';
@@ -12666,7 +12666,7 @@ strncat(dst,"\"",2);
 return;
 }
 /*:673*//*674:*/
-#line 19011 "weaver-interface-metafont.cweb"
+#line 19012 "weaver-interface-metafont.cweb"
 
 if(tok->type==TYPE_SYMBOLIC){
 struct symbolic_token*symb= (struct symbolic_token*)tok;
@@ -12681,7 +12681,7 @@ dst[31]= '\0';
 return;
 }
 /*:674*/
-#line 18942 "weaver-interface-metafont.cweb"
+#line 18943 "weaver-interface-metafont.cweb"
 
 tokenid_to_string(tok->type,dst);
 return;
@@ -12741,14 +12741,14 @@ permanent_free= p_free;
 random_func= random;
 dpi= pixel_density;
 /*418:*/
-#line 10866 "weaver-interface-metafont.cweb"
+#line 10867 "weaver-interface-metafont.cweb"
 
 glGenBuffers(1,&vbo);
 glBindBuffer(GL_ARRAY_BUFFER,vbo);
 
 glBufferData(GL_ARRAY_BUFFER,sizeof(square),square,GL_STATIC_DRAW);
 /*:418*//*424:*/
-#line 10979 "weaver-interface-metafont.cweb"
+#line 10980 "weaver-interface-metafont.cweb"
 
 {
 program= compile_shader_program(vertex_shader,fragment_shader);
@@ -12758,7 +12758,7 @@ uniform_matrix= glGetUniformLocation(program,"model_view_matrix");
 uniform_texture= glGetUniformLocation(program,"texture1");
 }
 /*:424*//*435:*/
-#line 11274 "weaver-interface-metafont.cweb"
+#line 11275 "weaver-interface-metafont.cweb"
 
 {
 inv_program= compile_shader_program(vertex_shader,fragment_shader_inverse);
@@ -12766,7 +12766,7 @@ uniform_inv_matrix= glGetUniformLocation(inv_program,"model_view_matrix");
 uniform_inv_texture= glGetUniformLocation(inv_program,"texture1");
 }
 /*:435*//*519:*/
-#line 14095 "weaver-interface-metafont.cweb"
+#line 14096 "weaver-interface-metafont.cweb"
 
 {
 float square_vertices[8]= {-0.5,-0.5,
@@ -12779,7 +12779,7 @@ glBufferData(GL_ARRAY_BUFFER,8*sizeof(float),square_vertices,
 GL_STATIC_DRAW);
 }
 /*:519*//*603:*/
-#line 16825 "weaver-interface-metafont.cweb"
+#line 16826 "weaver-interface-metafont.cweb"
 
 {
 pen_program= compile_shader_program(pen_vertex_shader,pen_fragment_shader);
@@ -12801,23 +12801,23 @@ return true;
 
 void _Wfinish_weavefont(void){
 /*419:*/
-#line 10875 "weaver-interface-metafont.cweb"
+#line 10876 "weaver-interface-metafont.cweb"
 
 glDeleteBuffers(1,&vbo);
 /*:419*//*425:*/
-#line 10991 "weaver-interface-metafont.cweb"
+#line 10992 "weaver-interface-metafont.cweb"
 
 glDeleteProgram(program);
 /*:425*//*436:*/
-#line 11284 "weaver-interface-metafont.cweb"
+#line 11285 "weaver-interface-metafont.cweb"
 
 glDeleteProgram(inv_program);
 /*:436*//*520:*/
-#line 14110 "weaver-interface-metafont.cweb"
+#line 14111 "weaver-interface-metafont.cweb"
 
 glDeleteBuffers(1,&pensquare_vbo);
 /*:520*//*604:*/
-#line 16840 "weaver-interface-metafont.cweb"
+#line 16841 "weaver-interface-metafont.cweb"
 
 glDeleteProgram(pen_program);
 glDeleteProgram(pen_erase_program);
@@ -12939,7 +12939,7 @@ permanent_free(mf->internal_pen_variables[0].format);
 permanent_free(mf->internal_pen_variables);
 }
 /*:188*//*619:*/
-#line 17326 "weaver-interface-metafont.cweb"
+#line 17327 "weaver-interface-metafont.cweb"
 
 {
 int block,block_size,index;
@@ -12976,7 +12976,7 @@ permanent_free(mf);
 }
 }
 /*:79*//*626:*/
-#line 17661 "weaver-interface-metafont.cweb"
+#line 17662 "weaver-interface-metafont.cweb"
 
 bool _Wwrite_numeric_variable(struct metafont*mf,char*name,float value){
 int i;
@@ -13017,7 +13017,7 @@ return true;
 return false;
 }
 /*:626*//*627:*/
-#line 17705 "weaver-interface-metafont.cweb"
+#line 17706 "weaver-interface-metafont.cweb"
 
 float _Wread_numeric_variable(struct metafont*mf,char*name){
 struct named_variable*var= (struct named_variable*)mf->named_variables;
@@ -13033,7 +13033,7 @@ var= var->next;
 return NAN;
 }
 /*:627*//*628:*/
-#line 17724 "weaver-interface-metafont.cweb"
+#line 17725 "weaver-interface-metafont.cweb"
 
 struct metafont*_Wnew_metafont(char*filename){
 struct metafont*mf;
@@ -13052,7 +13052,7 @@ return NULL;
 return mf;
 }
 /*:628*//*630:*/
-#line 17756 "weaver-interface-metafont.cweb"
+#line 17757 "weaver-interface-metafont.cweb"
 
 bool _Wrender_glyph(struct metafont*mf,char*glyph,
 char*next_glyph,GLuint*texture,
@@ -13101,17 +13101,17 @@ MUTEX_SIGNAL(mf->mutex);
 return true;
 }
 /*:630*//*661:*/
-#line 18656 "weaver-interface-metafont.cweb"
+#line 18657 "weaver-interface-metafont.cweb"
 
 #if defined(WEAVER_ENGINE)
 /*662:*/
-#line 18743 "weaver-interface-metafont.cweb"
+#line 18744 "weaver-interface-metafont.cweb"
 
 void _interface_free_metafont(void*data){
 _Wdestroy_metafont((struct metafont*)data);
 }
 /*:662*//*663:*/
-#line 18754 "weaver-interface-metafont.cweb"
+#line 18755 "weaver-interface-metafont.cweb"
 
 void _reload_texture(struct user_interface*target){
 struct metafont*mf= (struct metafont*)(target->_internal_data);
@@ -13139,7 +13139,7 @@ target->width= texture_width;
 target->height= texture_height+texture_depth;
 }
 /*:663*/
-#line 18658 "weaver-interface-metafont.cweb"
+#line 18659 "weaver-interface-metafont.cweb"
 
 void _Wmetafont_loading(void*(*p_alloc)(size_t),
 void(*p_free)(void*),
@@ -13211,9 +13211,9 @@ if(after_loading_interface!=NULL)
 after_loading_interface();
 }
 #endif
-#line 18729 "weaver-interface-metafont.cweb"
+#line 18730 "weaver-interface-metafont.cweb"
 /*:661*//*667:*/
-#line 18850 "weaver-interface-metafont.cweb"
+#line 18851 "weaver-interface-metafont.cweb"
 
 void _Wprint_metafont_error(struct metafont*mf){
 char line_number[8];
@@ -13228,7 +13228,7 @@ case ERROR_NO_ERROR:
 fprintf(stderr,"%s:%s No errors.",mf->file,line_number);
 break;
 /*678:*/
-#line 19107 "weaver-interface-metafont.cweb"
+#line 19108 "weaver-interface-metafont.cweb"
 
 case ERROR_DISCONTINUOUS_PATH:
 float*buffer= (float*)(mf->errno_str);
@@ -13238,13 +13238,13 @@ fprintf(stderr,
 mf->file,line_number,buffer[0],buffer[1],buffer[2],buffer[3]);
 break;
 /*:678*//*681:*/
-#line 19134 "weaver-interface-metafont.cweb"
+#line 19135 "weaver-interface-metafont.cweb"
 
 case ERROR_DIVISION_BY_ZERO:
 fprintf(stderr,"%s:%s Division by zero.",mf->file,line_number);
 break;
 /*:681*//*684:*/
-#line 19161 "weaver-interface-metafont.cweb"
+#line 19162 "weaver-interface-metafont.cweb"
 
 case ERROR_DUPLICATE_GLYPH:
 fprintf(stderr,
@@ -13252,7 +13252,7 @@ fprintf(stderr,
 mf->file,line_number,mf->errno_str);
 break;
 /*:684*//*687:*/
-#line 19205 "weaver-interface-metafont.cweb"
+#line 19206 "weaver-interface-metafont.cweb"
 
 case ERROR_EMPTY_DELIMITER:
 fprintf(stderr,"%s:%s Unexpected empty delimiter '%c%c'.",
@@ -13261,7 +13261,7 @@ mf->file,line_number,mf->errno_int,
 ((mf->errno_int=='[')?(']'):('}'))));
 break;
 /*:687*//*690:*/
-#line 19238 "weaver-interface-metafont.cweb"
+#line 19239 "weaver-interface-metafont.cweb"
 
 case ERROR_EXPECTED_FOUND:
 char expected_name[32];
@@ -13271,14 +13271,14 @@ fprintf(stderr,"%s:%s Expected '%s' token. Found '%s' instead.",
 mf->file,line_number,expected_name,mf->errno_str);
 break;
 /*:690*//*693:*/
-#line 19276 "weaver-interface-metafont.cweb"
+#line 19277 "weaver-interface-metafont.cweb"
 
 case ERROR_FAILED_OPENING_FILE:
 fprintf(stderr,"%s:%s Failed opening file \"%s\": %s.",mf->file,
 line_number,mf->errno_str,strerror(mf->errno_int));
 break;
 /*:693*//*697:*/
-#line 19312 "weaver-interface-metafont.cweb"
+#line 19313 "weaver-interface-metafont.cweb"
 
 case ERROR_INCOMPLETE_SOURCE:
 fprintf(stderr,
@@ -13286,7 +13286,7 @@ fprintf(stderr,
 mf->file,line_number);
 break;
 /*:697*//*700:*/
-#line 19342 "weaver-interface-metafont.cweb"
+#line 19343 "weaver-interface-metafont.cweb"
 
 case ERROR_INCOMPLETE_STATEMENT:
 fprintf(stderr,
@@ -13295,7 +13295,7 @@ fprintf(stderr,
 mf->file,line_number);
 break;
 /*:700*//*703:*/
-#line 19405 "weaver-interface-metafont.cweb"
+#line 19406 "weaver-interface-metafont.cweb"
 
 case ERROR_INVALID_CHAR:
 {
@@ -13347,7 +13347,7 @@ mf->file,line_number,mf->errno_str,code_point);
 break;
 }
 /*:703*//*706:*/
-#line 19479 "weaver-interface-metafont.cweb"
+#line 19480 "weaver-interface-metafont.cweb"
 
 case ERROR_INVALID_COMPARISON:
 char expr_type[32];
@@ -13358,7 +13358,7 @@ fprintf(stderr,
 mf->file,line_number,mf->errno_str,expr_type);
 break;
 /*:706*//*709:*/
-#line 19514 "weaver-interface-metafont.cweb"
+#line 19515 "weaver-interface-metafont.cweb"
 
 case ERROR_INVALID_DIMENSION_GLYPH:
 int*size_buffer= (int*)(mf->errno_str);
@@ -13373,7 +13373,7 @@ else if(size_buffer[1]<=0)
 fprintf(stderr,"height+depth.");
 break;
 /*:709*//*712:*/
-#line 19557 "weaver-interface-metafont.cweb"
+#line 19558 "weaver-interface-metafont.cweb"
 
 case ERROR_INVALID_NAME:
 char reason[128];
@@ -13392,7 +13392,7 @@ fprintf(stderr,"%s:%s You can not use '%s' as a variable name: %s.",
 mf->file,line_number,mf->errno_str,reason);
 break;
 /*:712*//*715:*/
-#line 19615 "weaver-interface-metafont.cweb"
+#line 19616 "weaver-interface-metafont.cweb"
 
 case ERROR_INVALID_TENSION:
 float*buf= (float*)(mf->errno_str);
@@ -13402,49 +13402,49 @@ mf->file,line_number,buf[0],buf[1],buf[2],buf[3],
 (mf->errno_int==0)?"first":"second",buf[4]);
 break;
 /*:715*//*718:*/
-#line 19648 "weaver-interface-metafont.cweb"
+#line 19649 "weaver-interface-metafont.cweb"
 
 case ERROR_MISSING_EXPRESSION:
 fprintf(stderr,"%s:%s Missing '%s' expression.",
 mf->file,line_number,mf->errno_str);
 break;
 /*:718*//*721:*/
-#line 19677 "weaver-interface-metafont.cweb"
+#line 19678 "weaver-interface-metafont.cweb"
 
 case ERROR_MISSING_TOKEN:
 fprintf(stderr,"%s:%s Missing matching token '%s'.",mf->file,line_number,
 mf->errno_str);
 break;
 /*:721*//*724:*/
-#line 19705 "weaver-interface-metafont.cweb"
+#line 19706 "weaver-interface-metafont.cweb"
 
 case ERROR_NEGATIVE_LOGARITHM:
 fprintf(stderr,"%s:%s Tried to compute logarithm of negative value '%s'.",
 mf->file,line_number,mf->errno_str);
 break;
 /*:724*//*727:*/
-#line 19733 "weaver-interface-metafont.cweb"
+#line 19734 "weaver-interface-metafont.cweb"
 
 case ERROR_NEGATIVE_SQUARE_ROOT:
 fprintf(stderr,"%s:%s Tried to compute square root of negative value '%s'.",
 mf->file,line_number,mf->errno_str);
 break;
 /*:727*//*730:*/
-#line 19760 "weaver-interface-metafont.cweb"
+#line 19761 "weaver-interface-metafont.cweb"
 
 case ERROR_NESTED_BEGINCHAR:
 fprintf(stderr,
 "%s:%s You cannot nest 'beginchar' statements.",mf->file,line_number);
 break;
 /*:730*//*733:*/
-#line 19812 "weaver-interface-metafont.cweb"
+#line 19813 "weaver-interface-metafont.cweb"
 
 case ERROR_NO_MEMORY:
 fprintf(stderr,"%s:%s Not enough memory for allocation.",mf->file,
 line_number);
 break;
 /*:733*//*736:*/
-#line 19843 "weaver-interface-metafont.cweb"
+#line 19844 "weaver-interface-metafont.cweb"
 
 case ERROR_NO_PICKUP_PEN:
 tokenid_to_string(mf->errno_int,mf->errno_str);
@@ -13453,21 +13453,21 @@ fprintf(stderr,"%s:%s After a 'pickup' command, you should use either a "
 mf->file,line_number);
 break;
 /*:736*//*739:*/
-#line 19870 "weaver-interface-metafont.cweb"
+#line 19871 "weaver-interface-metafont.cweb"
 
 case ERROR_NONCYCLICAL_PEN:
 fprintf(stderr,"%s:%s Tried to create a pen from non-cyclical path.",
 mf->file,line_number);
 break;
 /*:739*//*742:*/
-#line 19898 "weaver-interface-metafont.cweb"
+#line 19899 "weaver-interface-metafont.cweb"
 
 case ERROR_NULL_VECTOR_ANGLE:
 fprintf(stderr,"%s:%s You cannot use 'angle' operator in a null vector '(0, 0)'.",
 mf->file,line_number);
 break;
 /*:742*//*745:*/
-#line 19929 "weaver-interface-metafont.cweb"
+#line 19930 "weaver-interface-metafont.cweb"
 
 case ERROR_OPENGL_FRAMEBUFFER:
 fprintf(stderr,"%s:%s OpenGL error. Couldn't create framebuffer for image.",
@@ -13498,7 +13498,7 @@ break;
 }
 break;
 /*:745*//*748:*/
-#line 19986 "weaver-interface-metafont.cweb"
+#line 19987 "weaver-interface-metafont.cweb"
 
 case ERROR_RECURSIVE_RENDERCHAR:
 fprintf(stderr,"%s:%s Recursive 'renderchar' detected. Glyph '%s' depends on "
@@ -13506,7 +13506,7 @@ fprintf(stderr,"%s:%s Recursive 'renderchar' detected. Glyph '%s' depends on "
 line_number,mf->errno_str,mf->errno_str);
 break;
 /*:748*//*751:*/
-#line 20020 "weaver-interface-metafont.cweb"
+#line 20021 "weaver-interface-metafont.cweb"
 
 case ERROR_UNBALANCED_ENDING_TOKEN:
 tokenid_to_string(mf->errno_int,mf->errno_str);
@@ -13516,35 +13516,35 @@ fprintf(stderr,"%s:%s Unexpected token \"%s\" found. You are trying to "
 line_number,mf->errno_str);
 break;
 /*:751*//*754:*/
-#line 20051 "weaver-interface-metafont.cweb"
+#line 20052 "weaver-interface-metafont.cweb"
 
 case ERROR_UNCLOSED_DELIMITER:
 fprintf(stderr,"%s:%s Delimiter '%c' was not closed.",
 mf->file,line_number,mf->errno_int);
 break;
 /*:754*//*757:*/
-#line 20088 "weaver-interface-metafont.cweb"
+#line 20089 "weaver-interface-metafont.cweb"
 
 case ERROR_UNCLOSED_STRING:
 fprintf(stderr,"%s:%s Unclosed string \"%s\".",mf->file,
 line_number,mf->errno_str);
 break;
 /*:757*//*760:*/
-#line 20115 "weaver-interface-metafont.cweb"
+#line 20116 "weaver-interface-metafont.cweb"
 
 case ERROR_UNDECLARED_VARIABLE:
 fprintf(stderr,"%s:%s Variable '%s' was not declared.",mf->file,
 line_number,mf->errno_str);
 break;
 /*:760*//*763:*/
-#line 20149 "weaver-interface-metafont.cweb"
+#line 20150 "weaver-interface-metafont.cweb"
 
 case ERROR_UNEXPECTED_TOKEN:
 fprintf(stderr,"%s:%s We found '%s' token in a context where such "
 "token makes no sense.",mf->file,line_number,mf->errno_str);
 break;
 /*:763*//*766:*/
-#line 20178 "weaver-interface-metafont.cweb"
+#line 20179 "weaver-interface-metafont.cweb"
 
 case ERROR_UNINITIALIZED_VARIABLE:
 char var_type[32];
@@ -13553,7 +13553,7 @@ fprintf(stderr,"%s:%s Uninitialized %s variable '%s'.",
 mf->file,line_number,var_type,mf->errno_str);
 break;
 /*:766*//*769:*/
-#line 20209 "weaver-interface-metafont.cweb"
+#line 20210 "weaver-interface-metafont.cweb"
 
 case ERROR_UNKNOWN_GLYPH_DEPENDENCY:
 fprintf(stderr,
@@ -13561,14 +13561,14 @@ fprintf(stderr,
 mf->file,line_number,mf->errno_str);
 break;
 /*:769*//*772:*/
-#line 20241 "weaver-interface-metafont.cweb"
+#line 20242 "weaver-interface-metafont.cweb"
 
 case ERROR_UNKNOWN_EXPRESSION:
 fprintf(stderr,"%s:%s Unknown %s expression.",mf->file,
 line_number,list_of_keywords[mf->errno_int-10]);
 break;
 /*:772*//*775:*/
-#line 20272 "weaver-interface-metafont.cweb"
+#line 20273 "weaver-interface-metafont.cweb"
 
 case ERROR_UNKNOWN_STATEMENT:
 fprintf(stderr,"%s:%s Unknown statement. Perhaps you misspelled some "
@@ -13576,14 +13576,14 @@ fprintf(stderr,"%s:%s Unknown statement. Perhaps you misspelled some "
 "place.",mf->file,line_number);
 break;
 /*:775*//*778:*/
-#line 20302 "weaver-interface-metafont.cweb"
+#line 20303 "weaver-interface-metafont.cweb"
 
 case ERROR_UNOPENED_DELIMITER:
 fprintf(stderr,"%s:%s Delimiter '%c' was not previously opened.",
 mf->file,line_number,mf->errno_int);
 break;
 /*:778*//*781:*/
-#line 20337 "weaver-interface-metafont.cweb"
+#line 20338 "weaver-interface-metafont.cweb"
 
 case ERROR_UNSUPORTED_LENGTH_OPERAND:
 if(mf->errno_int==-1)
@@ -13598,7 +13598,7 @@ mf->file,line_number,mf->errno_str);
 }
 break;
 /*:781*//*784:*/
-#line 20380 "weaver-interface-metafont.cweb"
+#line 20381 "weaver-interface-metafont.cweb"
 
 case ERROR_WRONG_NUMBER_OF_PARAMETERS:
 fprintf(stderr,
@@ -13607,7 +13607,7 @@ mf->file,line_number,mf->errno_str,mf->errno_int>>8,
 mf->errno_int&255);
 break;
 /*:784*//*787:*/
-#line 20418 "weaver-interface-metafont.cweb"
+#line 20419 "weaver-interface-metafont.cweb"
 
 case ERROR_WRONG_VARIABLE_TYPE:
 char expected[32],found[32];
@@ -13618,7 +13618,7 @@ fprintf(stderr,"%s:%s Variable '%s' is a '%s' variable, but we expected a "
 found,expected);
 break;
 /*:787*/
-#line 18863 "weaver-interface-metafont.cweb"
+#line 18864 "weaver-interface-metafont.cweb"
 
 default:
 fprintf(stderr,"%s:%s Unknown error.",mf->file,line_number);

@@ -7015,6 +7015,7 @@ TYPE_YPART,  // O token simbólico 'ypart'
 TYPE_ANGLE,  // O token simbólico 'angle'
 @
 
+
 Correspondentes às seguintes palavras reservadas:
 
 @<Lista de Palavras Reservadas@>+=
