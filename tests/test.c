@@ -2334,7 +2334,6 @@ void test_pen_rendering(void){
 	 picture_d -> width == 400 &&
   	 picture_d -> height == 300 &&
   	 numeric_wd -> value == 60341.0);
-
   //print_picture(picture_a);
   //print_picture(picture_b);
   free_token_list(first);

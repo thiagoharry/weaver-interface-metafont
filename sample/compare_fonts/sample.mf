@@ -2776,8 +2776,82 @@ beginchar("q", (0.591+0.06*(weight-1)-0.051*italic+0.018*italic*(weight-1))*size
   % No Kerning
 endchar;
 
-beginchar("r", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
-    0.668*size*pt, 0);
+beginchar("r", (0.267+0.04*(weight-1)+0.11*italic+0.008*italic*(weight-1))*size*pt,
+    (0.504+0.01*(weight-1)-0.003*italic*(weight-1))*size*pt, 0);
+  %   upper_width
+  % +---+
+  % |    \ pen_height
+  % +-----+
+  % lower_width
+  numeric upper_width, pen_height, lower_width;
+  numeric slanting, ang, max_height;;
+  pen p;
+  pair p1, p2;
+  upper_width = (0.115+0.115*(weight-1))*h;
+  pen_height = 0.175*h;
+  lower_width = (0.17+0.11*(weight-1))*h;
+  p = makepen(
+      (-lower_width/2, pen_height/2)--
+      (-lower_width/2+upper_width, pen_height/2)--
+      (lower_width/2, -pen_height/2)--
+      (-lower_width/2, -pen_height/2) --cycle);
+  slanting = 0.215 * italic;
+  ang = angle(pen_height * slanting, pen_height);
+  pickup p slanted slanting;
+  pair p1, p2, p3, p4;
+  max_height = (0.985-0.02*(weight-1)+0.01*(italic*(weight-1)))*h - pen_height/2;
+  p1 = (lower_width/2 + cosd(ang) * max_height, max_height);
+  p2 = ((lower_width+pen_height*slanting)/2, pen_height/2);
+  draw p1 -- p2;
+  pair p3_u, p3_l, p4_u, p4_l, puu, pll;
+  p3_u = (w, (1-0.01*(weight-1)+0.01*(weight-1)*italic)*h);
+  p3_l = ((1-0.04*italic-0.04*italic*(weight-1))*w, (0.83-0.125*(weight-1)+0.01*(weight-1)*italic)*h);
+  p4_u = p1 + (lower_width/2 - slanting*(pen_height/2), -pen_height/2);
+  p4_l = (0.58+0.09*(weight-1)+0.01*italic-0.07*italic*(weight-1))[(lower_width, 0), p4_u];
+  puu = ((xpart  p3_u + xpart p4_u)/2, 0.96*h);
+  pll = ((xpart  p3_l + xpart p4_l)/2, (0.79-0.1*(weight-1)+0.02*(weight-1)*italic)*h);
+  pickup pencircle scaled (0.1+0.04*(weight-1))*h;
+  draw bot p4_u .. bot puu .. bot p3_u;
+  draw lft p4_l .. top pll .. top p3_l;
+  draw 0.1[bot p4_u, lft p4_l] .. 0.5[bot puu, top pll] .. 0.5[bot p3_u, top p3_l];
+  % RETOUCH
+  pen eraser;
+  eraser = makepen((w, h)--p3_l--(w, 0.5*h)--cycle);
+  pickup eraser;
+  erase (0,0);
+  % Kerning
+  kerning("W", 28*k*size);
+  kerning("v", 26*k*size);
+  kerning("ÿ", 26*k*size);
+  kerning("ý", 26*k*size);
+  kerning("y", 26*k*size);
+  kerning("w", 24*k*size);
+  kerning("x", 21*k*size);
+  kerning("f", 19*k*size);
+  kerning("t", 16*k*size);
+  kerning("ţ", 16*k*size);
+  kerning("ť", 16*k*size);
+  kerning("ț", 16*k*size);
+  kerning("t", 16*k*size);
+  kerning("ī", 15*k*size*(weight-1));
+  kerning("ï", 15*k*size*(weight-1));
+  kerning("į", 15*k*size*(weight-1));
+  kerning("î", 15*k*size*(weight-1));
+  kerning("í", 15*k*size*(weight-1));
+  kerning("ì", 15*k*size*(weight-1));
+  kerning("ı", 15*k*size*(weight-1));
+  kerning("i", 15*k*size*(weight-1));
+  kerning("ą", (-15+2*(weight-1))*k*size);
+  kerning("ă", (-15+2*(weight-1))*k*size);
+  kerning("á", (-15+2*(weight-1))*k*size);
+  kerning("å", (-15+2*(weight-1))*k*size);
+  kerning("ä", (-15+2*(weight-1))*k*size);
+  kerning("ã", (-15+2*(weight-1))*k*size);
+  kerning("â", (-15+2*(weight-1))*k*size);
+  kerning("à", (-15+2*(weight-1))*k*size);
+  kerning("ā", (-15+2*(weight-1))*k*size);
+  kerning("a", (-15+2*(weight-1))*k*size); 
+  kerning("æ", (-15+2*(weight-1))*k*size);
 endchar;
 
 beginchar("s", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
