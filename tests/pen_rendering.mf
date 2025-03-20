@@ -3,6 +3,7 @@ numeric wa, wb, wc, wd;
 picture a, b, c, D;
 pen p;
 
+
 currentpicture = nullpicture(11, 11);
 p = makepen((1,1)--(1, 10)--(10,10)--(10, 1)--(5, 5)--cycle);
 pickup p;
@@ -30,3 +31,4 @@ pickup p;
 draw (0,0);
 D = currentpicture;
 wd = totalweight D;
+

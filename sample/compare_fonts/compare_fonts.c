@@ -175,7 +175,7 @@ void test(struct metafont *mf, char *font_name, char *c, int weight, int italic)
 		          0.0, ZOOM * (float) face->glyph -> bitmap.width,
 			  ZOOM * (float) face->glyph -> bitmap.rows);
       m = _Wnew_interface(NULL, NULL,
-			  (window_width + ZOOM * width) / 2 +1,
+			  (window_width + ZOOM * width) / 2,
 			  (window_height + ZOOM * (height+depth)) / 2 - depth + 1,
 		          0.0, ZOOM * width, ZOOM * (height + depth));
       line = _Wnew_interface(NULL, NULL, window_width / 2, window_height / 2, 0.0, window_width, 1);
