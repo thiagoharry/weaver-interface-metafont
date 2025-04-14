@@ -2949,8 +2949,31 @@ beginchar("t", (0.266+0.077*(weight-1)+0.013*italic+0.012*italic*(weight-1))*siz
   kerning("w", 12*k*(weight-1)*size);
 endchar;
 
-beginchar("u", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
-    0.668*size*pt, 0);
+beginchar("u", (0.399+0.07*(weight-1)+0.09*italic-0.001*italic*(weight-1))*size*pt,
+    0.497*size*pt, 0);
+  numeric pen_width;
+  pen_width = (0.085+0.065*(weight-1))*h;
+  pickup pencircle scaled pen_width;
+  pair p1_outer, p1_inner, p2_inner, p2_outer, p3_outer, p3_inner, p4_inner, p4_outer;
+  pair p5_inner, p5_outer;
+  p1_outer = rt ((0.17*italic-0.02*(weight-1)*italic)*w, h);
+  p1_inner = (xpart p1_outer + pen_width, ypart p1_outer);
+  p2_outer = rt ((0.04-0.01*(weight-1))*italic*w, (0.3+0.02*(weight-1))*h);
+  p2_inner = (xpart p2_outer + pen_width, ypart p2_outer);
+  p3_outer = top ((0.42-0.06*(weight-1)-0.11*italic+0.02*italic*(weight-1))*w, 0);
+  p3_inner = ((0.48-0.11*italic+0.035*italic*(weight-1))*w, (0.09+0.045*(weight-1))*h);
+  p4_outer = lft ((1-0.15*italic)*w, (0.3+0.02*(weight-1))*h);
+  p4_inner = (xpart p4_outer - pen_width, ypart p4_outer);
+  p5_outer = lft (w, h);
+  p5_inner = (xpart p5_outer - pen_width, h);
+  draw p1_outer--p2_outer..{1, 0}p3_outer..p4_inner--p5_outer;
+  draw p1_inner--p2_inner..{1, 0}p3_inner..p4_inner--p5_inner;
+  draw 0.5[p1_inner, p1_outer]--0.5[p2_inner, p2_outer]..{1, 0}0.5[p3_inner, p3_outer];
+  pen ending;
+  ending = makepen((0, 0)--(-cosd(angle(p5_outer-p4_outer)) * (ypart p4_outer), -(ypart p4_outer)) -- (-cosd(angle(p5_outer-p4_outer)) * (ypart p4_outer)-(1.4+0.3*(weight-1))*pen_width, -(ypart p4_outer)) -- (-2*pen_width, 0) -- cycle);
+  pickup ending;
+  draw (xpart p4_outer + pen_width/2, ypart p4_outer) -- (w, h);
+  % NO KERNING
 endchar;
 
 beginchar("v", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
