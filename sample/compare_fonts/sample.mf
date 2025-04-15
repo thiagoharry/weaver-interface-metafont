@@ -2976,8 +2976,21 @@ beginchar("u", (0.399+0.07*(weight-1)+0.09*italic-0.001*italic*(weight-1))*size*
   % NO KERNING
 endchar;
 
-beginchar("v", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
-    0.668*size*pt, 0);
+beginchar("v", (0.441+0.085*(weight-1)+0.005*italic+0.003*italic*(weight-1))*size*pt,
+    0.497*size*pt, 0);
+  numeric pen_size;
+  pen_size = (0.17+0.15*(weight-1)-0.015*(weight-1)*italic)*h;
+  pickup pensquare xscaled pen_size;
+  pair p1, p2, p3, p4;
+  p1 = rt (0, h);
+  p2 = rt ((0.4-0.06*(weight-1)-0.23*italic+0.03*italic*(weight-1))*w, 0);
+  draw p1--p2;
+  p3 = (xpart p2 + (0.02*(weight-1)+0.025*italic*(weight-1))*w, ypart p2);
+  p4 = lft (w, h);
+  draw p3--p4;
+  %  KERNING
+  kerning("X", -19*k*size);
+  kerning("f", (21+6*(weight-1))*k*size);
 endchar;
 
 beginchar("w", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
