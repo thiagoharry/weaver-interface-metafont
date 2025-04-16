@@ -2993,8 +2993,32 @@ beginchar("v", (0.441+0.085*(weight-1)+0.005*italic+0.003*italic*(weight-1))*siz
   kerning("f", (21+6*(weight-1))*k*size);
 endchar;
 
-beginchar("w", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
-    0.668*size*pt, 0);
+beginchar("w", (0.654+0.069*(weight-1)+0.006*italic-0.001*italic*(weight-1))*size*pt,
+    0.497*size*pt, 0);
+  numeric pen_size1, pen_size2;
+  pen_size1 = (0.17+0.15*(weight-1)-0.015*(weight-1)*italic)*h;
+  pen_size2 = pen_size1 * (1-(0.4*(weight-1)-0.07*italic*(weight-1)));
+  pickup pensquare xscaled pen_size1;
+  pair p1, p2, p3, p4, p5, p6, p7, p8;
+  p1 = rt (0, h);
+  p2 = rt ((0.215-0.045*(weight-1)-0.16*italic+0.013*italic*(weight-1))*w, 0);
+  draw p1--p2;
+  p3 = (xpart p2 + 0.5 * (pen_size1 - pen_size2), 0);
+  p4 = ((0.5-0.04*(weight-1)-0.02*italic)*w, h);
+  pickup pensquare xscaled pen_size2;
+  draw p3--p4;
+  p5 = (xpart p4 + (0.07*(weight-1)+0.01*italic)*w, h);
+  p6 = ((0.73-0.065*(weight-1)-0.17*italic+0.025*italic*(weight-1))*w, 0);
+  draw p5--p6;
+  pickup pensquare xscaled pen_size1;
+  p7 = ((0.73-0.06*(weight-1)-0.15*italic+0.025*italic*(weight-1))*w + 0.5 * (pen_size1-pen_size2), 0);
+  p8 = lft (w, h);
+  draw p7--p8;
+  % KERNING
+  kerning("ÿ", (16+10*(weight-1))*k*size);
+  kerning("ý", (16+10*(weight-1))*k*size);
+  kerning("y", (16+10*(weight-1))*k*size);
+  kerning("v", (16+10*(weight-1))*k*size);
 endchar;
 
 beginchar("x", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
