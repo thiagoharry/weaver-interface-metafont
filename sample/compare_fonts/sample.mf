@@ -3021,8 +3021,34 @@ beginchar("w", (0.654+0.069*(weight-1)+0.006*italic-0.001*italic*(weight-1))*siz
   kerning("v", (16+10*(weight-1))*k*size);
 endchar;
 
-beginchar("x", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
-    0.668*size*pt, 0);
+beginchar("x", (0.462+0.072*(weight-1)+0.108*italic+0.001*italic*(weight-1))*size*pt,
+    0.497*size*pt, 0);
+  numeric pen_size1, pen_size2;
+  pen_size1 = (0.2+0.14*(weight-1)-0.025*italic-0.01*(weight-1)*italic)*h;
+  pen_size2 = pen_size1 * (1 + 0.22 * italic + 0.01 * italic * (weight-1));
+  pickup pensquare xscaled pen_size1;
+  pair p1, p2, p3, p4;
+  p1 = rt ((0.015+0.005*(weight-1)+0.2*italic-0.006*italic*(weight-1))*w, h);
+  p2 = lft ((1-0.188*italic+0.02*italic*(weight-1))*w, 0);
+  draw p1--p2;
+  pickup pensquare xscaled pen_size2;
+  p3 = rt (0, 0);
+  p4 = lft ((0.975-0.005*(weight-1)+0.025*italic+0.005*italic*(weight-1))*w, h);
+  draw p3--p4;
+  % KERNING
+  kerning("Ÿ", -19*k*size);
+  kerning("Ý", -19*k*size);
+  kerning("Y", -19*k*size);
+  kerning("Ą", 20*k*size);
+  kerning("Ă", 20*k*size);
+  kerning("Ā", 20*k*size);
+  kerning("Á", 20*k*size);
+  kerning("À", 20*k*size);
+  kerning("Å", 20*k*size);
+  kerning("Ä", 20*k*size);
+  kerning("Ã", 20*k*size);
+  kerning("Â", 20*k*size);
+  kerning("A", 20*k*size);
 endchar;
 
 beginchar("y", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
