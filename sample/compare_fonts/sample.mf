@@ -3051,8 +3051,28 @@ beginchar("x", (0.462+0.072*(weight-1)+0.108*italic+0.001*italic*(weight-1))*siz
   kerning("A", 20*k*size);
 endchar;
 
-beginchar("y", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
-    0.668*size*pt, 0);
+beginchar("y", (0.429+0.09*(weight-1)+0.113*italic-0.025*italic*(weight-1))*size*pt,
+    (0.495+0.001*(weight-1)+0.001*italic-0.001*italic*(weight-1))*size*pt, 0.16*size*pt);
+  numeric pen_size, pen_width, pen_height;
+  pen_size = (0.16+0.15*(weight-1)+0.01*italic-0.01*(weight-1)*italic)*h;
+  pen_width = (0.18+0.14*(weight-1)+0.01*italic-0.01*(weight-1)*italic)*h;
+  pen_height = (0.16+0.06*(weight-1)+0.01*italic-0.01*(weight-1)*italic)*h;
+  pickup pensquare xscaled pen_size;
+  pair p1, p2;
+  p1 = rt ((0.19-0.06*(weight-1))*italic*w, h);
+  p2 = ((0.5-(0.095+0.005*(weight-1))*italic)*w, 0);
+  draw p1--p2;
+  pickup pencircle xscaled pen_width yscaled pen_height;
+  pair p3, p4;
+  p3 = lft (w, h);
+  p4 = top ((0.085+0.03*(weight-1)-0.067*italic-0.024*italic*(weight-1))*w, -d);
+  draw p3--p2{p2-p3}..{-1, 0}p4;
+  % Retouch
+  pickup pensemicircle rotated (90-12*italic) xscaled pen_width yscaled (1.1*pen_height);
+  erase p4;
+  % KERNING
+  kerning("X", -19*k*size);
+  kerning("f", (21+6*(weight-1))*k*size);
 endchar;
 
 beginchar("z", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
