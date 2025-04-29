@@ -3075,8 +3075,26 @@ beginchar("y", (0.429+0.09*(weight-1)+0.113*italic-0.025*italic*(weight-1))*size
   kerning("f", (21+6*(weight-1))*k*size);
 endchar;
 
-beginchar("z", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
-    0.668*size*pt, 0);
+beginchar("z", (0.392+0.075*(weight-1)+0.108*italic+0.006*italic*(weight-1))*size*pt,
+    0.496*size*pt, 0);
+  numeric size1, size2, slt;
+  size1 = (0.149+0.094*(weight-1))*h;
+  size2 = (0.19+0.19*(weight-1)+0.02*italic+0.02*(weight-1)*italic)*h;
+  slt = italic*0.21;
+  pickup pensquare slanted slt scaled size1;
+  pair p1, p2, p3, p4;
+  p1 = rt bot ((0.02+0.19*italic-0.04*italic*(weight-1))*w, h);
+  p2 = lft bot ((0.97+0.03*italic)*w, h);
+  p3 = rt top (0, 0);
+  p4 = lft top ((1-0.17*italic)*w, 0);
+  draw p1--p2;
+  draw p3--p4;
+  pickup pensquare xscaled size2;
+  pair p5, p6;
+  p5 = p2 + (0.5*(size1-size2) - 0.5*slt*size1, -0.5*size1);
+  p6 = p3 + (-0.5*(size1-size2) + 0.5*slt*size1, 0.5*size1);
+  draw p5--p6;
+  % No kerning
 endchar;
 
 beginchar("{", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
