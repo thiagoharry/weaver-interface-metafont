@@ -3097,23 +3097,71 @@ beginchar("z", (0.392+0.075*(weight-1)+0.108*italic+0.006*italic*(weight-1))*siz
   % No kerning
 endchar;
 
-beginchar("{", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
-    0.668*size*pt, 0);
+beginchar("{", (0.247+0.065*(weight-1)+0.101*italic+0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, (0.161+0.001*italic)*size*pt);
+  numeric size_x, size_y;
+  size_x = (0.06+0.047*(weight-1))*h;
+  size_y = (0.051+0.038*(weight-1)+0.02*italic-0.02*italic*(weight-1))*h;
+  pickup pencircle xscaled size_x yscaled size_y;
+  pair p1u, p2u, p3u, p4u, p5;
+  pair p1, p2, p3;
+  p1u = bot (w, h);
+  p2u = p1u - ((0.3-0.05*(weight-1)-0.2*italic+0.2*italic*(weight-1))*w, 0);
+  p3u = ((0.35-0.02*(weight-1)+0.15*italic-0.08*italic*(weight-1))*w, (0.847-0.07*(weight-1)-0.03*italic*(weight-1))*h);
+  p1 = p3u;
+  p4u = ((0.35-0.02*(weight-1)+0.02*italic-0.02*italic*(weight-1))*w, 0.543*h);
+  p2 = p4u;
+  p5 = (0, 0.41*h);
+  path upper;
+  upper = p1u--p2u{p2u-p1u}..{p4u-p3u}p3u--p4u{p4u-p3u}..{-1, 0}p5;
+  draw upper;
+  pair p1l, p2l, p3l, p4l;
+  p1l = p1u - (0, size_y);
+  p2l = p2u - (0, size_y);
+  p3l = p3u + (size_x, 0);
+  p4l = p4u + (size_x, 0);
+  path lower;
+  lower = p1l--p2l{p2l-p1l}..{p4l-p3l}p3l--p4l{p4l-p3l}..{-1, 0}bot p5;
+  draw lower;
+  p1l = top (w, -d);
+  p2l = p1l - ((0.3)*w, 0);
+  numeric aux_y;
+  aux_y = (1-0.847+0.07*(weight-1)+0.02*italic-0.02*italic*(weight-1))*h - d;
+  p3l = (((xpart p2 - xpart p1)/(ypart p2 - ypart p1))*(aux_y - ypart p2) + (xpart p2), aux_y);
+  aux_y = (1-0.543)*h-d;
+  p4l = (((xpart p2 - xpart p1)/(ypart p2 - ypart p1))*(aux_y - ypart p2) + (xpart p2), aux_y);
+  p5 = (0, 0.41*h - 0.9*size_x);
+  lower = p1l--p2l{-1, 0}..{0, 1}p3l--p4l{0, 1}..{-1, 0}p5;
+  p3 = p5 - (0, 0.5*size_y);
+  draw lower;
+  p1u = p1l + (0, (1-0.3*italic+0.3*italic*(weight-1))*size_y);
+  p2u = p2l + (0, (1-0.3*italic+0.3*italic*(weight-1))*size_y);
+  p3u = p3l + (size_x, 0);
+  p4u = p4l + (size_x, 0);
+  upper = p1u--p2u{-1, 0}..{0, 1}p3u--p4u{0, 1}..{-1, 0}top p5;
+  draw upper;
+  % RETOUCH
+  pen eraser;
+  eraser = makepen((w, h)--(w, -d)--(w-sind(12.5)*(h+d)*italic, -d)--cycle);
+  pickup eraser;
+  erase (0,0);
+  eraser = makepen(p3--(0, h)--(sind(12.5)*(h+d-(ypart p3))*italic, h)--cycle);
+  pickup eraser;
+  erase (0,0);
+  % NO KERNING
 endchar;
 
 beginchar("|", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
     0.668*size*pt, 0);
 endchar;
 
-beginchar("}", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
-    0.668*size*pt, 0);
+beginchar("}", (0.247+0.065*(weight-1)+0.101*italic+0.004*italic*(weight-1))*size*pt,
+    0.668*size*pt, (0.161+0.001*italic)*size*pt);
+  renderchar "{" between (w, h) and (0, 0);
 endchar;
 
 beginchar("~", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
     0.668*size*pt, 0);
 endchar;
-
-
-
 
 
