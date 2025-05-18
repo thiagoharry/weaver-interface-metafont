@@ -1177,6 +1177,12 @@ beginchar("L", (0.455+0.025*(weight-1)+0.02*italic+0.013*italic*(weight-1))*size
   kerning("x", 28*k*size);
   kerning("X", 28*k*size);
   kerning("J", 28*k*size);
+  % DEBUG
+  pickup pencircle scaled 10;
+  pickcolor (1, 0, 0,1);
+  draw p1; draw p2; draw p3;
+  pickup pencircle scaled 5;
+  draw p2--p1--p3;
 endchar;
 
 beginchar("M", (0.67+0.085*(weight-1)+0.145*italic+0.005*italic*(weight-1))*size*pt, 0.668*size*pt, 0);
@@ -3130,7 +3136,7 @@ beginchar("{", (0.247+0.065*(weight-1)+0.101*italic+0.004*italic*(weight-1))*siz
   p3l = (((xpart p2 - xpart p1)/(ypart p2 - ypart p1))*(aux_y - ypart p2) + (xpart p2), aux_y);
   aux_y = (1-0.543)*h-d;
   p4l = (((xpart p2 - xpart p1)/(ypart p2 - ypart p1))*(aux_y - ypart p2) + (xpart p2), aux_y);
-  p5 = (0, 0.41*h - 0.9*size_x);
+  p5 = (0, 0.41*h - (0.9-0.25*(weight-1))*size_x);
   lower = p1l--p2l{-1, 0}..{0, 1}p3l--p4l{0, 1}..{-1, 0}p5;
   p3 = p5 - (0, 0.5*size_y);
   draw lower;
@@ -3151,8 +3157,10 @@ beginchar("{", (0.247+0.065*(weight-1)+0.101*italic+0.004*italic*(weight-1))*siz
   % NO KERNING
 endchar;
 
-beginchar("|", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
-    0.668*size*pt, 0);
+beginchar("|", (0.083+0.064*(weight-1)-0.002*italic+0.002*italic*(weight-1))*size*pt,
+    0.668*size*pt, 0.162*size*pt);
+  pickup pensquare xscaled w yscaled (h+d);
+  draw (w/2, ((h+d)/2)-d);
 endchar;
 
 beginchar("}", (0.247+0.065*(weight-1)+0.101*italic+0.004*italic*(weight-1))*size*pt,
