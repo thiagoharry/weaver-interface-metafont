@@ -3168,8 +3168,13 @@ beginchar("}", (0.247+0.065*(weight-1)+0.101*italic+0.004*italic*(weight-1))*siz
   renderchar "{" between (w, h) and (0, 0);
 endchar;
 
-beginchar("~", (0.54+0.036*(weight-1)+0.127*italic-0.004*italic*(weight-1))*size*pt,
-    0.668*size*pt, 0);
+beginchar("~", (0.477-0.023*(weight-1)+0.032*italic*(weight-1))*size*pt,
+    (0.324+0.047*(weight-1))*size*pt, (-0.193+0.049*(weight-1))*size*pt);
+  pair p1;
+  p1 = rt (0, 0.68*h);
+  pickcolor (1, 0, 0, 1);
+  pickup pencircle scaled 10;
+  draw p1;
 endchar;
 
 
