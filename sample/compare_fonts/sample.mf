@@ -3170,11 +3170,25 @@ endchar;
 
 beginchar("~", (0.477-0.023*(weight-1)+0.032*italic*(weight-1))*size*pt,
     (0.324+0.047*(weight-1))*size*pt, (-0.193+0.049*(weight-1))*size*pt);
-  pair p1;
-  p1 = rt (0, 0.68*h);
-  pickcolor (1, 0, 0, 1);
-  pickup pencircle scaled 10;
-  draw p1;
+  pair p1, p2, p3, p4;
+  numeric penX, penY;
+  penX = (0.235+0.05*(weight-1))*h;
+  penY = (0.235+0.08*(weight-1))*h;
+  pickup pencircle xscaled penX yscaled penY; 
+  p1 = rt (0, (0.65-0.195*(weight-1))*h);
+  p2 = bot ((0.28)*w, (1-0.06*(weight-1))*h);
+  p3 = top (0.71*w, -d+0.07*(weight-1)*h);
+  p4 = lft (w, 0.95*h);
+  draw p1{0.1,1}..{1, 0}p2..p3{1, 0}..{0.1, 1}p4;
+  % RETOUCH
+  pickup pensemicircle xscaled (1.1*penX) yscaled (1.1*penY) rotated (160);
+  erase p1;
+  pickup pensemicircle xscaled (1.1*penX) yscaled (1.1*penY) rotated (-20);
+  erase p4;
+  % No Kerning
 endchar;
 
+beginchar("¡", 10, 10, 0);
+endchar;
 
+% TODO: (0,0) na direção de caminho traava.
