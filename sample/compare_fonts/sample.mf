@@ -3188,7 +3188,13 @@ beginchar("~", (0.477-0.023*(weight-1)+0.032*italic*(weight-1))*size*pt,
   % No Kerning
 endchar;
 
-beginchar("¡", 10, 10, 0);
+beginchar("¡", (0.13+0.067*(weight-1)+0.112*italic+0.01*italic*(weight-1))*size*pt, (0.519+0.001*(weight-1)-0.001*(weight-1)*italic)*size*pt, (0.162-0.001*(weight-1)+0.001*(weight-1)*italic)*size*pt);
+  renderchar "!" between (w, 0.999*h) and (0, -d*0.999);
+  % No Kerning
+endchar;
+
+beginchar("¢", 10, 10, 0);
+
 endchar;
 
 % TODO: (0,0) na direção de caminho traava.
