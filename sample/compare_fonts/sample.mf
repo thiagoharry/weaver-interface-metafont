@@ -3193,7 +3193,18 @@ beginchar("¡", (0.13+0.067*(weight-1)+0.112*italic+0.01*italic*(weight-1))*size
   % No Kerning
 endchar;
 
-beginchar("¢", 10, 10, 0);
+beginchar("¢", (0.43+0.049*(weight-1)+0.042*italic+0.009*italic*(weight-1))*size*pt, 0.572*size*pt, (0.088-0.001*(weight-1)-0.001*italic+0.002*italic*(weight-1))*size*pt);
+  renderchar "c" between (0, 0) and (w, 0.89*h);
+  numeric pen_size;
+  pen_size = (0.09+0.03*(weight-1))*h;
+  pair p1, p2;
+  p1 = ((0.5+0.17*italic)*w, h);
+  p2 = ((0.5-0.15*italic+0.03*italic*(weight-1))*w, -d);
+  pickup pensquare xscaled pen_size;
+  draw p1--p2;
+endchar;
+
+beginchar("£", 10, 10, 0);
 
 endchar;
 
