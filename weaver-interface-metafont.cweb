@@ -1336,7 +1336,8 @@ bool lexer(struct metafont *mf, char *path, struct generic_token **first_token,
       char unknown_char[5];
       memset(unknown_char, 0, 5);
       unknown_char[0] = c;
-      fgets(&(unknown_char[1]), 4, fp);
+      if(!fgets(&(unknown_char[1]), 4, fp))
+        unknown_char[1] = '\0';
       RAISE_ERROR_INVALID_CHAR(mf, NULL, line, unknown_char);
       return false;
     }
