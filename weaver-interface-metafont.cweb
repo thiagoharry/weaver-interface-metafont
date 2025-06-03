@@ -18678,10 +18678,15 @@ void _Wmetafont_loading(void *(*p_alloc)(size_t), //Não usado
   if(before_loading_interface != NULL)
       before_loading_interface();
   mf = _Wnew_metafont(source_filename);
-  if(mf == NULL)
+  if(mf == NULL){
+    if(after_loading_interface != NULL)
+      after_loading_interface();
     return;
+  }
   if(mf -> err){
     _Wprint_metafont_error(mf);
+    if(after_loading_interface != NULL)
+      after_loading_interface();
     return;
   }
   // Computando a altura da interface, dada em pixels, para pontos tipográficos.
@@ -18693,14 +18698,19 @@ void _Wmetafont_loading(void *(*p_alloc)(size_t), //Não usado
   _Wwrite_numeric_variable(mf, "hsize", size);
   // A textura  é o primeiro glifo definido em mf -> first_glyph_symbol
   target -> _texture1 = (GLuint *) permanent_alloc(sizeof(GLuint));
-  if(target -> _texture1 == NULL)
+  if(target -> _texture1 == NULL){
+    if(after_loading_interface != NULL)
+      after_loading_interface();
     return;
+  }
   _Wrender_glyph(mf, mf -> first_glyph_symbol, NULL, target -> _texture1, 
                  &texture_width, &texture_height,
                  &texture_depth, &ignore_this, &ignore_this);
   if(mf -> err){
     _Wprint_metafont_error(mf);
     _Wdestroy_metafont(mf);
+    if(after_loading_interface != NULL)
+      after_loading_interface();
     return;
   }
   if(mf -> first_glyph -> need_rendering){ // Animated texture
