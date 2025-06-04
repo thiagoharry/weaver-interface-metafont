@@ -4721,7 +4721,8 @@ bool normalize_path(struct metafont *mf, struct context *cx,
   if(disalloc != NULL)
     disalloc(path -> points);
   memcpy(path, new, sizeof(struct path_variable));
-  disalloc(new);
+  if(disalloc != NULL)
+    disalloc(new);
   if(path -> number_of_missing_directions > 0){
     if(path -> cyclic){
       path -> length --;

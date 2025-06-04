@@ -4833,7 +4833,8 @@ bool normalize_path(struct metafont *mf, struct context *cx,
     disalloc(path -> points);
   // Path se torna idêntico ao que era, mas sem recursão:
   memcpy(path, new, sizeof(struct path_variable));
-  disalloc(new);
+  if(disalloc != NULL)
+    disalloc(new);
   if(path -> number_of_missing_directions > 0){
     if(path -> cyclic){
       if(isnan(path -> points[path -> length - 1].prov.dir1_x))
