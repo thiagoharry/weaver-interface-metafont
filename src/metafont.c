@@ -13206,7 +13206,7 @@ if(target->frame_duration==NULL){
 _Wdestroy_metafont(mf);
 return;
 }
-frame_duration= (unsigned)_Wread_numeric_variable(mf,"frame_duration");
+frame_duration= _Wread_numeric_variable(mf,"frame_duration");
 if(isnan(frame_duration))
 #if !defined(W_TIMESTEP)
 target->frame_duration[0]= 40000;
