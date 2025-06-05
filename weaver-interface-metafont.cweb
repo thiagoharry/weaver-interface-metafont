@@ -18650,7 +18650,7 @@ alocação e desalocação que devemos usar quando interpretamos o
 arquivo. As duas próximas funções são apenas ponteiros para funções
 que devem ser executadas antes e depois de interpretarmos a
 textura. Em seguida, vem o caminho do arquivo onde está o código a ser
-interpretado. E por fim, umponteiro para a interface onde devemos
+interpretado. E por fim, um ponteiro para a interface onde devemos
 colocar a textura lida. É possível definir texturas animadas.
 
 Definimos tal função como:
@@ -18724,7 +18724,11 @@ void _Wmetafont_loading(void *(*p_alloc)(size_t), //Não usado
     }
     frame_duration = (unsigned) _Wread_numeric_variable(mf, "frame_duration");
     if(isnan(frame_duration))
-      target -> frame_duration[0] = 0;
+#if !defined(W_TIMESTEP)
+      target -> frame_duration[0] = 40000;
+#else
+      target -> frame_duration[0] = W_TIMESTEP;
+#endif
     else
       target -> frame_duration[0] = (unsigned) frame_duration;
     target -> max_repetition = -1;

@@ -144,7 +144,7 @@ struct _glyph*first_glyph;
 char first_glyph_symbol[5];
 int number_of_glyphs;
 /*:615*//*664:*/
-#line 18804 "weaver-interface-metafont.cweb"
+#line 18808 "weaver-interface-metafont.cweb"
 
 int err,errno_line;
 char errno_character[5];

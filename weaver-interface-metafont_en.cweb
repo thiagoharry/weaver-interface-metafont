@@ -18405,8 +18405,13 @@ void _Wmetafont_loading(void *(*p_alloc)(size_t),
       return;
     }
     frame_duration = (unsigned) _Wread_numeric_variable(mf, "frame_duration");
-    if(isnan(frame_duration))
-      target -> frame_duration[0] = 0;
+    if(isnan(frame_duration)){
+#if !defined(W_TIMESTEP)
+      target -> frame_duration[0] = 40000;
+#else
+      target -> frame_duration[0] = W_TIMESTEP;
+#endif
+    }
     else
       target -> frame_duration[0] = (unsigned) frame_duration;
     target -> max_repetition = -1;
