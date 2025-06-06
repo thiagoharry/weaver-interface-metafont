@@ -17575,20 +17575,54 @@ else if(begin -> type == TYPE_BEGINCHAR){
     vars[INTERNAL_NUMERIC_H].value = 2 * round(height.value);
     vars[INTERNAL_NUMERIC_D].value = 2 * round(depth.value);
 #endif
-    glGenTextures(1, &(pic -> texture));
-    glBindTexture(GL_TEXTURE_2D, pic -> texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, pic -> width, pic -> height, 0,
-                 GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    if(cx -> candidate_texture != 0 &&
+#ifdef W_WeaveFont_DISABLE_MULTISAMPLE
+       cx -> candidate_texture_width == pic -> width &&
+       cx -> candidate_texture_height == pic -> height
+#else
+       2*(cx -> candidate_texture_width) == pic -> width &&
+       2*(cx -> candidate_texture_height) == pic -> height
+#endif
+       ){
+      pic -> texture = cx -> candidate_texture;
+      cx -> candidate_texture = 0;
+    }
+    else{
+      if(cx -> candidate_texture != 0)
+        glDeleteTextures(1, &(cx -> candidate_texture));
+      glGenTextures(1, &(pic -> texture));
+      glBindTexture(GL_TEXTURE_2D, pic -> texture);
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, pic -> width, pic -> height, 0,
+                   GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+      glBindTexture(GL_TEXTURE_2D, 0);
+    }
     @<Gera nova 'currentpicture'@>
   }
   return true;
 }
 @
+
+Algumas vezes podemos não precisar gerar uma nova textura porque já
+temos uma textura gerada anteriormente que podemos usar para
+renderizar:
+
+@<Atributos (struct context)@>+=
+GLuint candidate_texture;
+int candidate_texture_width, candidate_texture_height;
+@
+
+Por padrão tais valores são inicializados como zero:
+
+@<Inicialização (struct context)@>+=
+cx -> candidate_texture = 0;
+cx -> candidate_texture_width = 0;
+cx -> candidate_texture_height = 0;
+@
+
 
 Finalmente, quando lemos um \monoespaco{endchar} em modo de execução,
 significa que terminamos de renderizar um novo glifo. Devemos então
@@ -17756,6 +17790,7 @@ bool _Wrender_glyph(struct metafont *mf, char *glyph,
       MUTEX_SIGNAL(mf -> mutex);
       return false;
     }
+    @<_Wrender_glyph: Quando estamos repetindo renderização prévia@>
     if(!eval_list_of_statements(mf, cx, current -> begin, current -> end)){
       destroy_context(cx);
       MUTEX_SIGNAL(mf -> mutex);
@@ -18750,7 +18785,11 @@ código WeaveFont:
 @<Funções a Serem Colocadas na Interface de Usuário@>+=
 void _reload_texture(struct user_interface *target){
   struct metafont *mf = (struct metafont *) (target -> _internal_data);
+  mf -> reloading_texture = true;
   int texture_width, texture_height, texture_depth, ignore_this;
+  // Obtendo os valores anteriores de altura e largura
+  texture_width = target -> width;
+  texture_height = target -> height;
   // Computando a altura da interface, dada em pixels, para pontos tipográficos.
   // Se for suportado pela textura, usamos isso para determinar seu tamanho.
   float size = 72.0 * (target -> height) / dpi;
@@ -18758,10 +18797,10 @@ void _reload_texture(struct user_interface *target){
   // Computando a largura:
   size = 72.0 * (target -> width) / dpi;
   _Wwrite_numeric_variable(mf, "hsize", size);
-  glDeleteTextures(1, target -> _texture1);
   _Wrender_glyph(mf, mf -> first_glyph_symbol, NULL, target -> _texture1, 
                  &texture_width, &texture_height,
                  &texture_depth, &ignore_this, &ignore_this);
+  mf -> reloading_texture = false;
   if(mf -> err){
     _Wprint_metafont_error(mf);
     _Wdestroy_metafont(mf);
@@ -18772,6 +18811,38 @@ void _reload_texture(struct user_interface *target){
     target -> animate = false;
   target -> width = texture_width;
   target -> height = texture_height + texture_depth;
+}
+@
+
+A estrutura da nossa fonte deve armazenar em seu estado quando ela
+está em modo de operação onde está recarregando uma imagem. Saber que
+está neste estado pode permitir otimizações adicionais, como evitar
+ter que gerar uma textura nova quando a textura gerada anteriormente
+tem o mesmo tamanho da imagem atual. Declaramos este atributo aqui:
+
+@<Atributos (struct metafont)@>+=
+bool reloading_texture;
+@
+
+E ele é inicializado como falso, sendo que assume o valor de
+verdadeiro somente no momento em que está gerando novamente o valor de
+uma textura:
+
+@<Inicialização (struct metafont)@>+=
+mf -> reloading_texture = false;
+@
+
+A presença desta flag muda a renderização de um glifo. Diante dela, a
+função de renderização tenta, se possível, reaproveitar a mesma
+textura que já temos, desde que o tamanho dela seja adequado. Para
+isso, ela salva no contexto a informação de que se possível, queremos
+usar a mesma textura de antes:
+
+@<_Wrender_glyph: Quando estamos repetindo renderização prévia@>=
+if(mf -> reloading_texture){
+  cx -> candidate_texture = *texture;
+  cx -> candidate_texture_width = *width;
+  cx -> candidate_texture_height = *height;
 }
 @
 
