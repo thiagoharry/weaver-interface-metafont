@@ -16420,6 +16420,9 @@ initializes it:
       RAISE_ERROR_OPENGL_FRAMEBUFFER(mf, cx, 0);
       return false;
     }
+    // The image begins white and transparent:
+    glClearColor(1.0, 1.0, 1.0, 0.0);
+    glClear(GL_COLOR_BUFFER_BIT);
   }
   else
     glBindFramebuffer(GL_FRAMEBUFFER, cx -> currentpicture_fb);
@@ -17258,9 +17261,7 @@ else if(begin -> type == TYPE_BEGINCHAR){
   }
   *end = t;
   { // Initializing currentpicture = nullpicture(width, height + depth):
-    unsigned char *data;
     struct numeric_variable *vars;
-    size_t size;
     struct picture_variable *pic = cx -> currentpicture;
      if(pic -> texture != 0)
        glDeleteTextures(1, &(pic -> texture));
@@ -17280,30 +17281,15 @@ else if(begin -> type == TYPE_BEGINCHAR){
     vars[INTERNAL_NUMERIC_H].value = 2 * round(height.value);
     vars[INTERNAL_NUMERIC_D].value = 2 * round(depth.value);
 #endif
-    size = pic -> width * pic -> height * 4;
-    data = temporary_alloc(size);
-    if(data == NULL){
-      RAISE_ERROR_NO_MEMORY(mf, cx, OPTIONAL(begin -> line));
-      return false;
-    }
-    // Making a new white texture
-    memset(data, 255, size);
-    { // And turning it transparent
-      size_t i;
-      for(i = 3; i < size; i += 4)
-        data[i] = 0;
-    }
     glGenTextures(1, &(pic -> texture));
     glBindTexture(GL_TEXTURE_2D, pic -> texture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, pic -> width, pic -> height, 0,
-                 GL_RGBA, GL_UNSIGNED_BYTE, data);
+                 GL_RGBA, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glBindTexture(GL_TEXTURE_2D, 0);
-    if(temporary_free != NULL)
-      temporary_free(data);
     @<Create new 'currentpicture'@>
   }
   return true;
