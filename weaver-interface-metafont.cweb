@@ -10800,6 +10800,7 @@ o destino.
 
 @<Atribuição de Variável de Imagem@>=
 else if(type == TYPE_T_PICTURE){
+
   int i;
   struct picture_variable result;
   if(!eval_picture_expression(mf, cx, begin_expression, *end, &result))
@@ -10820,12 +10821,13 @@ else if(type == TYPE_T_PICTURE){
         @<Gera nova 'currentpicture'@>
       }
     }
-    else 
+    else{
       assign_picture_variable(mf, cx, (struct picture_variable *) var -> var,
                               &result);
+    }
     var = (struct symbolic_token *) (var -> next);
     var = (struct symbolic_token *) (var -> next);
-  }  
+  }
 }
 @
 
@@ -19173,12 +19175,15 @@ A mensagem de erro para avisar o usuário:
 
 @<Imprime Mensagem de Erro@>+=
 case ERROR_DISCONTINUOUS_PATH:
-  float *buffer = (float *) (mf -> errno_str);
-  fprintf(stderr,
-          "%s:%s Concatenating endpoint '(%g, %g)' with endpoint '(%g, %g)':"
-          " discontinuous path.",
-          mf -> file, line_number, buffer[0], buffer[1], buffer[2], buffer[3]);
-  break;
+  {
+    float *buffer = (float *) (mf -> errno_str);
+    fprintf(stderr,
+            "%s:%s Concatenating endpoint '(%g, %g)' with endpoint "
+	    "'(%g, %g)': discontinuous path.",
+            mf -> file, line_number, buffer[0], buffer[1], buffer[2],
+	    buffer[3]);
+    break;
+  }
 @
 
 
@@ -19304,12 +19309,14 @@ E com isso podemos produzir uma mensagem de erro informativa:
 
 @<Imprime Mensagem de Erro@>+=
 case ERROR_EXPECTED_FOUND:
+{
   char expected_name[32];
   memset(expected_name, 0, 32);
   tokenid_to_string(mf -> errno_int, expected_name);
   fprintf(stderr, "%s:%s Expected '%s' token. Found '%s' instead.",
           mf -> file, line_number, expected_name, mf -> errno_str);
   break;
+}
 @
 
 
@@ -19545,6 +19552,7 @@ E a mensagem de diagnóstico:
 
 @<Imprime Mensagem de Erro@>+=
 case ERROR_INVALID_COMPARISON:
+{
   char expr_type[32];
   tokenid_to_string(mf -> errno_int, expr_type);
   fprintf(stderr,
@@ -19552,6 +19560,7 @@ case ERROR_INVALID_COMPARISON:
           "expression of type '%s', but such type is not comparable.",
           mf -> file, line_number, mf -> errno_str, expr_type);
   break;
+}
 @
 
 \subsecao{A.11. ERROR\_INVALID\_DIMENSION\_GLYPH}
@@ -19580,6 +19589,7 @@ E o erro gera esta mensagem de diagnóstico:
 
 @<Imprime Mensagem de Erro@>+=
 case ERROR_INVALID_DIMENSION_GLYPH:
+{
   int *size_buffer = (int *) (mf -> errno_str);
   fprintf(stderr,
           "%s:%s Glyph with size %dx%d. Expected positive values for ",
@@ -19591,6 +19601,7 @@ case ERROR_INVALID_DIMENSION_GLYPH:
   else if(size_buffer[1] <= 0)
     fprintf(stderr, "height+depth.");
   break;
+}
 @
 
 
@@ -19623,6 +19634,7 @@ ocorreu. O motivo será escrito em uma string adicional:
 
 @<Imprime Mensagem de Erro@>+=
 case ERROR_INVALID_NAME:
+{
   char reason[128];
   if(mf -> errno_int == TYPE_NUMERIC || mf -> errno_int == TYPE_STRING){
     char type[16];
@@ -19638,6 +19650,7 @@ case ERROR_INVALID_NAME:
   fprintf(stderr, "%s:%s You can not use '%s' as a variable name: %s.",
           mf -> file, line_number, mf -> errno_str, reason);
   break;
+}
 @
 
 \subsecao{A.13. ERROR\_INVALID\_TENSION}
@@ -19681,12 +19694,14 @@ A mensagem de erro para avisar o usuário:
 
 @<Imprime Mensagem de Erro@>+=
 case ERROR_INVALID_TENSION:
+{
   float *buf = (float *) (mf -> errno_str);
   fprintf(stderr,
           "%s:%s Between path points (%g, %g) and (%g, %g) we found %s tension value '%g' smaller than minimal allowed '0.75'.",
           mf -> file, line_number, buf[0], buf[1], buf[2], buf[3],
           (mf -> errno_int == 0)?"first":"second", buf[4]);
   break;
+}
 @
 
 \subsecao{A.14. ERROR\_MISSING\_EXPRESSION}
@@ -20244,11 +20259,13 @@ E isso nos permite gerar a mensagem de erro:
 
 @<Imprime Mensagem de Erro@>+=
 case ERROR_UNINITIALIZED_VARIABLE:
+{
   char var_type[32];
   tokenid_to_string(mf -> errno_int, var_type);
   fprintf(stderr, "%s:%s Uninitialized %s variable '%s'.",
           mf -> file, line_number, var_type, mf -> errno_str);
   break;
+}
 @
 
 \subsecao{A.31. ERROR\_UNKNOWN\_GLYPH\_DEPENDENCY}
@@ -20484,6 +20501,7 @@ para strings de modo a formular a mensagem de erro:
 
 @<Imprime Mensagem de Erro@>+=
 case ERROR_WRONG_VARIABLE_TYPE:
+{
   char expected[32], found[32];
   tokenid_to_string(mf -> errno_int & 255, expected);
   tokenid_to_string(mf -> errno_int >> 8, found);
@@ -20491,6 +20509,7 @@ case ERROR_WRONG_VARIABLE_TYPE:
           "'%s' variable.", mf -> file, line_number, mf -> errno_str,
           found, expected);
   break;
+}
 @
 
 \secao{Referências}
