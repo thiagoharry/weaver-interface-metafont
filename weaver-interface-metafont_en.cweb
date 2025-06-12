@@ -22,6 +22,9 @@
 \def\matrix#1#2#3#4#5#6#7#8#9{\left[{{#1 \atop #4}\atop
       {\scriptstyle #7}}{{#2 \atop #5}\atop {\scriptstyle #8}}{{#3\atop
       #6}\atop{\scriptstyle #9}}\right]}
+\def\vector#1#2#3{\left[{{#1 \atop #4}\atop
+      {\scriptstyle #7}}\right]}
+
 
 \long\def\abstract#1{\parshape 10 0.8cm 13.4cm 0.8cm 13.4cm
 0.8cm 13.4cm 0.8cm 13.4cm 0.8cm 13.4cm 0.8cm 13.4cm 0.8cm 13.4cm
@@ -514,7 +517,7 @@ The matrix elements will be organized as below, according with how
 they are stored in array M:
 
 $$
-\matrix{M[0]}{M[1]}{M[2]}{M[3]}{M[4]}{M[5]}{M[6]}{M[7]}{M[8]}
+\matrix{M[0]}{M[3]}{M[6]}{M[1]}{M[4]}{M[7]}{M[2]}{M[5]}{M[8]}
 $$
 
 We can initialize an identity matrix with:
@@ -539,15 +542,15 @@ Given a 3-dimentional vector $(x, y, 1)$, we can transform it in a new
  the matrix below:
 
 $$\left[x\; y\; 1\right]
-\matrix{M[0]}{M[1]}{0}{M[3]}{M[4]}{0}{M[6]}{M[7]}{1}
+\matrix{M[0]}{M[3]}{0}{M[1]}{M[4]}{0}{M[4]}{M[5]}{1}
 =\left[x'\;\; y'\;\; 1\right]
 $$
 
 The new coordinates $(x', y')$ can be computed using the macros below:
 
 @<Local Macros (metafont.c)@>+=
-#define LINEAR_TRANSFORM_X(x, y, M) (x * M[0] + y * M[3] + M[6])
-#define LINEAR_TRANSFORM_Y(x, y, M) (x * M[1] + y * M[4] + M[7])
+#define LINEAR_TRANSFORM_X(x, y, M) (x * M[0] + y * M[1] + M[2])
+#define LINEAR_TRANSFORM_Y(x, y, M) (x * M[3] + y * M[4] + M[5])
 @
 
 The matrix multiplication is associative as seen below:
@@ -565,14 +568,14 @@ column:
 
 @<Local Macros (metafont.c)@>+=
 #define MATRIX_MULTIPLICATION(A, B) {\
-  float _a0 = A[0], _a1 = A[1], _a3 = A[3], _a4 = A[4], _a6 = A[6],\
-        _a7 = A[7];\
-  A[0] = _a0 * B[0] + _a1 * B[3];\
-  A[1] = _a0 * B[1] + _a1 * B[4];\
-  A[3] = _a3 * B[0] + _a4 * B[3];\
-  A[4] = _a3 * B[1] + _a4 * B[4];\
-  A[6] = _a6 * B[0] + _a7 * B[3] + B[6];\
-  A[7] = _a6 * B[1] + _a7 * B[4] + B[7];\
+  float _a0 = A[0], _a1 = A[1], _a2 = A[2], _a3 = A[3], _a4 = A[4],\
+        _a5 = A[5];\
+  A[0] = _a0 * B[0] + _a3 * B[1];\
+  A[1] = _a1 * B[0] + _a4 * B[1];\
+  A[2] = _a2 * B[0] + _a5 * B[1] + B[2];\
+  A[3] = _a0 * B[3] + _a3 * B[4];\
+  A[4] = _a1 * B[3] + _a4 * B[4];\
+  A[5] = _a2 * B[3] + _a5 * B[4] + B[5];\
 }
 @
 
@@ -592,17 +595,17 @@ Applying the linear transform above over a matrix can be done using
 
 @<Local Macros (metafont.c)@>+=
 #define TRANSFORM_ROTATE(M, theta) {\
-  float _m0 = M[0], _m1 = M[1], _m3 = M[3], _m4 = M[4], _m6 = M[6],\
-        _m7 = M[7];\
+  float _m0 = M[0], _m1 = M[1], _m2 = M[2], _m3 = M[3], _m4 = M[4],\
+        _m5 = M[5];\
   double _cos_theta, _sin_theta;\
   _sin_theta = sin(theta);\
   _cos_theta = cos(theta);\
-  M[0] = _m0 * _cos_theta - _m1 * _sin_theta;\
-  M[1] = _m0 * _sin_theta + _m1 * _cos_theta;\
-  M[3] = _m3 * _cos_theta - _m4 * _sin_theta;\
-  M[4] = _m3 * _sin_theta + _m4 * _cos_theta;\
-  M[6] = _m6 * _cos_theta - _m7 * _sin_theta;\
-  M[7] = _m6 * _sin_theta + _m7 * _cos_theta;\
+  M[0] = _m0 * _cos_theta - _m3 * _sin_theta;\
+  M[1] = _m1 * _cos_theta - _m4 * _sin_theta;\
+  M[2] = _m2 * _cos_theta - _m5 * _sin_theta;\
+  M[3] = _m0 * _sin_theta + _m3 * _cos_theta;\
+  M[4] = _m1 * _sin_theta + _m4 * _cos_theta;\
+  M[5] = _m2 * _sin_theta + _m5 * _cos_theta;\
 }
 @
 
@@ -620,8 +623,8 @@ And this is done by the macro below:
 @<Local Macros (metafont.c)@>+=
 #define TRANSFORM_SCALE_X(M, s) {\
   M[0] = M[0] * s;\
-  M[3] = M[3] * s;\
-  M[6] = M[6] * s;\
+  M[1] = M[1] * s;\
+  M[2] = M[2] * s;\
 }
 @
 
@@ -636,9 +639,9 @@ And we use the following code:
 
 @<Local Macros (metafont.c)@>+=
 #define TRANSFORM_SCALE_Y(M, s) {\
-  M[1] = M[1] * s;\
+  M[3] = M[3] * s;\
   M[4] = M[4] * s;\
-  M[7] = M[7] * s;\
+  M[5] = M[5] * s;\
 }
 @
 
@@ -666,8 +669,8 @@ This matrix multiplication is done using the following macro:
 
 @<Local Macros (metafont.c)@>+=
 #define TRANSFORM_SHIFT(M, a, b) {\
-  M[6] = M[6] + a;\
-  M[7] = M[7] + b;\
+  M[2] = M[2] + a;\
+  M[5] = M[5] + b;\
 }
 @
 
@@ -682,9 +685,9 @@ Which we apply over other matrices using the macro:
 
 @<Local Macros (metafont.c)@>+=
 #define TRANSFORM_SLANT(M, s) {\
-  M[0] = M[0] + s * M[1];\
-  M[3] = M[3] + s * M[4];\
-  M[6] = M[6] + s * M[7];\
+  M[0] = M[0] + s * M[3];\
+  M[1] = M[1] + s * M[4];\
+  M[2] = M[2] + s * M[5];\
 }
 @
 
@@ -702,14 +705,14 @@ Performing this operation in another matrix can be done using:
 
 @<Local Macros (metafont.c)@>+=
 #define TRANSFORM_SCALE_Z(M, s, t) {\
-  float _m0 = M[0], _m1 = M[1], _m3 = M[3], _m4 = M[4], _m6 = M[6],\
-        _m7 = M[7];\
-  M[0] = _m0 * s - _m1 * t;\
-  M[1] = _m0 * t + _m1 * s;\
-  M[3] = _m3 * s - _m4 * t;\
-  M[4] = _m3 * t + _m4 * s;\
-  M[6] = _m6 * s - _m7 * t;\
-  M[7] = _m6 * t + _m7 * s;\
+  float _m0 = M[0], _m1 = M[1], _m2 = M[2], _m3 = M[3], _m4 = M[4],\
+        _m5 = M[5];\
+  M[0] = _m0 * s - _m3 * t;\
+  M[3] = _m0 * t + _m3 * s;\
+  M[1] = _m1 * s - _m4 * t;\
+  M[4] = _m1 * t + _m4 * s;\
+  M[2] = _m2 * s - _m5 * t;\
+  M[5] = _m2 * t + _m5 * s;\
 }
 @
 
@@ -7354,11 +7357,14 @@ for(i = 0; i < 6; i ++){
   end_numeric_expr = begin_numeric_expr;
 }
 // Storing in the right order inside the matrix:
-result -> value[0] = values[2]; result -> value[1] = values[4];
-result -> value[2] = 0.0;
-result -> value[3] = values[3]; result -> value[4] = values[5];
-result -> value[5] = 0.0;
-result -> value[6] = values[0]; result -> value[7] = values[1];
+result -> value[0] = values[2];
+result -> value[3] = values[4];
+result -> value[6] = 0.0;
+result -> value[1] = values[3];
+result -> value[4] = values[5];
+result -> value[7] = 0.0;
+result -> value[2] = values[0];
+result -> value[5] = values[1];
 result -> value[8] = 1.0;
 return true;
 @
@@ -7415,9 +7421,9 @@ else if(begin -> type >= TYPE_XXPART && begin -> type <= TYPE_YYPART){
   if(begin -> type == TYPE_XXPART)
     result -> value = t.value[0];
   else if(begin -> type == TYPE_XYPART)
-    result -> value = t.value[3];
-  else if(begin -> type == TYPE_YXPART)
     result -> value = t.value[1];
+  else if(begin -> type == TYPE_YXPART)
+    result -> value = t.value[3];
   else if(begin -> type == TYPE_YYPART)
     result -> value = t.value[4];
   return true;
@@ -7435,7 +7441,7 @@ the \monoespaco{xpart} operator:
 struct transform_variable t;
 if(!eval_transform_primary(mf, cx, begin -> next, end, &t))
   return false;
-result -> value = t.value[6];
+result -> value = t.value[2];
 return true;
 @
 
@@ -7445,7 +7451,7 @@ And the same must be done for the \monoespaco{ypart} operator:
 struct transform_variable t;
 if(!eval_transform_primary(mf, cx, begin -> next, end, &t))
   return false;
-result -> value = t.value[7];
+result -> value = t.value[5];
 return true;
 @
 
@@ -10847,7 +10853,7 @@ void render_picture(struct picture_variable *pic, float *matrix, int dst_width,
   glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *) 0);
   glEnableVertexAttribArray(0);
   glUseProgram(program);
-  glUniformMatrix3fv(uniform_matrix, 1, true, matrix);
+  glUniformMatrix3fv(uniform_matrix, 1, false, matrix);
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, pic -> texture);
   glUniform1i(uniform_texture, 0);
@@ -11108,7 +11114,7 @@ if(last_operator -> type == TYPE_SUBTRACT){
   // Max function for RGB and subtraction for A:
   glBlendEquationSeparate(GL_MAX, GL_FUNC_REVERSE_SUBTRACT);
   glUseProgram(inv_program);
-  glUniformMatrix3fv(uniform_inv_matrix, 1, true, model_view_matrix);
+  glUniformMatrix3fv(uniform_inv_matrix, 1, false, model_view_matrix);
   glUniform1i(uniform_inv_texture, 0);
   glBindTexture(GL_TEXTURE_2D, b.texture);
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
@@ -11454,20 +11460,20 @@ bool apply_image_transformation(struct metafont *mf,
   }
   // Adjusting the image size according with translation (Step 2):
   dst -> width = (int) (max_x - min_x) +
-                 (int) (origin -> width * matrix[6]);
+                 (int) (origin -> width * matrix[2]);
   dst -> height = (int) (max_y - min_y) +
-                  (int) (origin -> height * matrix[7]);
+                  (int) (origin -> height * matrix[5]);
   // Removing from the matrix scaling data and correcting the translation
   // (Step 3):
   {
     double x_correction = ((double) origin -> width) / (double) dst -> width;
     double y_correction = ((double) origin -> height) / (double) dst -> height;
     matrix[0] = matrix[0] * x_correction;
-    matrix[3] = matrix[3] * x_correction;
-    matrix[6] = matrix[6] * x_correction;
-    matrix[1] = matrix[1] * y_correction;
+    matrix[1] = matrix[1] * x_correction;
+    matrix[2] = matrix[2] * x_correction;
+    matrix[3] = matrix[3] * y_correction;
     matrix[4] = matrix[4] * y_correction;
-    matrix[7] = matrix[7] * y_correction;
+    matrix[5] = matrix[5] * y_correction;
   }
   // Generating framebuffer and initial texture
   glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &previous_framebuffer);
@@ -11817,10 +11823,10 @@ in the two pairs:
   render_matrix[0] = original_picture.width / subpicture_size.x;
   render_matrix[4] = original_picture.height / subpicture_size.y;
   // Adjusting the offset in the render matrix
-  render_matrix[6] = -2.0 * (pair_offset.x +
+  render_matrix[2] = -2.0 * (pair_offset.x +
                       0.5 * (subpicture_size.x - original_picture.width)) /
                       subpicture_size.x;
-  render_matrix[7] = -2.0 * (pair_offset.y +
+  render_matrix[5] = -2.0 * (pair_offset.y +
                       0.5 * (subpicture_size.y - original_picture.height)) /
                       subpicture_size.y;
   // Rendering:
@@ -12152,7 +12158,7 @@ bool eval_boolean_expression(struct metafont *mf, struct context *cx,
     case TYPE_T_TRANSFORM:
     {
       struct transform_variable a, b;
-      int i, order[6] = {6, 7, 0, 3, 1, 4};
+      int i, order[6] = {2, 5, 0, 1, 3, 4};
       if(!eval_transform_expression(mf, cx, begin, before_last_operator, &a))
         return false;
       if(!eval_transform_expression(mf, cx, last_operator -> next, end, &b))
@@ -13539,16 +13545,16 @@ gets the extremity points for \monoespaco{pencircle}:
 void pencircular_extremity_points(struct context *cx,
                                   float *matrix, bool fullcircle){
   DECLARE_PEN_EXTREMITIES();
-  int i, index[4] = {0, 3, 4, 1};
+  int i, index[4] = {0, 1, 4, 3};
   for(i = 0; i < 2; i ++){ // i=0 computes axis x, i=1 computes axis y
     // Primeiro os casos mais simples:
-    if((i == 0 && matrix[3] == 0.0) ||
+    if((i == 0 && matrix[1] == 0.0) ||
        (i == 1 && matrix[4] == 0.0)){
       CHECK_PEN_EXTREMITIES(-0.5, 0.0, matrix);
       CHECK_PEN_EXTREMITIES(0.5, 0.0, matrix);
     }
     else if((i == 0 && matrix[0] == 0.0) ||
-            (i == 1 && matrix[1] == 0.0)){
+            (i == 1 && matrix[3] == 0.0)){
       CHECK_PEN_EXTREMITIES(0.0, 0.5, matrix);
       if(fullcircle)
         CHECK_PEN_EXTREMITIES(0.0, -0.5, matrix);
@@ -13568,7 +13574,7 @@ void pencircular_extremity_points(struct context *cx,
           float y1;
           x0 = -0.5;
           x1 = 0.5;
-          y1 = matrix[3-i*2] * sqrt(0.25-x1*x1) +
+          y1 = matrix[1+i*2] * sqrt(0.25-x1*x1) +
                (matrix[index[3-i*2]]*x1/sqrt(0.25-x1*x1));
           while(x0 != x1){
             float x2 = (x0+x1)/2;
@@ -16736,13 +16742,13 @@ void drawpoint(struct context *cx,
                float x, float y, float *matrix, bool erasing){
   float gl_matrix[9];
   gl_matrix[0] = (2 * matrix[0]) /  pic -> width;  // 2a/w
-  gl_matrix[1] = (2 * matrix[1]) /  pic -> height; // 2b/h
-  gl_matrix[2] = 0.0;
-  gl_matrix[3] = (2 * matrix[3]) /  pic -> width;  // 2c/w
+  gl_matrix[3] = (2 * matrix[3]) /  pic -> height; // 2b/h
+  gl_matrix[6] = 0.0;
+  gl_matrix[1] = (2 * matrix[1]) /  pic -> width;  // 2c/w
   gl_matrix[4] = (2 * matrix[4]) /  pic -> height; // 2d/h
-  gl_matrix[5] = 0.0;
-  gl_matrix[6] = 2 * (matrix[6] + x) /  pic -> width - 1.0;
-  gl_matrix[7] = 2 * (matrix[7] + cx -> current_depth + y) / pic -> height -
+  gl_matrix[7] = 0.0;
+  gl_matrix[2] = 2 * (matrix[2] + x) /  pic -> width - 1.0;
+  gl_matrix[5] = 2 * (matrix[5] + cx -> current_depth + y) / pic -> height -
                  1.0;
   gl_matrix[8] = 1.0;
   glViewport(0, 0, pic -> width, pic -> height);
@@ -16755,12 +16761,12 @@ void drawpoint(struct context *cx,
   glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void *) 0);
   if(erasing){
     glUseProgram(pen_erase_program);
-    glUniformMatrix3fv(pen_erase_uniform_matrix, 1, true, gl_matrix);
+    glUniformMatrix3fv(pen_erase_uniform_matrix, 1, false, gl_matrix);
     glUniform4f(pen_erase_uniform_color, 0.0, 0.0, 0.0, 1.0);
   }
   else{
     glUseProgram(pen_program);
-    glUniformMatrix3fv(pen_uniform_matrix, 1, true, gl_matrix);
+    glUniformMatrix3fv(pen_uniform_matrix, 1, false, gl_matrix);
     glUniform4f(pen_uniform_color, cx -> color[0], cx -> color[1], 
                 cx -> color[2], cx -> color[3]);
   }
@@ -17490,7 +17496,7 @@ bool _Wrender_glyph(struct metafont *mf, char *glyph,
       MUTEX_SIGNAL(mf -> mutex);
       return false;
     }
-    @<_Wrender_glyph: When we are repeating a previous rendering@>
+    @<\_Wrender\_glyph: When we are repeating a previous rendering@>
     if(!eval_list_of_statements(mf, cx, current -> begin, current -> end)){
       destroy_context(cx);
       MUTEX_SIGNAL(mf -> mutex);
@@ -17876,30 +17882,30 @@ use in the rendering:
   if(p1.x > p2.x){
     width = p1.x - p2.x;
     gl_matrix[0] = - (width / current_width);
-    gl_matrix[6] = ((p1.x + p2.x) / current_width) - 1.0;
+    gl_matrix[2] = ((p1.x + p2.x) / current_width) - 1.0;
   }
   else{
     width = p2.x - p1.x;
     gl_matrix[0] = (width / current_width);
-    gl_matrix[6] = ((p1.x + p2.x) / current_width) - 1.0;
+    gl_matrix[2] = ((p1.x + p2.x) / current_width) - 1.0;
   }
   if(p1.y > p2.y){
     height = p1.y - p2.y;
     depth = glyph -> depth * (height / (glyph -> height));
     gl_matrix[4] = - (height + depth) / current_height;
-    gl_matrix[7] = ((p1.y + p2.y) / 2) -
+    gl_matrix[5] = ((p1.y + p2.y) / 2) -
                    (glyph -> depth / 2) * (height/glyph -> height) - (current_height)/2;
-    gl_matrix[7] = 2 * (gl_matrix[7] / current_height);
-    gl_matrix[7] += 2 * (current_depth / current_height);
+    gl_matrix[5] = 2 * (gl_matrix[5] / current_height);
+    gl_matrix[5] += 2 * (current_depth / current_height);
   }
   else{
     height = p2.y - p1.y;
     depth = glyph -> depth * (height / (glyph -> height));
     gl_matrix[4] = (height + depth) / current_height;
-    gl_matrix[7] = ((p1.y + p2.y) / 2) -
+    gl_matrix[5] = ((p1.y + p2.y) / 2) -
                    (glyph -> depth / 2) * (height/glyph -> height) - (current_height)/2;
-    gl_matrix[7] = 2 * (gl_matrix[7] / current_height);
-    gl_matrix[7] += 2 * (current_depth / current_height);
+    gl_matrix[5] = 2 * (gl_matrix[5] / current_height);
+    gl_matrix[5] += 2 * (current_depth / current_height);
   }
   @<Prepare 'currentpicture' for Drawing@>
   glEnable(GL_BLEND);
@@ -17911,7 +17917,7 @@ use in the rendering:
   glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *) 0);
   glEnableVertexAttribArray(0);
   glUseProgram(program);
-  glUniformMatrix3fv(uniform_matrix, 1, true, gl_matrix);
+  glUniformMatrix3fv(uniform_matrix, 1, false, gl_matrix);
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, glyph -> texture);
   glUniform1i(uniform_texture, 0);
@@ -18185,7 +18191,7 @@ In the case of a Transform Expression:
   struct transform_variable result;
   if(!eval_transform_expression(mf, cx, begin_expr, end_expr, &result))
     return false;
-  printf("DEBUG: %s: %d: Pair Expression: "
+  printf("DEBUG: %s: %d: Transform Expression: "
          "(%f, %f, %f, %f, %f, %f, %f, %f, %f)\n", mf -> file, 
          begin_expr -> line, result.value[0], result.value[1], result.value[2],
          result.value[3], result.value[4], result.value[5], result.value[6],
@@ -18260,8 +18266,8 @@ In case of Pen Expression:
     printf(")");  
   }
   printf(" transformed (%f, %f, %f, %f, %f, %f)\n", 
-         result.gl_matrix[6], result.gl_matrix[7], result.gl_matrix[0],
-         result.gl_matrix[3], result.gl_matrix[1], result.gl_matrix[4]);
+         result.gl_matrix[2], result.gl_matrix[5], result.gl_matrix[0],
+         result.gl_matrix[1], result.gl_matrix[3], result.gl_matrix[4]);
   return true;
 }
 @
@@ -18520,7 +18526,7 @@ texture that we already have, as long as its size is adequate. To do
 this, it saves in the context the information that if possible, we
 want to use the same texture as before:
 
-@<_Wrender_glyph: When we are repeating a previous rendering@>=
+@<\_Wrender\_glyph: When we are repeating a previous rendering@>=
 if(mf -> reloading_texture){
   cx -> candidate_texture = *texture;
   cx -> candidate_texture_width = *width;

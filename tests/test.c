@@ -1374,13 +1374,13 @@ void test_pen_expressions(void){
 	 pen_p4 -> referenced == NULL &&
 	 pen_p4 -> gl_vbo == 0 &&
 	 ALMOST_EQUAL(pen_p4 -> gl_matrix[0], 1.0) &&
-	 ALMOST_EQUAL(pen_p4 -> gl_matrix[1], 0.0) &&
-	 ALMOST_EQUAL(pen_p4 -> gl_matrix[2], 0.0) &&
 	 ALMOST_EQUAL(pen_p4 -> gl_matrix[3], 0.0) &&
-	 ALMOST_EQUAL(pen_p4 -> gl_matrix[4], 1.0) &&
-	 ALMOST_EQUAL(pen_p4 -> gl_matrix[5], 0.0) &&
 	 ALMOST_EQUAL(pen_p4 -> gl_matrix[6], 0.0) &&
+	 ALMOST_EQUAL(pen_p4 -> gl_matrix[1], 0.0) &&
+	 ALMOST_EQUAL(pen_p4 -> gl_matrix[4], 1.0) &&
 	 ALMOST_EQUAL(pen_p4 -> gl_matrix[7], 0.0) &&
+	 ALMOST_EQUAL(pen_p4 -> gl_matrix[2], 0.0) &&
+	 ALMOST_EQUAL(pen_p4 -> gl_matrix[5], 0.0) &&
 	 ALMOST_EQUAL(pen_p4 -> gl_matrix[8], 1.0));
   assert("Creating straight and convex pen",
 	 pen_penrazor -> format != NULL &&
@@ -1388,13 +1388,13 @@ void test_pen_expressions(void){
 	 (pen_penrazor -> flags & FLAG_STRAIGHT) &&
 	 (pen_penrazor -> flags & FLAG_CONVEX) &&
 	 ALMOST_EQUAL(pen_penrazor -> gl_matrix[0], 1.0) &&
-	 ALMOST_EQUAL(pen_penrazor -> gl_matrix[1], 0.0) &&
-	 ALMOST_EQUAL(pen_penrazor -> gl_matrix[2], 0.0) &&
 	 ALMOST_EQUAL(pen_penrazor -> gl_matrix[3], 0.0) &&
-	 ALMOST_EQUAL(pen_penrazor -> gl_matrix[4], 1.0) &&
-	 ALMOST_EQUAL(pen_penrazor -> gl_matrix[5], 0.0) &&
 	 ALMOST_EQUAL(pen_penrazor -> gl_matrix[6], 0.0) &&
+	 ALMOST_EQUAL(pen_penrazor -> gl_matrix[1], 0.0) &&
+	 ALMOST_EQUAL(pen_penrazor -> gl_matrix[4], 1.0) &&
 	 ALMOST_EQUAL(pen_penrazor -> gl_matrix[7], 0.0) &&
+	 ALMOST_EQUAL(pen_penrazor -> gl_matrix[2], 0.0) &&
+	 ALMOST_EQUAL(pen_penrazor -> gl_matrix[5], 0.0) &&
 	 ALMOST_EQUAL(pen_penrazor -> gl_matrix[8], 1.0));
   assert("Creating straight and concave pen",
 	 pen_p5 -> format != NULL &&
@@ -1402,13 +1402,13 @@ void test_pen_expressions(void){
 	 (pen_p5 -> flags & FLAG_STRAIGHT) &&
 	 !(pen_p5 -> flags & FLAG_CONVEX) &&
 	 ALMOST_EQUAL(pen_p5 -> gl_matrix[0], 1.0) &&
-	 ALMOST_EQUAL(pen_p5 -> gl_matrix[1], 0.0) &&
-	 ALMOST_EQUAL(pen_p5 -> gl_matrix[2], 0.0) &&
 	 ALMOST_EQUAL(pen_p5 -> gl_matrix[3], 0.0) &&
-	 ALMOST_EQUAL(pen_p5 -> gl_matrix[4], 1.0) &&
-	 ALMOST_EQUAL(pen_p5 -> gl_matrix[5], 0.0) &&
 	 ALMOST_EQUAL(pen_p5 -> gl_matrix[6], 0.0) &&
+	 ALMOST_EQUAL(pen_p5 -> gl_matrix[1], 0.0) &&
+	 ALMOST_EQUAL(pen_p5 -> gl_matrix[4], 1.0) &&
 	 ALMOST_EQUAL(pen_p5 -> gl_matrix[7], 0.0) &&
+	 ALMOST_EQUAL(pen_p5 -> gl_matrix[2], 0.0) &&
+	 ALMOST_EQUAL(pen_p5 -> gl_matrix[5], 0.0) &&
 	 ALMOST_EQUAL(pen_p5 -> gl_matrix[8], 1.0));
   assert("Creating curved and convex pen",
 	 pen_p6 -> format != NULL &&
@@ -1416,13 +1416,13 @@ void test_pen_expressions(void){
 	 !(pen_p6 -> flags & FLAG_STRAIGHT) &&
 	 (pen_p6 -> flags & FLAG_CONVEX) &&
 	 ALMOST_EQUAL(pen_p6 -> gl_matrix[0], 1.0) &&
-	 ALMOST_EQUAL(pen_p6 -> gl_matrix[1], 0.0) &&
-	 ALMOST_EQUAL(pen_p6 -> gl_matrix[2], 0.0) &&
 	 ALMOST_EQUAL(pen_p6 -> gl_matrix[3], 0.0) &&
-	 ALMOST_EQUAL(pen_p6 -> gl_matrix[4], 1.0) &&
-	 ALMOST_EQUAL(pen_p6 -> gl_matrix[5], 0.0) &&
 	 ALMOST_EQUAL(pen_p6 -> gl_matrix[6], 0.0) &&
+	 ALMOST_EQUAL(pen_p6 -> gl_matrix[1], 0.0) &&
+	 ALMOST_EQUAL(pen_p6 -> gl_matrix[4], 1.0) &&
 	 ALMOST_EQUAL(pen_p6 -> gl_matrix[7], 0.0) &&
+	 ALMOST_EQUAL(pen_p6 -> gl_matrix[2], 0.0) &&
+	 ALMOST_EQUAL(pen_p6 -> gl_matrix[5], 0.0) &&
 	 ALMOST_EQUAL(pen_p6 -> gl_matrix[8], 1.0));
   assert("Creating curved and concave pen",
 	 pen_p7 -> format != NULL &&
@@ -1430,13 +1430,13 @@ void test_pen_expressions(void){
 	 !(pen_p7 -> flags & FLAG_STRAIGHT) &&
 	 !(pen_p7 -> flags & FLAG_CONVEX) &&
 	 ALMOST_EQUAL(pen_p7 -> gl_matrix[0], 1.0) &&
-	 ALMOST_EQUAL(pen_p7 -> gl_matrix[1], 0.0) &&
-	 ALMOST_EQUAL(pen_p7 -> gl_matrix[2], 0.0) &&
 	 ALMOST_EQUAL(pen_p7 -> gl_matrix[3], 0.0) &&
-	 ALMOST_EQUAL(pen_p7 -> gl_matrix[4], 1.0) &&
-	 ALMOST_EQUAL(pen_p7 -> gl_matrix[5], 0.0) &&
 	 ALMOST_EQUAL(pen_p7 -> gl_matrix[6], 0.0) &&
+	 ALMOST_EQUAL(pen_p7 -> gl_matrix[1], 0.0) &&
+	 ALMOST_EQUAL(pen_p7 -> gl_matrix[4], 1.0) &&
 	 ALMOST_EQUAL(pen_p7 -> gl_matrix[7], 0.0) &&
+	 ALMOST_EQUAL(pen_p7 -> gl_matrix[2], 0.0) &&
+	 ALMOST_EQUAL(pen_p7 -> gl_matrix[5], 0.0) &&
 	 ALMOST_EQUAL(pen_p7 -> gl_matrix[8], 1.0));
   // Código METAFONT para gerar os números abaixo:
   // path p;
@@ -1449,11 +1449,11 @@ void test_pen_expressions(void){
 	 (pen_p15 -> flags & FLAG_CONVEX) &&
 	 (pen_p15 -> flags & FLAG_SQUARE) &&
 	 ALMOST_EQUAL(0.5, -0.5 * pen_p15 -> gl_matrix[0] +
-	 	      -0.5 * pen_p15 -> gl_matrix[3] +
-	 	      1.0 * pen_p15 -> gl_matrix[6]) &&
-	 ALMOST_EQUAL(1.5, -0.5 * pen_p15 -> gl_matrix[1] +
+	 	      -0.5 * pen_p15 -> gl_matrix[1] +
+	 	      1.0 * pen_p15 -> gl_matrix[2]) &&
+	 ALMOST_EQUAL(1.5, -0.5 * pen_p15 -> gl_matrix[3] +
 	 	      -0.5 * pen_p15 -> gl_matrix[4] +
-	 	      1.0 * pen_p15 -> gl_matrix[7]));
+	 	      1.0 * pen_p15 -> gl_matrix[5]));
   // Código METAFONT para gerar os números abaixo:
   // path p;
   // p = (unitsquare shifted -(.5, .5)) shifted (1, 2) scaled 0.5;
@@ -1465,11 +1465,11 @@ void test_pen_expressions(void){
 	 (pen_p16 -> flags & FLAG_CONVEX) &&
 	 (pen_p16 -> flags & FLAG_SQUARE) &&
 	 ALMOST_EQUAL(0.25, -0.5 * pen_p16 -> gl_matrix[0] +
-	 	      -0.5 * pen_p16 -> gl_matrix[3] +
-	 	      1.0 * pen_p16 -> gl_matrix[6]) &&
-	 ALMOST_EQUAL(0.75, -0.5 * pen_p16 -> gl_matrix[1] +
+	 	      -0.5 * pen_p16 -> gl_matrix[1] +
+	 	      1.0 * pen_p16 -> gl_matrix[2]) &&
+	 ALMOST_EQUAL(0.75, -0.5 * pen_p16 -> gl_matrix[3] +
 	 	      -0.5 * pen_p16 -> gl_matrix[4] +
-	 	      1.0 * pen_p16 -> gl_matrix[7]));
+	 	      1.0 * pen_p16 -> gl_matrix[5]));
   // Código METAFONT para gerar os números abaixo:
   // path p;
   // p = (unitsquare shifted -(.5, .5)) shifted (1, 2) scaled 0.5 xscaled 3;
@@ -1481,11 +1481,11 @@ void test_pen_expressions(void){
 	 (pen_p17 -> flags & FLAG_CONVEX) &&
 	 (pen_p17 -> flags & FLAG_SQUARE) &&
 	 ALMOST_EQUAL(0.75, -0.5 * pen_p17 -> gl_matrix[0] +
-	 	      -0.5 * pen_p17 -> gl_matrix[3] +
-	 	      1.0 * pen_p17 -> gl_matrix[6]) &&
-	 ALMOST_EQUAL(0.75, -0.5 * pen_p17 -> gl_matrix[1] +
+	 	      -0.5 * pen_p17 -> gl_matrix[1] +
+	 	      1.0 * pen_p17 -> gl_matrix[2]) &&
+	 ALMOST_EQUAL(0.75, -0.5 * pen_p17 -> gl_matrix[3] +
 	 	      -0.5 * pen_p17 -> gl_matrix[4] +
-	 	      1.0 * pen_p17 -> gl_matrix[7]));
+	 	      1.0 * pen_p17 -> gl_matrix[5]));
   // Código METAFONT para gerar os números abaixo:
   // path p;
   // p = (unitsquare shifted -(.5, .5)) shifted (1, 2) scaled 0.5 xscaled 3
@@ -1498,11 +1498,11 @@ void test_pen_expressions(void){
 	 (pen_p18 -> flags & FLAG_CONVEX) &&
 	 (pen_p18 -> flags & FLAG_SQUARE) &&
 	 ALMOST_EQUAL(0.75, -0.5 * pen_p18 -> gl_matrix[0] +
-	 	      -0.5 * pen_p18 -> gl_matrix[3] +
-	 	      1.0 * pen_p18 -> gl_matrix[6]) &&
-	 ALMOST_EQUAL(3.0, -0.5 * pen_p18 -> gl_matrix[1] +
+	 	      -0.5 * pen_p18 -> gl_matrix[1] +
+	 	      1.0 * pen_p18 -> gl_matrix[2]) &&
+	 ALMOST_EQUAL(3.0, -0.5 * pen_p18 -> gl_matrix[3] +
 	 	      -0.5 * pen_p18 -> gl_matrix[4] +
-	 	      1.0 * pen_p18 -> gl_matrix[7]));
+	 	      1.0 * pen_p18 -> gl_matrix[5]));
   // Código METAFONT para gerar os números abaixo:
   // path p;
   // p = (unitsquare shifted -(.5, .5)) shifted (1, 2) scaled 0.5 xscaled 3
@@ -1515,11 +1515,25 @@ void test_pen_expressions(void){
 	 (pen_p19 -> flags & FLAG_CONVEX) &&
 	 (pen_p19 -> flags & FLAG_SQUARE) &&
 	 ALMOST_EQUAL(1.05002, -0.5 * pen_p19 -> gl_matrix[0] +
-	 	      -0.5 * pen_p19 -> gl_matrix[3] +
-	 	      1.0 * pen_p19 -> gl_matrix[6]) &&
-	 ALMOST_EQUAL(3.0, -0.5 * pen_p19 -> gl_matrix[1] +
+	 	      -0.5 * pen_p19 -> gl_matrix[1] +
+	 	      1.0 * pen_p19 -> gl_matrix[2]) &&
+	 ALMOST_EQUAL(3.0, -0.5 * pen_p19 -> gl_matrix[3] +
 	 	      -0.5 * pen_p19 -> gl_matrix[4] +
-	 	      1.0 * pen_p19 -> gl_matrix[7]));
+	 	      1.0 * pen_p19 -> gl_matrix[5]));
+  if(!(ALMOST_EQUAL(1.05002, -0.5 * pen_p19 -> gl_matrix[0] +
+	 	      -0.5 * pen_p19 -> gl_matrix[1] +
+	 	      1.0 * pen_p19 -> gl_matrix[2]) &&
+	 ALMOST_EQUAL(3.0, -0.5 * pen_p19 -> gl_matrix[3] +
+	 	      -0.5 * pen_p19 -> gl_matrix[4] +
+	 	      1.0 * pen_p19 -> gl_matrix[5]))){
+    printf("ERROR: Expected: (1.05002, 3), found: (%f, %f)\n",
+	   -0.5 * pen_p19 -> gl_matrix[0] +
+	 	      -0.5 * pen_p19 -> gl_matrix[1] +
+	   1.0 * pen_p19 -> gl_matrix[2],
+	   -0.5 * pen_p19 -> gl_matrix[3] +
+	 	      -0.5 * pen_p19 -> gl_matrix[4] +
+	 	      1.0 * pen_p19 -> gl_matrix[5]);
+  }
   assert("Pen transformation (Rotate)",
 	 pen_p13 -> format == NULL &&
 	 (pen_p8 -> flags & FLAG_STRAIGHT) &&
@@ -1539,11 +1553,11 @@ void test_pen_expressions(void){
 	 (pen_p8 -> flags & FLAG_CONVEX) &&
 	 (pen_p8 -> flags & FLAG_SQUARE) &&
 	 ALMOST_EQUAL(-8.78473, 0.5 * pen_p8 -> gl_matrix[0] +
-	 	      -0.5 * pen_p8 -> gl_matrix[3] +
-	 	      1.0 * pen_p8 -> gl_matrix[6]) &&
-	 ALMOST_EQUAL(0.58345, 0.5 * pen_p8 -> gl_matrix[1] +
+	 	      -0.5 * pen_p8 -> gl_matrix[1] +
+	 	      1.0 * pen_p8 -> gl_matrix[2]) &&
+	 ALMOST_EQUAL(0.58345, 0.5 * pen_p8 -> gl_matrix[3] +
 	 	      -0.5 * pen_p8 -> gl_matrix[4] +
-	 	      1.0 * pen_p8 -> gl_matrix[7]));
+	 	      1.0 * pen_p8 -> gl_matrix[5]));
   assert("Extracting path from 'nullpen'",
 	 path_p9 -> length == 1 &&
 	 path_p9 -> number_of_points == 1 &&
@@ -1655,11 +1669,11 @@ void test_pen_expressions(void){
 	 (pen_p14 -> flags & FLAG_CONVEX) &&
 	 (pen_p14 -> flags & FLAG_SQUARE) &&
 	 ALMOST_EQUAL(2.5, 0.5 * pen_p14 -> gl_matrix[0] +
-	 	      -0.5 * pen_p14 -> gl_matrix[3] +
-	 	      1.0 * pen_p14 -> gl_matrix[6]) &&
-	 ALMOST_EQUAL(3.5, 0.5 * pen_p14 -> gl_matrix[1] +
+	 	      -0.5 * pen_p14 -> gl_matrix[1] +
+	 	      1.0 * pen_p14 -> gl_matrix[2]) &&
+	 ALMOST_EQUAL(3.5, 0.5 * pen_p14 -> gl_matrix[3] +
 	 	      -0.5 * pen_p14 -> gl_matrix[4] +
-	 	      1.0 * pen_p14 -> gl_matrix[7]));
+	 	      1.0 * pen_p14 -> gl_matrix[5]));
   free_token_list(first);
   destroy_context(cx);
   _Wdestroy_metafont(mf);
@@ -1728,6 +1742,11 @@ void test_pair_expressions(void){
   assert("Evaluating transform over pairs",
 	 ALMOST_EQUAL(pair_a -> x, 20.0) &&
 	 ALMOST_EQUAL(pair_a -> y, 27.0));
+  if(!(ALMOST_EQUAL(pair_a -> x, 20.0) &&
+       ALMOST_EQUAL(pair_a -> y, 27.0))){
+    printf("ERROR: Expected around (20, 27), found: (%f, %f)\n",
+	   pair_a -> x, pair_a -> y);
+  }
   assert("Interpolating between two points",
 	 ALMOST_EQUAL(pair_b -> x, 227.9591) &&
 	 ALMOST_EQUAL(pair_b -> y, 74.94846));
@@ -1771,74 +1790,74 @@ void test_transform_expressions(void){
   transform_j = (struct transform_variable *) j -> var;
   assert("Interpreting program with transform expressions", ret);
   assert("Evaluating transform literal",
-	 ALMOST_EQUAL(transform_a -> value[6], -1.0) &&
-	 ALMOST_EQUAL(transform_a -> value[7], 0.0) &&
 	 ALMOST_EQUAL(transform_a -> value[0], 0.2) &&
-	 ALMOST_EQUAL(transform_a -> value[3], 0.4) &&
-	 ALMOST_EQUAL(transform_a -> value[1], -0.4) &&
-	 ALMOST_EQUAL(transform_a -> value[4], 0.2));
+	 ALMOST_EQUAL(transform_a -> value[1], 0.4) &&
+	 ALMOST_EQUAL(transform_a -> value[2], -1.0) &&
+	 ALMOST_EQUAL(transform_a -> value[3], -0.4) &&
+	 ALMOST_EQUAL(transform_a -> value[4], 0.2) &&
+	 ALMOST_EQUAL(transform_a -> value[5], 0.0));
   assert("Evaluating identity variable as transform",
-	 ALMOST_EQUAL(transform_b -> value[6], 0.0) &&
-	 ALMOST_EQUAL(transform_b -> value[7], 0.0) &&
+	 ALMOST_EQUAL(transform_b -> value[2], 0.0) &&
+	 ALMOST_EQUAL(transform_b -> value[5], 0.0) &&
 	 ALMOST_EQUAL(transform_b -> value[0], 1.0) &&
-	 ALMOST_EQUAL(transform_b -> value[3], 0.0) &&
 	 ALMOST_EQUAL(transform_b -> value[1], 0.0) &&
+	 ALMOST_EQUAL(transform_b -> value[3], 0.0) &&
 	 ALMOST_EQUAL(transform_b -> value[4], 1.0));
   assert("Evaluating rotation in transform expressions",
-	 ALMOST_EQUAL(transform_c -> value[6], 0.0) &&
-	 ALMOST_EQUAL(transform_c -> value[7], 0.0) &&
+	 ALMOST_EQUAL(transform_c -> value[2], 0.0) &&
+	 ALMOST_EQUAL(transform_c -> value[5], 0.0) &&
 	 ALMOST_EQUAL(transform_c -> value[0], 0.86603) &&
-	 ALMOST_EQUAL(transform_c -> value[3], -0.5) &&
-	 ALMOST_EQUAL(transform_c -> value[1], 0.5) &&
+	 ALMOST_EQUAL(transform_c -> value[1], -0.5) &&
+	 ALMOST_EQUAL(transform_c -> value[3], 0.5) &&
 	 ALMOST_EQUAL(transform_c -> value[4], 0.86603));
   assert("Evaluating shifting in transform expressions",
-	 ALMOST_EQUAL(transform_d -> value[6], 5.0) &&
-	 ALMOST_EQUAL(transform_d -> value[7], 8.0) &&
+	 ALMOST_EQUAL(transform_d -> value[2], 5.0) &&
+	 ALMOST_EQUAL(transform_d -> value[5], 8.0) &&
 	 ALMOST_EQUAL(transform_d -> value[0], 1.0) &&
-	 ALMOST_EQUAL(transform_d -> value[3], 0.0) &&
 	 ALMOST_EQUAL(transform_d -> value[1], 0.0) &&
+	 ALMOST_EQUAL(transform_d -> value[3], 0.0) &&
 	 ALMOST_EQUAL(transform_d -> value[4], 1.0));
   assert("Evaluating scaling in transform expressions",
-	 ALMOST_EQUAL(transform_e -> value[6], 0.0) &&
-	 ALMOST_EQUAL(transform_e -> value[7], 0.0) &&
+	 ALMOST_EQUAL(transform_e -> value[2], 0.0) &&
+	 ALMOST_EQUAL(transform_e -> value[5], 0.0) &&
 	 ALMOST_EQUAL(transform_e -> value[0], 5.0) &&
-	 ALMOST_EQUAL(transform_e -> value[3], 0.0) &&
 	 ALMOST_EQUAL(transform_e -> value[1], 0.0) &&
+	 ALMOST_EQUAL(transform_e -> value[3], 0.0) &&
 	 ALMOST_EQUAL(transform_e -> value[4], 5.0));
   assert("Evaluating slanting in transform expressions",
-	 ALMOST_EQUAL(transform_f -> value[6], 0.0) &&
-	 ALMOST_EQUAL(transform_f -> value[7], 0.0) &&
+	 ALMOST_EQUAL(transform_f -> value[2], 0.0) &&
+	 ALMOST_EQUAL(transform_f -> value[5], 0.0) &&
 	 ALMOST_EQUAL(transform_f -> value[0], 1.0) &&
-	 ALMOST_EQUAL(transform_f -> value[3], 5.0) &&
-	 ALMOST_EQUAL(transform_f -> value[1], 0.0) &&
+	 ALMOST_EQUAL(transform_f -> value[1], 5.0) &&
+	 ALMOST_EQUAL(transform_f -> value[3], 0.0) &&
 	 ALMOST_EQUAL(transform_f -> value[4], 1.0));
   assert("Evaluating x-scaling in transform expressions",
-	 ALMOST_EQUAL(transform_g -> value[6], 0.0) &&
-	 ALMOST_EQUAL(transform_g -> value[7], 0.0) &&
+	 ALMOST_EQUAL(transform_g -> value[2], 0.0) &&
+	 ALMOST_EQUAL(transform_g -> value[5], 0.0) &&
 	 ALMOST_EQUAL(transform_g -> value[0], 10.0) &&
-	 ALMOST_EQUAL(transform_g -> value[3], 0.0) &&
 	 ALMOST_EQUAL(transform_g -> value[1], 0.0) &&
+	 ALMOST_EQUAL(transform_g -> value[3], 0.0) &&
 	 ALMOST_EQUAL(transform_g -> value[4], 1.0));
   assert("Evaluating y-scaling in transform expressions",
-	 ALMOST_EQUAL(transform_h -> value[6], 0.0) &&
-	 ALMOST_EQUAL(transform_h -> value[7], 0.0) &&
+	 ALMOST_EQUAL(transform_h -> value[2], 0.0) &&
+	 ALMOST_EQUAL(transform_h -> value[5], 0.0) &&
 	 ALMOST_EQUAL(transform_h -> value[0], 1.0) &&
-	 ALMOST_EQUAL(transform_h -> value[3], 0.0) &&
 	 ALMOST_EQUAL(transform_h -> value[1], 0.0) &&
+	 ALMOST_EQUAL(transform_h -> value[3], 0.0) &&
 	 ALMOST_EQUAL(transform_h -> value[4], 3.0));
   assert("Evaluating z-scaling in transform expressions",
-	 ALMOST_EQUAL(transform_i -> value[6], 0.0) &&
-	 ALMOST_EQUAL(transform_i -> value[7], 0.0) &&
+	 ALMOST_EQUAL(transform_i -> value[2], 0.0) &&
+	 ALMOST_EQUAL(transform_i -> value[5], 0.0) &&
 	 ALMOST_EQUAL(transform_i -> value[0], 8.0) &&
-	 ALMOST_EQUAL(transform_i -> value[3], -2.0) &&
-	 ALMOST_EQUAL(transform_i -> value[1], 2.0) &&
+	 ALMOST_EQUAL(transform_i -> value[1], -2.0) &&
+	 ALMOST_EQUAL(transform_i -> value[3], 2.0) &&
 	 ALMOST_EQUAL(transform_i -> value[4], 8.0));
   assert("Evaluating generic transformation in transform expressions",
-	 ALMOST_EQUAL(transform_j -> value[6], -1.0) &&
-	 ALMOST_EQUAL(transform_j -> value[7], 0.0) &&
+	 ALMOST_EQUAL(transform_j -> value[2], -1.0) &&
+	 ALMOST_EQUAL(transform_j -> value[5], 0.0) &&
 	 ALMOST_EQUAL(transform_j -> value[0], 0.2) &&
-	 ALMOST_EQUAL(transform_j -> value[3], 0.4) &&
-	 ALMOST_EQUAL(transform_j -> value[1], -0.4) &&
+	 ALMOST_EQUAL(transform_j -> value[1], 0.4) &&
+	 ALMOST_EQUAL(transform_j -> value[3], -0.4) &&
 	 ALMOST_EQUAL(transform_j -> value[4], 0.2));
   free_token_list(first);
   destroy_context(cx);
