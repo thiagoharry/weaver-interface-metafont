@@ -16602,8 +16602,11 @@ bool drawing_commands(struct metafont *mf, struct context *cx,
     MATRIX_MULTIPLICATION(transform_matrix, currentpen -> gl_matrix);
     currentpen = currentpen -> referenced;
   }
-  else
+  else{
+    if(currentpen -> flags == FLAG_NULL)
+      return true;
     memcpy(transform_matrix, currentpen -> gl_matrix, 9 * sizeof(float));
+  }
   @<Prepare 'currentpicture' for Drawing@>
   // Drawing loop
   for(i = 0; i < path -> length - 1; i ++){

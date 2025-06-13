@@ -16904,8 +16904,11 @@ bool drawing_commands(struct metafont *mf, struct context *cx,
     MATRIX_MULTIPLICATION(transform_matrix, currentpen -> gl_matrix);
     currentpen = currentpen -> referenced;
   }
-  else
+  else{
+    if(currentpen -> flags == FLAG_NULL)
+      return true;
     memcpy(transform_matrix, currentpen -> gl_matrix, 9 * sizeof(float));
+  }
   @<Prepara 'currentpicture' para Desenho@>
   // Loop de desenho
   for(i = 0; i < path -> length - 1; i ++){
@@ -17054,7 +17057,7 @@ void drawpoint(struct context *cx,
   gl_matrix[5] = 2 * (matrix[5] + cx -> current_depth + y) / pic -> height -
                  1.0;
   gl_matrix[8] = 1.0;
-  glViewport(0, 0, pic -> width, pic -> height); 
+  glViewport(0, 0, pic -> width, pic -> height);
   // Se a caneta for quadrada, usamos a triangulação padrão de quadrado.
   // Se não for, usamos a triangulação da própria caneta.
   if(pen -> flags & FLAG_SQUARE)

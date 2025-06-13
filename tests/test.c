@@ -2876,13 +2876,15 @@ int main(void){
   test_picture_expressions();
   test_boolean_expressions();
   test_if_statements();
-  test_drawing_commands();
+  test_drawing_commands();// OpenGL errors in Emscripten here
   test_font_rendering();
   test_pen_rendering();
   test_prime_computing();
   test_shipit_command();
   test_renderchar_command();
+#if !defined(__EMSCRIPTEN__)
   test_errors();
+#endif
   test_opengl();
   imprime_resultado();
   _Wfinish_weavefont();

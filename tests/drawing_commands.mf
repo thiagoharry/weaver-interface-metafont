@@ -101,8 +101,8 @@ wg = totalweight g;
 % Now this will test the commands 'top', 'bot', 'lft' and 'rt' when we
 % have a non-symetrical pen.
 
-p = pensquare xscaled 0.5 shifted (0.15, 0.1);
-pickup p;
+ p = pensquare xscaled 0.5 shifted (0.15, 0.1);
+ pickup p;
 
 ph1 = top lft (0, 0);
 ph2 = bot rt (0, 0);
