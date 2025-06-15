@@ -3204,8 +3204,77 @@ beginchar("¢", (0.43+0.049*(weight-1)+0.042*italic+0.009*italic*(weight-1))*siz
   draw p1--p2;
 endchar;
 
-beginchar("£", 10, 10, 0);
-
+beginchar("£", (0.487+0.064*(weight-1)+0.083*italic-0.003*italic*(weight-1))*size*pt,
+    0.68*size*pt, 0.012*size*pt);
+  pair p1u, p1l, p2u, p2l, p3u, p3l, p4u, p4l, p5u, p5l;
+  pair cnt;
+  p1u = ((0.97+0.03*italic)*w, (0.8-0.01*(weight-1)+0.01*italic)*h);
+  p2u = ((0.533-0.025*(weight-1)+0.1*italic+0.005*italic*(weight-1))*w, h);
+  p1l = ((0.81-0.085*(weight-1)+0.04*italic)*w, (0.76-0.045*(weight-1)+0.015*italic-0.01*italic*(weight-1))*h);
+  p2l = ((0.533-0.015*(weight-1)+0.1*italic-0.03*italic*(weight-1))*w, (0.895-0.07*(weight-1))*h);
+  p3u = ((0.09-0.03*(weight-1)+0.14*italic-0.03*italic*(weight-1))*w, (0.76-0.01*(weight-1)-0.055*italic+0.01*italic*(weight-1))*h);
+  p3l = ((0.26+0.08*(weight-1)+0.125*italic-0.045*italic*(weight-1))*w, (0.75-0.03*(weight-1)-0.04*italic+0.01*italic*(weight-1))*h);
+  p4u = ((0.27-0.05*(weight-1)+0.025*italic)*w, (0.335+0.035*(weight-1)+0.06*italic-0.03*italic*(weight-1))*h);
+  p4l = ((0.445+0.06*(weight-1)+0.01*italic-0.02*italic*(weight-1))*w, (0.35+0.04*(weight-1)+0.06*italic-0.03*italic*(weight-1))*h);
+  p5u = (0, (0.08+0.075*(weight-1))*h);
+  cnt = ((0.26+0.055*(weight-1)-0.035*italic+0.005*italic*(weight-1))*w, (0.135+0.038*(weight-1))*h);
+  numeric penX, penY;
+  penX = (0.035+0.05*(weight-1)-0.01*italic-0.01*italic*(weight-1))*h;
+  penY = (0.035+0.05*(weight-1)-0.01*italic-0.01*italic*(weight-1))*h;
+  %p5u = p5u + (0, -0.7071*penYu);
+  p5l = cnt + (-0.7*penX, (0.5-0.15*(weight-1))*penY);
+  pickup pencircle xscaled penX yscaled penY;
+  draw lft p1u..{-1, 0}bot p2u..{0, -1}rt p3u..{0, -1}rt p4u..bot p5u;
+  draw rt p1l..{-1, 0}top p2l..{0, -1}lft p3l..{0, -1}lft p4l..p5l;
+  pair p1, p2, p3, p4, p5;
+  p1 = 0.5[lft p1u, rt p1l];
+  p2 = 0.5[bot p2u, top p2l];
+  p3 = 0.5[rt p3u, lft p3l];
+  p4 = 0.5[rt p4u, lft p4l];
+  penX = (0.11+0.01*italic+0.02*italic*(weight-1)+0.005*italic*(weight-1))*h;
+  penY = (0.05+0.01*italic+0.015*italic*(weight-1)+0.005*italic*(weight-1))*h;
+  pickup pencircle xscaled penX yscaled penY;
+  p5 = bot p5l;
+  p5 = p5 + (0.7071*0.5*penX, 0.7071*penY);
+  draw p1..p2{-1, 0}..p3{0, -1}..p4{0, -1}..p5;
+  % RETOUCH
+  pen eraser;
+  eraser = makepen(p1u--p1l--(xpart p1l, ypart p1l - penY)--(xpart p1u, ypart p1u - 2*penY)--cycle);
+  pickup eraser;
+  erase (0,0);
+  % DRAWING PART 2: BOTTOM
+  pair p6l, p6u, p7u, p7l, p8u, p8l, p9l;
+  p6l = ((1-0.17*italic+0.01*italic*(weight-1))*w, (0.025+0.01*(weight-1))*h);
+  p6u = ((0.95-0.035*(weight-1)-0.14*italic+0.035*italic*(weight-1))*w, (0.135+0.08*(weight-1)-0.005*italic*(weight-1))*h);
+  p7u = ((0.72+0.01*(weight-1)-0.11*italic+0.02*italic*(weight-1))*w, (0.1+0.065*(weight-1)+0.01*italic*(weight-1))*h);
+  p7l = ((0.74-0.02*(weight-1)-0.14*italic)*w, -d);
+  p8u = ((0.38+0.075*(weight-1)-0.05*italic+0.01*italic*(weight-1))*w, (0.15+0.045*(weight-1))*h);
+  p8l = ((0.35-0.015*(weight-1)-0.085*italic+0.015*italic*(weight-1))*w, (0.05-0.015*(weight-1)-0.015*italic+0.015*italic*(weight-1))*h);
+  p9l = ((0.06+0.035*(weight-1)-0.035*italic-0.01*italic*(weight-1))*w, -d);
+  penX = penY = (0.08+0.03*(weight-1))*h;
+  pickup pencircle xscaled penX yscaled penY;
+  draw bot p6u..{-1, 0}bot p7u..{-1, 0}bot p8u..bot cnt..0.5[p9l, p5u];
+  draw top p6l..{-1, 0}top p7l..{-1, 0}top p8l..top p9l;
+  pickup pensquare xscaled ((0.6+0.2*(weight-1)+0.1*italic*(weight-1))*penX) yscaled ((1-0.5*italic)*penY);
+  draw lft cnt;
+  % RETOUCH 2
+  eraser = makepen(p5u--p9l--(0, -d)--cycle);
+  pickup eraser;
+  erase (0, 0);
+  % RETOUCH 3
+  eraser = makepen(p6u--p6l--(w, ypart p6l)--(w, ypart p6u)--cycle);
+  pickup eraser;
+  erase (0, 0);
+  % RETOUCH 4
+  eraser = makepen(p6u..p7u{-1, 0}..p8u..cnt..cnt..{0, 1}p4l--cycle);
+  pickup eraser;
+  erase (0, 0);
+  % Horizontal line
+  pair h1, h2;
+  h1 = ((0.09-0.025*(weight-1))*italic*w, (0.505-0.015*(weight-1))*h);
+  h2 = ((0.79-0.08*(weight-1)-0.01*italic+0.02*(weight-1)*italic)*w, (0.505-0.015*(weight-1))*h);
+  pickup pensquare slanted (18*italic) yscaled (0.075+0.035*(weight-1))*h;
+  draw rt h1--lft h2;
 endchar;
 
-% TODO: (0,0) na direção de caminho traava.
+% TODO: (0,0) na direção de caminho trava.
