@@ -3295,7 +3295,8 @@ beginchar("¤", (0.475+0.016*(weight-1))*size*pt, (0.56+0.005*(weight-1))*size*p
   draw 0.8[p3,p4]--p4;
 endchar;
 
-beginchar("¥", 10, 10, 0);
+beginchar("¥", (0.576+0.093*(weight-1)+0.047*italic-0.035*italic*(weight-1))*size*pt, 0.668*size*pt, 0);
+  renderchar "Y" between (0,0) and (w, h);
 endchar;
 
 % TODO: (0,0) na direção de caminho trava.
