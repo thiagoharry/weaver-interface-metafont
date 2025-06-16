@@ -3277,4 +3277,23 @@ beginchar("£", (0.487+0.064*(weight-1)+0.083*italic-0.003*italic*(weight-1))*si
   draw rt h1--lft h2;
 endchar;
 
+beginchar("¤", (0.475+0.016*(weight-1))*size*pt, (0.56+0.005*(weight-1))*size*pt, (-0.084+0.01*(weight-1))*size*pt);
+  pickup pencircle xscaled ((0.925-0.015*(weight-1))*w) yscaled ((0.925-0.03*(weight-1))*(h+d));
+  draw (w/2, (h-d)/2);
+  pickup pencircle xscaled ((0.605-0.185*(weight-1))*w) yscaled ((0.605-0.185*(weight-1))*(h+d));
+  erase (w/2, (h-d)/2);
+  pickup pensquare xscaled ((0.1+0.02*(weight-1))*h) rotated 45;
+  pair p1, p2, p3, p4;
+  p1 = bot rt (0, h);
+  p2 = top lft(w, -d);
+  p3 = bot lft (w, h);
+  p4 = top rt (0, -d);
+  draw p1-- 0.2[p1,p2];
+  draw 0.8[p1,p2]--p2;
+  pickup pensquare xscaled ((0.1+0.02*(weight-1))*h) rotated (-45);
+  draw p3-- 0.2[p3,p4];
+  draw 0.8[p3,p4]--p4;
+  %draw bot lft (w, h)-- 0.35[bot lft (w, h),(w/2, h/2)];
+endchar;
+
 % TODO: (0,0) na direção de caminho trava.
