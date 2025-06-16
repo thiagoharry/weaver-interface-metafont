@@ -2387,8 +2387,8 @@ void test_shipit_command(void){
   struct metafont *mf;
   struct context *cx;
   bool ret;
-  struct named_variable *w;
-  struct numeric_variable *numeric_w;
+  struct named_variable *w, *var;
+  struct numeric_variable *numeric_w, *numeric_var;
   GLuint glyph = 0;
   int width = 0, height = 0, depth = -1, italcorr = -1, kerning = -1;
   double w1, w2;
@@ -2400,7 +2400,10 @@ void test_shipit_command(void){
     _Wprint_metafont_error(mf);
   assert("Evaluating program with 'shipit' command", ret);
   w = (struct named_variable *) mf -> named_variables;
+  var = w -> next;
+  var = var -> next;
   numeric_w = (struct numeric_variable *) w -> var;
+  numeric_var = (struct numeric_variable *) var -> var;
   ret = _Wrender_glyph(mf, "A", NULL, &glyph, &width, &height,
 		       &depth, &italcorr, &kerning);
   if(!ret)
@@ -2417,6 +2420,16 @@ void test_shipit_command(void){
   glDeleteTextures(1, &glyph);
   assert("Testing correctness of 'shipit' command",
 	 ret && w1 == 18.0 && w2 == 35.0);
+  ret = _Wrender_glyph(mf, "3", NULL, &glyph, &width, &height,
+		       &depth, &italcorr, &kerning);
+  if(!ret)
+    _Wprint_metafont_error(mf);
+  assert("Glyphs with no drawing or rendering should be empty",
+	 ret && numeric_var -> value == 0.0);
+  if(numeric_var -> value != 0.0){
+    printf("Result of 'totalweight' in empty glyph should be 0.0, found %f instead.\n",
+	   numeric_var -> value);
+  }
   free_token_list(first);
   destroy_context(cx);
   _Wdestroy_metafont(mf);

@@ -17614,6 +17614,7 @@ else if(begin -> type == TYPE_BEGINCHAR){
       glBindTexture(GL_TEXTURE_2D, 0);
     }
     @<Gera nova 'currentpicture'@>
+    @<Prepara 'currentpicture' para Desenho@>
   }
   return true;
 }

@@ -17309,6 +17309,7 @@ else if(begin -> type == TYPE_BEGINCHAR){
       glBindTexture(GL_TEXTURE_2D, 0);
     }
     @<Create new 'currentpicture'@>
+    @<Prepare 'currentpicture' for Drawing@>
   }
   return true;
 }

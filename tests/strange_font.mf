@@ -1,4 +1,4 @@
-numeric weight, counter;
+numeric weight, counter, var;
 
 counter = 0;
 
@@ -63,4 +63,12 @@ beginchar("1", 100, 100, 0);
       ypart p1 + (0.951881 * (ypart p2 - ypart p1)))
     .. p2;
   draw p;
+endchar;
+
+beginchar("2", 10, 10, 0);
+endchar;
+
+beginchar("3", 10, 10, 0);
+  renderchar "2" between (0, 0) and (w, h);
+  var = totalweight currentpicture;
 endchar;
