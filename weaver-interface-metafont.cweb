@@ -16753,30 +16753,19 @@ renderizar em outros lugares. Por causa disso, vamos sempre
 preferencialmente manter o nosso framebuffer atual para o
 da \monoespaco{currentpicture}.
 
-Antes de começar a avaliar código, é quando nós salvamos o framebuffer
-anterior. Para isso usamos a variável abaixo:
-
-@<Variáveis Locais (metafont.c)@>+=
-static GLint previous_fb;
-@
-
-E abaixo temos onde salvamos o framebuffer anterior antes de começar a
-executar qualquer código
-em \monoespaco{eval\_list\_of\_expressions}. Salvamos também as
-dimensões do ``viewport'', já que podemos mudar tais valores ao
-renderizar uma imagem:
+Antes de avaliar código, salvamos as dimensões do ``viewport'',
+já que podemos mudar tais valores ao renderizar uma imagem:
 
 @<Antes de Avaliar Código@>=
 GLint _viewport[4];
 glGetIntegerv(GL_VIEWPORT, _viewport);
-glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &previous_fb);
 @
 
 E aqui nós restauramos o framebuffer e o ``viewport'' de antes de
 começarmos a interpretar código:
 
 @<Depois de Avaliar Código@>=
-glBindFramebuffer(GL_FRAMEBUFFER, previous_fb);
+glBindFramebuffer(GL_FRAMEBUFFER, 0);
 glViewport(_viewport[0], _viewport[1], _viewport[2], _viewport[3]);
 @
 

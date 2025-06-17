@@ -16451,30 +16451,19 @@ operation. Because of this, we will try to keep as the current
 framebuffer the framebuffer associated
 with \monoespaco{currentpicture}.
 
-But before beginning to evaluate code, we store the previous
-framebuffer that the program was using before calling our code. It
-will be stored in the variable below:
-
-@<Local Variables (metafont.c)@>+=
-static GLint previous_fb;
-@
-
-And here is where we save the previous framebuffer before evaluating
-the code in \monoespaco{eval\_list\_of\_expressions}. We also save the
-previous viewport, as we can change this value too when rendering a
-glyph:
+Before code evaluation, we save the previous viewport, as we can
+change this value too when rendering a glyph:
 
 @<Before Evaluating Code@>=
 GLint _viewport[4];
 glGetIntegerv(GL_VIEWPORT, _viewport);
-glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &previous_fb);
 @
 
 And this restores the old framebuffer and viewport after code
 evaluation:
 
 @<After Evaluating Code@>=
-glBindFramebuffer(GL_FRAMEBUFFER, previous_fb);
+glBindFramebuffer(GL_FRAMEBUFFER, 0);
 glViewport(_viewport[0], _viewport[1], _viewport[2], _viewport[3]);
 @
 
