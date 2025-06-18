@@ -18359,7 +18359,6 @@ void _Wmetafont_loading(void *(*p_alloc)(size_t),
                         char *source_filename,
                         struct user_interface *target){
   struct metafont *mf;
-  float size;
   int texture_width, texture_height, texture_depth, ignore_this;
   if(p_alloc != permanent_alloc || p_free != permanent_free ||
      t_alloc != temporary_alloc || t_free != temporary_free){
@@ -18381,13 +18380,9 @@ void _Wmetafont_loading(void *(*p_alloc)(size_t),
       after_loading_interface();
     return;
   }
-  // Computing interface height in pixels to a value in pt.
-  // If supported by the texture, this defines its size.
-  size = 72.0 * (target -> height) / dpi;
-  _Wwrite_numeric_variable(mf, "size", size);
-  // Computing width:
-  size = 72.0 * (target -> width) / dpi;
-  _Wwrite_numeric_variable(mf, "hsize", size);
+  // Storing interface size in variables if they exist:
+  _Wwrite_numeric_variable(mf, "size", target -> height);
+  _Wwrite_numeric_variable(mf, "hsize", target -> width);
   // The texture is the first glyph in mf -> first_glyph_symbol
   target -> _texture1 = (GLuint *) permanent_alloc(sizeof(GLuint));
   if(target -> _texture1 == NULL){
@@ -18472,13 +18467,9 @@ void _reload_texture(struct user_interface *target){
   // Getting previous texture width and height:
   texture_width = target -> width;
   texture_height = target -> height;
-  // Computando a altura da interface, dada em pixels, para pontos tipográficos.
-  // Se for suportado pela textura, usamos isso para determinar seu tamanho.
-  float size = 72.0 * (target -> height) / dpi;
-  _Wwrite_numeric_variable(mf, "size", size);
-  // Computando a largura:
-  size = 72.0 * (target -> width) / dpi;
-  _Wwrite_numeric_variable(mf, "hsize", size);
+  // Storing interface size:
+  _Wwrite_numeric_variable(mf, "size", target -> height);
+  _Wwrite_numeric_variable(mf, "hsize", target -> width);
   _Wrender_glyph(mf, mf -> first_glyph_symbol, NULL, target -> _texture1, 
                  &texture_width, &texture_height,
                  &texture_depth, &ignore_this, &ignore_this);

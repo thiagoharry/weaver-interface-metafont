@@ -18672,7 +18672,6 @@ colocar a textura lida. É possível definir texturas animadas.
 
 Definimos tal função como:
 
-
 @<Definição de Funções da API (metafont.c)@>+=
 #if defined(WEAVER_ENGINE)
 @<Funções a Serem Colocadas na Interface de Usuário@>
@@ -18685,7 +18684,6 @@ void _Wmetafont_loading(void *(*p_alloc)(size_t), //Não usado
                         char *source_filename,
                         struct user_interface *target){
   struct metafont *mf;
-  float size;
   int texture_width, texture_height, texture_depth, ignore_this;
   if(p_alloc != permanent_alloc || p_free != permanent_free ||
      t_alloc != temporary_alloc || t_free != temporary_free){
@@ -18707,13 +18705,9 @@ void _Wmetafont_loading(void *(*p_alloc)(size_t), //Não usado
       after_loading_interface();
     return;
   }
-  // Computando a altura da interface, dada em pixels, para pontos tipográficos.
-  // Se for suportado pela textura, usamos isso para determinar seu tamanho.
-  size = 72.0 * (target -> height) / dpi;
-  _Wwrite_numeric_variable(mf, "size", size);
-  // Computando a largura:
-  size = 72.0 * (target -> width) / dpi;
-  _Wwrite_numeric_variable(mf, "hsize", size);
+  // Armazenando altura e largura da interface em variáveis caso existam:
+  _Wwrite_numeric_variable(mf, "size", target -> height);
+  _Wwrite_numeric_variable(mf, "hsize", target -> width);
   // A textura  é o primeiro glifo definido em mf -> first_glyph_symbol
   target -> _texture1 = (GLuint *) permanent_alloc(sizeof(GLuint));
   if(target -> _texture1 == NULL){
@@ -18793,13 +18787,9 @@ void _reload_texture(struct user_interface *target){
   // Obtendo os valores anteriores de altura e largura
   texture_width = target -> width;
   texture_height = target -> height;
-  // Computando a altura da interface, dada em pixels, para pontos tipográficos.
-  // Se for suportado pela textura, usamos isso para determinar seu tamanho.
-  float size = 72.0 * (target -> height) / dpi;
-  _Wwrite_numeric_variable(mf, "size", size);
-  // Computando a largura:
-  size = 72.0 * (target -> width) / dpi;
-  _Wwrite_numeric_variable(mf, "hsize", size);
+  // Armazenando tamanho da interface:
+  _Wwrite_numeric_variable(mf, "size", target -> height);
+  _Wwrite_numeric_variable(mf, "hsize", target -> width);
   _Wrender_glyph(mf, mf -> first_glyph_symbol, NULL, target -> _texture1, 
                  &texture_width, &texture_height,
                  &texture_depth, &ignore_this, &ignore_this);

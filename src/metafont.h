@@ -149,11 +149,11 @@ struct _glyph*first_glyph;
 char first_glyph_symbol[5];
 int number_of_glyphs;
 /*:614*//*665:*/
-#line 18826 "weaver-interface-metafont.cweb"
+#line 18816 "weaver-interface-metafont.cweb"
 
 bool reloading_texture;
 /*:665*//*668:*/
-#line 18861 "weaver-interface-metafont.cweb"
+#line 18851 "weaver-interface-metafont.cweb"
 
 int err,errno_line;
 char errno_character[5];
