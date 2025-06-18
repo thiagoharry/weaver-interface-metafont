@@ -1,0 +1,57 @@
+% This is a comment. Comments begin with a '%' and extends to the end of line.
+
+% Global variables defining the sizes:
+numeric size, hsize;
+% Now we begin defining 'A'. Each glyph has a corresponding string description,
+% a horizontal size, vertical size and depth. (when you want do draw below
+% the baseline)
+beginchar("A", hsize, size, 0);
+  % Pair variables can be used to describe points in 2D space:
+  pair z1, z2, z3, z4, z5, z6, z7;
+  % Numeric variables are floating-point values:
+  numeric pen_width, pen_height;
+  % Initializing one of the variables. In a glyph definition, we
+  % can use an implicit variable 'h', which is our glyph height:
+  pen_height = 0.09*h;
+  % Initializing other variable:
+  pen_width = 0.9*pen_height;
+  % Before drawing, we need to pick up a pen. Here we use a pen called
+  % 'pencircle', which is a circle of 1 pixel. As this is too small, we
+  % scale it in coordinates 'x' and 'y' to the desired size:
+  pickup pencircle yscaled pen_height xscaled pen_width;
+  % Our point 'z1' is defined as the position of our pen, if we place
+  % it immediately to the right (rt) and on top of point (0, 0).
+  z1 = top rt (0, 0);
+  % Our point 'z2' is defined as the position of our pen, if we place
+  % it immediately to the right (rt) of point (0,0.75*h).
+  % Where 'h' is our glyph height.
+  z2 = rt (0, 0.75*h);
+  % Our point 'z3' is defined as the position of our pen, if we place
+  % it immediately on the bottom (bot) of point (0.5*w,h).
+  % Where 'w' is our glyph width and 'h' is our glyph height.
+  z3 = bot (0.5*w, h);
+  % Our point 'z4' is defined as the position of our pen, if we place
+  % it immediately to the left (lft) of point (w, 0.75*h).
+  % Where 'w' is our glyph width and 'h' is our glyph height.
+  z4 = lft (w, 0.75*h);
+  % Our point 'z5' is defined as the position of our pen, if we place
+  % it immediately to the left (lft) and on top of point (w, 0).
+  % Where 'w' is our glyph width.  
+  z5 = lft top (w, 0);
+  % Our point 'z6' is defined as the position of our pen, if we place
+  % it immediately to the right (rt) of point (0, 0.45*h).
+  % Where 'h' is our glyph height.
+  z6 = rt (0, 0.45*h);
+  % Our point 'z7' is defined as the position of our pen, if we place
+  % it immediately to the left (lft) of point (w, 0.45*h).
+  % Where 'w' is our glyph width and 'h' is our glyph height.
+  z7 = lft (w, 0.45*h);
+  % We can draw the horizontal line in 'A' joining two points:
+  draw z6--z7;
+  % Joining points with '--' creates a line. To create curves, we use '..'.
+  % Usually we help WEAVEFONT to create curves giving some hints about
+  % the curve direction. The numbers in brackets '{}' are unit vectors
+  % representing directions. They contain the pen direction while it moves
+  % through the curve when passing by each point.
+  draw z1--z2{0, 1}..z3{1, 0}..{0, -1}z4--z5;
+endchar;

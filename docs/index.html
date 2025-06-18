@@ -1,0 +1,185 @@
+<!doctypehtml>
+<html lang=en-us>
+  <head>
+    <meta charset=utf-8>
+    <meta content="text/html; charset=utf-8"http-equiv=Content-Type>
+    <title>WEAVEFONT</title>
+    <style>
+    .editor-container {
+      position: relative;
+      width: 60em;
+      height: 600px;
+      font-family: monospace;
+    }
+
+    .highlighting, textarea {
+      position: absolute;
+      top: 0;
+      left: 0;
+      margin: 0;
+      padding: 10px;
+      width: 100%;
+      height: 100%;
+      font-size: 14px;
+      line-height: 1.5;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      overflow: auto;
+      box-sizing: border-box;
+    }
+
+    .highlighting {
+      color: transparent;
+      background-color: white;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    textarea {
+      background: transparent;
+      color: black;
+      z-index: 2;
+      resize: none;
+    }
+
+    .highlighting .type {
+      color: #0066cc;
+      font-weight: bold;
+    }
+
+    .highlighting .keyword {
+      color: #800080;
+      font-weight: bold;
+    }
+    .highlighting .comment {
+	color: #006400; /* verde escuro */
+	font-weight: bold;
+}
+
+.highlighting .string {
+    color: #D2691E; /* chocolate / laranja escuro */
+    font-weight: bold;
+}
+  </style>
+  </head>
+  <body>
+    <div class=spinner id=spinner></div>
+    <div class=emscripten id=status>Downloading...</div>
+    <div class=emscripten>
+      <progress hidden id=progress max=100 value=0></progress>
+    </div>
+    <div class=emscripten_border>
+      <canvas class=emscripten id=canvas oncontextmenu=event.preventDefault() tabindex=-1></canvas>
+    </div>
+    <script>var statusElement=document.getElementById("status"),progressElement=document.getElementById("progress"),spinnerElement=document.getElementById("spinner"),canvasElement=document.getElementById("canvas"),outputElement=document.getElementById("output");outputElement&&(outputElement.value=""),canvasElement.addEventListener("webglcontextlost",(e=>{alert("WebGL context lost. You will need to reload the page."),e.preventDefault()}),!1);var Module={print(...e){if(console.log(...e),outputElement){var t=e.join(" ");outputElement.value+=t+"\n",outputElement.scrollTop=outputElement.scrollHeight}},canvas:canvasElement,setStatus(e){if(Module.setStatus.last??={time:Date.now(),text:""},e!==Module.setStatus.last.text){var t=e.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/),n=Date.now();t&&n-Module.setStatus.last.time<30||(Module.setStatus.last.time=n,Module.setStatus.last.text=e,t?(e=t[1],progressElement.value=100*parseInt(t[2]),progressElement.max=100*parseInt(t[4]),progressElement.hidden=!1,spinnerElement.hidden=!1):(progressElement.value=null,progressElement.max=null,progressElement.hidden=!0,e||(spinnerElement.style.display="none")),statusElement.innerHTML=e)}},totalDependencies:0,monitorRunDependencies(e){this.totalDependencies=Math.max(this.totalDependencies,e),Module.setStatus(e?"Preparing... ("+(this.totalDependencies-e)+"/"+this.totalDependencies+")":"All downloads complete.")}};Module.setStatus("Downloading..."),window.onerror=e=>{Module.setStatus("Exception thrown, see JavaScript console"),spinnerElement.style.display="none",Module.setStatus=e=>{e&&console.error("[post-exception status] "+e)}}</script><script async src=index.js></script>
+    <div style="position:absolute;left:0;top:15vh;max-width:60em;margin-left:1em;">
+    <p>
+      <b>A new language for dynamic, programmable vector graphics</b>
+    </p>
+    <p>
+      WEAVEFONT is a programming language for creating
+      vector graphics — originally designed for programmable
+      typefaces, but powerful enough for static images, generative
+      art, and real-time animations.
+    </p>
+    <p>
+      Inspired by the powerful and innovative <b>METAFONT</b> and
+      reimagined for modern graphics pipelines, <b>WEAVEFONT</b> lets
+      you define visual forms algorithmically and renders them in real
+      time using <b>OpenGL</b>. That means high performance, fluid
+      animations, and native interactivity — on desktop or in the
+      browser through <b>WebAssembly</b>.
+    </p>
+    <p><b>Key Features:</b></p>
+    <ul>
+      <li><b>Programmable vector fonts</b> with full parametric
+	control.</li>
+      <li><b>Real-time rendering</b> via GPU acceleration (OpenGL/WebGL)</li>
+      <li><b>Lightweight and portable:</b> just drop in a single .c
+	and .h file in your project.</li>
+      <li><b>WebAssembly-compatible:</b> no external dependencies</li>
+      <li><b>Free software:</b> made for openness and community</li>
+    </ul>
+    <h3>Try it out!</h3>
+    <p>The WEAVEFONT logo in this page was defined and rendered using
+    WEAVEFONT. You can try changing the code for each one of its
+    glyphs and see how it affects our logo. Click in one of the
+    buttons below to live edit the corresponding letter in
+      'WEAVEFONT':</p>
+    <p><button>Code for 'W'</button> <button>Code for 'E'</button>
+      <button>Code for 'A'</button> <button>Code for 'V'</button>
+      <button>Code for 'F'</button> <button>Code for 'O'</button>
+      <button>Code for 'N'</button> <button>Code for 'T'</button></p>
+    </div>
+    <div style="position:absolute;right:0;top:0vh;display:none;">
+      <div class="editor-container">
+	<div class="highlighting" id="highlighting"></div>
+	<textarea id="editor" spellcheck="false" cols="80"></textarea>
+      </div>
+      <button>Run code!</button>
+    </div>
+    <script>
+  const textarea = document.getElementById("editor");
+  const highlighting = document.getElementById("highlighting");
+
+  const types = ["numeric", "pair", "transform", "path", "picture", "pen", "boolean"];
+  const keywords = [
+    "scaled", "shifted", "slanted", "xscaled", "yscaled", "zscaled", "trasnformed", "xpart",
+    "ypart", "angle", "xxpart", "yypart", "xypart", "yxpart", "cycle", "tension",
+    "atleast", "controls", "curl", "reverse", "subpath", "point", "postcontrol",
+    "precontrol", "nullpen", "pencircle", "pensemicircle", "makepen", "nullpicture",
+    "subpicture", "totalweight", "width", "height", "or", "true", "false", "odd", "not",
+    "elseif", "else", "if", "step", "until", "pickup", "bot", "top", "rt", "lft",
+    "pickcolor", "monowidth", "draw", "erase", "shipit", "renderchar", "between",
+    "kerning", "debug", "begingroup", "endgroup", "fi", "beginchar", "endchar"
+  ];
+
+  function escapeHTML(str) {
+    return str.replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;');
+  }
+
+  function highlightSyntax(text) {
+    // Escape antes de processar
+    let escaped = escapeHTML(text);
+
+    // Primeiro, destaque as strings entre aspas duplas
+    escaped = escaped.replace(/"([^"\n]*)"/g, (match) => {
+      return `<span class="string">${match}</span>`;
+    });
+
+    // Em seguida, destaque os comentários (tudo após % até o fim da linha)
+    escaped = escaped.replace(/%.*/g, (match) => {
+      return `<span class="comment">${match}</span>`;
+    });
+
+    // Agora destaque palavras, mas ignorando as que já estão em span (grosso modo)
+    escaped = escaped.replace(/\b\w+\b/g, (word) => {
+      if (types.includes(word)) {
+        return `<span class="type">${word}</span>`;
+      } else if (keywords.includes(word)) {
+        return `<span class="keyword">${word}</span>`;
+      }
+      return word;
+    });
+
+    return escaped;
+  }
+
+  function syncHighlighting() {
+    const text = textarea.value;
+    highlighting.innerHTML = highlightSyntax(text) + "\n";
+  }
+
+  textarea.addEventListener("input", syncHighlighting);
+  textarea.addEventListener("scroll", () => {
+    highlighting.scrollTop = textarea.scrollTop;
+    highlighting.scrollLeft = textarea.scrollLeft;
+  });
+  Module['doNotCaptureKeyboard'] = true;
+  syncHighlighting();
+</script>
+</body></html>
