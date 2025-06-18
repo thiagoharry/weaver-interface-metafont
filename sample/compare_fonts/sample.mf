@@ -3296,8 +3296,26 @@ beginchar("¤", (0.475+0.016*(weight-1))*size*pt, (0.56+0.005*(weight-1))*size*p
 endchar;
 
 beginchar("¥", (0.576+0.093*(weight-1)+0.047*italic-0.035*italic*(weight-1))*size*pt, 0.668*size*pt, 0);
-  pickup pensquare scaled 10;
-  renderchar "Y" between (0,0) and (w, h);
+    % PARAMETERS
+  numeric pen_width;
+  pen_width = ((0.15+0.12*(weight-1)-0.01*italic*(weight-1))*h);
+  % CONTROL POINTS
+  pair p1, p2, p3, p4;
+  p1 = ((pen_width/2)+0.07*italic*w-0.07*italic*(weight-1)*w, h);
+  p2 = ((0.5-0.141*italic+0.07*italic*(weight-1)-0.08*italic*(weight-1))*w, 0.39*h);
+  p3 = (w - pen_width/2, h);
+  p4 = ((0.5-0.2*italic+0.05*italic*(weight-1)-0.065*italic*(weight-1))*w, 0);
+  % RENDERING
+  pickup pensquare xscaled pen_width;
+  draw p1--p2;
+  draw p3--p2;
+  draw p2--p4;
+  pickup pensquare yscaled (0.077+0.039*(weight-1))*h rotated (-12*italic);
+  draw ((0.16-0.105*italic)*w, 0.374*h)--((0.84-0.157*italic-0.015*italic*(weight-1))*w, 0.374*h);
+  draw ((0.16-0.15*italic+0.005*italic*(weight-1))*w, 0.165*h)--((0.84-0.2*italic-0.01*italic*(weight-1))*w, 0.165*h);
+endchar;
+
+beginchar("¦", 10, 10, 0);
 endchar;
 
 % TODO: (0,0) na direção de caminho trava.
