@@ -149,11 +149,11 @@ struct _glyph*first_glyph;
 char first_glyph_symbol[5];
 int number_of_glyphs;
 /*:614*//*665:*/
-#line 18816 "weaver-interface-metafont.cweb"
+#line 18818 "weaver-interface-metafont.cweb"
 
 bool reloading_texture;
 /*:665*//*668:*/
-#line 18851 "weaver-interface-metafont.cweb"
+#line 18853 "weaver-interface-metafont.cweb"
 
 int err,errno_line;
 char errno_character[5];
@@ -177,7 +177,7 @@ void(*temporary_free)(void*),
 void(*before_loading_interface)(void),
 void(*after_loading_interface)(void),
 char*source_filename,
-struct user_interface*target);
+void*target);
 #endif
 #line 383 "weaver-interface-metafont.cweb"
 /*:1*//*3:*/

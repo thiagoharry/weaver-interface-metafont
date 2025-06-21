@@ -358,7 +358,7 @@ void _Wmetafont_loading(void *(*permanent_alloc)(size_t),
                       void (*before_loading_interface)(void),
                       void (*after_loading_interface)(void),
                       char *source_filename,
-                      struct user_interface *target);
+                      void *target);
 #endif
 @
 
@@ -18333,7 +18333,7 @@ void extract(void *(*permanent_alloc)(size_t),
              void (*temporary_free)(void *),
              void (*before_loading_interface)(void),
              void (*after_loading_interface)(void),
-             char *source_filename, struct user_interface *i)
+             char *source_filename, void *i)
 \alinhanormal
 
 The first four parameters are just functions for the allocation and
@@ -18357,8 +18357,9 @@ void _Wmetafont_loading(void *(*p_alloc)(size_t),
                         void (*before_loading_interface)(void),
                         void (*after_loading_interface)(void),
                         char *source_filename,
-                        struct user_interface *target){
+                        void *target_pointer){
   struct metafont *mf;
+  struct user_interface *target;
   int texture_width, texture_height, texture_depth, ignore_this;
   if(p_alloc != permanent_alloc || p_free != permanent_free ||
      t_alloc != temporary_alloc || t_free != temporary_free){
@@ -18380,6 +18381,7 @@ void _Wmetafont_loading(void *(*p_alloc)(size_t),
       after_loading_interface();
     return;
   }
+  target = (struct user_interface *) target_pointer;
   // Storing interface size in variables if they exist:
   _Wwrite_numeric_variable(mf, "size", target -> height);
   _Wwrite_numeric_variable(mf, "hsize", target -> width);
