@@ -36,3 +36,5 @@ Despite similar syntax, WeaveFont has several differences to METAFONT. Some of t
 * WeaveFont is not tied with a single interpreter and program. You could use WeaveFont in any
   other computer program, just inserting a single C file and a single header.
 
+You can see a small demo where you can edit WeaveFont code and see the results in
+your Web Browser in [https://thiagoharry.github.io/weaver-interface-metafont/].
