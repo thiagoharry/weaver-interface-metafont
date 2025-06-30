@@ -43,6 +43,9 @@
       z-index: 2;
       resize: none;
     }
+    .highlighting{
+	font-weight: bold;
+    }
 
     .highlighting .type {
       color: #0066cc;
@@ -53,6 +56,8 @@
       color: #800080;
       font-weight: bold;
     }
+    .highlighting .comment .type,
+    .highlighting .comment .keyword,
     .highlighting .comment {
 	color: #006400; /* verde escuro */
 	font-weight: bold;
@@ -108,19 +113,24 @@
     glyphs and see how it affects our logo. Click in one of the
     buttons below to live edit the corresponding letter in
       'WEAVEFONT':</p>
-    <p><button>Code for 'W'</button> <button>Code for 'E'</button>
-      <button>Code for 'A'</button> <button>Code for 'V'</button>
-      <button>Code for 'F'</button> <button>Code for 'O'</button>
-      <button>Code for 'N'</button> <button>Code for 'T'</button></p>
+    <p><button onclick="get_code('w')">Code for 'W'</button>
+      <button onclick="get_code('e')">Code for 'E'</button>
+      <button onclick="get_code('a')">Code for 'A'</button>
+      <button onclick="get_code('v')">Code for 'V'</button>
+      <button onclick="get_code('f')">Code for 'F'</button>
+      <button onclick="get_code('o')">Code for 'O'</button>
+      <button onclick="get_code('n')">Code for 'N'</button>
+      <button onclick="get_code('t')">Code for 'T'</button></p>
     </div>
-    <div style="position:absolute;right:0;top:0vh;display:none;">
+    <div id="code_area" style="position:absolute;right:0;top:0vh;display:none;">
       <div class="editor-container">
-	<div class="highlighting" id="highlighting"></div>
+	<div class="highlighting" id="highlighting" style="background-color:lightgray"></div>
 	<textarea id="editor" spellcheck="false" cols="80"></textarea>
       </div>
-      <button>Run code!</button>
+      <button onclick='run_code()'>Run code!</button><button onclick='close_code()'>Hide Code Editor</button>
     </div>
     <script>
+      var last_char="";
   const textarea = document.getElementById("editor");
   const highlighting = document.getElementById("highlighting");
 
@@ -133,7 +143,8 @@
     "subpicture", "totalweight", "width", "height", "or", "true", "false", "odd", "not",
     "elseif", "else", "if", "step", "until", "pickup", "bot", "top", "rt", "lft",
     "pickcolor", "monowidth", "draw", "erase", "shipit", "renderchar", "between",
-    "kerning", "debug", "begingroup", "endgroup", "fi", "beginchar", "endchar"
+      "kerning", "debug", "begingroup", "endgroup", "fi", "beginchar", "endchar",
+      "and", "of"
   ];
 
   function escapeHTML(str) {
@@ -165,7 +176,6 @@
       }
       return word;
     });
-
     return escaped;
   }
 
@@ -180,6 +190,27 @@
     highlighting.scrollLeft = textarea.scrollLeft;
   });
   Module['doNotCaptureKeyboard'] = true;
-  syncHighlighting();
+      syncHighlighting();
+
+      function get_code(c){
+	  get_source = Module.cwrap('get_source', 'string', ['number']);
+	  code = get_source(c.charCodeAt(0));
+	  code_area = document.getElementById("code_area");
+	  editor_area = document.getElementById("editor");
+	  editor_area.value = code;
+          code_area.style.display='block';
+          syncHighlighting();
+	  last_char = c.charCodeAt(0);
+      }
+
+      function run_code(c){
+	  put_source = Module.cwrap('put_source', null, ['number', 'string']);
+	  put_source(last_char, editor_area.value);
+      }
+
+      function close_code(){
+	  code_area = document.getElementById("code_area");
+	  code_area.style.display='none';
+      }
 </script>
 </body></html>
