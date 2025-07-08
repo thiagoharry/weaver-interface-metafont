@@ -38,3 +38,6 @@ Despite similar syntax, WeaveFont has several differences to METAFONT. Some of t
 
 You can see a small demo where you can edit WeaveFont code and see the results in
 your Web Browser in [https://thiagoharry.github.io/weaver-interface-metafont/].
+
+There is also a proof-of-concept game written in WeaveFont. The language was not conceived for creating computer games, 
+but this page shows that it is possible: [https://thiagoharry.github.io/breakout/].
