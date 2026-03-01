@@ -451,11 +451,12 @@ extern "C" {
 #endif
 #include <stdbool.h> // Define  'bool' type
 #include <stdlib.h> // Define 'atof' and 'abs' functions
-#if defined(__linux__) || defined(BSD) || defined(__EMSCRIPTEN__)
-#include <GLES3/gl3.h> // Our language renders with OpenGL
-#endif
 #if !defined(_WIN32)
 #include <sys/param.h> // Needed on BSD, but does not exist on Windows
+#endif
+#if defined(__linux__) || defined(BSD) || defined(__EMSCRIPTEN__)
+#include <EGL/egl.h>
+#include <GLES3/gl3.h> // Our language renders with OpenGL
 #endif
 @<Include General Headers (metafont.h)@>
 @<General Declarations (metafont.h)@>

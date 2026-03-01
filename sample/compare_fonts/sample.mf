@@ -3321,7 +3321,17 @@ beginchar("¦", (0.083+0.046*(weight-1)-0.002*italic+0.002*italic*(weight-1))*si
   draw top rt (0, -d);
 endchar;
 
-beginchar("§", 10, 10, 0);
+beginchar("§", (0.471+0.06*(weight-1)+0.11*italic-0.01*italic*(weight-1))*size*pt, 0.68*size*pt, (0.173+0.001*italic)*size*pt);
+  %pickup pencircle xscaled ((0.177+0.106*(weight-1)) * w) yscaled ((0.11+0.05*(weight-1)) * h);
+  pair p1, p2, p3, p4;
+  p1 = italic[((0.775-0.03*(weight-1))*w, (0.83-0.025*(weight-1))*h),lft (w, (0.86-0.01*(weight-1))*h)];
+  p2 = ((0.48+0.01*(weight-1)+0.215*italic-0.025*italic*(weight-1))*w, h);
+  p3 = rt ((0.102-0.01*(weight-1)+0.28*italic-0.05*italic*(weight-1))*w, (0.81-0.035*(weight-1)-0.04*italic-0.01*italic*(weight-1))*h);
+  p4 = ((0.41-0.06*(weight-1)+0.17*italic+0.01*italic*(weight-1))*w, (0.62-0.025*italic*(weight-1))*h);
+  %draw p1..{-1, 0}bot p2..{0, -1}rt p3..p4;
+  pickup pencircle scaled 10;
+  pickcolor (1, 0, 0, 1);
+  draw p1; draw p2; draw p3; draw p4;
 endchar;
 
 % TODO: (0,0) na direção de caminho trava.

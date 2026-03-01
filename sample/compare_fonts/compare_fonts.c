@@ -5,6 +5,9 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <time.h>
+#if defined(__linux__) || defined(BSD) || defined(__EMSCRIPTEN__)
+#include <GLES3/gl3.h>
+#endif
 #include "window.h"
 #include "metafont.h"
 #include "interface.h"
@@ -164,7 +167,8 @@ void test(struct metafont *mf, char *font_name, char *c, int weight, int italic)
            width, height, depth, elapsed);
     }
     { // Screen rendering
-      int i, j, p;
+      unsigned int i, j;
+      int p;
       struct user_interface *line, *f, *m, *h, *h1, *h2, *top;
       _Wmark_history_interface(); 
       f = _Wnew_interface(NULL, NULL,
