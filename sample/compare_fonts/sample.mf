@@ -3322,16 +3322,33 @@ beginchar("¦", (0.083+0.046*(weight-1)-0.002*italic+0.002*italic*(weight-1))*si
 endchar;
 
 beginchar("§", (0.471+0.06*(weight-1)+0.11*italic-0.01*italic*(weight-1))*size*pt, 0.68*size*pt, (0.173+0.001*italic)*size*pt);
-  %pickup pencircle xscaled ((0.177+0.106*(weight-1)) * w) yscaled ((0.11+0.05*(weight-1)) * h);
-  pair p1, p2, p3, p4;
-  p1 = italic[((0.775-0.03*(weight-1))*w, (0.83-0.025*(weight-1))*h),lft (w, (0.86-0.01*(weight-1))*h)];
+  numeric pen_y, pen_x;
+  pair p1, p2, p3, p4, p5, p6;
+  pair p7, p8, p9, p10;
+  pen_y = (0.1+0.06*(weight-1))*h;
+  pen_x = (0.12+0.09*(weight-1))*h;
+  p1 = ((0.775-0.03*(weight-1)+0.155*italic-0.01*italic*(weight-1))*w, (0.83-0.025*(weight-1)+0.01*italic)*h);
   p2 = ((0.48+0.01*(weight-1)+0.215*italic-0.025*italic*(weight-1))*w, h);
   p3 = rt ((0.102-0.01*(weight-1)+0.28*italic-0.05*italic*(weight-1))*w, (0.81-0.035*(weight-1)-0.04*italic-0.01*italic*(weight-1))*h);
-  p4 = ((0.41-0.06*(weight-1)+0.17*italic+0.01*italic*(weight-1))*w, (0.62-0.025*italic*(weight-1))*h);
-  %draw p1..{-1, 0}bot p2..{0, -1}rt p3..p4;
-  pickup pencircle scaled 10;
-  pickcolor (1, 0, 0, 1);
-  draw p1; draw p2; draw p3; draw p4;
+  p4 = ((0.41-0.06*(weight-1)+0.16*italic+0.01*italic*(weight-1))*w, (0.62-0.025*italic*(weight-1))*h);
+  p5 = ((1-0.09*italic+0.005*(italic*(weight-1)))*w, (0.355+0.01*(weight-1)+0.04*italic)*h);
+  p6 = ((0.62+0.01*(weight-1)-0.1*italic+0.035*italic*(weight-1))*w, (0.14+0.02*(weight-1)-0.01*italic)*h);
+  p7 = ((0.15*italic-0.03*italic*(weight-1))*w, (0.42-0.04*italic+0.01*italic*(weight-1))*h);
+  p8 = ((0.89+0.01*(weight-1)-0.23*italic+0.035*italic*(weight-1))*w, (-0.04+0.04*(weight-1)+0.04*italic+0.02*italic*(weight-1))*h);
+  p9 = ((0.49-0.02*(weight-1)-0.2*italic+0.03*italic*(weight-1))*w, -d);
+  p10 = ((0.14+0.05*(weight-1)-0.06*italic-0.025*italic*(weight-1))*w, (-0.05+0.03*(weight-1)-0.01*italic-0.03*italic*(weight-1))*h);
+  pickup pencircle yscaled pen_y xscaled pen_x;
+  draw p1..{-1, 0}bot p2..{0, -1}rt p3..{0, -1}lft p5..p6;
+  draw p4..{0, -1}rt p7..{0, -1}lft p8..{-1, 0}top p9..p10;
+  % RETOUCH
+  pickup pensemicircle xscaled (1.1*pen_x) yscaled (1.1*pen_y) rotated (-160);
+  erase p1;
+  pickup pensemicircle xscaled (1.1*pen_x) yscaled (1.1*pen_y) rotated (20);
+  erase p10;
+endchar;
+
+beginchar("¨", 1, 1, 0);
+
 endchar;
 
 % TODO: (0,0) na direção de caminho trava.
