@@ -2785,7 +2785,7 @@ void test_errors(void){
   _Wdestroy_metafont(mf);
   // ERROR: Missing matching token
   memset(error_string, 0, 1024);
-  setvbuf(stderr, error_string, _IOLBF, 1024);
+  //setvbuf(stderr, error_string, _IOLBF, 1024);
   create_metafont(&mf, &cx, "numeric a;\n if 1 < 2:\n a = 2;");
   _Wprint_metafont_error(mf);
   assert("Raising error when missing matching token",

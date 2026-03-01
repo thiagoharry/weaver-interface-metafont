@@ -1302,9 +1302,9 @@ void free_token_list(void *token_list){
 Agora a função que fará a análise léxica. Ela receberá como argumento
 a estrutura da meta-fonte (cujos detalhes ainda vamos definir) e uma
 string com caminho para arquivo com código-fonte METAFONT. Ela
-produzirá uma lsita de tokens e armazenará no ponteiro indicado por
+produzirá uma lista de tokens e armazenará no ponteiro indicado por
 seus dois últimos argumentos o primeiro e o último token lido. A
-função retornará verdadeiro se nenhum erro ocorrer, e falo caso
+função retornará verdadeiro se nenhum erro ocorrer, e falso caso
 contrário.
 
 @<Funções Auxiliares Locais (metafont.c)@>=
@@ -2141,10 +2141,10 @@ acusamos um erro (que definiremos depois):
 
 @<Análise Léxica: Detecção Final de Erros@>=
 if(aux_stack != NULL){
-  free_token_list(*first_token);
-  *first_token = *last_token = NULL;
   RAISE_ERROR_MISSING_TOKEN(mf, NULL, OPTIONAL(aux_stack -> link -> line),
                            aux_stack -> type);
+  free_token_list(*first_token);
+  *first_token = *last_token = NULL;
   return false;
 }
 @

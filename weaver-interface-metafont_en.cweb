@@ -2078,10 +2078,10 @@ error (which will be defined later):
 
 @<Lexer: Detect Final Errors@>=
 if(aux_stack != NULL){
-  free_token_list(*first_token);
-  *first_token = *last_token = NULL;
   RAISE_ERROR_MISSING_TOKEN(mf, NULL, OPTIONAL(aux_stack -> link -> line),
                            aux_stack -> type);
+  free_token_list(*first_token);
+  *first_token = *last_token = NULL;
   return false;
 }
 @
