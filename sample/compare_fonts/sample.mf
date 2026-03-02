@@ -3347,8 +3347,14 @@ beginchar("§", (0.471+0.06*(weight-1)+0.11*italic-0.01*italic*(weight-1))*size*
   erase p10;
 endchar;
 
-beginchar("¨", 1, 1, 0);
+% 103/335
+beginchar("¨", (0.32+0.015*(weight-1))*size*pt, (0.697+0.022*(weight-1))*size*pt, (-0.59+0.013*(weight-1))*size*pt);
+  pickup pencircle scaled (h+d);
+  draw bot rt (0, h);
+  draw bot lft (w, h);
+endchar;
 
+beginchar("©", 1, 1, 0);
 endchar;
 
 % TODO: (0,0) na direção de caminho trava.
