@@ -3347,14 +3347,26 @@ beginchar("§", (0.471+0.06*(weight-1)+0.11*italic-0.01*italic*(weight-1))*size*
   erase p10;
 endchar;
 
-% 103/335
 beginchar("¨", (0.32+0.015*(weight-1))*size*pt, (0.697+0.022*(weight-1))*size*pt, (-0.59+0.013*(weight-1))*size*pt);
   pickup pencircle scaled (h+d);
   draw bot rt (0, h);
   draw bot lft (w, h);
 endchar;
 
-beginchar("©", 1, 1, 0);
+% 104/335
+beginchar("©", 0.693*size*pt, 0.68*size*pt, 0);
+  numeric thickness, side_x, side_y;
+  thickness = (0.1+0.01*(weight-1))*h;
+  side_y = 0.53*h;
+  side_x = (0.46+0.035*(weight-1))*h;
+  pickup pencircle scaled h;
+  draw (0.5*w, 0.5*h);
+  pickup pencircle scaled (h-2*thickness);
+  erase (0.5*w, 0.5*h);
+  renderchar "c" between ((w-side_x)/2, (h-side_y)/2) and ((w+side_x)/2, (h+side_y)/2);
+endchar;
+
+beginchar("ª", 1, 1, 0);
 endchar;
 
 % TODO: (0,0) na direção de caminho trava.
