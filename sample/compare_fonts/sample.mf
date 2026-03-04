@@ -3353,7 +3353,6 @@ beginchar("¨", (0.32+0.015*(weight-1))*size*pt, (0.697+0.022*(weight-1))*size*p
   draw bot lft (w, h);
 endchar;
 
-% 104/335
 beginchar("©", 0.693*size*pt, 0.68*size*pt, 0);
   numeric thickness, side_x, side_y;
   thickness = (0.1+0.01*(weight-1))*h;
@@ -3366,7 +3365,9 @@ beginchar("©", 0.693*size*pt, 0.68*size*pt, 0);
   renderchar "c" between ((w-side_x)/2, (h-side_y)/2) and ((w+side_x)/2, (h+side_y)/2);
 endchar;
 
-beginchar("ª", 1, 1, 0);
+% 105/335
+beginchar("ª", (0.265+0.025*(weight-1)+0.021*italic+0.016*italic*(weight-1))*size*pt, (0.693-0.001*(weight-1)-0.001*italic+0.002*italic*(weight-1))*size*pt, (-0.396+0.001*(weight-1)-0.001*italic*(weight-1))*size*pt);
+  renderchar "a" between (0,-d) and (w, h);
 endchar;
 
 % TODO: (0,0) na direção de caminho trava.
