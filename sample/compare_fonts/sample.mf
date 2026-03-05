@@ -3399,7 +3399,9 @@ beginchar("®", 0.693*size*pt, 0.68*size*pt, 0);
   renderchar "R" between ((w-side_x)/2, (h-side_y)/2) and ((w+side_x)/2, (h+side_y)/2);
 endchar;
 
-beginchar("¯", 1, 1, 0);
+beginchar("¯", (0.278+0.022*(weight-1)+0.0125*italic+0.009*italic*(weight-1))*size*pt, 0.668*size*pt, (-0.6+0.032*(weight-1))*size*pt);
+  pickup pensquare scaled (h+d) slanted (0.2 * italic);
+  draw rt (0, (h-d)/2) -- lft (w, (h-d)/2);
 endchar;
 
 % TODO: (0,0) na direção de caminho trava.
