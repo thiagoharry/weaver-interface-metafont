@@ -3365,9 +3365,19 @@ beginchar("©", 0.693*size*pt, 0.68*size*pt, 0);
   renderchar "c" between ((w-side_x)/2, (h-side_y)/2) and ((w+side_x)/2, (h+side_y)/2);
 endchar;
 
-% 105/335
 beginchar("ª", (0.265+0.025*(weight-1)+0.021*italic+0.016*italic*(weight-1))*size*pt, (0.693-0.001*(weight-1)-0.001*italic+0.002*italic*(weight-1))*size*pt, (-0.396+0.001*(weight-1)-0.001*italic*(weight-1))*size*pt);
   renderchar "a" between (0,-d) and (w, h);
+endchar;
+
+% 106/335
+beginchar("«", (0.457+0.107*(weight-1)+0.027*italic+0.013*italic*(weight-1))*size*pt, (0.462-0.001*italic*(weight-1))*size*pt, (-0.04+0.001*italic*(weight-1))*size*pt);
+  numeric pen_x, inner_distance, lower_drift;
+  pen_x = (0.22+0.1*(weight-1)-0.05*italic*(weight-1))*w; 
+  inner_distance = (0.32-0.07*(weight-1)+0.03*italic+0.05*italic*(weight-1))*w;
+  lower_drift = 0.14*italic*w;
+  pickup pensquare xscaled pen_x;
+  draw lft (w, h)--lft (w-inner_distance, -d+(h+d)/2)--lft (w-lower_drift, -d);
+  draw rt (inner_distance, h)-- rt (0, -d+(h+d)/2)--rt (inner_distance-lower_drift, -d); 
 endchar;
 
 % TODO: (0,0) na direção de caminho trava.
