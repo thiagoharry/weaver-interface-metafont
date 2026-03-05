@@ -3369,15 +3369,37 @@ beginchar("ª", (0.265+0.025*(weight-1)+0.021*italic+0.016*italic*(weight-1))*si
   renderchar "a" between (0,-d) and (w, h);
 endchar;
 
-% 106/335
 beginchar("«", (0.457+0.107*(weight-1)+0.027*italic+0.013*italic*(weight-1))*size*pt, (0.462-0.001*italic*(weight-1))*size*pt, (-0.04+0.001*italic*(weight-1))*size*pt);
   numeric pen_x, inner_distance, lower_drift;
-  pen_x = (0.22+0.1*(weight-1)-0.05*italic*(weight-1))*w; 
+  pen_x = (0.22+0.1*(weight-1)-0.05*italic*(weight-1))*w;
   inner_distance = (0.32-0.07*(weight-1)+0.03*italic+0.05*italic*(weight-1))*w;
   lower_drift = 0.14*italic*w;
   pickup pensquare xscaled pen_x;
   draw lft (w, h)--lft (w-inner_distance, -d+(h+d)/2)--lft (w-lower_drift, -d);
   draw rt (inner_distance, h)-- rt (0, -d+(h+d)/2)--rt (inner_distance-lower_drift, -d); 
+endchar;
+
+beginchar("¬", (0.497+0.016*(weight-1))*size*pt, (0.396+0.027*(weight-1))*size*pt, (-0.088+0.032*(weight-1))*size*pt);
+  numeric size;
+  size = (0.22+0.09*(weight-1))*h;
+  pickup pensquare scaled size;
+  draw rt bot (0, h)--lft bot (w, h)--top lft (w, -d);
+endchar;
+
+% 108/335
+beginchar("®", 0.693*size*pt, 0.68*size*pt, 0);
+  numeric thickness, side_x, side_y;
+  thickness = (0.1+0.01*(weight-1))*h;
+  side_y = 0.53*h;
+  side_x = (0.46+0.035*(weight-1))*h;
+  pickup pencircle scaled h;
+  draw (0.5*w, 0.5*h);
+  pickup pencircle scaled (h-2*thickness);
+  erase (0.5*w, 0.5*h);
+  renderchar "R" between ((w-side_x)/2, (h-side_y)/2) and ((w+side_x)/2, (h+side_y)/2);
+endchar;
+
+beginchar("¯", 1, 1, 0);
 endchar;
 
 % TODO: (0,0) na direção de caminho trava.
