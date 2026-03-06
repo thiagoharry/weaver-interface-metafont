@@ -3386,7 +3386,6 @@ beginchar("¬", (0.497+0.016*(weight-1))*size*pt, (0.396+0.027*(weight-1))*size*
   draw rt bot (0, h)--lft bot (w, h)--top lft (w, -d);
 endchar;
 
-% 108/335
 beginchar("®", 0.693*size*pt, 0.68*size*pt, 0);
   numeric thickness, side_x, side_y;
   thickness = (0.1+0.01*(weight-1))*h;
@@ -3402,6 +3401,27 @@ endchar;
 beginchar("¯", (0.278+0.022*(weight-1)+0.0125*italic+0.009*italic*(weight-1))*size*pt, 0.668*size*pt, (-0.6+0.032*(weight-1))*size*pt);
   pickup pensquare scaled (h+d) slanted (0.2 * italic);
   draw rt (0, (h-d)/2) -- lft (w, (h-d)/2);
+endchar;
+
+% 110/335
+beginchar("°", (0.273+0.052*(weight-1))*size*pt, 0.68*size*pt, (-0.407+0.053*(weight-1))*size*pt);
+  numeric thickness;
+  thickness = (0.1+0.032*(weight-1))*h;
+  pickup pencircle xscaled w yscaled (h+d);
+  draw (0.5*w, 0.5*(h+d)-d);
+  pickup pencircle xscaled (w-2*thickness) yscaled (h+d-2*thickness);
+  erase (0.5*w, 0.5*(h+d)-d);
+endchar;
+
+beginchar("±", (0.474+0.039*(weight-1))*size*pt, (0.496-0.001*(weight-1))*size*pt, 0);
+  numeric cross_y, lower_thickness;
+  cross_y = (0.625+0.055*(weight-1))*h;
+  lower_thickness = (0.158+0.1*(weight-1))*h;
+  pickup pensquare scaled (0.158+0.06*(weight-1))*h;
+  draw top (w/2, (2*cross_y-h)) -- bot (w/2, h);
+  draw rt (0, cross_y) -- lft (w, cross_y);
+  pickup pensquare xscaled (0.158+0.06*(weight-1))*h yscaled lower_thickness;
+  draw top rt (0, 0)-- top lft (w, 0);
 endchar;
 
 % TODO: (0,0) na direção de caminho trava.
