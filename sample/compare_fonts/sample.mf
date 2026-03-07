@@ -3424,4 +3424,20 @@ beginchar("±", (0.474+0.039*(weight-1))*size*pt, (0.496-0.001*(weight-1))*size*
   draw top rt (0, 0)-- top lft (w, 0);
 endchar;
 
+
+beginchar("²", (0.278+0.024*(weight-1)+0.05*italic+0.008*italic*(weight-1))*size*pt, 0.786*size*pt, (-0.403+0.001*(weight-1)-0.001*italic*(weight-1))*size*pt);
+  renderchar "2" between (0,-d) and (w, h);
+endchar;
+
+beginchar("³", (0.277+0.03*(weight-1)+0.021*italic+0.006*italic*(weight-1))*size*pt, (0.786+0.003*italic*(weight-1))*size*pt, (-0.396+0.001*(weight-1)+0.001*italic-0.002*italic*(weight-1))*size*pt);
+  renderchar "3" between (0,-d) and (w, h);
+endchar;
+
+beginchar("´", (0.163+0.045*(weight-1)+0.027*italic+0.006*italic*(weight-1))*size*pt, (0.708+0.019*(weight-1)-0.001*italic+0.001*italic*(weight-1))*size*pt, (-0.571-0.002*(weight-1))*size*pt);
+  renderchar "`" between (w,0) and (0, h);
+endchar;
+
+beginchar("¶", (0.445+0.026*(weight-1)+0.066*italic)*size*pt, (0.667)*size*pt, (0.162+0.001*italic-0.001*italic*(weight-1))*size*pt);
+endchar;
+
 % TODO: (0,0) na direção de caminho trava.
