@@ -3403,7 +3403,6 @@ beginchar("¯", (0.278+0.022*(weight-1)+0.0125*italic+0.009*italic*(weight-1))*s
   draw rt (0, (h-d)/2) -- lft (w, (h-d)/2);
 endchar;
 
-% 110/335
 beginchar("°", (0.273+0.052*(weight-1))*size*pt, 0.68*size*pt, (-0.407+0.053*(weight-1))*size*pt);
   numeric thickness;
   thickness = (0.1+0.032*(weight-1))*h;
@@ -3437,7 +3436,29 @@ beginchar("´", (0.163+0.045*(weight-1)+0.027*italic+0.006*italic*(weight-1))*si
   renderchar "`" between (w,0) and (0, h);
 endchar;
 
+% 115/335
 beginchar("¶", (0.445+0.026*(weight-1)+0.066*italic)*size*pt, (0.667)*size*pt, (0.162+0.001*italic-0.001*italic*(weight-1))*size*pt);
+  numeric pen_x, pen_y, body_x, sl, bot_x1, leg_x, bot_x2;
+  pair dir, p1, p2, p3;
+  sl = 0.24*italic;
+  pen_y = 0.1*h;
+  leg_x = (0.81)*w;
+  pen_x = (0.125+0.015*(weight-1))*h;
+  body_x = (0.33-0.03*(weight-1)+0.1*italic + 0.0*italic*(weight-1))*w;
+  pickup pensquare yscaled pen_y slanted sl;
+  draw  bot lft (w, h) -- bot (body_x, h);
+  pickup pensquare xscaled pen_x;
+  bot_x1 = body_x + pen_x/2 -0.5*pen_y*sl - sl * (h+d-pen_y);
+  bot_x2 = leg_x - sl * (h+d-pen_y);
+  draw (body_x+pen_x/2-0.5*pen_y*sl, h-pen_y)--(bot_x1, -d);
+  draw (leg_x, h-pen_y) -- (bot_x2, -d);
+  p1 = (body_x+0.5*pen_y*sl, h);
+  p2 = (0.03*italic*w, (0.71-0.05*italic)*h);
+  p3 = 0.45[p1, (bot_x1-0.5*pen_x, -d)];
+  pen head;
+  head = makepen(p1{-1, 0}..p2{0, -1}..{1, 0}p3--cycle);
+  pickup head;
+  draw (0,0);
 endchar;
 
 % TODO: (0,0) na direção de caminho trava.
