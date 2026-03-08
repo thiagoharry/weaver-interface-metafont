@@ -3461,4 +3461,41 @@ beginchar("¶", (0.445+0.026*(weight-1)+0.066*italic)*size*pt, (0.667)*size*pt, 
   draw (0,0);
 endchar;
 
+beginchar("·", (0.13+0.066*(weight-1))*size*pt, (0.312+0.033*(weight-1))*size*pt, (-0.183+0.033*(weight-1))*size*pt);
+  numeric diameter;
+  if w < (h+d):
+    diameter = w;
+  else:
+    diameter = (h+d);
+  fi
+  pickup pencircle scaled diameter;
+  numeric a;
+  draw (0.5*w, 0.5*(h-d));
+endchar;
+
+beginchar ("¸", (0.186+0.03*(weight-1)+0.057*italic-0.037*italic*(weight-1))*size*pt, (0.025+0.002*italic*(weight-1))*size*pt, (0.181+0.006*(weight-1)-0.001*italic+0.01*italic*(weight-1))*size*pt);
+  pair p1, p2, p3, p4, p5, p6, p7, p8, p9, p10;
+  numeric pen_y;
+  pen_y = (1.6+0.2*(weight-1))*h;
+  p1 = ((0.55-0.05*(weight-1))*w, 0.5*h);
+  p2 = ((0.23+0.05*italic)*w, (-0.37+0.02*italic*(weight-1))*d);
+  pickup pencircle scaled pen_y;
+  draw p1--p2;
+  pickup pensemicircle scaled (1.8+0.2*(weight-1))*h rotated -30;
+  erase p1;
+  p3 = ((0.63-0.05*(weight-1)-0.075*italic+0.125*italic*(weight-1))*w, -0.245*d);
+  p4 = ((1-0.19*italic+0.155*italic*(weight-1))*w, (-0.55-0.05*(weight-1)+0.02*italic+0.05*italic*(weight-1))*d);
+  p5 = ((0.47-0.07*(weight-1)-0.12*italic+0.12*italic*(weight-1))*w, -d);
+  p6 = (0, -0.9*d);
+  p7 = ((0.06+0.02*(weight-1)+0.04*italic)*w, (-0.7+0.03*(weight-1))*d);
+  p8 = ((0.38-0.03*(weight-1)-0.075*italic+0.08*italic*(weight-1))*w, (-0.77+0.03*(weight-1))*d);
+  p9 = ((0.68-0.1*(weight-1)-0.11*italic+0.1*italic*(weight-1))*w, (-0.58-0.005*(weight-1)-0.005*italic+0.02*italic*(weight-1))*d);
+  p10 = ((0.485-0.095*(weight-1)-0.07*italic +0.09*italic*(weight-1))*w, (-0.45+0.01*italic)*d);
+  pickup pencircle scaled 10;
+  pen tail;
+  tail = makepen(p2..{1,0}p3..{0,-1}p4..{-1,0}p5..p6--p7..{1,0}p8..{0,1}p9..{-1,0}p10..(xpart p2, ypart p2 - 0.5*pen_y)--cycle);
+  pickup tail;
+  draw (0,0);
+endchar;
+
 % TODO: (0,0) na direção de caminho trava.
