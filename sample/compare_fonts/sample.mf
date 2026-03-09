@@ -3505,7 +3505,6 @@ beginchar("º", (0.276+0.027*(weight-1)+0.021*italic+0.003*italic*(weight-1))*si
   renderchar "o" between (0,-d) and (w, h);
 endchar;
 
-% 120/335
 beginchar("»", (0.457+0.107*(weight-1)+0.027*italic+0.015*italic*(weight-1))*size*pt, (0.462-0.001*italic*(weight-1))*size*pt, (-0.04+0.001*italic*(weight-1))*size*pt);
   renderchar "«" between (w,h) and (0, 0);
 endchar;
@@ -3551,6 +3550,17 @@ endchar;
 
 beginchar("¿", (0.431+0.094*(weight-1)+0.021*italic+0.015*italic*(weight-1))*size*pt, (0.519+0.001*(weight-1)-0.001*italic)*size*pt, (0.173+0.002*italic-0.002*italic*(weight-1))*size*pt);
   renderchar "?" between (w, h) and (0, -d);
+endchar;
+
+% 125/335
+beginchar("À", (0.607+0.073*(weight-1)+0.012*italic-0.002*italic*(weight-1))*size*pt, (0.863+0.023*(weight-1)+0.002*italic-0.003*italic*(weight-1))*size*pt, 0);
+  numeric accent_x, a_size, shift_accent, accent_lower;
+  a_size = 0.774*h;
+  shift_accent = (-0.1+0.24*italic+0.05*italic*(weight-1))*w;
+  accent_x = (0.3+0.05*(weight-1)-0.05*italic-0.02*italic*(weight-1))*w;
+  accent_lower = (0.33-0.13*(weight-1)-0.05*italic+0.03*italic*(weight-1))*h;
+  renderchar "`" between ((w-accent_x)/2 + shift_accent, accent_lower)  and ((w+accent_x)/2 + shift_accent, h);
+  renderchar "A" between (0, 0) and (w, a_size);
 endchar;
 
 % TODO: (0,0) na direção de caminho trava.
