@@ -3637,7 +3637,7 @@ beginchar("Â", (0.607+0.073*(weight-1)+0.018*italic-0.002*italic*(weight-1))*si
   % Retouch
   pickup pensemicircle rotated 180 scaled 1.8*pen_size;
   erase p1;
-  erase p3;  
+  erase p3;
   renderchar "A" between (0, 0) and (w, a_size);
   kerning("V", (-67-22*(weight-1))*k*size);
   kerning("W", -47*k*size);
@@ -3647,6 +3647,55 @@ beginchar("Â", (0.607+0.073*(weight-1)+0.018*italic-0.002*italic*(weight-1))*si
   kerning("x", 20*k*size);
 endchar;
 
+beginchar("Ã", (0.607+0.073*(weight-1)+0.055*italic-0.021*italic*(weight-1))*size*pt, (0.855-0.009*(weight-1)+0.008*italic+0.003*italic*(weight-1))*size*pt, 0);
+  numeric accent_x, a_size, shift_accent, accent_lower;
+  a_size = 0.774*h;
+  shift_accent = (0.01+0.21*italic-0.02*italic*(weight-1))*w;
+  accent_x = (0.54+0.05*(weight-1)-0.0*italic-0.02*italic*(weight-1))*w;
+  accent_lower = (0.7+0.05*(weight-1)-0.05*italic+0.03*italic*(weight-1))*h;
+  renderchar "~" between ((w-accent_x)/2 + shift_accent, accent_lower)  and ((w+accent_x)/2 + shift_accent, h);
+  renderchar "A" between (0, 0) and (w, a_size);
+  kerning("V", (-67-22*(weight-1))*k*size);
+  kerning("W", -47*k*size);
+  kerning("w", (-44+12*italic-12*italic*(weight-1))*k*size);
+  kerning("U", -28*k*size);
+  kerning("l", -21*k*size);
+  kerning("x", 20*k*size);
+endchar;
+
+beginchar("Ä", (0.606+0.074*(weight-1)+0.022*italic-0.012*italic*(weight-1))*size*pt, (0.846+0.023*(weight-1)+0.004*italic-0.004*italic*(weight-1))*size*pt, 0);
+  numeric a_size, x1, x2;
+  a_size = 0.774*h;
+  pickup pencircle scaled (0.125+0.045*(weight-1))*h;
+  x1 = (0.32+0.03*(weight-1)+0.26*italic-0.03*italic*(weight-1))*w;
+  x2 = (0.67-0.02*(weight-1)+0.243*italic-0.02*italic*(weight-1))*w;
+  draw bot (x1, h);
+  draw bot (x2, h);
+  renderchar "A" between (0, 0) and (w, a_size);
+  kerning("V", (-67-22*(weight-1))*k*size);
+  kerning("W", -47*k*size);
+  kerning("w", (-44+12*italic-12*italic*(weight-1))*k*size);
+  kerning("U", -28*k*size);
+  kerning("l", -21*k*size);
+  kerning("x", 20*k*size);
+endchar;
+
+beginchar("Å", (0.606+0.074*(weight-1)+0.022*italic-0.012*italic*(weight-1))*size*pt, (0.846+0.023*(weight-1)+0.004*italic-0.004*italic*(weight-1))*size*pt, 0);
+  numeric a_size, x1, x2;
+  a_size = 0.774*h;
+  pickup pencircle scaled (0.125+0.045*(weight-1))*h;
+  x1 = (0.32+0.03*(weight-1)+0.26*italic-0.03*italic*(weight-1))*w;
+  x2 = (0.67-0.02*(weight-1)+0.243*italic-0.02*italic*(weight-1))*w;
+  draw bot (x1, h);
+  draw bot (x2, h);
+  renderchar "A" between (0, 0) and (w, a_size);
+  kerning("V", (-67-22*(weight-1))*k*size);
+  kerning("W", -47*k*size);
+  kerning("w", (-44+12*italic-12*italic*(weight-1))*k*size);
+  kerning("U", -28*k*size);
+  kerning("l", -21*k*size);
+  kerning("x", 20*k*size);
+endchar;
 
 
 % TODO: (0,0) na direção de caminho trava.
