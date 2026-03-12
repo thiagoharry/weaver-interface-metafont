@@ -3680,14 +3680,16 @@ beginchar("Ä", (0.606+0.074*(weight-1)+0.022*italic-0.012*italic*(weight-1))*si
   kerning("x", 20*k*size);
 endchar;
 
-beginchar("Å", (0.606+0.074*(weight-1)+0.022*italic-0.012*italic*(weight-1))*size*pt, (0.846+0.023*(weight-1)+0.004*italic-0.004*italic*(weight-1))*size*pt, 0);
-  numeric a_size, x1, x2;
+beginchar("Å", (0.606+0.074*(weight-1)+0.012*italic-0.002*italic*(weight-1))*size*pt, (0.838+0.023*(weight-1)+0.001*italic*(weight-1))*size*pt, 0);
+  numeric a_size, dot_x, outer_diameter, inner_diameter;
   a_size = 0.774*h;
-  pickup pencircle scaled (0.125+0.045*(weight-1))*h;
-  x1 = (0.32+0.03*(weight-1)+0.26*italic-0.03*italic*(weight-1))*w;
-  x2 = (0.67-0.02*(weight-1)+0.243*italic-0.02*italic*(weight-1))*w;
-  draw bot (x1, h);
-  draw bot (x2, h);
+  dot_x = (0.5+0.25*italic-0.03*italic*(weight-1))*w;
+  outer_diameter = (0.26+0.04*(weight-1))*h;
+  inner_diameter = (0.48-0.11*(weight-1))*outer_diameter;
+  pickup pencircle scaled outer_diameter;
+  draw bot (dot_x, h);
+  pickup pencircle scaled inner_diameter;
+  erase bot (dot_x, h-(outer_diameter-inner_diameter)/2);
   renderchar "A" between (0, 0) and (w, a_size);
   kerning("V", (-67-22*(weight-1))*k*size);
   kerning("W", -47*k*size);
@@ -3697,5 +3699,33 @@ beginchar("Å", (0.606+0.074*(weight-1)+0.022*italic-0.012*italic*(weight-1))*si
   kerning("x", 20*k*size);
 endchar;
 
+beginchar("Æ", (0.95+0.04*(weight-1)+0.136*italic+0.012*italic*(weight-1))*size*pt, (0.668-0.001*(weight-1)-0.001*italic+0.002*italic*(weight-1))*size*pt, 0);
+  numeric pen_size, shift_e;
+  pair p1, p2;
+  shift_e = (0.514-0.03*(weight-1)-0.06*italic-0.002*italic*(weight-1))*w;
+  pen_size = ((0.141+0.096*(weight-1))*h);
+  p1 = (shift_e, 0);
+  p2 = (shift_e + 0.128*w*italic, h);
+  pickup pencircle scaled pen_size;
+  draw rt p1--rt p2;
+  pickup pensquare scaled (pen_size*0.87) slanted (italic*0.25);
+  pair p3;
+  p3 = top lft ((1-0.12*italic+0.025*italic*(weight-1))*w, 0);
+  draw top rt p1--p3;
+  draw bot rt p2--bot lft (w, h);
+  pair p4;
+  p4 = lft ((0.9-0.04*(weight-1)-0.045*italic+0.013*italic*(weight-1))*w, 0.515*h);
+  draw (0.515[rt p1, rt p2]) -- p4;
+  pickup pensquare xscaled pen_size;
+  draw rt p2--rt (0,0);
+  pair p5, p6;
+  p5 = (0.22-0.04*(weight-1))[rt (0.5*pen_size, 0), rt (p2 + (0.5*pen_size, 0))];
+  p6 = (xpart 0.22[p1, p2], ypart p5);
+  p6 = p6 + (0.5*pen_size, 0);
+  pickup pensquare yscaled ((1-0.15*(weight-1))*pen_size);
+  draw top p5 -- top rt p6;
+  kerning("V", 17*k*size);
+  kerning("W", 18*k*size);
+endchar;
 
 % TODO: (0,0) na direção de caminho trava.
