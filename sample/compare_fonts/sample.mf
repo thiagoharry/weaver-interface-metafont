@@ -5,6 +5,8 @@ weight = 1;
 italic = 0;
 k = 0.01;
 
+% Unicode Block: Basic Latin (94/94 printable glyphs)
+
 beginchar("!", (0.13+0.067*(weight-1)+0.12*italic)*size*pt, 0.667*size*pt, 0.012 * size * pt);
   numeric circle_diameter;
   % Drawing dot
@@ -3188,6 +3190,8 @@ beginchar("~", (0.477-0.023*(weight-1)+0.032*italic*(weight-1))*size*pt,
   % No Kerning
 endchar;
 
+% Unicode Block: Latin 1 Supplement (39/94 glyphs)
+
 beginchar("¡", (0.13+0.067*(weight-1)+0.112*italic+0.01*italic*(weight-1))*size*pt, (0.519+0.001*(weight-1)-0.001*(weight-1)*italic)*size*pt, (0.162-0.001*(weight-1)+0.001*(weight-1)*italic)*size*pt);
   renderchar "!" between (w, 0.999*h) and (0, -d*0.999);
   % No Kerning
@@ -3511,7 +3515,7 @@ beginchar("·", (0.13+0.066*(weight-1))*size*pt, (0.312+0.033*(weight-1))*size*p
   draw (0.5*w, 0.5*(h-d));
 endchar;
 
-beginchar ("¸", (0.186+0.03*(weight-1)+0.057*italic-0.037*italic*(weight-1))*size*pt, (0.025+0.002*italic*(weight-1))*size*pt, (0.181+0.006*(weight-1)-0.001*italic+0.01*italic*(weight-1))*size*pt);
+beginchar("¸", (0.186+0.03*(weight-1)+0.057*italic-0.037*italic*(weight-1))*size*pt, (0.025+0.002*italic*(weight-1))*size*pt, (0.181+0.006*(weight-1)-0.001*italic+0.01*italic*(weight-1))*size*pt);
   pair p1, p2, p3, p4, p5, p6, p7, p8, p9, p10;
   numeric pen_y;
   pen_y = (1.6+0.2*(weight-1))*h;
@@ -3726,6 +3730,25 @@ beginchar("Æ", (0.95+0.04*(weight-1)+0.136*italic+0.012*italic*(weight-1))*size
   draw top p5 -- top rt p6;
   kerning("V", 17*k*size);
   kerning("W", 18*k*size);
+endchar;
+
+beginchar("Ç", (0.57+0.047*(weight-1)+0.052*italic)*size*pt, 0.68*size*pt, (0.182+0.007*(weight-1)-0.002*italic+0.008*italic*(weight-1))*size*pt);
+  numeric cedilla_width, cedilla_height, cedilla_shift;
+  cedilla_width = (0.35+0.02*italic)*w;
+  cedilla_height = 0.035*h;
+  cedilla_shift = (0.02*(weight-1)-0.07*italic-0.11*italic*(weight-1))*h;
+  renderchar "¸" between (cedilla_shift+(w-cedilla_width)/2, 0) and (cedilla_shift+(w+cedilla_width)/2, cedilla_height);
+  renderchar "C" between (0, 0) and (w, h);
+endchar;
+
+beginchar("È", (0.455+0.06*(weight-1)+0.143*italic+0.003*italic*(weight-1))*size*pt, (0.865+0.022*(weight-1)-0.002*italic*(weight-1))*size*pt, 0);
+  numeric accent_x, e_size, shift_accent, accent_lower;
+  e_size = (0.773-0.02*(weight-1))*h;
+  shift_accent = (-0.01-0.01*(weight-1)+0.13*italic-0.03*italic*(weight-1))*w;
+  accent_x = (0.31+0.05*(weight-1)-0.05*italic-0.02*italic*(weight-1))*w;
+  accent_lower = (0.33-0.13*(weight-1)-0.05*italic+0.03*italic*(weight-1))*h;
+  renderchar "`" between ((w-accent_x)/2 + shift_accent, accent_lower)  and ((w+accent_x)/2 + shift_accent, h);
+  renderchar "E" between (0, 0) and (w, e_size);
 endchar;
 
 % TODO: (0,0) na direção de caminho trava.
