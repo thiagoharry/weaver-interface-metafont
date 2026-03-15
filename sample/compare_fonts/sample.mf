@@ -3190,7 +3190,7 @@ beginchar("~", (0.477-0.023*(weight-1)+0.032*italic*(weight-1))*size*pt,
   % No Kerning
 endchar;
 
-% Unicode Block: Latin 1 Supplement (59/94 glyphs)
+% Unicode Block: Latin 1 Supplement (61/94 glyphs)
 
 beginchar("¡", (0.13+0.067*(weight-1)+0.112*italic+0.01*italic*(weight-1))*size*pt, (0.519+0.001*(weight-1)-0.001*(weight-1)*italic)*size*pt, (0.162-0.001*(weight-1)+0.001*(weight-1)*italic)*size*pt);
   renderchar "!" between (w, 0.999*h) and (0, -d*0.999);
@@ -4051,7 +4051,36 @@ beginchar("Ü", (0.54+0.037*(weight-1)+0.128*italic-0.005*italic*(weight-1))*siz
   draw bot (accent_center + accent_spread, h);
 endchar;
 
+beginchar("Ý", (0.575+0.093*(weight-1)+0.004*italic+0.01*italic*(weight-1))*size*pt, (0.865+0.022*(weight-1)-0.002*italic*(weight-1))*size*pt, 0);
+  numeric accent_width, letter_size, shift_accent, accent_lower;
+  letter_size = (0.773-0.02*(weight-1))*h;
+  accent_width = (0.34-0.02*italic)*w;
+  accent_lower = (0.28-0.11*(weight-1)+0.01*italic*(weight-1))*h;
+  shift_accent = (0.1-0.02*(weight-1)-0.03*italic*(weight-1))*w;
+  renderchar "´" between ((w-accent_width)/2 + shift_accent, accent_lower)  and ((w+accent_width)/2 + shift_accent, h);
+  renderchar "Y" between (0, 0) and (w, letter_size);
+  % KERNING
+  kerning("J", -57*k*size);
+  kerning("p", (-57+5*italic)*k*size*(weight-1));
+  kerning("x", -19*k*size);
+  kerning("V", 19*k*size);
+endchar;
 
+beginchar("Þ", (0.463+0.087*(weight-1)+0.117*italic-0.008*italic*(weight-1))*size*pt, (0.668-0.001*(weight-1)-0.008*italic+0.01*italic*(weight-1))*size*pt, 0);
+  numeric pen_width1, sl;
+  pen_width1 = (0.13+0.11*(weight-1))*h;
+  sl = (0.24*italic-0.02*italic*(weight-1))*w;
+  pickup pensquare xscaled pen_width1;
+  draw rt (0,0)--rt (sl, h);
+  pair p1, p2, p3;
+  p1 = (0.3-0.01*(weight-1)-0.022*italic+0.01*italic*(weight-1))[rt (0,0), rt (sl, h)];
+  p3 = (0.735+0.01*(weight-1)-0.02*italic)[rt (0,0), rt (sl, h)];
+  p2 = ((1-0.06*italic+0.02*italic*(weight-1))*w, (0.5+0.03*italic)*(ypart p1 + ypart p3));
+  numeric pen_width2;
+  pen_width2 = (0.115+0.09*(weight-1))*h;
+  pickup pencircle scaled pen_width2;
+  draw p1{1, 0}..lft p2{0, 1}..{-1, 0}p3;
+endchar;
 
 % TODO: (0,0) na direção de caminho trava.
 
