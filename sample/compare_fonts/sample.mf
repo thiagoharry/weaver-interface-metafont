@@ -3981,5 +3981,25 @@ beginchar("Ö", (0.628+0.067*(weight-1)+0.06*italic-0.012*italic*(weight-1))*siz
   kerning("W", -19*k*size);
 endchar;
 
+beginchar("×", (0.423+0.035*(weight-1))*size*pt, (0.462+0.015*(weight-1))*size*pt, (-0.038+0.017*(weight-1))*size*pt);
+  numeric pen_size;
+  pen_size = (0.17+0.095*(weight-1))*h;
+  pickup pensquare xscaled pen_size rotated -45;
+  draw rt top (0,-d) -- lft bot (w, h);
+  pickup pensquare xscaled pen_size rotated 45;
+  draw rt bot (0, h) -- lft top (w, -d);
+endchar;
+
+beginchar("Ø", (0.628+0.065*(weight-1)+0.097*italic-0.047*italic*(weight-1))*size*pt, (0.68-0.001*(weight-1)-0.001*italic+0.008*italic*(weight-1))*size*pt, 0);
+  renderchar "O" between (0, 0) and (w, h);
+  numeric pen_size;
+  pair p1, p2;
+  pen_size = (0.08+0.03*(weight-1))*h;
+  pickup pensquare xscaled pen_size rotated -45;
+  p1 = ((0.02+0.03*(weight-1)-0.02*italic-0.03*italic*(weight-1))*w,-d);
+  p2 = ((0.97-0.04*(weight-1)+0.03*italic+0.04*italic*(weight-1))*w, (0.98+0.02*(weight-1)+0.02*italic-0.02*italic*(weight-1))*h);
+  draw rt top p1 -- lft bot p2;
+endchar;
+
 % TODO: (0,0) na direção de caminho trava.
 
