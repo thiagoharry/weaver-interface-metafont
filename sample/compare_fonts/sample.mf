@@ -4109,7 +4109,14 @@ beginchar("ß", (0.485+0.072*(weight-1)+0.078*italic+0.006*italic*(weight-1))*si
   erase (0, 0);
 endchar;
 
-beginchar("à", 1, 1, 0);
+beginchar("à", (0.438+0.058*(weight-1)+0.042*italic+0.004*italic*(weight-1))*size*pt, (0.707+0.022*(weight-1)+0.001*italic-0.004*italic*(weight-1))*size*pt, 0);
+  numeric accent_width, letter_size, shift_accent, accent_lower;
+  letter_size = 0.71*h;
+  accent_width = (0.37+0.04*(weight-1)-0.04*italic-0.04*italic*(weight-1))*w;
+  accent_lower = (0.02-0.01*(weight-1)+0.015*italic-0.005*italic*(weight-1))*h;
+  shift_accent = (-0.08+0.04*(weight-1)+0.15*italic-0.08*italic*(weight-1))*w;
+  renderchar "`" between ((w-accent_width)/2 + shift_accent, accent_lower)  and ((w+accent_width)/2 + shift_accent, h);
+  renderchar "a" between (0, 0) and (w, letter_size);
 endchar;
 
 beginchar("á", 1, 1, 0);
