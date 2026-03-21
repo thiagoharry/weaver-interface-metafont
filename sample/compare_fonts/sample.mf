@@ -3190,7 +3190,7 @@ beginchar("~", (0.477-0.023*(weight-1)+0.032*italic*(weight-1))*size*pt,
   % No Kerning
 endchar;
 
-% Unicode Block: Latin 1 Supplement (68/94 glyphs)
+% Unicode Block: Latin 1 Supplement (69/94 glyphs)
 
 beginchar("¡", (0.13+0.067*(weight-1)+0.112*italic+0.01*italic*(weight-1))*size*pt, (0.519+0.001*(weight-1)-0.001*(weight-1)*italic)*size*pt, (0.162-0.001*(weight-1)+0.001*(weight-1)*italic)*size*pt);
   renderchar "!" between (w, 0.999*h) and (0, -d*0.999);
@@ -4212,6 +4212,65 @@ beginchar("å", (0.438+0.058*(weight-1)+0.042*italic+0.003*italic*(weight-1))*si
   kerning("y", -23*k*size*italic*(weight-1));
   kerning("ý", -23*k*size*italic*(weight-1));
   kerning("ÿ", -23*k*size*italic*(weight-1));
+endchar;
+
+beginchar("æ", (0.818+0.03*(weight-1)+0.067*italic+0.007*italic*(weight-1))*size*pt, (0.503+0.007*(weight-1)+0.005*italic-0.005*italic*(weight-1))*size*pt, 0);
+  % PARAMETERS
+  numeric pen_width, pen_height, pen_height2;
+  pen_width = (0.165+0.07*(weight-1))*h;
+  pen_height = (0.14+0.07*(weight-1))*h;
+  pen_height2 = (0.14+0.04*(weight-1))*h;
+  % CONTROL POINTS
+  pair p1, p2, p3, p4, p5, pp, pq;
+  p1 = ((0.91-0.01*(weight-1)-0.03*italic)*w, (0.2+0.04*(weight-1))*h);
+  p2 = ((0.705-0.01*(weight-1)-0.045*italic)*w, pen_height/2);
+  p3 = (0.41*w+pen_width/2 + (0.03*italic-0.001*italic*(weight-1))*w , (0.51-0.01*italic*(weight-1))*h);
+  pp = (0.41*w  +pen_width/2 + (0.03*italic-0.001*italic*(weight-1))*w, (0.51-0.12*(italic)-0.02*italic*(weight-1))*h);
+  p4 = ((0.705-0.01*(weight-1)+0.04*italic)*w, h - pen_height/2);
+  p5 = ((0.9825+0.0025*(weight-1)-0.015*italic)*w - pen_width/2, ypart p3);
+  pq = italic[(p5-(0, pen_height/2)), (0.2[p5, p1])];
+  % RENDERING
+  pickup pencircle xscaled pen_width yscaled pen_height;
+  draw p1..p2{-1, 0}..{0, 1}pp..p3..p4{1, 0}..p5..pq;
+  pickup pensquare yscaled pen_height2;
+  draw (p5-(0, (pen_height-pen_height2)/2))--(p3-(0, (pen_height-pen_height2)/2));
+  % RETOUCH
+  pickup pensquare yscaled (pen_height/2) xscaled (0.3*w);
+  erase bot (p5-(0, pen_height/2));
+  pickup pensemicircle rotated -20 xscaled (pen_width*1.2) yscaled (pen_height*1.2);
+  erase p1;
+  % PARAMETERS
+  numeric pen_width1, pen_height1, pen_width2, pen_height2;
+  pen_width1 = (0.155+0.1*(weight-1))*h;
+  pen_height1 = (0.13+0.07*(weight-1))*h;
+  pen_width2 = (0.18+0.1*(weight-1))*h;
+  pen_height2 = (0.13+0.05*(weight-1))*h;
+  % CONTROL POINTS
+  pair p1, p2, p4, p5, p6;
+  pair p8, p9;
+  p1 = ((0.08+0.03*(weight-1)+0.07*italic)*w, (0.74-0.02*(weight-1)-0.01*italic)*h);
+  p2 = ((0.27+0.02*(weight-1)+0.07*italic)*w, h-pen_height1/2);
+  p4 = p3;
+  p3 = ((0.45+0.02*(weight-1)+0.04*italic-0.01*italic*(weight-1))*w, ypart p1);
+  p6 = ((0.47-0.02*(weight-1)-0.02*italic-0.0*italic*(weight-1))*w, (0.18-0.05*(weight-1)+0.01*italic)*h);
+  p8 = (pen_width2/2 + 0.03*italic*w, (0.26-0.03*italic)*h);
+  p5 = (0.5*(xpart p4 + xpart p8), ypart p4);
+  p9 = ((0.21+0.01*(weight-1)-0.0*italic)*w, pen_height2/2);
+  % RENDERING
+  pickup pencircle xscaled pen_width1 yscaled pen_height1;
+  draw p1..p2{1, 0}..p3..p4..top p6;
+  pickup pencircle xscaled pen_width2 yscaled pen_height2;
+  draw (p4 - ((pen_width2-pen_width1)/2, 0))..p5..p8{0, -1}..p9{1, 0}..lft p6..{0, 1}p4;
+  % RETOUCH
+  pickup pensemicircle xscaled (pen_width1+0.03*w) yscaled (pen_height1+0.03*h) rotated 160;
+  erase p1;
+  % KERNING
+  kerning("X", -19*k*size*italic*(weight-1));
+  kerning("W", -28*k*size*italic*(weight-1));
+  kerning("V", -38*k*size*italic*(weight-1));
+endchar;
+
+beginchar("ç", 1, 1, 0);
 endchar;
 
 
