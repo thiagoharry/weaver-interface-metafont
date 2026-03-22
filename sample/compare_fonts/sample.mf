@@ -3190,7 +3190,7 @@ beginchar("~", (0.477-0.023*(weight-1)+0.032*italic*(weight-1))*size*pt,
   % No Kerning
 endchar;
 
-% Unicode Block: Latin 1 Supplement (74/94 glyphs)
+% Unicode Block: Latin 1 Supplement (78/94 glyphs)
 
 beginchar("¡", (0.13+0.067*(weight-1)+0.112*italic+0.01*italic*(weight-1))*size*pt, (0.519+0.001*(weight-1)-0.001*(weight-1)*italic)*size*pt, (0.162-0.001*(weight-1)+0.001*(weight-1)*italic)*size*pt);
   renderchar "!" between (w, 0.999*h) and (0, -d*0.999);
@@ -4348,6 +4348,61 @@ beginchar("ë", (0.483+0.048*(weight-1)+0.045*italic+0.005*italic*(weight-1))*si
   kerning("X", -19*k*size);
 endchar;
 
+beginchar("ì", (0.172+0.077*(weight-1)+0.033*italic+0.013*italic*(weight-1))*size*pt, (0.708+0.022*(weight-1)-0.001*italic*(weight-1))*size*pt, 0);
+  numeric accent_width, letter_size, shift_accent, accent_lower;
+  letter_size = (0.701-0.021*(weight-1))*h;
+  accent_width = (1-0.16*(weight-1)-0.15*italic-0.04*italic*(weight-1))*w;
+  accent_lower = (0.02-0.01*(weight-1)+0.015*italic-0.005*italic*(weight-1))*h;
+  shift_accent = (-0.0+0.075*italic+0.1*italic*(weight-1))*w;
+  renderchar "`" between ((w-accent_width)/2 + shift_accent, accent_lower)  and ((w+accent_width)/2 + shift_accent, h);
+  renderchar "ı" between (0, 0) and (w, letter_size);
+endchar;
+
+beginchar("í", (0.232+0.078*(weight-1)+0.075*italic+0.018*italic*(weight-1))*size*pt, (0.707+0.022*(weight-1)-0.002*italic+0.001*italic*(weight-1))*size*pt, 0);
+  numeric accent_width, letter_height, shift_accent, accent_lower, letter_width;
+  letter_height = (0.704-0.021*(weight-1))*h;
+  letter_width = (0.65+0.16*(weight-1)-0.08*italic*(weight-1))*w;
+  accent_width = (0.7-0.03*(weight-1)-0.1*italic)*w;
+  accent_lower = (0.01-0.01*(weight-1)+0.015*italic-0.005*italic*(weight-1))*h;
+  shift_accent = (0.14+0.01*(weight-1)+0.04*italic)*w;
+  renderchar "´" between ((w-accent_width)/2 + shift_accent, accent_lower)  and ((w+accent_width)/2 + shift_accent, h);
+  renderchar "ı" between (0, 0) and (letter_width, letter_height);
+endchar;
+
+beginchar("î", (0.324+0.071*(weight-1)+0.001*italic+0.011*italic*(weight-1))*size*pt, (0.695+0.032*(weight-1))*size*pt, 0);
+  numeric letter_height, letter_width, letter_shift;
+  letter_height = (0.717-0.035*(weight-1))*h;
+  letter_width = (0.47+0.15*(weight-1)+0.1*italic+0.01*italic*(weight-1))*w;
+  letter_shift = (0.17-0.08*(weight-1)-0.15*italic+0.07*italic*(weight-1))*w;
+  renderchar "ı" between (letter_shift, 0) and (letter_shift+letter_width, letter_height);
+  numeric pen_size, accent_spread, accent_y, accent_center, accent_diff;
+  pair p1, p2, p3;
+  pen_size = (0.135+0.04*(weight-1)+0.01*italic*(weight-1))*h;
+  accent_y = (0.827-0.035*(weight-1)+0.0*italic)*h;
+  accent_spread = (0.35-0.01*(weight-1)-0.01*italic*(weight-1))*w;
+  accent_center = (0.5+0.07*italic)*w;
+  accent_diff = 0.07*italic*w;
+  pickup pensquare xscaled pen_size;
+  p1 = (accent_center - accent_spread - accent_diff, accent_y);
+  p3 = (accent_center + accent_spread - accent_diff, accent_y);
+  p2 = bot (accent_center, h);
+  draw p1--p2--p3;
+endchar;
+
+beginchar("ï", (0.32+0.016*(weight-1)+0.043*italic*(weight-1))*size*pt, (0.692+0.028*(weight-1))*size*pt, 0);
+  numeric letter_height, letter_width, letter_shift;
+  letter_height = (0.718-0.028*(weight-1))*h;
+  letter_width = (0.47+0.25*(weight-1)+0.11*italic-0.1*italic*(weight-1))*w;
+  letter_shift = (0.2-0.15*(weight-1)-0.18*italic+0.13*italic*(weight-1))*w;
+  renderchar "ı" between (letter_shift, 0) and (letter_shift+letter_width, letter_height);
+  numeric accent_center, accent_spread, pen_size;
+  pen_size = (0.15+0.04*(weight-1))*h;
+  accent_spread = (0.33-0.04*(weight-1)-0.04*italic*(weight-1))*w;
+  accent_center = (0.5+0.062*italic*(weight-1))*w;
+  pickup pencircle scaled pen_size;
+  draw bot (accent_center-accent_spread, h);
+  draw bot (accent_center + accent_spread, h);
+endchar;
 
 
 % TODO: (0,0) na direção de caminho trava.
