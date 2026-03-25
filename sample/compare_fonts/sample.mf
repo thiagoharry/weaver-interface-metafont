@@ -3190,7 +3190,7 @@ beginchar("~", (0.477-0.023*(weight-1)+0.032*italic*(weight-1))*size*pt,
   % No Kerning
 endchar;
 
-% Unicode Block: Latin 1 Supplement (85/94 glyphs)
+% Unicode Block: Latin 1 Supplement (86/94 glyphs)
 
 beginchar("¡", (0.13+0.067*(weight-1)+0.112*italic+0.01*italic*(weight-1))*size*pt, (0.519+0.001*(weight-1)-0.001*(weight-1)*italic)*size*pt, (0.162-0.001*(weight-1)+0.001*(weight-1)*italic)*size*pt);
   renderchar "!" between (w, 0.999*h) and (0, -d*0.999);
@@ -4509,6 +4509,97 @@ beginchar("ö", (0.478+0.048*(weight-1)+0.043*italic+0.003*italic*(weight-1))*si
   pickup pencircle scaled pen_size;
   draw bot (accent_center-accent_spread, h);
   draw bot (accent_center + accent_spread, h);
+endchar;
+
+beginchar("÷", (0.498+0.015*(weight-1))*size*pt, (0.483+0.027*(weight-1))*size*pt, 0);
+  numeric dash_y;
+  dash_y = (0.515-0.023*(weight-1))*h;
+  pickup pensquare yscaled ((0.166+0.085*(weight-1))*h);
+  draw (0, dash_y)--(w, dash_y);
+  pickup pencircle scaled ((0.27+0.05*(weight-1))*h);
+  draw bot (0.5*w, h);
+  draw top (0.5*w, 0);
+endchar;
+
+beginchar("ø", (0.478+0.048*(weight-1)+0.072*italic-0.007*italic*(weight-1))*size*pt, (0.507+0.018*(weight-1)+0.001*italic+0.004*italic*(weight-1))*size*pt, 0.012*(weight-1)*size*pt);
+  numeric letter_height;
+  letter_height = (0.99-0.03*(weight-1))*h;
+  renderchar "o" between (0, 0) and (w, letter_height);
+  pair p8, p9;
+  p8 = ((0.96-0.02*(weight-1)+0.04*italic+0.02*italic*(weight-1))*w, (0.927-0.02*(weight-1)-0.01*italic*(weight-1))*h);
+  p9 = ((0.095+0.03*(weight-1)-0.025*italic)*w, -d);
+  pickup pensquare xscaled ((0.095+0.04*(weight-1)+0.01*italic)*h) rotated (angle(p9-p8));
+  draw top lft p8 -- top lft p9;
+endchar;
+
+beginchar("ù", (0.4+0.07*(weight-1)+0.088*italic)*size*pt, (0.707+0.023*(weight-1)+0.001*italic-0.003*italic*(weight-1))*size*pt, 0);
+  numeric accent_width, letter_size, shift_accent, accent_lower;
+  letter_size = (0.703-0.023*(weight-1))*h;
+  accent_width = (0.43+0.01*(weight-1)-0.08*italic)*w;
+  accent_lower = (0.02-0.01*(weight-1)+0.01*italic-0.005*italic*(weight-1))*h;
+  shift_accent = (-0.12+0.02*(weight-1)+0.13*italic)*w;
+  renderchar "`" between ((w-accent_width)/2 + shift_accent, accent_lower)  and ((w+accent_width)/2 + shift_accent, h);
+  renderchar "u" between (0, 0) and (w, letter_size);
+endchar;
+
+beginchar("ú", (0.4+0.07*(weight-1)+0.088*italic)*size*pt, (0.707+0.022*(weight-1)+0.001*italic-0.002*italic*(weight-1))*size*pt, 0);
+  numeric accent_width, letter_size, shift_accent, accent_lower;
+  letter_size = (0.703-0.022*(weight-1))*h;
+  accent_width = (0.43+0.01*(weight-1)-0.08*italic)*w;
+  accent_lower = (0.023-0.01*(weight-1)-0.01*italic-0.005*italic*(weight-1))*h;
+  shift_accent = (0.14-0.05*(weight-1)+0.08*italic+0.01*italic*(weight-1))*w;
+  renderchar "´" between ((w-accent_width)/2 + shift_accent, accent_lower)  and ((w+accent_width)/2 + shift_accent, h);
+  renderchar "u" between (0, 0) and (w, letter_size);
+endchar;
+
+beginchar("û", (0.4+0.07*(weight-1)+0.088*italic)*size*pt, (0.695+0.032*(weight-1))*size*pt, 0);
+  numeric letter_size;
+  letter_size = (0.715-0.031*(weight-1))*h;
+  renderchar "u" between (0, 0) and (w, letter_size);
+  numeric pen_size, accent_spread, accent_y, accent_center, accent_diff;
+  pair p1, p2, p3;
+  pen_size = (0.135+0.04*(weight-1)+0.01*italic*(weight-1))*h;
+  accent_y = (0.827-0.035*(weight-1)+0.0*italic)*h;
+  accent_spread = (0.29-0.01*(weight-1)-0.05*italic+0.01*italic*(weight-1))*w;
+  accent_center = (0.5+0.19*italic-0.02*italic*(weight-1))*w;
+  accent_diff = 0.07*italic*w;
+  pickup pensquare xscaled pen_size;
+  p1 = (accent_center - accent_spread - accent_diff, accent_y);
+  p3 = (accent_center + accent_spread - accent_diff, accent_y);
+  p2 = bot (accent_center, h);
+  draw p1--p2--p3;
+endchar;
+
+beginchar("ü", (0.4+0.07*(weight-1)+0.088*italic)*size*pt, (0.696+0.024*(weight-1)+0.002*italic-0.002*italic*(weight-1))*size*pt, 0);
+  numeric letter_size;
+  letter_size = (0.7135-0.025*(weight-1))*h;
+  renderchar "u" between (0, 0) and (w, letter_size);
+  numeric accent_center, accent_spread, pen_size;
+  pen_size = (0.15+0.05*(weight-1))*h;
+  accent_spread = (0.25-0.04*(weight-1)-0.04*italic+0.01*italic*(weight-1))*w;
+  accent_center = (0.5+0.15*italic-0.03*italic*(weight-1))*w;
+  pickup pencircle scaled pen_size;
+  draw bot (accent_center-accent_spread, h);
+  draw bot (accent_center + accent_spread, h);
+endchar;
+
+beginchar("ý", (0.43+0.088*(weight-1)+0.112*italic-0.022*italic*(weight-1))*size*pt, (0.707+0.022*(weight-1)+0.001*italic-0.001*italic*(weight-1))*size*pt, 0.162*size*pt);
+  numeric accent_width, letter_size, shift_accent, accent_lower;
+  letter_size = (0.701-0.02*(weight-1))*h;
+  accent_width = (0.4+0.01*(weight-1)-0.06*italic+0.02*italic*(weight-1))*w;
+  accent_lower = (0.023-0.01*(weight-1)-0.01*italic-0.005*italic*(weight-1))*h;
+  shift_accent = (0.125-0.05*(weight-1)+0.09*italic)*w;
+  renderchar "´" between ((w-accent_width)/2 + shift_accent, accent_lower)  and ((w+accent_width)/2 + shift_accent, h);
+  renderchar "y" between (0, 0) and (w, letter_size);
+  % KERNING
+  kerning("X", -19*k*size);
+  kerning("f", (21+6*(weight-1))*k*size);
+endchar;
+
+beginchar("þ", 1, 1, 0);
+endchar;
+
+beginchar("ÿ", 1, 1, 0);
 endchar;
 
 % TODO: (0,0) na direção de caminho trava.
