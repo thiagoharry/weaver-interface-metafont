@@ -2337,26 +2337,6 @@ beginchar("h", (0.41+0.063*(weight-1)+0.095*italic+0.008*italic*(weight-1))*size
   kerning("W", -28*k*size);
 endchar;
 
-beginchar("ı", (0.153+0.095*(weight-1)+0.039*italic-0.004*italic*(weight-1))*size*pt,
-    0.497*size*pt, 0);
-  % PARAMETERS
-  numeric ang, p_width, p_height;
-  ang = -12*italic;
-  p_width=(0.175+0.13*(weight-1))*h;
-  p_height=(0.136+0.095*(weight-1))*h;
-  % CONTROL POINTS
-  pair p1, p2;
-  p1 = ((0.04-0.04*(weight-1))*italic*w, h);
-  p2 = italic[(w, 0), (p_width, 0)] + (0.07*italic*(weight-1)*w, 0);
-  % RENDERING
-  pickup pensquare yscaled p_height rotated ang;
-  draw rt bot p1 -- lft bot (w, h);
-  pickup pensquare xscaled p_width;
-  draw lft bot (w+p_height*sind(ang), h-p_height*cosd(ang))--lft p2;
-  % NO KERNING
-endchar;
-
-
 beginchar("i", (0.174+0.087*(weight-1)+0.074*italic-0.004*italic*(weight-1))*size*pt,
     (0.716+0.043*(weight-1)+0.001*italic-0.002*italic*(weight-1))*size*pt, 0);
   % PARAMETERS
@@ -4596,10 +4576,90 @@ beginchar("ý", (0.43+0.088*(weight-1)+0.112*italic-0.022*italic*(weight-1))*siz
   kerning("f", (21+6*(weight-1))*k*size);
 endchar;
 
-beginchar("þ", 1, 1, 0);
+beginchar("þ", (0.458+0.065*(weight-1)+0.078*italic+0.007*italic*(weight-1))*size*pt, 0.668*size*pt, 0.162*size*pt);
+  % PARAMETERS
+  numeric pen_width1, pen_height2, pen_width2, pen_width3;
+  pen_width1 = (0.13+0.1*(weight-1))*h;
+  pen_height2 = (0.1+0.065*(weight-1))*h;
+  pen_width2 = (0.06+0.01*(weight-1))*h;
+  pen_width3 = (0.14+0.05*(weight-1))*h;
+  % CONTROL POINTS
+  pair p1, p2, p3;
+  p1 = (pen_width1/2 + 0.28*italic*w -0.05*italic*(weight-1)*w, h);
+  p2 = (pen_width1/2 + 0.025*italic*w, 0.11*h);
+  pair p4, p5, p6, p7;
+  p4 = ((0.53+0.04*(weight-1)+0.03*italic-0.04*italic*(weight-1))*w, pen_height2/2);
+  p5 = ((0.14+0.11*(weight-1)+0.15*italic-0.05*italic*(weight-1))*w, 0.37*h);
+  p6 = ((0.53+0.04*(weight-1)+0.11*italic+0.03*italic*(weight-1))*w, (0.695-0.015*(weight-1)+0.01*italic-0.02*italic*(weight-1))*h);
+  p7 = (w-pen_width3/2, (0.37+0.08*italic)*h);  
+  % RENDERING
+  pickup pencircle xscaled pen_width2 yscaled pen_height2;
+  draw p4{-1, 0}..p5..{1, 0}p6;
+  pickup pencircle xscaled pen_width3 yscaled pen_height2;
+  draw p6{1, 0}..p7{0, -1*(1-italic*(weight-1))}..{-1, 0}p4;
+  p1 = ((0.33*italic-0.04*italic*(weight-1))*w, h);
+  p2 = (0, -d);
+  pickup pensquare xscaled pen_width1;
+  draw rt p1 -- rt p2;
 endchar;
 
-beginchar("ÿ", 1, 1, 0);
+beginchar("ÿ", (0.43+0.088*(weight-1)+0.112*italic-0.022*italic*(weight-1))*size*pt, (0.699+0.021*(weight-1))*size*pt, 0.162*size*pt);
+  numeric letter_size;
+  letter_size = (0.708-0.018*(weight-1))*h;
+  renderchar "y" between (0, 0) and (w, letter_size);
+  numeric accent_center, accent_spread, pen_size;
+  pen_size = (0.15+0.05*(weight-1))*h;
+  accent_spread = (0.24-0.05*(weight-1)-0.05*italic+0.02*italic*(weight-1))*w;
+  accent_center = (0.5+0.15*italic-0.05*italic*(weight-1))*w;
+  pickup pencircle scaled pen_size;
+  draw bot (accent_center-accent_spread, h);
+  draw bot (accent_center + accent_spread, h);
+  % KERNING
+  kerning("X", -19*k*size);
+  kerning("f", (21+6*(weight-1))*k*size);
+endchar;
+
+% Unicode Block: Latin Extended-A (1/128 printable glyphs)
+
+beginchar("ı", (0.153+0.095*(weight-1)+0.039*italic-0.004*italic*(weight-1))*size*pt,
+    0.497*size*pt, 0);
+  % PARAMETERS
+  numeric ang, p_width, p_height;
+  ang = -12*italic;
+  p_width=(0.175+0.13*(weight-1))*h;
+  p_height=(0.136+0.095*(weight-1))*h;
+  % CONTROL POINTS
+  pair p1, p2;
+  p1 = ((0.04-0.04*(weight-1))*italic*w, h);
+  p2 = italic[(w, 0), (p_width, 0)] + (0.07*italic*(weight-1)*w, 0);
+  % RENDERING
+  pickup pensquare yscaled p_height rotated ang;
+  draw rt bot p1 -- lft bot (w, h);
+  pickup pensquare xscaled p_width;
+  draw lft bot (w+p_height*sind(ang), h-p_height*cosd(ang))--lft p2;
+  % NO KERNING
+endchar;
+
+% Unicode Block: General Punctuation (0/70 printable glyphs)
+
+beginchar("‐", 1, 1, 0);
+endchar;
+
+beginchar("–", 1, 1, 0); % en-dash
+endchar;
+
+beginchar("—", 1, 1, 0); % em-dash
+endchar;
+
+beginchar("“", 1, 1, 0);
+endchar;
+
+beginchar("”", 1, 1, 0);
+endchar;
+
+% Unicode Block: Mathematical Operators (0/256 printable glyphs)
+
+beginchar("−", 1, 1, 0); % Minus
 endchar;
 
 % TODO: (0,0) na direção de caminho trava.
