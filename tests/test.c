@@ -2435,6 +2435,32 @@ void test_shipit_command(void){
   _Wdestroy_metafont(mf);
 }
 
+void test_makepen_command(void){
+  struct generic_token *first, *last;
+  struct metafont *mf;
+  struct context *cx;
+  bool ret;
+  GLuint glyph = 0;
+  int width = 0, height = 0, depth = -1, italcorr = -1, kerning = -1;
+  mf = init_metafont("tests/bug1.mf");
+  cx = init_context(mf);
+  lexer(mf,  "tests/bug1.mf", &first, &last);
+  ret = eval_program(mf, cx, first, last);
+  if(!ret)
+    _Wprint_metafont_error(mf);
+  
+  ret = _Wrender_glyph(mf, "¸", "¸", &glyph, &width, &height,
+		       &depth, &italcorr, &kerning);
+  if(!ret)
+    _Wprint_metafont_error(mf);
+
+  assert("Testing concave pens with redundant points.",
+	 true);
+  free_token_list(first);
+  destroy_context(cx);
+  _Wdestroy_metafont(mf);  
+}
+
 void test_renderchar_command(void){
   struct generic_token *first, *last;
   struct metafont *mf;
@@ -2889,7 +2915,8 @@ int main(void){
   test_picture_expressions();
   test_boolean_expressions();
   test_if_statements();
-  test_drawing_commands();// OpenGL errors in Emscripten here
+  test_drawing_commands();
+  test_makepen_command();
   test_font_rendering();
   test_pen_rendering();
   test_prime_computing();

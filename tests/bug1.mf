@@ -1,0 +1,25 @@
+pen t1, t2, t3, t4, t5;
+
+beginchar("¸", 5, 5, 5);
+  % Bug: At 2026-03-29 it was noticed that concave non-monotonous
+  % pens with reduntand points were causing segfaults. In the
+  % following example, using 'pickup' in  't3' and 't4' caused
+  % segfault and in 't2' produced assertion warnings.
+  % This test ensures that these pens are safe.
+    t5 = makepen((3.220000, -5.180000) .. controls (4.865146, -4.040505) and (6.818762, -3.430000) .. (8.820000, -3.430000) .. controls (11.529501, -3.430000) and (14.000000, -5.157820) .. (14.000000, -7.700000) .. controls (14.000000, -11.401954) and (10.489401, -14.000000) .. (6.580000, -14.000000) .. controls (4.312751, -14.000000) and (2.070865, -13.523003) .. (0.000000, -12.599999) .. controls (0.280000, -11.666666) and (0.560000, -10.733334) .. (0.840000, -9.800000) .. controls (2.245260, -10.445699) and (3.773493, -10.780000) .. (5.320000, -10.780000) .. controls (7.404206, -10.780000) and (9.520000, -9.952774) .. (9.520000, -8.120000) .. controls (9.520000, -6.906361) and (8.156840, -6.300000) .. (6.790000, -6.300000) .. controls (5.583914, -6.300000) and (4.383254, -6.461433) .. (3.220000, -6.780000) .. controls (3.220000, -6.246667) and (3.220000, -5.713334) .. cycle);
+  pickup t5;
+  % Concave non-monotonous pen
+  t1 = makepen((5,0)..(20,0)..(7,5)..(7,6)..(10, 5)..(10, 15)..cycle);
+  %pickup t1;
+  % Concave non-monotonous pen with redundant points in cycle
+  %t2 = makepen((0,0)..(20,0)..(5,4)..(7,6)..(8, 5)..(10, 10)..(0,0)..cycle);
+  t2 = makepen((5,0)..(20,0)..(7,5)..(7,6)..(10, 5)..(10, 15)..(5, 0)..cycle);
+  pickup t2;
+  % Concave non-monotonous pen with internal redundant points
+  t3 = makepen((0,0)--(20,0)--(5,4)--(5,4)--(7,6)--(8, 5)--(10, 10)--cycle);
+  pickup t3;
+  % Concave polygon  with redundant points in cycle
+  t4 = makepen((0,0)--(20,0)--(5,4)--(7,6)--(8, 5)--(10, 10)--(0,0)--cycle);
+  pickup t4;
+  % Real world path with segfault errors
+endchar;

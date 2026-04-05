@@ -14,8 +14,8 @@
 
 // In 96 dpi: 300 pt = 400 px
 
-#define MIN_SIZE 450
-#define MAX_SIZE 450
+#define MIN_SIZE 15
+#define MAX_SIZE 15
 
 #define ZOOM 1.0
 
@@ -271,8 +271,8 @@ void test(struct metafont *mf, char *font_name, char *c, int weight, int italic)
       glGenTextures(1, f -> _texture1);
       glBindTexture(GL_TEXTURE_2D, *(f -> _texture1));
       glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, face->glyph -> bitmap.width,
-      	   face->glyph -> bitmap.rows, 0,
-      	   GL_RGBA, GL_UNSIGNED_BYTE, f_buffer);
+		   face->glyph -> bitmap.rows, 0,
+		   GL_RGBA, GL_UNSIGNED_BYTE, f_buffer);
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -371,8 +371,8 @@ int main(int argc, char **argv){
     fprintf(stderr, "ERROR initializing WEAVEFONT library.\n");
     return 1;
   }
-  _Winit_interface(&window_width, &window_height, malloc, free, malloc, free,
-		       NULL, NULL, NULL);
+  _Winit_interface(&window_width, &window_height, malloc, free, malloc,
+		   free, NULL, NULL, NULL);
   mf = _Wnew_metafont("sample.mf");
   if(mf == NULL){
     fprintf(stderr, "ERROR loading sample.mf.\n");

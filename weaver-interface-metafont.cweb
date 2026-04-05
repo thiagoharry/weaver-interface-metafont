@@ -14665,7 +14665,8 @@ struct polygon_vertex *polygon_from_pen(struct metafont *mf,
         straight_line = true;
     }
     if(straight_line){ // Em caso de linha reta, precisamos só de 1 vértice
-      if(i < path -> length - 2){
+      if(i < path -> length - 2 &&
+         ((*number_of_vertices) < 1 || x1 != last -> x || y1 != last -> y)){
         last -> next = NEW_POLYGON_VERTEX();
         if(last -> next == NULL){
           RAISE_ERROR_NO_MEMORY(mf, NULL, 0);
@@ -14733,6 +14734,15 @@ struct polygon_vertex *polygon_from_pen(struct metafont *mf,
   }
   first -> prev = last;
   last -> next = first;
+  // Removendo pontos redundantes:
+  while(last != first && last -> x == first -> x && last -> y == first -> y){
+    first -> prev = last -> prev;
+    first -> prev -> next = first;
+    if(leftmost == last)
+      leftmost = first;
+    DESTROY_POLYGON_VERTEX(last);
+    (*number_of_vertices) --;
+  }
   return leftmost;
 }
 @
@@ -15073,7 +15083,7 @@ vídeo.
 if(!(pen -> flags & FLAG_CONVEX)){
   struct polygon_vertex *poly;
   float *triang, *last_triang;
-  int number_of_vertices = 0, number_of_triangles = 0;  
+  int number_of_vertices = 0, number_of_triangles = 0;
   poly = polygon_from_pen(mf, pen, transform_matrix, &number_of_vertices);
   if(poly == NULL)
     return false;
@@ -15316,7 +15326,7 @@ estamos percorrendo em sentido anti-horário. E se for para a esquerda,
 estamos em sentido horário.
 
 Usando esta lógica podemos então criar uma iteração que percorre todos
-os vértices identificando seu tipo e criando alista duplamente
+os vértices identificando seu tipo e criando a lista duplamente
 encadeada. Depois disso, ordenamos tudo com um ``merge sort''. E
 finalmente, depois de ordenar, já saberemos qual é o vértice mais à
 esquerda e o mais à direita:
@@ -15327,29 +15337,40 @@ void prepare_non_monotonous(struct polygon_vertex *p, int number_of_vertices);
 
 @<Funções Auxiliares Locais (metafont.c)@>+=
 void prepare_non_monotonous(struct polygon_vertex *p, int number_of_vertices){
-  bool turn_left = (p -> next -> y < p -> y);
   struct polygon_vertex *first_vertex = p;
+  float m1, m2;
+  m1 = p -> prev -> y - p -> y;
+  if(m1 != 0.0) m1 = (p -> prev -> x - p -> x) / m1;
+  m2 = p -> next -> y - p -> y;
+  if(m2 != 0.0) m2 = (p -> next -> x - p -> x) / m2;
+  bool turn_left = (m2 < m1);
   do{
     bool is_current_turn_left = is_turning_left(p -> prev, p, p -> next);
     if((XMONOTONE_LEQ(p, p -> next) && XMONOTONE_LEQ(p -> prev, p)) ||
-       (XMONOTONE_LEQ(p, p -> prev) && XMONOTONE_LEQ(p -> next, p)))
+       (XMONOTONE_LEQ(p, p -> prev) && XMONOTONE_LEQ(p -> next, p))){
       p -> flag = TYPE_REGULAR_VERTEX;
+    }
     // Vértice de começo ou de separação:
     else if(XMONOTONE_LEQ(p, p -> next) && XMONOTONE_LEQ(p, p -> prev)){
-      if(p == first_vertex)
+      if(p == first_vertex){
         p -> flag = TYPE_BEGIN_VERTEX | FLAG_UPPER | FLAG_LOWER;
+      }
       else if((turn_left && is_current_turn_left) ||
-              (!turn_left && !is_current_turn_left))
+              (!turn_left && !is_current_turn_left)){
         p -> flag = TYPE_BEGIN_VERTEX | FLAG_UPPER | FLAG_LOWER;
-      else
+      }
+      else{
         p -> flag = TYPE_SPLIT_VERTEX;
+      }
     }
     else{ // Vértice de fim ou de junção
       if((turn_left && is_current_turn_left) ||
-         (!turn_left && !is_current_turn_left))
+         (!turn_left && !is_current_turn_left)){
         p -> flag = TYPE_END_VERTEX | FLAG_UPPER | FLAG_LOWER;
-      else
+      }
+      else{
         p -> flag = TYPE_MERGE_VERTEX;
+      }
     }
     p -> succ = p -> next;
     p -> next -> pred = p;
@@ -15955,7 +15976,18 @@ seja o vértice de começo atual:
 
 @<Torna X-Monótono: Adicionando Diagonal@>=
 if(GET_VERTEX_TYPE(current_vertex) == TYPE_BEGIN_VERTEX){
-  if(current_vertex -> prev -> y <= current_vertex -> next -> y){
+  float m1, m2;
+  m1 = (current_vertex -> prev -> x - current_vertex -> x);
+  m2 = (current_vertex -> next -> x - current_vertex -> x);
+  if(m1 == 0.0 || m2 == 0.0){
+    m1 = current_vertex -> prev -> y;
+    m2 = current_vertex -> next -> y;
+  }
+  else{
+    m1 = (current_vertex -> prev -> y - current_vertex -> y) / m1;         
+    m2 = (current_vertex -> next -> y - current_vertex -> y) / m2;
+  }
+  if(m1 <= m2){
     insert_polygon_edge(&imaginary_line, current_vertex -> x,
                         current_vertex -> y, current_vertex -> prev -> x,
                         current_vertex -> prev -> y,
@@ -15980,7 +16012,12 @@ devemos removê-la da árvore.
 @<Torna X-Monótono: Adicionando Diagonal@>+=
 else if(GET_VERTEX_TYPE(current_vertex) == TYPE_END_VERTEX){
   struct polygon_edge *removed;
-  if(current_vertex -> prev -> y <= current_vertex -> next -> y){
+  float m1, m2;
+  m1 = (current_vertex -> y - current_vertex -> prev -> y) /
+       (current_vertex -> x - current_vertex -> prev -> x);
+  m2 = (current_vertex -> y - current_vertex -> next -> y) /
+       (current_vertex -> x - current_vertex -> next -> x);
+  if(m1 > m2){
     removed = remove_polygon_edge(&imaginary_line, current_vertex -> x,
                                  current_vertex -> y,
                                  current_vertex -> prev -> x,
@@ -16013,11 +16050,16 @@ passar por ela:
 @<Torna X-Monótono: Adicionando Diagonal@>+=
 else if(GET_VERTEX_TYPE(current_vertex) == TYPE_SPLIT_VERTEX){
   struct polygon_edge *below;
+  float m1, m2;
+  m1 = (current_vertex -> y - current_vertex -> prev -> y) /
+       (current_vertex -> x - current_vertex -> prev -> x);
+  m2 = (current_vertex -> y - current_vertex -> next -> y) /
+       (current_vertex -> x - current_vertex -> next -> x);
   below = find_edge_below(imaginary_line, current_vertex -> x,
                           current_vertex -> y);
   ADD_CUT(current_vertex, below -> helper);
   below -> helper = current_vertex;
-  if(current_vertex -> prev -> y <= current_vertex -> next -> y){
+  if(m1 <= m2){
     insert_polygon_edge(&imaginary_line, current_vertex -> x,
                         current_vertex -> y, current_vertex -> next -> x,
                         current_vertex -> next -> y,
@@ -16046,7 +16088,12 @@ vértice atual.
 @<Torna X-Monótono: Adicionando Diagonal@>+=
 else if(GET_VERTEX_TYPE(current_vertex) == TYPE_MERGE_VERTEX){
   struct polygon_edge *removed, *below;
-  if(current_vertex -> prev -> y <= current_vertex -> next -> y){
+  float m1, m2;
+  m1 = (current_vertex -> y - current_vertex -> prev -> y) /
+       (current_vertex -> x - current_vertex -> prev -> x);
+  m2 = (current_vertex -> y - current_vertex -> next -> y) /
+       (current_vertex -> x - current_vertex -> next -> x);
+  if(m2 <= m1){
     removed = remove_polygon_edge(&imaginary_line, current_vertex -> x,
                                  current_vertex -> y,
                                  current_vertex -> next -> x,
@@ -16093,7 +16140,7 @@ diagonal. Independente de termos feito isso, em seguida marcamos o
 
 @<Torna X-Monótono: Adicionando Diagonal@>+=
 else{
-  struct polygon_edge *removed;
+  struct polygon_edge *removed = NULL;
   if((clockwise && // Checa se interior está acima:
      XMONOTONE_LEQ(current_vertex -> next, current_vertex -> prev)) ||
      (!clockwise &&
@@ -16127,9 +16174,6 @@ else{
     struct polygon_edge *below;
     below = find_edge_below(imaginary_line, current_vertex -> x,
                             current_vertex -> y);
-    if(below == NULL){
-      print_tree(imaginary_line);
-    }
     if(GET_VERTEX_TYPE(below -> helper) == TYPE_MERGE_VERTEX){
       ADD_CUT(current_vertex, below -> helper);
     }
@@ -16387,8 +16431,9 @@ transformação, a passamos para a função que fará a triangulação:
     MATRIX_MULTIPLICATION(final_transform_matrix,
                           cx -> currentpen -> gl_matrix);
     if(!triangulate_pen(mf, cx, cx -> currentpen -> referenced,
-                        final_transform_matrix))
+                        final_transform_matrix)){
       return false;
+      }
   }
 }
 @
@@ -19210,7 +19255,7 @@ ERROR_DUPLICATE_GLYPH,
 @
 
 Este erro ocorre quando um glifo é definido duas vezes com o comando
-\monoespaco{beginchar}. Quando ele ocorre, devemos armazenar quaç é o
+\monoespaco{beginchar}. Quando ele ocorre, devemos armazenar qual é o
 glifo que está tendo uma definição redundante.
 
 

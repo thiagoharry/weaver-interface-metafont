@@ -15,7 +15,7 @@ test: tangle
 	cp src/metafont.* tests/
 	$(CC) $(CPPFLAGS) $(CFLAGS)  ${FLAGS} tests/window.c tests/test.c -o test_metafont -lpthread -lX11 -lEGL -lGLESv2 -lm -DW_DEBUG_METAFONT -DWEAVER_ENGINE $(LDFLAGS)
 	./test_metafont 2> /dev/null
-test_en: tangle
+test_en: tangle_en
 	cp src/metafont.* tests/
 	cp src/metafont.* tests/
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) ${FLAGS} tests/window.c tests/test.c  -o test_metafont -lX11 -lEGL -lGLESv2 -lm -DW_DEBUG_METAFONT -DWEAVER_ENGINE
