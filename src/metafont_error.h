@@ -1,165 +1,169 @@
-/*679:*/
-#line 19153 "weaver-interface-metafont.cweb"
+/*677:*/
+#line 18849 "weaver-interface-metafont_en.cweb"
 
 #ifndef __WEAVER_METAFONT_ERROR
 #define __WEAVER_METAFONT_ERROR
 #ifdef __cplusplus
 extern"C"{
 #endif
-#line 19159 "weaver-interface-metafont.cweb"
+#line 18855 "weaver-interface-metafont_en.cweb"
  enum{
 ERROR_NO_ERROR= 0,
 
-/*680:*/
-#line 19182 "weaver-interface-metafont.cweb"
+/*678:*/
+#line 18878 "weaver-interface-metafont_en.cweb"
 
 ERROR_DISCONTINUOUS_PATH,
-/*:680*//*683:*/
-#line 19231 "weaver-interface-metafont.cweb"
+/*:678*//*681:*/
+#line 18925 "weaver-interface-metafont_en.cweb"
 
 ERROR_DIVISION_BY_ZERO,
-/*:683*//*686:*/
-#line 19253 "weaver-interface-metafont.cweb"
+/*:681*//*684:*/
+#line 18947 "weaver-interface-metafont_en.cweb"
 
 ERROR_DUPLICATE_GLYPH,
-/*:686*//*689:*/
-#line 19283 "weaver-interface-metafont.cweb"
+/*:684*//*687:*/
+#line 18976 "weaver-interface-metafont_en.cweb"
 
 ERROR_EMPTY_DELIMITER,
-/*:689*//*692:*/
-#line 19328 "weaver-interface-metafont.cweb"
+/*:687*//*690:*/
+#line 19021 "weaver-interface-metafont_en.cweb"
 
 ERROR_EXPECTED_FOUND,
-/*:692*//*695:*/
-#line 19364 "weaver-interface-metafont.cweb"
+/*:690*//*693:*/
+#line 19058 "weaver-interface-metafont_en.cweb"
 
 ERROR_FAILED_OPENING_FILE,
-/*:695*//*699:*/
-#line 19405 "weaver-interface-metafont.cweb"
+/*:693*//*697:*/
+#line 19100 "weaver-interface-metafont_en.cweb"
 
 ERROR_INCOMPLETE_SOURCE,
-/*:699*//*702:*/
-#line 19435 "weaver-interface-metafont.cweb"
+/*:697*//*700:*/
+#line 19130 "weaver-interface-metafont_en.cweb"
 
 ERROR_INCOMPLETE_STATEMENT,
-/*:702*//*705:*/
-#line 19467 "weaver-interface-metafont.cweb"
+/*:700*//*703:*/
+#line 19161 "weaver-interface-metafont_en.cweb"
 
 ERROR_INVALID_CHAR,
-/*:705*//*708:*/
-#line 19572 "weaver-interface-metafont.cweb"
+/*:703*//*706:*/
+#line 19262 "weaver-interface-metafont_en.cweb"
 
 ERROR_INVALID_COMPARISON,
-/*:708*//*711:*/
-#line 19607 "weaver-interface-metafont.cweb"
+/*:706*//*709:*/
+#line 19296 "weaver-interface-metafont_en.cweb"
 
 ERROR_INVALID_DIMENSION_GLYPH,
-/*:711*//*714:*/
-#line 19649 "weaver-interface-metafont.cweb"
+/*:709*//*712:*/
+#line 19337 "weaver-interface-metafont_en.cweb"
 
 ERROR_INVALID_NAME,
-/*:714*//*717:*/
-#line 19697 "weaver-interface-metafont.cweb"
+/*:712*//*715:*/
+#line 19385 "weaver-interface-metafont_en.cweb"
 
 ERROR_INVALID_TENSION,
-/*:717*//*720:*/
-#line 19748 "weaver-interface-metafont.cweb"
+/*:715*//*718:*/
+#line 19439 "weaver-interface-metafont_en.cweb"
 
 ERROR_MISSING_EXPRESSION,
-/*:720*//*723:*/
-#line 19778 "weaver-interface-metafont.cweb"
+/*:718*//*721:*/
+#line 19469 "weaver-interface-metafont_en.cweb"
 
 ERROR_MISSING_TOKEN,
-/*:723*//*726:*/
-#line 19808 "weaver-interface-metafont.cweb"
+/*:721*//*724:*/
+#line 19498 "weaver-interface-metafont_en.cweb"
 
 ERROR_NEGATIVE_LOGARITHM,
-/*:726*//*729:*/
-#line 19836 "weaver-interface-metafont.cweb"
+/*:724*//*727:*/
+#line 19525 "weaver-interface-metafont_en.cweb"
 
 ERROR_NEGATIVE_SQUARE_ROOT,
-/*:729*//*732:*/
-#line 19863 "weaver-interface-metafont.cweb"
+/*:727*//*730:*/
+#line 19553 "weaver-interface-metafont_en.cweb"
 
 ERROR_NESTED_BEGINCHAR,
-/*:732*//*735:*/
-#line 19890 "weaver-interface-metafont.cweb"
+/*:730*//*733:*/
+#line 19581 "weaver-interface-metafont_en.cweb"
 
 ERROR_NO_MEMORY,
-/*:735*//*738:*/
-#line 19942 "weaver-interface-metafont.cweb"
+/*:733*//*736:*/
+#line 19631 "weaver-interface-metafont_en.cweb"
 
 ERROR_NO_PICKUP_PEN,
-/*:738*//*741:*/
-#line 19975 "weaver-interface-metafont.cweb"
+/*:736*//*739:*/
+#line 19663 "weaver-interface-metafont_en.cweb"
 
 ERROR_NONCYCLICAL_PEN,
-/*:741*//*744:*/
-#line 20001 "weaver-interface-metafont.cweb"
+/*:739*//*742:*/
+#line 19689 "weaver-interface-metafont_en.cweb"
 
 ERROR_NULL_VECTOR_ANGLE,
-/*:744*//*747:*/
-#line 20029 "weaver-interface-metafont.cweb"
+/*:742*//*745:*/
+#line 19717 "weaver-interface-metafont_en.cweb"
 
 ERROR_OPENGL_FRAMEBUFFER,
-/*:747*//*750:*/
-#line 20083 "weaver-interface-metafont.cweb"
+/*:745*//*748:*/
+#line 19771 "weaver-interface-metafont_en.cweb"
 
 ERROR_RECURSIVE_RENDERCHAR,
-/*:750*//*753:*/
-#line 20117 "weaver-interface-metafont.cweb"
+/*:748*//*751:*/
+#line 19805 "weaver-interface-metafont_en.cweb"
+
+ERROR_SELF_INTERSECTING_PEN,
+/*:751*//*754:*/
+#line 19833 "weaver-interface-metafont_en.cweb"
 
 ERROR_UNBALANCED_ENDING_TOKEN,
-/*:753*//*756:*/
-#line 20153 "weaver-interface-metafont.cweb"
+/*:754*//*757:*/
+#line 19868 "weaver-interface-metafont_en.cweb"
 
 ERROR_UNCLOSED_DELIMITER,
-/*:756*//*759:*/
-#line 20181 "weaver-interface-metafont.cweb"
+/*:757*//*760:*/
+#line 19897 "weaver-interface-metafont_en.cweb"
 
 ERROR_UNCLOSED_STRING,
-/*:759*//*762:*/
-#line 20218 "weaver-interface-metafont.cweb"
+/*:760*//*763:*/
+#line 19934 "weaver-interface-metafont_en.cweb"
 
 ERROR_UNDECLARED_VARIABLE,
-/*:762*//*765:*/
-#line 20246 "weaver-interface-metafont.cweb"
+/*:763*//*766:*/
+#line 19962 "weaver-interface-metafont_en.cweb"
 
 ERROR_UNEXPECTED_TOKEN,
-/*:765*//*768:*/
-#line 20279 "weaver-interface-metafont.cweb"
+/*:766*//*769:*/
+#line 19994 "weaver-interface-metafont_en.cweb"
 
 ERROR_UNINITIALIZED_VARIABLE,
-/*:768*//*771:*/
-#line 20312 "weaver-interface-metafont.cweb"
+/*:769*//*772:*/
+#line 20029 "weaver-interface-metafont_en.cweb"
 
 ERROR_UNKNOWN_GLYPH_DEPENDENCY,
-/*:771*//*774:*/
-#line 20343 "weaver-interface-metafont.cweb"
+/*:772*//*775:*/
+#line 20060 "weaver-interface-metafont_en.cweb"
 
 ERROR_UNKNOWN_EXPRESSION,
-/*:774*//*777:*/
-#line 20374 "weaver-interface-metafont.cweb"
+/*:775*//*778:*/
+#line 20090 "weaver-interface-metafont_en.cweb"
 
 ERROR_UNKNOWN_STATEMENT,
-/*:777*//*780:*/
-#line 20405 "weaver-interface-metafont.cweb"
+/*:778*//*781:*/
+#line 20120 "weaver-interface-metafont_en.cweb"
 
 ERROR_UNOPENED_DELIMITER,
-/*:780*//*783:*/
-#line 20434 "weaver-interface-metafont.cweb"
+/*:781*//*784:*/
+#line 20149 "weaver-interface-metafont_en.cweb"
 
 ERROR_UNSUPORTED_LENGTH_OPERAND,
-/*:783*//*786:*/
-#line 20477 "weaver-interface-metafont.cweb"
+/*:784*//*787:*/
+#line 20191 "weaver-interface-metafont_en.cweb"
 
 ERROR_WRONG_NUMBER_OF_PARAMETERS,
-/*:786*//*789:*/
-#line 20515 "weaver-interface-metafont.cweb"
+/*:787*//*790:*/
+#line 20231 "weaver-interface-metafont_en.cweb"
 
 ERROR_WRONG_VARIABLE_TYPE,
-/*:789*/
-#line 19162 "weaver-interface-metafont.cweb"
+/*:790*/
+#line 18858 "weaver-interface-metafont_en.cweb"
 
 
 ERROR_UNKNOWN
@@ -167,16 +171,15 @@ ERROR_UNKNOWN
 enum{
 TYPE_NUMERIC= 1,TYPE_STRING,TYPE_SYMBOLIC,TYPE_FOR,TYPE_ENDFOR,
 
-
 /*39:*/
-#line 1254 "weaver-interface-metafont.cweb"
+#line 1201 "weaver-interface-metafont_en.cweb"
 
 TYPE_OPEN_PARENTHESIS,
 TYPE_CLOSE_PARENTHESIS,
 TYPE_COMMA,
 TYPE_SEMICOLON,
 /*:39*//*84:*/
-#line 2521 "weaver-interface-metafont.cweb"
+#line 2446 "weaver-interface-metafont_en.cweb"
 
 TYPE_BEGINGROUP,
 TYPE_ENDGROUP,
@@ -185,7 +188,7 @@ TYPE_FI,
 TYPE_BEGINCHAR,
 TYPE_ENDCHAR,
 /*:84*//*97:*/
-#line 2787 "weaver-interface-metafont.cweb"
+#line 2714 "weaver-interface-metafont_en.cweb"
 
 TYPE_T_BOOLEAN,
 TYPE_T_PATH,
@@ -194,32 +197,32 @@ TYPE_T_PICTURE,
 TYPE_T_TRANSFORM,
 TYPE_T_PAIR,
 TYPE_T_NUMERIC,
-/*:97*//*201:*/
-#line 5301 "weaver-interface-metafont.cweb"
+/*:97*//*200:*/
+#line 5176 "weaver-interface-metafont_en.cweb"
 
 TYPE_EQUAL,
 TYPE_ASSIGNMENT,
-/*:201*//*205:*/
-#line 5469 "weaver-interface-metafont.cweb"
+/*:200*//*204:*/
+#line 5342 "weaver-interface-metafont_en.cweb"
 
 TYPE_SUM,
 TYPE_SUBTRACT,
 TYPE_PYTHAGOREAN_SUM,
 TYPE_PYTHAGOREAN_SUBTRACT,
-/*:205*//*206:*/
-#line 5482 "weaver-interface-metafont.cweb"
+/*:204*//*205:*/
+#line 5355 "weaver-interface-metafont_en.cweb"
 
 TYPE_OPEN_BRACKETS,
 TYPE_CLOSE_BRACKETS,
 TYPE_OPEN_BRACES,
 TYPE_CLOSE_BRACES,
-/*:206*//*213:*/
-#line 5719 "weaver-interface-metafont.cweb"
+/*:205*//*212:*/
+#line 5580 "weaver-interface-metafont_en.cweb"
 
 TYPE_MULTIPLICATION,
 TYPE_DIVISION,
-/*:213*//*217:*/
-#line 5845 "weaver-interface-metafont.cweb"
+/*:212*//*216:*/
+#line 5701 "weaver-interface-metafont_en.cweb"
 
 TYPE_LENGTH,
 TYPE_SQRT,
@@ -229,12 +232,12 @@ TYPE_LOG,
 TYPE_EXP,
 TYPE_FLOOR,
 TYPE_UNIFORMDEVIATE,
-/*:217*//*233:*/
-#line 6133 "weaver-interface-metafont.cweb"
+/*:216*//*232:*/
+#line 5985 "weaver-interface-metafont_en.cweb"
 
 TYPE_NORMALDEVIATE,
-/*:233*//*247:*/
-#line 6464 "weaver-interface-metafont.cweb"
+/*:232*//*246:*/
+#line 6313 "weaver-interface-metafont_en.cweb"
 
 TYPE_ROTATED,
 TYPE_SCALED,
@@ -243,25 +246,25 @@ TYPE_SLANTED,
 TYPE_XSCALED,
 TYPE_YSCALED,
 TYPE_ZSCALED,
-/*:247*//*267:*/
-#line 7020 "weaver-interface-metafont.cweb"
+/*:246*//*266:*/
+#line 6865 "weaver-interface-metafont_en.cweb"
 
 TYPE_XPART,
 TYPE_YPART,
 TYPE_ANGLE,
-/*:267*//*274:*/
-#line 7160 "weaver-interface-metafont.cweb"
+/*:266*//*273:*/
+#line 7005 "weaver-interface-metafont_en.cweb"
 
 TYPE_TRANSFORMED,
-/*:274*//*293:*/
-#line 7570 "weaver-interface-metafont.cweb"
+/*:273*//*292:*/
+#line 7401 "weaver-interface-metafont_en.cweb"
 
 TYPE_XXPART,
 TYPE_XYPART,
 TYPE_YXPART,
 TYPE_YYPART,
-/*:293*//*300:*/
-#line 7726 "weaver-interface-metafont.cweb"
+/*:292*//*299:*/
+#line 7555 "weaver-interface-metafont_en.cweb"
 
 TYPE_CYCLE,
 TYPE_AMPERSAND,
@@ -272,113 +275,113 @@ TYPE_ATLEAST,
 TYPE_CONTROLS,
 TYPE_CURL,
 TYPE_STRAIGHT_JOIN,
-/*:300*//*361:*/
-#line 9393 "weaver-interface-metafont.cweb"
+/*:299*//*360:*/
+#line 9199 "weaver-interface-metafont_en.cweb"
 
 TYPE_REVERSE,
 TYPE_SUBPATH,
 TYPE_OF,
-/*:361*//*373:*/
-#line 9772 "weaver-interface-metafont.cweb"
+/*:360*//*372:*/
+#line 9577 "weaver-interface-metafont_en.cweb"
 
 TYPE_POINT,
 TYPE_PRECONTROL,
 TYPE_POSTCONTROL,
-/*:373*//*395:*/
-#line 10293 "weaver-interface-metafont.cweb"
+/*:372*//*394:*/
+#line 10094 "weaver-interface-metafont_en.cweb"
 
 TYPE_NULLPEN,
 TYPE_PENCIRCLE,
 TYPE_PENSEMICIRCLE,
 TYPE_MAKEPEN,
-/*:395*//*407:*/
-#line 10574 "weaver-interface-metafont.cweb"
+/*:394*//*406:*/
+#line 10367 "weaver-interface-metafont_en.cweb"
 
 TYPE_MAKEPATH,
-/*:407*//*451:*/
-#line 11728 "weaver-interface-metafont.cweb"
+/*:406*//*450:*/
+#line 11511 "weaver-interface-metafont_en.cweb"
 
 TYPE_NULLPICTURE,
 TYPE_SUBPICTURE,
-/*:451*//*463:*/
-#line 12089 "weaver-interface-metafont.cweb"
+/*:450*//*462:*/
+#line 11869 "weaver-interface-metafont_en.cweb"
 
 TYPE_TOTALWEIGHT,
 TYPE_WIDTH,
 TYPE_HEIGHT,
-/*:463*//*469:*/
-#line 12256 "weaver-interface-metafont.cweb"
+/*:462*//*468:*/
+#line 12033 "weaver-interface-metafont_en.cweb"
 
 TYPE_LT,
 TYPE_LEQ,
 TYPE_GT,
 TYPE_GEQ,
 TYPE_NEQ,
-/*:469*//*473:*/
-#line 12495 "weaver-interface-metafont.cweb"
+/*:468*//*472:*/
+#line 12272 "weaver-interface-metafont_en.cweb"
 
 TYPE_OR,
-/*:473*//*479:*/
-#line 12646 "weaver-interface-metafont.cweb"
+/*:472*//*478:*/
+#line 12423 "weaver-interface-metafont_en.cweb"
 
 TYPE_TRUE,
 TYPE_FALSE,
 TYPE_ODD,
 TYPE_NOT,
-/*:479*//*487:*/
-#line 13133 "weaver-interface-metafont.cweb"
+/*:478*//*486:*/
+#line 12902 "weaver-interface-metafont_en.cweb"
 
 TYPE_ELSEIF,
 TYPE_ELSE,
 TYPE_COLON,
-/*:487*//*492:*/
-#line 13337 "weaver-interface-metafont.cweb"
+/*:486*//*491:*/
+#line 13117 "weaver-interface-metafont_en.cweb"
 
 TYPE_STEP,
 TYPE_UNTIL,
-/*:492*//*501:*/
-#line 13561 "weaver-interface-metafont.cweb"
+/*:491*//*500:*/
+#line 13339 "weaver-interface-metafont_en.cweb"
 
 TYPE_PICKUP,
-/*:501*//*576:*/
-#line 16455 "weaver-interface-metafont.cweb"
+/*:500*//*575:*/
+#line 16175 "weaver-interface-metafont_en.cweb"
 
 TYPE_BOT,
 TYPE_TOP,
 TYPE_LFT,
 TYPE_RT,
-/*:576*//*584:*/
-#line 16575 "weaver-interface-metafont.cweb"
+/*:575*//*583:*/
+#line 16294 "weaver-interface-metafont_en.cweb"
 
 TYPE_PICKCOLOR,
-/*:584*//*587:*/
-#line 16657 "weaver-interface-metafont.cweb"
+/*:583*//*586:*/
+#line 16375 "weaver-interface-metafont_en.cweb"
 
 TYPE_MONOWIDTH,
-/*:587*//*592:*/
-#line 16711 "weaver-interface-metafont.cweb"
+/*:586*//*591:*/
+#line 16429 "weaver-interface-metafont_en.cweb"
 
 TYPE_DRAW,
 TYPE_ERASE,
-/*:592*//*632:*/
-#line 17924 "weaver-interface-metafont.cweb"
+/*:591*//*631:*/
+#line 17633 "weaver-interface-metafont_en.cweb"
 
 TYPE_SHIPIT,
-/*:632*//*636:*/
-#line 18029 "weaver-interface-metafont.cweb"
+/*:631*//*635:*/
+#line 17736 "weaver-interface-metafont_en.cweb"
 
 TYPE_RENDERCHAR,
 TYPE_BETWEEN,
-/*:636*//*645:*/
-#line 18301 "weaver-interface-metafont.cweb"
+/*:635*//*644:*/
+#line 18009 "weaver-interface-metafont_en.cweb"
 
 TYPE_KERNING,
-/*:645*//*651:*/
-#line 18454 "weaver-interface-metafont.cweb"
+/*:644*//*650:*/
+#line 18159 "weaver-interface-metafont_en.cweb"
 
 TYPE_DEBUG,
-/*:651*/
-#line 19170 "weaver-interface-metafont.cweb"
+/*:650*/
+#line 18865 "weaver-interface-metafont_en.cweb"
 
 
 TYPE_INVALID_TOKEN
@@ -386,7 +389,7 @@ TYPE_INVALID_TOKEN
 #ifdef __cplusplus
 }
 #endif
-#line 19177 "weaver-interface-metafont.cweb"
+#line 18872 "weaver-interface-metafont_en.cweb"
 #endif
-#line 19178 "weaver-interface-metafont.cweb"
-/*:679*/
+#line 18873 "weaver-interface-metafont_en.cweb"
+/*:677*/

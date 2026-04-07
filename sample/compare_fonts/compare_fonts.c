@@ -14,8 +14,8 @@
 
 // In 96 dpi: 300 pt = 400 px
 
-#define MIN_SIZE 15
-#define MAX_SIZE 15
+#define MIN_SIZE 1000
+#define MAX_SIZE 1000
 
 #define ZOOM 1.0
 

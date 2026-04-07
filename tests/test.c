@@ -2799,6 +2799,16 @@ void test_errors(void){
 	 !strcmp(error_string, "/tmp/test.mf:2: Tried to create a pen from non-cyclical path.\n"));
   destroy_context(cx);
   _Wdestroy_metafont(mf);
+  // ERROR: Complex pen
+  memset(error_string, 0, 1024);
+  setvbuf(stderr, error_string, _IOLBF, 1024);
+  create_metafont(&mf, &cx, "pen a;\na = makepen((0,0)--(10,10)--(15,10.2)--(10.1,0.1)--(11,20)--cycle);\npickup a;");
+  _Wprint_metafont_error(mf);
+  assert("Raising error when trying to create a pen from self-intersecting shape",
+	 mf != NULL && mf -> err == ERROR_SELF_INTERSECTING_PEN &&
+	 !strcmp(error_string, "/tmp/test.mf:3: Tried to pick up a pen with self-intersecting path.\n"));
+  destroy_context(cx);
+  _Wdestroy_metafont(mf);
   // ERROR: Comparing non-comparable types
   memset(error_string, 0, 1024);
   setvbuf(stderr, error_string, _IOLBF, 1024);

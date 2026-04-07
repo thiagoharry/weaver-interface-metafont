@@ -297,31 +297,33 @@ A.23. ERROR\_OPENGL\_FRAMEBUFFER \indice{310}
 
 A.24. ERROR\_RECURSIVE\_RENDERCHAR \indice{311}
 
-A.25. ERROR\_UNBALANCED\_ENDING\_TOKEN \indice{311}
+A.25. ERROR\_SELF\_INTERSECTING\_PEN
 
-A.26. ERROR\_UNCLOSED\_DELIMITER \indice{312}
+A.26. ERROR\_UNBALANCED\_ENDING\_TOKEN \indice{309}
 
-A.27. ERROR\_UNCLOSED\_STRING \indice{312}
+A.27. ERROR\_UNCLOSED\_DELIMITER \indice{309}
 
-A.28. ERROR\_UNDECLARED\_VARIABLE \indice{313}
+A.28. ERROR\_UNCLOSED\_STRING \indice{310}
 
-A.29. ERROR\_UNEXPECTED\_TOKEN \indice{313}
+A.29. ERROR\_UNDECLARED\_VARIABLE \indice{310}
 
-A.30. ERROR\_UNINITIALIZED\_VARIABLE \indice{314}
+A.30. ERROR\_UNEXPECTED\_TOKEN \indice{310}
 
-A.31. ERROR\_UNKNOWN\_GLYPH\_DEPENDENCY \indice{314}
+A.31. ERROR\_UNINITIALIZED\_VARIABLE \indice{311}
 
-A.32. ERROR\_UNKNOWN\_EXPRESSION \indice{315}
+A.32. ERROR\_UNKNOWN\_GLYPH\_DEPENDENCY \indice{311}
 
-A.33. ERROR\_UNKNOWN\_STATEMENT \indice{315}
+A.33. ERROR\_UNKNOWN\_EXPRESSION \indice{312}
 
-A.34. ERROR\_UNOPENED\_DELIMITER \indice{315}
+A.34. ERROR\_UNKNOWN\_STATEMENT \indice{312}
 
-A.35. ERROR\_UNSUPORTED\_LENGTH\_OPERAND \indice{316}
+A.35. ERROR\_UNOPENED\_DELIMITER \indice{313}
 
-A.36. ERROR\_WRONG\_NUMBER\_OF\_PARAMETERS \indice{317}
+A.36. ERROR\_UNSUPORTED\_LENGTH\_OPERAND \indice{313}
 
-A.37. ERROR\_WRONG\_VARIABLE\_TYPE \indice{318}
+A.37. ERROR\_WRONG\_NUMBER\_OF\_PARAMETERS \indice{314}
+
+A.38. ERROR\_WRONG\_VARIABLE\_TYPE \indice{314}
 
 References \indice{314}
 
@@ -9746,8 +9748,8 @@ else if(type == TYPE_T_PEN){
     return false;
   var = (struct symbolic_token *) begin;
   for(i = 0; i < number_of_variables; i ++){
-    if(!assign_pen_variable(mf, cx, (struct pen_variable *) var -> var,
-                           &result))
+    if(!assign_pen_variable(mf, cx, OPTIONAL(var -> line),
+                            (struct pen_variable *) var -> var, &result))
       return false;
     var = (struct symbolic_token *) (var -> next);
     var = (struct symbolic_token *) (var -> next);
@@ -9763,7 +9765,7 @@ The declaration for the function that makes the assignment:
 
 @<Local Function Declaration (metafont.c)@>+=
 bool assign_pen_variable(struct metafont *mf, struct context *cx,
-                         struct pen_variable *target,
+                         int line, struct pen_variable *target,
                          struct pen_variable *source);
 @
 
@@ -9771,7 +9773,7 @@ And its implementation:
 
 @<Auxiliary Local Functions (metafont.c)@>+=
 bool assign_pen_variable(struct metafont *mf, struct context *cx,
-                         struct pen_variable *target,
+                         int line, struct pen_variable *target,
                          struct pen_variable *source){
   void *(*alloc)(size_t);
   void (*disalloc)(void *);
@@ -9803,7 +9805,7 @@ bool assign_pen_variable(struct metafont *mf, struct context *cx,
   // If we are assigning to 'currentpen', then we need to retriangulate
   // the pen, as will be described in Section 11.2:
   if(target == cx -> currentpen)
-    triangulate_pen(mf, cx, target, target -> gl_matrix);
+    triangulate_pen(mf, cx, OPTIONAL(line), target, target -> gl_matrix);
   return true;
 }
 @
@@ -13819,14 +13821,14 @@ bool is_pen_counterclockwise(struct pen_variable *pen){
 The function that will perform the triangulation is:
 
 @<Local Function Declaration (metafont.c)@>+=
-bool triangulate_pen(struct metafont *mf, struct context *cx,
+bool triangulate_pen(struct metafont *mf, struct context *cx, int line,
                      struct pen_variable *pen, float *transform_matrix);
 @
 
 And its implementation:
 
 @<Auxiliary Local Functions (metafont.c)@>+=
-bool triangulate_pen(struct metafont *mf, struct context *cx,
+bool triangulate_pen(struct metafont *mf, struct context *cx, int line,
                      struct pen_variable *pen, float *transform_matrix){
   @<Triangulation: Null Pen@>
   @<Triangulation: Square Pen@>
@@ -15740,19 +15742,21 @@ else if(GET_VERTEX_TYPE(current_vertex) == TYPE_END_VERTEX){
        (current_vertex -> x - current_vertex -> prev -> x);
   m2 = (current_vertex -> y - current_vertex -> next -> y) /
        (current_vertex -> x - current_vertex -> next -> x);
-  if(m1 > m2){
+  if(m1 > m2)
     removed = remove_polygon_edge(&imaginary_line, current_vertex -> x,
                                  current_vertex -> y,
                                  current_vertex -> prev -> x,
                                  current_vertex -> prev -> y,
                                  leq_by_vertex, eq_by_vertex);
-  }
-  else{
+  else
     removed = remove_polygon_edge(&imaginary_line, current_vertex -> x,
                                  current_vertex -> y,
                                  current_vertex -> next -> x,
                                  current_vertex -> next -> y,
                                  leq_by_vertex, eq_by_vertex);
+  if(removed == NULL){
+    RAISE_ERROR_SELF_INTERSECTING_PEN(mf, cx, OPTIONAL(line));
+    return false;
   }
   if(GET_VERTEX_TYPE(removed -> helper) == TYPE_MERGE_VERTEX){
     ADD_CUT(current_vertex, removed -> helper);
@@ -15814,19 +15818,21 @@ else if(GET_VERTEX_TYPE(current_vertex) == TYPE_MERGE_VERTEX){
        (current_vertex -> x - current_vertex -> prev -> x);
   m2 = (current_vertex -> y - current_vertex -> next -> y) /
        (current_vertex -> x - current_vertex -> next -> x);
-  if(m2 <= m1){
+  if(m2 <= m1)
     removed = remove_polygon_edge(&imaginary_line, current_vertex -> x,
                                  current_vertex -> y,
                                  current_vertex -> next -> x,
                                  current_vertex -> next -> y,
                                  leq_by_vertex, eq_by_vertex);
-  }
-  else{
+  else
     removed = remove_polygon_edge(&imaginary_line, current_vertex -> x,
                                  current_vertex -> y,
                                  current_vertex -> prev -> x,
                                  current_vertex -> prev -> y,
                                  leq_by_vertex, eq_by_vertex);
+  if(removed == NULL){
+    RAISE_ERROR_SELF_INTERSECTING_PEN(mf, cx, OPTIONAL(line));
+    return false;
   }
   if(GET_VERTEX_TYPE(removed -> helper) == TYPE_MERGE_VERTEX){
     ADD_CUT(current_vertex, removed -> helper);
@@ -15879,6 +15885,10 @@ else{
                                     current_vertex -> next -> y,
                                     leq_by_vertex, eq_by_vertex);
       to_append = current_vertex -> prev;
+    }
+    if(removed == NULL){
+      RAISE_ERROR_SELF_INTERSECTING_PEN(mf, cx, OPTIONAL(line));
+      return false;
     }
     if(GET_VERTEX_TYPE(removed -> helper) == TYPE_MERGE_VERTEX){
       ADD_CUT(current_vertex, removed -> helper);
@@ -16134,7 +16144,8 @@ the triangulation function:
   if(cx -> currentpen -> referenced == NULL){
     memcpy(final_transform_matrix, cx -> currentpen -> gl_matrix,
            9 * sizeof(float));
-    if(!triangulate_pen(mf, cx, cx -> currentpen, final_transform_matrix))
+    if(!triangulate_pen(mf, cx, OPTIONAL(begin -> line), cx -> currentpen, 
+                        final_transform_matrix))
       return false;
   }
   else{
@@ -16142,7 +16153,8 @@ the triangulation function:
            cx -> currentpen -> referenced -> gl_matrix, 9 * sizeof(float));
     MATRIX_MULTIPLICATION(final_transform_matrix,
                           cx -> currentpen -> gl_matrix);
-    if(!triangulate_pen(mf, cx, cx -> currentpen -> referenced,
+    if(!triangulate_pen(mf, cx, OPTIONAL(begin -> line), 
+                        cx -> currentpen -> referenced,
                         final_transform_matrix))
       return false;
   }
@@ -19790,7 +19802,35 @@ case ERROR_RECURSIVE_RENDERCHAR:
   break;
 @
 
-\subsecao{A.25. ERROR\_UNBALANCED\_ENDING\_TOKEN}
+\subsecao{A.25. ERROR\_SELF\_INTERSECTING\_PEN}
+
+@<Types of Error@>+=
+ERROR_SELF_INTERSECTING_PEN,
+@
+
+This is an error caught when trying to triangulate a pen produced from
+a complex shape, with edges that cross each other. This type of shape
+is not allowed for pens, and this error can be produced when trying to
+use such a pen.
+
+This error is handled in the standard way:
+
+@<Local Macros (metafont.c)@>+=
+#define RAISE_ERROR_SELF_INTERSECTING_PEN(mf, cx, line) {\
+    RAISE_GENERIC_ERROR(mf, cx, line, ERROR_SELF_INTERSECTING_PEN);}
+@
+
+This produces the following error message:
+
+@<Print Error Message@>+=
+case ERROR_SELF_INTERSECTING_PEN:
+  fprintf(stderr,
+          "%s:%s Tried to pick up a pen with self-intersecting path.",
+          mf -> file, line_number);
+  break;
+@
+
+\subsecao{A.26. ERROR\_UNBALANCED\_ENDING\_TOKEN}
 
 @<Types of Error@>+=
 ERROR_UNBALANCED_ENDING_TOKEN,
@@ -19825,7 +19865,7 @@ case ERROR_UNBALANCED_ENDING_TOKEN:
   break;
 @
 
-\subsecao{A.26. ERROR\_UNCLOSED\_DELIMITER}
+\subsecao{A.27. ERROR\_UNCLOSED\_DELIMITER}
 
 @<Types of Error@>+=
 ERROR_UNCLOSED_DELIMITER,
@@ -19854,7 +19894,7 @@ case ERROR_UNCLOSED_DELIMITER:
 @
 
 
-\subsecao{A.27. ERROR\_UNCLOSED\_STRING}
+\subsecao{A.28. ERROR\_UNCLOSED\_STRING}
 
 @<Types of Error@>+=
 ERROR_UNCLOSED_STRING,
@@ -19891,7 +19931,7 @@ case ERROR_UNCLOSED_STRING:
   break;
 @
 
-\subsecao{A.28. ERROR\_UNDECLARED\_VARIABLE}
+\subsecao{A.29. ERROR\_UNDECLARED\_VARIABLE}
 
 @<Types of Error@>+=
 ERROR_UNDECLARED_VARIABLE,
@@ -19919,7 +19959,7 @@ case ERROR_UNDECLARED_VARIABLE:
 @
 
 
-\subsecao{A.29. ERROR\_UNEXPECTED\_TOKEN}
+\subsecao{A.30. ERROR\_UNEXPECTED\_TOKEN}
 
 @<Types of Error@>+=
 ERROR_UNEXPECTED_TOKEN,
@@ -19951,7 +19991,7 @@ case ERROR_UNEXPECTED_TOKEN:
   break;
 @
 
-\subsecao{A.30. ERROR\_UNINITIALIZED\_VARIABLE}
+\subsecao{A.31. ERROR\_UNINITIALIZED\_VARIABLE}
 
 @<Types of Error@>+=
 ERROR_UNINITIALIZED_VARIABLE,
@@ -19986,7 +20026,7 @@ case ERROR_UNINITIALIZED_VARIABLE:
 @
 
 
-\subsecao{A.31. ERROR\_UNKNOWN\_GLYPH\_DEPENDENCY}
+\subsecao{A.32. ERROR\_UNKNOWN\_GLYPH\_DEPENDENCY}
 
 @<Types of Error@>+=
 ERROR_UNKNOWN_GLYPH_DEPENDENCY,
@@ -20017,7 +20057,7 @@ case ERROR_UNKNOWN_GLYPH_DEPENDENCY:
 @
 
 
-\subsecao{A.32. ERROR\_UNKNOWN\_EXPRESSION}
+\subsecao{A.33. ERROR\_UNKNOWN\_EXPRESSION}
 
 @<Types of Error@>+=
 ERROR_UNKNOWN_EXPRESSION,
@@ -20047,7 +20087,7 @@ case ERROR_UNKNOWN_EXPRESSION:
   break;
 @
 
-\subsecao{A.33. ERROR\_UNKNOWN\_STATEMENT}
+\subsecao{A.34. ERROR\_UNKNOWN\_STATEMENT}
 
 @<Types of Error@>+=
 ERROR_UNKNOWN_STATEMENT,
@@ -20077,7 +20117,7 @@ case ERROR_UNKNOWN_STATEMENT:
   break;
 @
 
-\subsecao{A.34. ERROR\_UNOPENED\_DELIMITER}
+\subsecao{A.35. ERROR\_UNOPENED\_DELIMITER}
 
 @<Types of Error@>+=
 ERROR_UNOPENED_DELIMITER,
@@ -20106,7 +20146,7 @@ case ERROR_UNOPENED_DELIMITER:
   break;
 @
 
-\subsecao{A.35. ERROR\_UNSUPORTED\_LENGTH\_OPERAND}
+\subsecao{A.36. ERROR\_UNSUPORTED\_LENGTH\_OPERAND}
 
 @<Types of Error@>+=
 ERROR_UNSUPORTED_LENGTH_OPERAND,
@@ -20148,7 +20188,7 @@ case ERROR_UNSUPORTED_LENGTH_OPERAND:
   break;
 @
 
-\subsecao{A.36. ERROR\_WRONG\_NUMBER\_OF\_PARAMETERS}
+\subsecao{A.37. ERROR\_WRONG\_NUMBER\_OF\_PARAMETERS}
 
 @<Types of Error@>+=
 ERROR_WRONG_NUMBER_OF_PARAMETERS,
@@ -20188,7 +20228,7 @@ case ERROR_WRONG_NUMBER_OF_PARAMETERS:
 @
 
 
-\subsecao{A.37. ERROR\_WRONG\_VARIABLE\_TYPE}
+\subsecao{A.38. ERROR\_WRONG\_VARIABLE\_TYPE}
 
 @<Types of Error@>+=
 ERROR_WRONG_VARIABLE_TYPE,

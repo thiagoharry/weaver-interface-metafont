@@ -11,9 +11,9 @@
 #include "metafont.h"
 #include "interface.h"
 
-#define MARGIN 90.0
-#define HEIGHT 90.0
-#define MAX_X  1800.0
+#define MARGIN 2.0
+#define HEIGHT 2.0
+#define MAX_X  40.0
 #define ZOOM 1.0
 
 
@@ -32,7 +32,7 @@ void test(struct metafont *mf, float weight, float italic, float size){
   bool ret;
   unsigned char c[4];
   float x, y;
-  x = MARGIN; y = window_height - HEIGHT;
+  x = MARGIN * size; y = window_height - HEIGHT * size;
   _Wmark_history_interface();
   ret = _Wwrite_numeric_variable(mf, "size", (float) size);
   ret = _Wwrite_numeric_variable(mf, "weight", weight);
@@ -52,11 +52,11 @@ void test(struct metafont *mf, float weight, float italic, float size){
 			     x, y,
 			     0.0, ZOOM * width, ZOOM * (height + depth));
       if(ret){
-	printf("%s\n", c);
-	x += MARGIN;
-	if(x > MAX_X){
-	  x = MARGIN;
-	  y -= HEIGHT;
+	//printf("%s\n", c);
+	x += MARGIN * size;
+	if(x > window_width - MARGIN * size){
+	  x = MARGIN * size;
+	  y -= HEIGHT * size;
 	}
 	next -> _texture1 = (GLuint *) malloc(sizeof(GLuint));
 	*(next -> _texture1) = t;
@@ -80,12 +80,12 @@ void test(struct metafont *mf, float weight, float italic, float size){
 			     x, y,
 			     0.0, ZOOM * width, ZOOM * (height + depth));
       if(ret){
-	printf("%s\n", c);
+	//printf("%s\n", c);
 	//printf("%lx\n", i);
-	x += MARGIN;
-	if(x > MAX_X){
-	  x = MARGIN;
-	  y -= HEIGHT;
+	x += MARGIN * size;
+	if(x > window_width - MARGIN * size){
+	  x = MARGIN * size;
+	  y -= HEIGHT * size;
 	}
 	next -> _texture1 = (GLuint *) malloc(sizeof(GLuint));
 	*(next -> _texture1) = t;
@@ -110,12 +110,12 @@ void test(struct metafont *mf, float weight, float italic, float size){
 			     x, y,
 			     0.0, ZOOM * width, ZOOM * (height + depth));
       if(ret){
-	printf("%s\n", c);
+	//printf("%s\n", c);
 	//printf("%lx\n", i);
-	x += MARGIN;
-	if(x > MAX_X){
-	  x = MARGIN;
-	  y -= HEIGHT;
+	x += MARGIN * size;
+	if(x > window_width - MARGIN * size){
+	  x = MARGIN * size;
+	  y -= HEIGHT * size;
 	}
 	next -> _texture1 = (GLuint *) malloc(sizeof(GLuint));
 	*(next -> _texture1) = t;
