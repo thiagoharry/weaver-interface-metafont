@@ -373,14 +373,14 @@ void test_path_expressions(void){
   struct named_variable *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9, *p10,
     *quartercircle, *halfcircle, *fullcircle, *unitsquare, *a, *b, *c,
     *d, *e, *f, *g, *h, *i, *j, *k, *l, *n, *q, *r, *s, *m, *m1, *m2, *m3, *m4,
-    *m5, *m6, *m7, *m8, *m9, *m10, *m11, *m12;
+    *m5, *m6, *m7, *m8, *m9, *m10, *m11, *m12, *m13, *m14;
   struct path_variable *path_p1, *path_p2, *path_p3, *path_p4, *path_p5,
     *path_p6, *path_p7, *path_p8, *path_p9, *path_p10, *quartercircle_path,
     *halfcircle_path, *fullcircle_path, *unitsquare_path, *path_a,
     *path_b, *path_c, *path_d, *path_e, *path_f, *path_g, *path_h,
     *path_i, *path_j, *path_k, *path_l, *path_m, *path_m1, *path_m2, *path_m3,
     *path_m4, *path_m5, *path_m6, *path_m7, *path_m8, *path_m9, *path_m10,
-    *path_m11, *path_m12;
+    *path_m11, *path_m12, *path_m13, *path_m14;
   struct numeric_variable *numeric_n;
   struct pair_variable *pair_q, *pair_r, *pair_s;
   mf = init_metafont("tests/path_expressions.mf");
@@ -403,6 +403,7 @@ void test_path_expressions(void){
   m1 = m -> next; m2 = m1 -> next; m3 = m2 -> next; m4 = m3 -> next;
   m5 = m4 -> next; m6 = m5 -> next; m7 = m6 -> next; m8 = m7 -> next;
   m9 = m8 -> next; m10 = m9 -> next; m11 = m10 -> next; m12 = m11 -> next;
+  m13 = m12 -> next; m14 = m13 -> next;
   path_p1 = (struct path_variable *) p1 -> var;
   path_p2 = (struct path_variable *) p2 -> var;
   path_p3 = (struct path_variable *) p3 -> var;
@@ -442,6 +443,8 @@ void test_path_expressions(void){
   path_m10 = (struct path_variable *) m10 -> var;
   path_m11 = (struct path_variable *) m11 -> var;
   path_m12 = (struct path_variable *) m12 -> var;
+  path_m13 = (struct path_variable *) m13 -> var;
+  path_m14 = (struct path_variable *) m14 -> var;
   numeric_n = (struct numeric_variable *) n -> var;
   pair_q = (struct pair_variable *) q -> var;
   pair_r = (struct pair_variable *) r -> var;
@@ -1288,6 +1291,24 @@ void test_path_expressions(void){
 	 ALMOST_EQUAL(path_m12 -> points[3].point.v_y, 0.33333) &&
 	 path_m12 -> points[4].point.x == 2.0 &&
 	 path_m12 -> points[4].point.y == 0.0);
+    assert("Null direction specifiers in paths are ignored",
+	   path_m13 -> points[0].point.u_x == path_m14 -> points[0].point.u_x &&
+	   path_m13 -> points[0].point.u_y == path_m14 -> points[0].point.u_y &&
+	   path_m13 -> points[0].point.v_x == path_m14 -> points[0].point.v_x &&
+	   path_m13 -> points[0].point.v_y == path_m14 -> points[0].point.v_y &&
+	   path_m13 -> points[1].point.u_x == path_m14 -> points[1].point.u_x &&
+	   path_m13 -> points[1].point.u_y == path_m14 -> points[1].point.u_y &&
+	   path_m13 -> points[1].point.v_x == path_m14 -> points[1].point.v_x &&
+	   path_m13 -> points[1].point.v_y == path_m14 -> points[1].point.v_y);
+    printf("%f %f ~ %f %f\n", path_m13 -> points[0].point.u_x, path_m13 -> points[0].point.u_y,
+	   path_m14 -> points[0].point.u_x, path_m14 -> points[0].point.u_y);
+    printf("%f %f ~ %f %f\n", path_m13 -> points[0].point.v_x, path_m13 -> points[0].point.v_y,
+	   path_m14 -> points[0].point.v_x, path_m14 -> points[0].point.v_y);
+    printf("%f %f ~ %f %f\n", path_m13 -> points[1].point.u_x, path_m13 -> points[1].point.u_y,
+	   path_m14 -> points[1].point.u_x, path_m14 -> points[1].point.u_y);
+    printf("%f %f ~ %f %f\n", path_m13 -> points[1].point.v_x, path_m13 -> points[1].point.v_y,
+	   path_m14 -> points[1].point.v_x, path_m14 -> points[1].point.v_y);
+
   free_token_list(first);
   destroy_context(cx);
   _Wdestroy_metafont(mf);

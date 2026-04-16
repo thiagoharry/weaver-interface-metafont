@@ -8173,8 +8173,10 @@ if(begin_b != NULL){
     return false;
   if(!eval_numeric_expression(mf, cx, begin_b, end_b, &b))
     return false;
-  *w_x = a.value;
-  *w_y = b.value;
+  if(a.value != 0.0 || b.value != 0.0){
+    *w_x = a.value;
+    *w_y = b.value;
+  }
   return true;
 }
 @
@@ -8192,8 +8194,10 @@ else{ // if in the previous case there was no comma
   struct pair_variable a;
   if(!eval_pair_expression(mf, cx, begin_a, end_a, &a))
     return false;
-  *w_x = a.x;
-  *w_y = a.y;
+  if(a.x != 0.0 || a.y != 0.0){
+    *w_x = a.x;
+    *w_y = a.y;
+  }
   return true;
 }
 @

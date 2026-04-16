@@ -4679,4 +4679,3 @@ beginchar("−", (0.498+0.015*(weight-1))*size*pt, (0.288+0.023*(weight-1))*size
   kerning("4", 31*k*size);
 endchar;
 
-% TODO: (0,0) na direção de caminho trava.
