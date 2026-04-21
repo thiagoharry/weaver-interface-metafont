@@ -2443,8 +2443,8 @@ void test_shipit_command(void){
   struct metafont *mf;
   struct context *cx;
   bool ret;
-  struct named_variable *w, *var;
-  struct numeric_variable *numeric_w, *numeric_var;
+  struct named_variable *w, *var, *ww1, *ww2;
+  struct numeric_variable *numeric_w, *numeric_var, *numeric_w1, *numeric_w2;
   GLuint glyph = 0;
   int width = 0, height = 0, depth = -1, italcorr = -1, kerning = -1;
   double w1, w2;
@@ -2458,8 +2458,12 @@ void test_shipit_command(void){
   w = (struct named_variable *) mf -> named_variables;
   var = w -> next;
   var = var -> next;
+  ww1 = var -> next;
+  ww2 = ww1 -> next;
   numeric_w = (struct numeric_variable *) w -> var;
   numeric_var = (struct numeric_variable *) var -> var;
+  numeric_w1 = (struct numeric_variable *) ww1 -> var;
+  numeric_w2 = (struct numeric_variable *) ww2 -> var;
   ret = _Wrender_glyph(mf, "A", NULL, &glyph, &width, &height,
 		       &depth, &italcorr, &kerning);
   if(!ret)
@@ -2486,6 +2490,18 @@ void test_shipit_command(void){
     printf("Result of 'totalweight' in empty glyph should be 0.0, found %f instead.\n",
 	   numeric_var -> value);
   }
+  ret = _Wrender_glyph(mf, "C", NULL, &glyph, &width, &height,
+		       &depth, &italcorr, &kerning);
+  if(!ret)
+    _Wprint_metafont_error(mf);
+  ret &= _Wrender_glyph(mf, "D", NULL, &glyph, &width, &height,
+			&depth, &italcorr, &kerning);
+  assert("Area pencircle = 2 * pensemicircle", ret && numeric_w1 -> value == 0.0 &&
+	 numeric_w2 -> value == 0.0);
+  if(numeric_w1 -> value != 0.0)
+    printf("ERROR: draw pencircle & erase pensemicircle produces weight %f\n", numeric_w1 -> value);
+  if(numeric_w2 -> value != 0.0)
+    printf("ERROR: draw 2*pensemicircle & erase pencircle produces weight %f\n", numeric_w2 -> value);
   free_token_list(first);
   destroy_context(cx);
   _Wdestroy_metafont(mf);

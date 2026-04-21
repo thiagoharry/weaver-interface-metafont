@@ -1,4 +1,4 @@
-numeric weight, counter, var;
+numeric weight, counter, var, w1, w2;
 
 counter = 0;
 
@@ -25,6 +25,27 @@ beginchar("B", 10, 10, 0);
   draw (w/2, h/2);
   weight = totalweight currentpicture;
 endchar
+
+beginchar("C", 1000, 1000, 0);
+  pickup pencircle scaled w;
+  draw (w/2, h/2);
+  pickup pensemicircle scaled w;
+  erase (w/2, h/2);
+  pickup pensemicircle scaled w rotated 180;
+  erase (w/2, h/2);
+  w1 = totalweight currentpicture;
+endchar;
+
+beginchar("D", 1000, 1000, 0);
+  pickup pensemicircle scaled w;
+  draw (w/2, h/2);
+  pickup pensemicircle scaled w rotated 180;
+  draw (w/2, h/2);
+  pickup pencircle scaled w;
+  erase (w/2, h/2);
+  w2 = totalweight currentpicture;
+endchar;
+
 
 beginchar("I", 100, 100, 0);
   renderchar "1" between (0.25*w, 0.5*h) and (0.75*w, h);
@@ -72,3 +93,4 @@ beginchar("3", 10, 10, 0);
   renderchar "2" between (0, 0) and (w, h);
   var = totalweight currentpicture;
 endchar;
+
