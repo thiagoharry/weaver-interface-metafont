@@ -1300,15 +1300,6 @@ void test_path_expressions(void){
 	   path_m13 -> points[1].point.u_y == path_m14 -> points[1].point.u_y &&
 	   path_m13 -> points[1].point.v_x == path_m14 -> points[1].point.v_x &&
 	   path_m13 -> points[1].point.v_y == path_m14 -> points[1].point.v_y);
-    printf("%f %f ~ %f %f\n", path_m13 -> points[0].point.u_x, path_m13 -> points[0].point.u_y,
-	   path_m14 -> points[0].point.u_x, path_m14 -> points[0].point.u_y);
-    printf("%f %f ~ %f %f\n", path_m13 -> points[0].point.v_x, path_m13 -> points[0].point.v_y,
-	   path_m14 -> points[0].point.v_x, path_m14 -> points[0].point.v_y);
-    printf("%f %f ~ %f %f\n", path_m13 -> points[1].point.u_x, path_m13 -> points[1].point.u_y,
-	   path_m14 -> points[1].point.u_x, path_m14 -> points[1].point.u_y);
-    printf("%f %f ~ %f %f\n", path_m13 -> points[1].point.v_x, path_m13 -> points[1].point.v_y,
-	   path_m14 -> points[1].point.v_x, path_m14 -> points[1].point.v_y);
-
   free_token_list(first);
   destroy_context(cx);
   _Wdestroy_metafont(mf);
@@ -2140,14 +2131,15 @@ void test_drawing_commands(void){
   bool ret;
   struct named_variable *a, *wa, *b, *wb, *c, *wc, *d, *wd, *e, *we, *f, *wf,
     *g, *wg, *pa1, *pa2, *pb1, *pb2, *pd1, *pd2, *pe1, *pe2, *pf1, *pf2, *pg1,
-    *pg2, *ph1, *ph2;
+    *pg2, *ph1, *ph2, *pc0, *pc1, *pc2, *pc3, *pc4, *pc5, *pc6, *pc7;
   struct picture_variable *picture_a, *picture_b, *picture_c, *picture_d,
     *picture_e, *picture_f, *picture_g;
   struct numeric_variable *numeric_wa, *numeric_wb, *numeric_wc, *numeric_wd,
     *numeric_we, *numeric_wf, *numeric_wg;
   struct pair_variable *pair_pa1, *pair_pa2, *pair_pb1, *pair_pb2, *pair_pd1,
     *pair_pd2, *pair_pe1, *pair_pe2, *pair_pf1, *pair_pf2, *pair_pg1, *pair_pg2,
-    *pair_ph1, *pair_ph2;
+    *pair_ph1, *pair_ph2, *pair_pc0, *pair_pc1, *pair_pc2, *pair_pc3, *pair_pc4,
+    *pair_pc5, *pair_pc6, *pair_pc7;
   mf = init_metafont("tests/drawing_commands.mf");
   cx = init_context(mf);
   lexer(mf,  "tests/drawing_commands.mf", &first, &last);
@@ -2180,6 +2172,14 @@ void test_drawing_commands(void){
   pg2 = (struct named_variable *) (pg1 -> next);
   ph1 = (struct named_variable *) (pg2 -> next);
   ph2 = (struct named_variable *) (ph1 -> next);
+  pc0 = (struct named_variable *) (ph2 -> next);
+  pc1 = (struct named_variable *) (pc0 -> next);
+  pc2 = (struct named_variable *) (pc1 -> next);
+  pc3 = (struct named_variable *) (pc2 -> next);
+  pc4 = (struct named_variable *) (pc3 -> next);
+  pc5 = (struct named_variable *) (pc4 -> next);
+  pc6 = (struct named_variable *) (pc5 -> next);
+  pc7 = (struct named_variable *) (pc6 -> next);
   picture_a = (struct picture_variable *) a -> var;
   picture_b = (struct picture_variable *) b -> var;
   picture_c = (struct picture_variable *) c -> var;
@@ -2208,6 +2208,14 @@ void test_drawing_commands(void){
   pair_pg2 = (struct pair_variable *) pg2 -> var;
   pair_ph1 = (struct pair_variable *) ph1 -> var;
   pair_ph2 = (struct pair_variable *) ph2 -> var;
+  pair_pc0 = (struct pair_variable *) pc0 -> var;
+  pair_pc1 = (struct pair_variable *) pc1 -> var;
+  pair_pc2 = (struct pair_variable *) pc2 -> var;
+  pair_pc3 = (struct pair_variable *) pc3 -> var;
+  pair_pc4 = (struct pair_variable *) pc4 -> var;
+  pair_pc5 = (struct pair_variable *) pc5 -> var;
+  pair_pc6 = (struct pair_variable *) pc6 -> var;
+  pair_pc7 = (struct pair_variable *) pc7 -> var;
   assert("Interpreting program with drawing commands", ret);
   assert("Drawing a simple square",
 	 picture_a -> width == 6 && picture_a -> height == 6 &&
@@ -2298,6 +2306,33 @@ void test_drawing_commands(void){
 	 ALMOST_EQUAL(pair_ph1 -> y, 0.6) &&
 	 ALMOST_EQUAL(pair_ph2 -> x, 0.4) &&
 	 ALMOST_EQUAL(pair_ph2 -> y, -0.4));
+    assert("Commands 'top', 'bot', 'lft' and 'rt' on pensemicircle",
+	   pair_pc0 -> x == 0.0 && pair_pc0 -> y == 0.0 &&
+	   pair_pc1 -> x == 0.0 && pair_pc1 -> y == 0.0 &&
+	   pair_pc2 -> x == 0.0 && pair_pc2 -> y == 0.0 &&
+	   pair_pc3 -> x == 0.0 && pair_pc3 -> y == 0.0);
+    if(pair_pc0 -> x != 0.0 || pair_pc0 -> y != 0.0)
+      printf("Expected: top (0, 0) = (0, 0). Found: (%f, %f)\n", pair_pc0 -> x, pair_pc0 -> y);
+    if(pair_pc1 -> x != 0.0 || pair_pc1 -> y != 0.0)
+      printf("Expected: bot (0, 0.5) = (0, 0). Found: (%f, %f)\n", pair_pc1 -> x, pair_pc1 -> y);
+    if(pair_pc2 -> x != 0.0 || pair_pc2 -> y != 0.0)
+      printf("Expected: lft (0.5, 0) = (0, 0). Found: (%f, %f)\n", pair_pc2 -> x, pair_pc2 -> y);
+    if(pair_pc3 -> x != 0.0 || pair_pc3 -> y != 0.0)
+      printf("Expected: rt (-0.5, 0) = (0, 0). Found: (%f, %f)\n", pair_pc3 -> x, pair_pc3 -> y);
+
+    assert("Commands 'top', 'bot', 'lft' and 'rt' on pencircle",
+	   pair_pc4 -> x == 0.0 && pair_pc4 -> y == 0.0 &&
+	   pair_pc5 -> x == 0.0 && pair_pc5 -> y == 0.0 &&
+	   pair_pc6 -> x == 0.0 && pair_pc6 -> y == 0.0 &&
+	   pair_pc7 -> x == 0.0 && pair_pc7 -> y == 0.0);
+    if(pair_pc4 -> x != 0.0 || pair_pc4 -> y != 0.0)
+      printf("Expected: top (0, -0.5) = (0, 0). Found: (%f, %f)\n", pair_pc4 -> x, pair_pc4 -> y);
+    if(pair_pc5 -> x != 0.0 || pair_pc5 -> y != 0.0)
+      printf("Expected: bot (0, 0.5) = (0, 0). Found: (%f, %f)\n", pair_pc5 -> x, pair_pc5 -> y);
+    if(pair_pc6 -> x != 0.0 || pair_pc6 -> y != 0.0)
+      printf("Expected: lft (0.5, 0) = (0, 0). Found: (%f, %f)\n", pair_pc6 -> x, pair_pc6 -> y);
+    if(pair_pc7 -> x != 0.0 || pair_pc7 -> y != 0.0)
+      printf("Expected: rt (-0.5, 0) = (0, 0). Found: (%f, %f)\n", pair_pc7 -> x, pair_pc7 -> y);
   free_token_list(first);
   destroy_context(cx);
   _Wdestroy_metafont(mf);

@@ -13433,6 +13433,22 @@ which are its extremity coordinates:
 }
 @
 
+The points above are calculated in a way that is compatible with the
+original METAFONT language. But for circular pens or pens that are
+semicircles, we will calculate things a bit differently. The new
+method will not change the values for circular pens, but it will
+produce more intuitive values specifically for semicircular pens,
+which are defined with non-symmetric coordinates.
+
+@<Local Macros (metafont.c)@>+=
+#define UPDATE_CIRCULAR_PEN_EXTREMITIES() {\
+  cx -> pen_lft = -_max_x;\
+  cx -> pen_rt = -_min_x;\
+  cx -> pen_top = -_min_y;\
+  cx -> pen_bot = -_max_y;\
+}
+@
+
 The previous macros is enough if we will iterate over each point in
 the pen perimeter. Doing this, we can
 call \monoespaco{CHECK\_PEN\_EXTREMITIES} in all points and then we
@@ -13622,7 +13638,7 @@ void pencircular_extremity_points(struct context *cx,
       }
     }
   }
-  UPDATE_PEN_EXTREMITIES();
+  UPDATE_CIRCULAR_PEN_EXTREMITIES();
 }
 @
 

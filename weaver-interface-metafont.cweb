@@ -13656,6 +13656,22 @@ atualizar seus pontos de extremidade:
 }
 @
 
+Os pontos acima são calculados de maneira que sejam compatíveis com a
+linguagem METAFONT original. Mas para canetas circulares ou que sejam
+semicírculos, vamos calcular de maneira um pouco diferente. O novo
+método não irá mudar os valores de canetas circulares, mas irá
+produzir valores mais intuitivos especificamente para canetas
+semi-circulares, que são definidas com coordenadas não-simétricas:
+
+@<Macros Locais (metafont.c)@>+=
+#define UPDATE_CIRCULAR_PEN_EXTREMITIES() {\
+  cx -> pen_lft = -_max_x;\
+  cx -> pen_rt = -_min_x;\
+  cx -> pen_top = -_min_y;\
+  cx -> pen_bot = -_max_y;\
+}
+@
+
 As macros anteriores presumem que iremos iterar sobre cada um dos
 pontos que compõe o perímetro de uma caneta. Fazendo isso, podemos
 chamar \monoespaco{CHECK\_PEN\_EXTREMITIES} em todos os pontos e assim
@@ -13851,7 +13867,7 @@ void pencircular_extremity_points(struct context *cx,
       }
     }
   }
-  UPDATE_PEN_EXTREMITIES();
+  UPDATE_CIRCULAR_PEN_EXTREMITIES();
 }
 @
 

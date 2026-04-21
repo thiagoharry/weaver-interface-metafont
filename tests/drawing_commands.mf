@@ -3,6 +3,7 @@
 picture a, b, c, D, e, f, g;
 numeric wa, wb, wc, wd, we, wf, wg;
 pair pa1, pa2, pb1, pb2, pd1, pd2, pe1, pe2, pf1, pf2, pg1, pg2, ph1, ph2;
+pair pc0, pc1, pc2, pc3, pc4, pc5, pc6, pc7;
 pen p;
 path tmp;
 
@@ -107,3 +108,16 @@ wg = totalweight g;
 ph1 = top lft (0, 0);
 ph2 = bot rt (0, 0);
 
+% Testing 'top', 'bot', 'lft' and 'rt' in pensemicircle
+pickup pensemicircle;
+pc0 = top (0, 0);
+pc1 = bot (0, 0.5);
+pc2 = lft (0.5, 0);
+pc3 = rt (-0.5, 0);
+
+% Testing 'top', 'bot', 'lft' and 'rt' in pencircle
+pickup pencircle;
+pc4 = top (0, -0.5);
+pc5 = bot (0, 0.5);
+pc6 = lft (0.5, 0);
+pc7 = rt (-0.5, 0);
