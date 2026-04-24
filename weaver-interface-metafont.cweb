@@ -262,6 +262,12 @@ Imagens Vazias \indice{178}
 
 21. Integração entre WeaveFont e Motor de Jogos Weaver \indice{288}
 
+22. WeaveTeX: Nosso Sistema Tipográfico
+
+22.1. WeaveTeX: O Analisador Léxico
+
+22.1.1. Caixa
+
 Apêndice A: Tratamento de Erros \indice{291}
 
 A.1. ERROR\_DISCONTINUOUS\_PATH \indice{295}
@@ -18916,6 +18922,78 @@ if(mf -> reloading_texture){
   cx -> candidate_texture = *texture;
   cx -> candidate_texture_width = *width;
   cx -> candidate_texture_height = *height;
+}
+@
+
+\secao{22. WeaveTeX: Nosso Sistema Tipográfico}
+
+O que desenvolvemos até agora foi uma linguagem de programação e uma
+API com o propósito de criar fontes tipográficas vetoriais para o
+computador. O que seria equivalente, antes do advento dos
+computadores, a criar formas em metal com vários glifos para que
+possam ser usados junto com tinta para ``carimbar'' formas fixas de
+letras no papel. O que falta fazermos em software agora é o
+equivalente à prensa de Guttemberg: um mecanismo que consegue usar os
+vários glifos criados para efetivamente compor textos completos.
+
+A linguagem que desenvolvemos, WeaveFont, cuidava da definição dos
+glifos. Agora vamos desenvolver outra linguagem, WeaveTeX para cuidar
+da composição dos glifos em palavras, frases, linhas, parágrafos e
+páginas. Felizmente, a linguagem WeaveTeX não precisa ser tão complexa
+como WeaveFont. A ideia é que ela seja tão direta que na maioria das
+vezes será usada de forma transparente.
+
+\subsecao{22.1. WeaveTeX: O Analisador Léxico}
+
+Assim como na linguagem WeaveFont, começamos a definir WeaveTeX pelo
+analisador léxico. Seu papel é converter uma string de caracteres
+UTF-8 em uma sequência de tokens. Existem 7 tipos de tokens: caixas,
+kerns, cola, marca de separação silábica, comandos, penalidades e
+formatações. Vamos passar por cada um deles.
+
+Todo token WeaveTeX possui como primeiro valor um inteiro
+representando seu tipo e ponteiros para o token anterior e para o
+próximo token. Permitindo a eles formar listas duplamente encadeadas:
+
+@<Estrutura de Dados Locais (metafont.c)@>+=
+struct tex_token{
+  int type;
+  struct tex_token *prev, *next;
+};
+// Lista de tipos:
+#define TEX_UNDEFINED 0
+#define TEX_BOX       1
+#define TEX_KERN      2
+#define TEX_GLUE      3
+#define TEX_DISC_MARK 4
+#define TEX_COMMAND   5
+#define TEX_PENALTY   6
+#define TEX_FORMAT    7
+@
+
+\subsubsecao{22.1.1. Caixa}
+
+Uma caixa representa um glifo a ser inserido. Assim como os glifos em
+WeaveFont, a caixa possui altura, largura e profundidade. Ela também
+possui um \monoespaco{GLuint} com um índice para a sua textura ou com
+o valor de zero caso ela ainda não tenha sido gerada.
+
+@<Estrutura de Dados Locais (metafont.c)@>+=
+struct tex_box_token{
+  int type;
+  struct tex_token *prev, *next;
+  float width, height, depth;
+  GLuint texture;
+};
+@
+
+@<Funções Auxiliares Locais (metafont.c)@>+=
+struct tex_box_token *new_tex_box(void){
+  struct tex_box_token *t;
+  t = (struct tex_box_token *) temporary_alloc(sizeof(struct tex_box_token));
+  t -> type = TEX_BOX;
+  t -> texture = 0;
+  return t;
 }
 @
 

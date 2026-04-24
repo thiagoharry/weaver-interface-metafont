@@ -247,6 +247,12 @@
 
 21. Integrating WeaveFont and Weaver Game Engine \indice{291}
 
+22. WeaveTeX: Our Typographic System
+
+22.1. WeaveTeX: The Lexer
+
+22.1.1. Box
+
 Appendix A: Handling Errors \indice{294}
 
 A.1. ERROR\_DISCONTINUOUS\_PATH \indice{298}
@@ -18605,6 +18611,80 @@ if(mf -> reloading_texture){
   cx -> candidate_texture_height = *height;
 }
 @
+
+\secao{22. WeaveTeX: Our Typographical System}
+
+What we have developed so far is a programming language and an API
+with the purpose of creating vector typographic fonts for the
+computer. This would be equivalent, before the advent of computers, to
+creating metal shapes with multiple glyphs so that they could be used
+with ink to 'stamp' fixed letter shapes onto paper. What remains for
+us to do in software now is the equivalent of the Gutenberg press: a
+mechanism that can use the various glyphs created to effectively
+compose complete texts.
+
+The language we developed, WeaveFont, handled the definition of
+glyphs. Now we are going to develop another language, WeaveTeX, to
+handle the composition of glyphs into words, sentences, lines,
+paragraphs, and pages. Fortunately, the WeaveTeX language does not
+need to be as complex as WeaveFont. The idea is that it will be so
+straightforward that most of the time it will be used transparently.
+
+\subsecao{22.1. WeaveTeX: The Lexer}
+
+As in the WeaveFont language, we begin defining WeaveTeX with the
+lexical analyzer. Its role is to convert a UTF-8 character string into
+a sequence of tokens. There are 7 token types: boxes, kerns, glue,
+hyphenation marks, commands, penalties, and formats. Let's go through
+each one of them.
+
+Every WeaveTeX token has, as its first value, an integer representing
+its type, as well as pointers to the previous token and the next
+token. This allows them to form doubly linked lists:
+
+@<Local Data Structures (metafont.c)@>+=
+struct tex_token{
+  int type;
+  struct tex_token *prev, *next;
+};
+// List of types:
+#define TEX_UNDEFINED 0
+#define TEX_BOX       1
+#define TEX_KERN      2
+#define TEX_GLUE      3
+#define TEX_DISC_MARK 4
+#define TEX_COMMAND   5
+#define TEX_PENALTY   6
+#define TEX_FORMAT    7
+@
+
+
+\subsubsecao{22.1.1 Box}
+
+A box represents a glyph to be inserted. Just like glyphs in
+WeaveFont, the box has height, width, and depth. It also has a
+\monoespaco{GLuint} with an index to its texture or with a value of
+zero if it has not yet been generated.
+
+@<Local Data Structures (metafont.c)@>+=
+struct tex_box_token{
+  int type;
+  struct tex_token *prev, *next;
+  float width, height, depth;
+  GLuint texture;
+};
+@
+
+@<Auxiliary Local Functions (metafont.c)@>+=
+struct tex_box_token *new_tex_box(void){
+  struct tex_box_token *t;
+  t = (struct tex_box_token *) temporary_alloc(sizeof(struct tex_box_token));
+  t -> type = TEX_BOX;
+  t -> texture = 0;
+  return t;
+}
+@
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
