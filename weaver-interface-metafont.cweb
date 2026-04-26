@@ -268,7 +268,9 @@ Imagens Vazias \indice{178}
 
 22.1.1. Caixa
 
-22.1.1. kern
+22.1.2. Kern
+
+22.1.3. Cola
 
 Apêndice A: Tratamento de Erros \indice{291}
 
@@ -19020,6 +19022,31 @@ struct tex_kern_token *new_tex_kern(void){
   struct tex_kern_token *t;
   t = (struct tex_kern_token *) temporary_alloc(sizeof(struct tex_kern_token));
   t -> type = TEX_KERN;
+  return t;
+}
+@
+
+\subsubsecao{22.1.3. Cola}
+
+Uma cola é um espaçamento assim como o Kern. A diferença é que ela não
+possui um tamanho fixo. Ela possui um tamanho natural, um número de
+esticabilidade e um número de compressibilidade. Uma cola então pode
+se apresentar coom um tamanho entre o tamanho natural menos a
+compressiblidade e o tamanho natural mais a esticabilidade.
+
+@<Estrutura de Dados Locais (metafont.c)@>+=
+struct tex_glue_token{
+  int type;
+  struct tex_token *prev, *next;
+  float size, stretch, shrink;
+};
+@
+
+@<Funções Auxiliares Locais (metafont.c)@>+=
+struct tex_glue_token *new_tex_glue(void){
+  struct tex_glue_token *t;
+  t = (struct tex_glue_token *) temporary_alloc(sizeof(struct tex_glue_token));
+  t -> type = TEX_GLUE;
   return t;
 }
 @

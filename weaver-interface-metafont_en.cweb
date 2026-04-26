@@ -255,6 +255,8 @@
 
 22.1.2. Kern
 
+22.1.3. Glue
+
 Appendix A: Handling Errors \indice{294}
 
 A.1. ERROR\_DISCONTINUOUS\_PATH \indice{298}
@@ -18707,6 +18709,31 @@ struct tex_kern_token *new_tex_kern(void){
   struct tex_kern_token *t;
   t = (struct tex_kern_token *) temporary_alloc(sizeof(struct tex_kern_token));
   t -> type = TEX_KERN;
+  return t;
+}
+@
+
+\subsubsecao{22.1.3. Glue}
+
+Glue is a spacing element similar to a kern. The difference is that it
+does not have a fixed size. It has a natural size, a stretchability
+value, and a shrinkability value. Glue can therefore assume a size
+between the natural size minus the shrinkability and the natural size
+plus the stretchability.
+
+@<Local Data Structures (metafont.c)@>+=
+struct tex_glue_token{
+  int type;
+  struct tex_token *prev, *next;
+  float size, stretch, shrink;
+};
+@
+
+@<Estrutura de Dados Locais (metafont.c)@>+=
+struct tex_glue_token *new_tex_glue(void){
+  struct tex_glue_token *t;
+  t = (struct tex_glue_token *) temporary_alloc(sizeof(struct tex_glue_token));
+  t -> type = TEX_GLUE;
   return t;
 }
 @
