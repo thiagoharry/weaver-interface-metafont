@@ -268,6 +268,8 @@ Imagens Vazias \indice{178}
 
 22.1.1. Caixa
 
+22.1.1. kern
+
 Apêndice A: Tratamento de Erros \indice{291}
 
 A.1. ERROR\_DISCONTINUOUS\_PATH \indice{295}
@@ -18996,6 +18998,32 @@ struct tex_box_token *new_tex_box(void){
   return t;
 }
 @
+
+\subsubsecao{22.1.2. Kern}
+
+Um Kern é apenas um espaço em branco fixo e inflexível colocado para
+separar glifos. Ele é considerado um espaço natural a se colocar
+gerando intervalo entre caixas, como se fizesse parte do próprio glifo
+que o precede. Ele é formado por um número representando o espaçamento
+em pixels.
+
+@<Estrutura de Dados Locais (metafont.c)@>+=
+struct tex_kern_token{
+  int type;
+  struct tex_token *prev, *next;
+  float size;
+};
+@
+
+@<Funções Auxiliares Locais (metafont.c)@>+=
+struct tex_kern_token *new_tex_kern(void){
+  struct tex_kern_token *t;
+  t = (struct tex_kern_token *) temporary_alloc(sizeof(struct tex_kern_token));
+  t -> type = TEX_KERN;
+  return t;
+}
+@
+
 
 \secao{Apêndice A: Tratamento de Erros}
 

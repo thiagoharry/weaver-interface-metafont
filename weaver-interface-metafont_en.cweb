@@ -253,6 +253,8 @@
 
 22.1.1. Box
 
+22.1.2. Kern
+
 Appendix A: Handling Errors \indice{294}
 
 A.1. ERROR\_DISCONTINUOUS\_PATH \indice{298}
@@ -18681,6 +18683,30 @@ struct tex_box_token *new_tex_box(void){
   t = (struct tex_box_token *) temporary_alloc(sizeof(struct tex_box_token));
   t -> type = TEX_BOX;
   t -> texture = 0;
+  return t;
+}
+@
+
+\subsubsecao{22.1.2. Kern}
+
+A kern is just a fixed and inflexible blank space placed to separate
+glyphs. It is considered a natural space to be inserted, creating an
+interval between boxes, as if it were part of the glyph that precedes
+it. It consists of a number representing the spacing in pixels.
+
+@<Local Data Structures (metafont.c)@>+=
+struct tex_kern_token{
+  int type;
+  struct tex_token *prev, *next;
+  float size;
+};
+@
+
+@<Auxiliary Local Functions (metafont.c)@>+=
+struct tex_kern_token *new_tex_kern(void){
+  struct tex_kern_token *t;
+  t = (struct tex_kern_token *) temporary_alloc(sizeof(struct tex_kern_token));
+  t -> type = TEX_KERN;
   return t;
 }
 @
