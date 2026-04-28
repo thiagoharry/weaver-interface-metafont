@@ -272,6 +272,12 @@ Imagens Vazias \indice{178}
 
 22.1.3. Cola
 
+22.1.4. Separação Silábica
+
+22.1.5. Comandos
+
+22.1.6. Penalidades
+
 Apêndice A: Tratamento de Erros \indice{291}
 
 A.1. ERROR\_DISCONTINUOUS\_PATH \indice{295}
@@ -19047,6 +19053,92 @@ struct tex_glue_token *new_tex_glue(void){
   struct tex_glue_token *t;
   t = (struct tex_glue_token *) temporary_alloc(sizeof(struct tex_glue_token));
   t -> type = TEX_GLUE;
+  return t;
+}
+@
+
+\subsubsecao{22.1.4. Separação Silábica}
+
+Este é um token usado para delimitar que, mesmo que não exista nenhum
+espaço, pode ser possível interromper a linha atual neste ponto. Ele é
+formado por três sequências de código WeaveTeX:
+
+a) O que deve ser posicionado nesta região se nenhuma quebra de linha
+for inserida.
+
+b) O que deve ser inserido imediatamente antes da quebra de linha caso
+seja inserida uma quebra aqui.
+
+c) O que deve ser inserido imediatamente após a quebra de linha caso
+seja inserida uma quebra ali.
+
+@<Estrutura de Dados Locais (metafont.c)@>+=
+struct tex_discretionary_token{
+  int type;
+  struct tex_token *prev, *next;
+  struct tex_token *nobreak, *prebreak, *postbreak;
+};
+@
+
+@<Funções Auxiliares Locais (metafont.c)@>+=
+struct tex_discretionary_token *new_tex_discretionary(void){
+  struct tex_discretionary_token *t;
+  t = (struct tex_discretionary_token *)
+                       temporary_alloc(sizeof(struct tex_discretionary_token));
+  t -> type = TEX_DISC_MARK;
+  return t;
+}
+@
+
+\subsubsecao{22.1.5. Comandos}
+
+Comandos são instruções que modificam o comportamento de
+WeaveTeX. Elas são formadas por strings com o nome do comando que deve
+ser executado.
+
+@<Estrutura de Dados Locais (metafont.c)@>+=
+struct tex_command_token{
+  int type;
+  struct tex_token *prev, *next;
+  char name[16];
+};
+@
+
+@<Funções Auxiliares Locais (metafont.c)@>+=
+struct tex_command_token *new_tex_command(void){
+  struct tex_command_token *t;
+  t = (struct tex_command_token *)
+                             temporary_alloc(sizeof(struct tex_command_token));
+  t -> type = TEX_COMMAND;
+  return t;
+}
+@
+
+\subsubsecao{22.1.6. Penalidades}
+
+Uma penalidade é uma marcação que indica o quão desejável ou
+indesejável é inserir uma quebra de linha em determinada região de
+texto. Uma penalidade negativa é um incentivo para que uma quebra seja
+inserida ali e uma penalidade positiva é um desincentivo.
+
+Penalidades variam entre -10000 e 10000. Um valor de -10000 é
+interpretado como uma quebra de linha obrigatória. Um valor de 10000 é
+tratado como uma proibição absoluta para a inserção de quebra de linha.
+
+@<Estrutura de Dados Locais (metafont.c)@>+=
+struct tex_penalty_token{
+  int type;
+  struct tex_token *prev, *next;
+  int penalty;
+};
+@
+
+@<Funções Auxiliares Locais (metafont.c)@>+=
+struct tex_penalty_token *new_tex_penalty(void){
+  struct tex_penalty_token *t;
+  t = (struct tex_penalty_token *)
+                             temporary_alloc(sizeof(struct tex_penalty_token));
+  t -> type = TEX_PENALTY;
   return t;
 }
 @

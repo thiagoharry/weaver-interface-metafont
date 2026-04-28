@@ -257,6 +257,12 @@
 
 22.1.3. Glue
 
+22.1.4. Discretionary Mark
+
+22.1.5. Commands
+
+22.1.6. Penalties
+
 Appendix A: Handling Errors \indice{294}
 
 A.1. ERROR\_DISCONTINUOUS\_PATH \indice{298}
@@ -18729,7 +18735,7 @@ struct tex_glue_token{
 };
 @
 
-@<Estrutura de Dados Locais (metafont.c)@>+=
+@<Auxiliary Local Functions (metafont.c)@>+=
 struct tex_glue_token *new_tex_glue(void){
   struct tex_glue_token *t;
   t = (struct tex_glue_token *) temporary_alloc(sizeof(struct tex_glue_token));
@@ -18738,6 +18744,89 @@ struct tex_glue_token *new_tex_glue(void){
 }
 @
 
+\subsubsecao{22.1.4. Discretionary Mark}
+
+This is a token used to indicate that, even if there is no space, it
+may be possible to break the current line at this point. It consists
+of three WeaveTeX code sequences:
+
+a) What should be placed in this region if no line break is inserted.
+
+b) What should be inserted immediately before the line break if a
+break is inserted here.
+
+c) What should be inserted immediately after the line break if a break
+is inserted there.
+
+@<Local Data Structures (metafont.c)@>+=
+struct tex_discretionary_token{
+  int type;
+  struct tex_token *prev, *next;
+  struct tex_token *nobreak, *prebreak, *postbreak;
+};
+@
+
+@<Auxiliary Local Functions (metafont.c)@>+=
+struct tex_discretionary_token *new_tex_discretionary(void){
+  struct tex_discretionary_token *t;
+  t = (struct tex_discretionary_token *)
+                       temporary_alloc(sizeof(struct tex_discretionary_token));
+  t -> type = TEX_DISC_MARK;
+  return t;
+}
+@
+
+\subsubsecao{22.1.5. Commands}
+
+Commands are instructions that modify WeaveTeX's behavior. They are
+made up of strings containing the name of the command to be executed.
+
+@<Local Data Structures (metafont.c)@>+=
+struct tex_command_token{
+  int type;
+  struct tex_token *prev, *next;
+  char name[16];
+};
+@
+
+@<Auxiliary Local Functions (metafont.c)@>+=
+struct tex_command_token *new_tex_command(void){
+  struct tex_command_token *t;
+  t = (struct tex_command_token *)
+                             temporary_alloc(sizeof(struct tex_command_token));
+  t -> type = TEX_COMMAND;
+  return t;
+}
+@
+
+\subsubsecao{22.1.6. Penalties}
+
+A penalty is a marker that indicates how desirable or undesirable it
+is to insert a line break at a particular region of text. A negative
+penalty encourages a line break to be inserted there, while a positive
+penalty discourages it.
+
+Penalties range from -10000 to 10000. A value of -10000 is interpreted
+as a mandatory line break. A value of 10000 is treated as an absolute
+prohibition against inserting a line break.
+
+@<Local Data Structures (metafont.c)@>+=
+struct tex_penalty_token{
+  int type;
+  struct tex_token *prev, *next;
+  int penalty;
+};
+@
+
+@<Auxiliary Local Functions (metafont.c)@>+=
+struct tex_penalty_token *new_tex_penalty(void){
+  struct tex_penalty_token *t;
+  t = (struct tex_penalty_token *)
+                             temporary_alloc(sizeof(struct tex_penalty_token));
+  t -> type = TEX_PENALTY;
+  return t;
+}
+@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
