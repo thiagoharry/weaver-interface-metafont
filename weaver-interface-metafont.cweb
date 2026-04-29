@@ -278,6 +278,8 @@ Imagens Vazias \indice{178}
 
 22.1.6. Penalidades
 
+22.1.7. Formatação
+
 Apêndice A: Tratamento de Erros \indice{291}
 
 A.1. ERROR\_DISCONTINUOUS\_PATH \indice{295}
@@ -19143,6 +19145,33 @@ struct tex_penalty_token *new_tex_penalty(void){
 }
 @
 
+\subsubsecao{22.1.6. Formatações}
+
+Formatações são mudanças de variáveis feitas na fonte WeaveFont. Tais
+mudanças são feitas para que o estilo dos glifos possa mudar (negrito,
+itálico, tamanho da fonte) ao longo de sua renderização.
+
+Uma formatação é formada pela variável interna à fonte tipográfica
+será mudada e um número em ponto flutuante representando o novo valor.
+
+@<Estrutura de Dados Locais (metafont.c)@>+=
+struct tex_format_token{
+  int type;
+  struct tex_token *prev, *next;
+  struct named_variable *var;
+  float value;  
+};
+@
+
+@<Funções Auxiliares Locais (metafont.c)@>+=
+struct tex_format_token *new_tex_format(void){
+  struct tex_format_token *t;
+  t = (struct tex_format_token *)
+                              temporary_alloc(sizeof(struct tex_format_token));
+  t -> type = TEX_FORMAT;
+  return t;
+}
+@
 
 \secao{Apêndice A: Tratamento de Erros}
 

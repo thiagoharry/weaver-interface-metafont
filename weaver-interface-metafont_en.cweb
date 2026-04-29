@@ -263,6 +263,8 @@
 
 22.1.6. Penalties
 
+22.1.7. Formatting
+
 Appendix A: Handling Errors \indice{294}
 
 A.1. ERROR\_DISCONTINUOUS\_PATH \indice{298}
@@ -18827,6 +18829,36 @@ struct tex_penalty_token *new_tex_penalty(void){
   return t;
 }
 @
+
+\subsubsecao{22.1.7. Formats}
+
+Formats are changes to variables made in the WeaveFont source. Such
+changes are made so that the style of glyphs can change (bold, italic,
+font size) during their rendering.
+
+A format consists of an internal variable of the typographic font
+which will be changed and a floating-point number representing the new
+value.
+
+@<Local Data Structures (metafont.c)@>+=
+struct tex_format_token{
+  int type;
+  struct tex_token *prev, *next;
+  struct named_variable *var;
+  float value;  
+};
+@
+
+@<Auxiliary Local Functions (metafont.c)@>+=
+struct tex_format_token *new_tex_format(void){
+  struct tex_format_token *t;
+  t = (struct tex_format_token *)
+                              temporary_alloc(sizeof(struct tex_format_token));
+  t -> type = TEX_FORMAT;
+  return t;
+}
+@
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
