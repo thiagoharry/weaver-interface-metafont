@@ -2575,7 +2575,36 @@ void test_renderchar_command(void){
   _Wdestroy_metafont(mf);
 }
 
-
+void test_tex(void){
+  struct generic_token *first, *last;
+  struct metafont *mf;
+  struct context *cx;
+  struct named_variable *count;
+  struct numeric_variable *numeric_count;
+  GLuint glyph = 0;
+  bool ret;
+  char read_char[4];
+  int width = 0, height = 0, depth = -1, italcorr = -1, kerning = -1;
+  char tex[] = "fflffiflfiff-----``''";
+  char *c = tex;
+  mf = init_metafont("tests/ligatures.mf");
+  cx = init_context(mf);
+  lexer(mf,  "tests/ligatures.mf", &first, &last);
+  ret = eval_program(mf, cx, first, last);
+  if(!ret)
+    _Wprint_metafont_error(mf);
+  count = (struct named_variable *) mf -> named_variables;
+  numeric_count = (struct numeric_variable *) count -> var;
+  do{
+    c = tex_readchar(mf, c, read_char);
+    ret = _Wrender_glyph(mf, read_char, "", &glyph, &width, &height,
+			 &depth, &italcorr, &kerning);
+  }while(read_char[0] != '\0');
+  assert("Testing WeaveTeX ligatures", numeric_count -> value == 9.0);
+  free_token_list(first);
+  destroy_context(cx);
+  _Wdestroy_metafont(mf);
+}
 
 bool create_metafont(struct metafont **mf, struct context **cx, char *source){
   FILE *fp;
@@ -3004,6 +3033,7 @@ int main(void){
   test_prime_computing();
   test_shipit_command();
   test_renderchar_command();
+  test_tex();
 #if !defined(__EMSCRIPTEN__)
   test_errors();
 #endif

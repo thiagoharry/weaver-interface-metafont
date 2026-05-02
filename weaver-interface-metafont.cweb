@@ -264,7 +264,7 @@ Imagens Vazias \indice{178}
 
 22. WeaveTeX: Nosso Sistema Tipográfico
 
-22.1. WeaveTeX: O Analisador Léxico
+22.1. WeaveTeX: Tokens
 
 22.1.1. Caixa
 
@@ -279,6 +279,10 @@ Imagens Vazias \indice{178}
 22.1.6. Penalidades
 
 22.1.7. Formatação
+
+22.2. WeaveTeX: Analizador Léxico
+
+22.2.1. Lendo UTF-8 e Interpretando Ligaduras
 
 Apêndice A: Tratamento de Erros \indice{291}
 
@@ -18955,7 +18959,7 @@ páginas. Felizmente, a linguagem WeaveTeX não precisa ser tão complexa
 como WeaveFont. A ideia é que ela seja tão direta que na maioria das
 vezes será usada de forma transparente.
 
-\subsecao{22.1. WeaveTeX: O Analisador Léxico}
+\subsecao{22.1. WeaveTeX: Tokens}
 
 Assim como na linguagem WeaveFont, começamos a definir WeaveTeX pelo
 analisador léxico. Seu papel é converter uma string de caracteres
@@ -19145,7 +19149,7 @@ struct tex_penalty_token *new_tex_penalty(void){
 }
 @
 
-\subsubsecao{22.1.6. Formatações}
+\subsubsecao{22.1.7. Formatações}
 
 Formatações são mudanças de variáveis feitas na fonte WeaveFont. Tais
 mudanças são feitas para que o estilo dos glifos possa mudar (negrito,
@@ -19170,6 +19174,154 @@ struct tex_format_token *new_tex_format(void){
                               temporary_alloc(sizeof(struct tex_format_token));
   t -> type = TEX_FORMAT;
   return t;
+}
+@
+
+\subsubsecao{22.2. WeaveTeX: O Analisador Léxico}
+
+O analisador léxico irá receber uma string terminada pelo caractere
+nulo. Ela irá retornar uma lista encadeada de tokens obtidos após
+interpretar a string.
+
+\subsubsecao{22.2.1. Lendo UTF-8 e Interpretando Ligaduras}
+
+A string será interpretada como uma sequência de caracteres Unicode
+codificados no formato UTF-8. Além disso, a seguinte sequência de
+caracteres será interpretada de maneira diferente: ``ff'', ``fi'',
+``fl'', ``ffi'', ``ffl'', ``-{}-'', ``-{}-{}-'', além do abrir e
+fechar de aspas representado por dois acentos graves e dois acentos
+agudos. Tais sequências devem ser substituídas por ligaduras
+correspondentes, mas somente se a fonte com a qual estivermos
+trabalhando suportar o glifo Unicode de tais ligaduras.
+
+Uma função que lê tal tipo de string e obtém o próximo caractere
+Unicode deve então receber como parâmetro uma estutura metafont, um
+ponteiro para mo próximo caractere da string a ser lido e um ponteiro
+para um buffer de 4 bytes que armazenará o caractere UTF-8 obtido. A
+função deve retornar um ponteiro para onde estará o próximo caractere
+daquela string a ser lido. Se não houver outro caractere (chegamos no
+fim da string), o endereço retornado é o mesmo do caractere que foi
+lido. Em caso de erro, a função retorna NULL.
+
+@<Declaração de Função Local (metafont.c)@>+=
+unsigned char *tex_readchar(struct metafont *mf, unsigned char *source,
+                            unsigned char result[4]);
+@
+
+Assumindo que não temos ligaduras, o próximo caractere é lido com:
+
+@<Funções Auxiliares Locais (metafont.c)@>+=
+unsigned char *tex_readchar(struct metafont *mf, unsigned char *source,
+                            unsigned char result[4]){
+  result[0] = result[1] = result[2] = result[3] = '\0';
+  @<TeX Parser: Trata Ligaduras@>
+  // UTF-8: 1 byte: 0yyyzzzz
+  if((source[0] & 0x80) == 0){
+    result[0] = source[0];
+    if(source[0] == '\0')
+      return source;
+    else
+      return source + 1;
+  }
+  // UTF-8: 2 bytes: 110xxxyy 10yyzzzz
+  else if((source[0] & 0xe0) == 0xc0 &&
+          (source[1] & 0xc0) == 0x80){
+    result[0] = source[0];
+    result[1] = source[1];
+    return source + 2;
+  }
+  // UTF-8: 3 bytes: 1110wwww 10xxxxyy 10yyzzzz
+  else if((source[0] & 0xf0) == 0xe0 &&
+          (source[1] & 0xc0) == 0x80 &&
+	  (source[2] & 0xc0) == 0x80){
+    result[0] = source[0];
+    result[1] = source[1];
+    result[2] = source[2];
+    return source + 3;  
+  }
+  // UTF-8: 4 bytes: 11110uvv 10vvwwww 10xxxxyy 10yyzzzz
+  else if((source[0] & 0xf8) == 0xf0 &&
+          (source[1] & 0xc0) == 0x80 &&
+	  (source[2] & 0xc0) == 0x80 &&
+	  (source[2] & 0xc0) == 0x80){
+    result[0] = source[0];
+    result[1] = source[1];
+    result[2] = source[2];
+    result[3] = source[3];
+    return source + 4;  
+  }
+  else return NULL;
+}
+@
+
+E aqui é o código que trata ligaduras entes de processar o caso mais
+geral de caractere UTF-8:
+
+@<TeX Parser: Trata Ligaduras@>=
+if(source[0] == 'f'){
+  if(source[1] == 'f'){
+    if(source[2] == 'i'){ // ffi: U+FB03
+      if(mf -> glyphs[154] != NULL && mf -> glyphs[154][3].begin != NULL){
+        memcpy(result, "ﬃ", 3);
+        return source + 3;
+      }
+    }
+    else if(source[2] == 'l'){ // ffl: U+FB04
+      if(mf -> glyphs[154] != NULL && mf -> glyphs[154][4].begin != NULL){
+        memcpy(result, "ﬄ", 3);
+        return source + 3;
+      }
+    }
+    else{ // ff: U+FB00
+      if(mf -> glyphs[154] != NULL && mf -> glyphs[154][0].begin != NULL){
+        memcpy(result, "ﬀ", 3);
+        return source + 2;
+      }
+    }
+  }
+  else if(source[1] == 'i'){ // fi: U+FB01
+    if(mf -> glyphs[154] != NULL && mf -> glyphs[154][1].begin != NULL){
+      memcpy(result, "ﬁ", 3);
+      return source + 2;
+    }
+  }
+  else if(source[1] == 'l'){ // fl: U+FB02
+    if(mf -> glyphs[154] != NULL && mf -> glyphs[154][2].begin != NULL){
+      memcpy(result, "ﬂ", 3);
+      return source + 2;
+    }
+  }
+}
+@
+
+Ligaduras baseadas em traços e aspas:
+
+@<TeX Parser: Trata Ligaduras@>+=
+else if(source[0] == '-' && source[1] == '-'){
+  if(source[2] == '-'){ // ---: U+2014
+    if(mf -> glyphs[72] != NULL && mf -> glyphs[72][20].begin != NULL){
+      memcpy(result, "—", 3);
+      return source + 3;
+    }
+  }
+  else{ // --: U+2013
+    if(mf -> glyphs[72] != NULL && mf -> glyphs[72][19].begin != NULL){
+      memcpy(result, "–", 3);
+      return source + 2;
+    }
+  }
+}
+else if(source[0] == '`' && source[1] == '`'){ // ``: U+201C
+  if(mf -> glyphs[72] != NULL && mf -> glyphs[72][28].begin != NULL){
+    memcpy(result, "“", 3);
+    return source + 2;
+  }
+}
+else if(source[0] == '\'' && source[1] == '\''){ // '': U+201D
+  if(mf -> glyphs[72] != NULL && mf -> glyphs[72][29].begin != NULL){
+    memcpy(result, "”", 3);
+    return source + 2;
+  }
 }
 @
 

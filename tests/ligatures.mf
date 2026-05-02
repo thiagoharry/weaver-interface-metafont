@@ -1,0 +1,48 @@
+numeric count;
+
+count = 0;
+
+beginchar("f", 1, 1, 0);
+endchar;
+
+beginchar("i", 1, 1, 0);
+endchar;
+
+beginchar("l", 1, 1, 0);
+endchar;
+
+beginchar("ﬃ", 1, 1, 0);
+  count = count + 1;
+endchar;
+
+beginchar("ﬄ", 1, 1, 0);
+  count = count + 1;
+endchar;
+
+beginchar("ﬀ", 1, 1, 0);
+  count = count + 1;
+endchar;
+
+beginchar("ﬁ", 1, 1, 0);
+  count = count + 1;
+endchar;
+
+beginchar("ﬂ", 1, 1, 0);
+  count = count + 1;
+endchar;
+
+beginchar("—", 1, 1, 0);
+  count = count + 1;
+endchar;
+
+beginchar("–", 1, 1, 0);
+  count = count + 1;
+endchar;
+
+beginchar("“", 1, 1, 0);
+  count = count + 1;
+endchar;
+
+beginchar("”", 1, 1, 0);
+  count = count + 1;
+endchar;

@@ -249,7 +249,7 @@
 
 22. WeaveTeX: Our Typographic System
 
-22.1. WeaveTeX: The Lexer
+22.1. WeaveTeX: Tokens
 
 22.1.1. Box
 
@@ -263,7 +263,12 @@
 
 22.1.6. Penalties
 
-22.1.7. Formatting
+22.1.7. Formats
+
+22.2. WeaveTeX: Lexer
+
+22.2.1. Reading UTF-8 and Interpreting Ligatures
+
 
 Appendix A: Handling Errors \indice{294}
 
@@ -18642,7 +18647,7 @@ paragraphs, and pages. Fortunately, the WeaveTeX language does not
 need to be as complex as WeaveFont. The idea is that it will be so
 straightforward that most of the time it will be used transparently.
 
-\subsecao{22.1. WeaveTeX: The Lexer}
+\subsecao{22.1. WeaveTeX: Tokens}
 
 As in the WeaveFont language, we begin defining WeaveTeX with the
 lexical analyzer. Its role is to convert a UTF-8 character string into
@@ -18856,6 +18861,155 @@ struct tex_format_token *new_tex_format(void){
                               temporary_alloc(sizeof(struct tex_format_token));
   t -> type = TEX_FORMAT;
   return t;
+}
+@
+
+\subsubsecao{22.2. WeaveTeX: Lexer}
+
+The lexical analyzer will receive a string terminated by the null
+character. It will return a linked list of tokens obtained after
+interpreting the string.
+
+\subsubsecao{22.2.1. Reading UTF-8 and Interpreting Ligatures}
+
+The string will be interpreted as a sequence of Unicode characters
+encoded in UTF-8 format. Additionally, the following sequences of
+characters will be interpreted differently: ``ff'', ``fi'', ``fl'',
+``ffi'', ``ffl'', ``-{}-'', ``-{}-{}-'', as well as the opening and
+closing quotation marks represented by two grave accents and two acute
+accents. Such sequences must be replaced by corresponding ligatures,
+but only if the font we are working with supports the Unicode glyph
+for those ligatures.
+
+A function that reads such a string and obtains the next Unicode
+character must then receive as parameters a metafont structure, a
+pointer to the next character of the string to be read, and a pointer
+to a 4-byte buffer that will store the obtained UTF-8 character. The
+function must return a pointer to where the next character of that
+string to be read will be. If there is no further character (we have
+reached the end of the string), the returned address is the same as
+that of the read character. In case of error, the function returns
+NULL.
+
+@<Local Function Declaration (metafont.c)@>+=
+unsigned char *tex_readchar(struct metafont *mf, unsigned char *source,
+                            unsigned char result[4]);
+@
+
+Assuming we have no ligatures, the next character is read with:
+
+@<Auxiliary Local Functions (metafont.c)@>+=
+unsigned char *tex_readchar(struct metafont *mf, unsigned char *source,
+                            unsigned char result[4]){
+  result[0] = result[1] = result[2] = result[3] = '\0';
+  @<TeX Parser: Ligatures@>
+  // UTF-8: 1 byte: 0yyyzzzz
+  if((source[0] & 0x80) == 0){
+    result[0] = source[0];
+    if(source[0] == '\0')
+      return source;
+    else
+      return source + 1;
+  }
+  // UTF-8: 2 bytes: 110xxxyy 10yyzzzz
+  else if((source[0] & 0xe0) == 0xc0 &&
+          (source[1] & 0xc0) == 0x80){
+    result[0] = source[0];
+    result[1] = source[1];
+    return source + 2;
+  }
+  // UTF-8: 3 bytes: 1110wwww 10xxxxyy 10yyzzzz
+  else if((source[0] & 0xf0) == 0xe0 &&
+          (source[1] & 0xc0) == 0x80 &&
+	  (source[2] & 0xc0) == 0x80){
+    result[0] = source[0];
+    result[1] = source[1];
+    result[2] = source[2];
+    return source + 3;  
+  }
+  // UTF-8: 4 bytes: 11110uvv 10vvwwww 10xxxxyy 10yyzzzz
+  else if((source[0] & 0xf8) == 0xf0 &&
+          (source[1] & 0xc0) == 0x80 &&
+	  (source[2] & 0xc0) == 0x80 &&
+	  (source[2] & 0xc0) == 0x80){
+    result[0] = source[0];
+    result[1] = source[1];
+    result[2] = source[2];
+    result[3] = source[3];
+    return source + 4;  
+  }
+  else return NULL;
+}
+@
+
+And here is the code that handles ligatures before processing the more
+general UTF-8 character case:
+
+@<TeX Parser: Ligatures@>=
+if(source[0] == 'f'){
+  if(source[1] == 'f'){
+    if(source[2] == 'i'){ // ffi: U+FB03
+      if(mf -> glyphs[154] != NULL && mf -> glyphs[154][3].begin != NULL){
+        memcpy(result, "ﬃ", 3);
+        return source + 3;
+      }
+    }
+    else if(source[2] == 'l'){ // ffl: U+FB04
+      if(mf -> glyphs[154] != NULL && mf -> glyphs[154][4].begin != NULL){
+        memcpy(result, "ﬄ", 3);
+        return source + 3;
+      }
+    }
+    else{ // ff: U+FB00
+      if(mf -> glyphs[154] != NULL && mf -> glyphs[154][0].begin != NULL){
+        memcpy(result, "ﬀ", 3);
+        return source + 2;
+      }
+    }
+  }
+  else if(source[1] == 'i'){ // fi: U+FB01
+    if(mf -> glyphs[154] != NULL && mf -> glyphs[154][1].begin != NULL){
+      memcpy(result, "ﬁ", 3);
+      return source + 2;
+    }
+  }
+  else if(source[1] == 'l'){ // fl: U+FB02
+    if(mf -> glyphs[154] != NULL && mf -> glyphs[154][2].begin != NULL){
+      memcpy(result, "ﬂ", 3);
+      return source + 2;
+    }
+  }
+}
+@
+
+Ligatures based on dashes and quotes:
+
+@<TeX Parser: Ligatures@>+=
+else if(source[0] == '-' && source[1] == '-'){
+  if(source[2] == '-'){ // ---: U+2014
+    if(mf -> glyphs[72] != NULL && mf -> glyphs[72][20].begin != NULL){
+      memcpy(result, "—", 3);
+      return source + 3;
+    }
+  }
+  else{ // --: U+2013
+    if(mf -> glyphs[72] != NULL && mf -> glyphs[72][19].begin != NULL){
+      memcpy(result, "–", 3);
+      return source + 2;
+    }
+  }
+}
+else if(source[0] == '`' && source[1] == '`'){ // ``: U+201C
+  if(mf -> glyphs[72] != NULL && mf -> glyphs[72][28].begin != NULL){
+    memcpy(result, "“", 3);
+    return source + 2;
+  }
+}
+else if(source[0] == '\'' && source[1] == '\''){ // '': U+201D
+  if(mf -> glyphs[72] != NULL && mf -> glyphs[72][29].begin != NULL){
+    memcpy(result, "”", 3);
+    return source + 2;
+  }
 }
 @
 
