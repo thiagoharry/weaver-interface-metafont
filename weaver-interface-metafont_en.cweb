@@ -269,6 +269,7 @@
 
 22.2.1. Reading UTF-8 and Interpreting Ligatures
 
+22.2.2. Lexer Loop
 
 Appendix A: Handling Errors \indice{294}
 
@@ -19010,6 +19011,47 @@ else if(source[0] == '\'' && source[1] == '\''){ // '': U+201D
     memcpy(result, "”", 3);
     return source + 2;
   }
+}
+@
+
+\subsubsecao{22.2.2. Lexer Loop}
+
+The function that actually performs the lexical analysis must receive
+a string and return a linked list of WeaveTeX tokens:
+
+@<Local Function Declaration (metafont.c)@>+=
+struct tex_token *tex_lexer(struct metafont *mf, unsigned char *source);
+@
+
+The function consists of a loop where, as an invariant, we will always
+keep the next UTF-8 character that has yet to be interpreted and
+converted into a token, as well as the following character that comes
+after it. Knowing the next character is useful so that we can
+correctly compute kerning. Additionally, we will have pointers to
+where in the input string these two subsequent characters are located,
+and a pointer to the next character that has not yet been interpreted.
+
+The loop must be interrupted as soon as we detect that the next
+character is the end of the string, or if the pointer to this
+character actually becomes a null pointer due to an error.
+
+In the end, the function returns the list of tokens, returning a
+pointer to the first token in the list.
+
+@<Auxiliary Local Functions (metafont.c)@>+=
+struct tex_token *tex_lexer(struct metafont *mf, unsigned char *source){
+  struct tex_token *first_token = NULL, *last_token = NULL;
+  unsigned char *next_char = source, *next_next_char, *next_next_next_char;
+  unsigned char next_utf8[4], next_next_utf8[4];
+  next_next_char = tex_readchar(mf, next_char, next_utf8);
+  while(next_char != NULL && next_utf8[0] != '\0'){
+    next_next_next_char = tex_readchar(mf, next_next_char, next_next_utf8);
+    // (...)
+    next_char = next_next_char;
+    next_next_char = next_next_next_char;
+    memcpy(next_utf8, next_next_utf8, 4);
+  }
+  return first_token;
 }
 @
 

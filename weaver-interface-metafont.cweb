@@ -284,6 +284,8 @@ Imagens Vazias \indice{178}
 
 22.2.1. Lendo UTF-8 e Interpretando Ligaduras
 
+22.2.2. O Loop do Analisador Léxico
+
 Apêndice A: Tratamento de Erros \indice{291}
 
 A.1. ERROR\_DISCONTINUOUS\_PATH \indice{295}
@@ -19324,6 +19326,49 @@ else if(source[0] == '\'' && source[1] == '\''){ // '': U+201D
   }
 }
 @
+
+\subsubsecao{22.2.2. O Loop do Analisador Léxico}
+
+A função que efetivamente faz a análise léxica deve receber uma string
+e retornar uma lista encadeada de tokens WeaveTeX:
+
+@<Declaração de Função Local (metafont.c)@>+=
+struct tex_token *tex_lexer(struct metafont *mf, unsigned char *source);
+@
+
+A função consiste em um laço de repetição onde como invariante iremos
+sempre manter o próximo caractere UTF-8 que ainda falta ser
+interpretado e convertido em um token, e o caractere seguinte que vem
+depois dele. Saber o próximo caractere é útil para podermos computar
+corretamente o kerning. Além disso, teremos ponteiros para onde na
+string de entrada estão estes dois caracteres seguintes, e um ponteiro
+para o próximo caractere que ainda não foi interpretado.
+
+O laço de repetição deve ser interrompido assim que detectarmos que o
+próximo caractere é o fim da string ou se o ponteiro para este
+caractere na verdade se tornou um ponteiro nulo devido a erro.
+
+Ao fim, a funçao retorna a lista de tokens, retornando o ponteiro para
+o primeiro token da lista.
+
+@<Funções Auxiliares Locais (metafont.c)@>+=
+struct tex_token *tex_lexer(struct metafont *mf, unsigned char *source){
+  struct tex_token *first_token = NULL, *last_token = NULL;
+  unsigned char *next_char = source, *next_next_char, *next_next_next_char;
+  unsigned char next_utf8[4], next_next_utf8[4];
+  next_next_char = tex_readchar(mf, next_char, next_utf8);
+  while(next_char != NULL && next_utf8[0] != '\0'){
+    next_next_next_char = tex_readchar(mf, next_next_char, next_next_utf8);
+    // (...)
+    next_char = next_next_char;
+    next_next_char = next_next_next_char;
+    memcpy(next_utf8, next_next_utf8, 4);
+  }
+  return first_token;
+}
+@
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \secao{Apêndice A: Tratamento de Erros}
 
