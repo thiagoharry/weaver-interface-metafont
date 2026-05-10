@@ -286,6 +286,8 @@ Imagens Vazias \indice{178}
 
 22.2.2. O Loop do Analisador Léxico
 
+22.2.3. Comentários
+
 Apêndice A: Tratamento de Erros \indice{291}
 
 A.1. ERROR\_DISCONTINUOUS\_PATH \indice{295}
@@ -19342,7 +19344,9 @@ interpretado e convertido em um token, e o caractere seguinte que vem
 depois dele. Saber o próximo caractere é útil para podermos computar
 corretamente o kerning. Além disso, teremos ponteiros para onde na
 string de entrada estão estes dois caracteres seguintes, e um ponteiro
-para o próximo caractere que ainda não foi interpretado.
+para o próximo caractere que ainda não foi interpretado. Vamos
+declarar também uma variável para armazenar o estado do nosso
+analisador, o qual descreveremos na próxima seção.
 
 O laço de repetição deve ser interrompido assim que detectarmos que o
 próximo caractere é o fim da string ou se o ponteiro para este
@@ -19354,18 +19358,36 @@ o primeiro token da lista.
 @<Funções Auxiliares Locais (metafont.c)@>+=
 struct tex_token *tex_lexer(struct metafont *mf, unsigned char *source){
   struct tex_token *first_token = NULL, *last_token = NULL;
+  int state = 'N';
   unsigned char *next_char = source, *next_next_char, *next_next_next_char;
   unsigned char next_utf8[4], next_next_utf8[4];
   next_next_char = tex_readchar(mf, next_char, next_utf8);
   while(next_char != NULL && next_utf8[0] != '\0'){
     next_next_next_char = tex_readchar(mf, next_next_char, next_next_utf8);
-    // (...)
+    @<Análise Léxica TeX@>
+continue_lexer_loop:
     next_char = next_next_char;
     next_next_char = next_next_next_char;
     memcpy(next_utf8, next_next_utf8, 4);
   }
   return first_token;
 }
+@
+
+\subsubsection{22.2.3. Comentários}
+
+Toda vez que o caractere de porcentagem é encontrado, este caractere e
+todo o restante da linha (incluindo a quebra de linha) devem ser
+descartados. Isso pode ser feito com o código abaixo:
+
+@<Análise Léxica TeX@>=
+  if(*next_char == '%'){
+    while(*next_char != '\n' && *next_char != '\0')
+      next_char ++;
+    next_next_char = tex_readchar(mf, next_char, next_utf8);
+    next_next_next_char = tex_readchar(mf, next_next_char, next_next_utf8);
+    goto continue_lexer_loop;
+  }
 @
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

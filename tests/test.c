@@ -2601,9 +2601,16 @@ void test_tex(void){
 			 &depth, &italcorr, &kerning);
   }while(read_char[0] != '\0');
   assert("Testing WeaveTeX ligatures", numeric_count -> value == 9.0);
+  // Commment test:
+  {
+    unsigned char text_with_comment[] = "%Isso é um comentário\n%Isso também.";
+    struct tex_token *t = tex_lexer(mf, text_with_comment);
+    assert("Testing WeaveTeX comments", t == NULL);
+  }
   free_token_list(first);
   destroy_context(cx);
   _Wdestroy_metafont(mf);
+
 }
 
 bool create_metafont(struct metafont **mf, struct context **cx, char *source){

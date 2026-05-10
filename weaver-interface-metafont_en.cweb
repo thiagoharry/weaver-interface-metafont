@@ -271,6 +271,8 @@
 
 22.2.2. Lexer Loop
 
+22.2.3. Comments
+
 Appendix A: Handling Errors \indice{294}
 
 A.1. ERROR\_DISCONTINUOUS\_PATH \indice{298}
@@ -19030,6 +19032,9 @@ after it. Knowing the next character is useful so that we can
 correctly compute kerning. Additionally, we will have pointers to
 where in the input string these two subsequent characters are located,
 and a pointer to the next character that has not yet been interpreted.
+We'll also declare a variable to store the lexer state, which will be
+explained in next section.
+
 
 The loop must be interrupted as soon as we detect that the next
 character is the end of the string, or if the pointer to this
@@ -19041,18 +19046,36 @@ pointer to the first token in the list.
 @<Auxiliary Local Functions (metafont.c)@>+=
 struct tex_token *tex_lexer(struct metafont *mf, unsigned char *source){
   struct tex_token *first_token = NULL, *last_token = NULL;
+  char state = 'N';
   unsigned char *next_char = source, *next_next_char, *next_next_next_char;
   unsigned char next_utf8[4], next_next_utf8[4];
   next_next_char = tex_readchar(mf, next_char, next_utf8);
   while(next_char != NULL && next_utf8[0] != '\0'){
     next_next_next_char = tex_readchar(mf, next_next_char, next_next_utf8);
-    // (...)
+    @<TeX Lexer@>
+continue_lexer_loop:
     next_char = next_next_char;
     next_next_char = next_next_next_char;
     memcpy(next_utf8, next_next_utf8, 4);
   }
   return first_token;
 }
+@
+
+\subsubsection{22.2.3. Comments}
+
+Whenever a percent character is found, this character and the
+remainder of the line (including the line break) must be
+discarded. This can be done with the code below:
+
+@<TeX Lexer@>=
+  if(*next_char == '%'){
+    while(*next_char != '\n' && *next_char != '\0')
+      next_char ++;
+    next_next_char = tex_readchar(mf, next_char, next_utf8);
+    next_next_next_char = tex_readchar(mf, next_next_char, next_next_utf8);
+    goto continue_lexer_loop;
+  }
 @
 
 
