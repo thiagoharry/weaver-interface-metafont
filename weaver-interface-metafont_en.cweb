@@ -265,6 +265,8 @@
 
 22.1.7. Formats
 
+22.1.8. Memory Deallocation
+
 22.2. WeaveTeX: Lexer
 
 22.2.1. Reading UTF-8 and Interpreting Ligatures
@@ -272,6 +274,8 @@
 22.2.2. Lexer Loop
 
 22.2.3. Comments
+
+22.2.4. Dealing with Spaces and Line Breaks
 
 Appendix A: Handling Errors \indice{294}
 
@@ -18721,10 +18725,14 @@ struct tex_kern_token{
 @
 
 @<Auxiliary Local Functions (metafont.c)@>+=
-struct tex_kern_token *new_tex_kern(void){
+struct tex_kern_token *new_tex_kern(float size){
   struct tex_kern_token *t;
   t = (struct tex_kern_token *) temporary_alloc(sizeof(struct tex_kern_token));
-  t -> type = TEX_KERN;
+  if(t != NULL){
+    t -> size = size;
+    t -> next = t -> prev = NULL;
+    t -> type = TEX_KERN;
+  }
   return t;
 }
 @
@@ -18866,6 +18874,23 @@ struct tex_format_token *new_tex_format(void){
   return t;
 }
 @
+
+\subsubsection{22.1.8. Memory Deallocation}
+
+We can deallocate a list of WeaveTeX tokens using:
+
+@<Auxiliary Local Functions (metafont.c)@>+=
+void free_tex_tokens(struct tex_token *t){
+  if(temporary_free != NULL){
+    while(t != NULL){
+      struct tex_token *next = t -> next;
+      temporary_free(t);
+      t = next;
+    }
+  }
+}
+@
+
 
 \subsubsecao{22.2. WeaveTeX: Lexer}
 
@@ -19045,8 +19070,9 @@ pointer to the first token in the list.
 
 @<Auxiliary Local Functions (metafont.c)@>+=
 struct tex_token *tex_lexer(struct metafont *mf, unsigned char *source){
-  struct tex_token *first_token = NULL, *last_token = NULL;
-  char state = 'N';
+  struct tex_token *first_token, *last_token = NULL;
+  first_token = last_token = (struct tex_token *) new_tex_kern(0.0);
+  bool beginning_of_line = true;
   unsigned char *next_char = source, *next_next_char, *next_next_next_char;
   unsigned char next_utf8[4], next_next_utf8[4];
   next_next_char = tex_readchar(mf, next_char, next_utf8);
@@ -19076,6 +19102,39 @@ discarded. This can be done with the code below:
     next_next_next_char = tex_readchar(mf, next_next_char, next_next_utf8);
     goto continue_lexer_loop;
   }
+@
+
+\subsubsection{22.2.4. Dealing with Spaces and Line Breaks}
+
+WeaveTeX treats line breaks as spaces, two or more successive spaces
+as a single space, and a blank line denotes the end of the
+paragraph. Whitespace at the end of the line is also ignored.
+
+Such rules can be implemented with:
+
+@<TeX Lexer@>+=
+if(next_utf8[0] == ' ' || next_utf8[0] == '\t'){
+  if(next_next_utf8[0] == ' ' || next_next_utf8[0] == '\t' ||
+     next_next_utf8[0] == '\n')
+    goto continue_lexer_loop;
+  else{
+    beginning_of_line = false;
+    //@<TeX: Spacing Token@>
+    goto continue_lexer_loop;
+  }
+}
+else if(next_utf8[0] == '\n' || next_utf8[0] == '\0'){
+  if(beginning_of_line){
+    //@<TeX: End of Paragraph@>
+    goto continue_lexer_loop;
+  }
+  else{
+    //@<TeX: Spacing Token@>
+    beginning_of_line = true;
+    goto continue_lexer_loop;
+  }
+}
+beginning_of_line = false;
 @
 
 

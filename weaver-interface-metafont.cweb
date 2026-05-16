@@ -280,6 +280,8 @@ Imagens Vazias \indice{178}
 
 22.1.7. Formatação
 
+22.1.8. Desalocação de Memória
+
 22.2. WeaveTeX: Analizador Léxico
 
 22.2.1. Lendo UTF-8 e Interpretando Ligaduras
@@ -287,6 +289,8 @@ Imagens Vazias \indice{178}
 22.2.2. O Loop do Analisador Léxico
 
 22.2.3. Comentários
+
+22.2.4. Lidando com Espaços e Quebras
 
 Apêndice A: Tratamento de Erros \indice{291}
 
@@ -19034,10 +19038,14 @@ struct tex_kern_token{
 @
 
 @<Funções Auxiliares Locais (metafont.c)@>+=
-struct tex_kern_token *new_tex_kern(void){
+struct tex_kern_token *new_tex_kern(float size){
   struct tex_kern_token *t;
   t = (struct tex_kern_token *) temporary_alloc(sizeof(struct tex_kern_token));
-  t -> type = TEX_KERN;
+  if(t != NULL){
+    t -> size = size;
+    t -> next = t -> prev = NULL;
+    t -> type = TEX_KERN;
+  }
   return t;
 }
 @
@@ -19178,6 +19186,22 @@ struct tex_format_token *new_tex_format(void){
                               temporary_alloc(sizeof(struct tex_format_token));
   t -> type = TEX_FORMAT;
   return t;
+}
+@
+
+\subsubsecao{22.1.8. Desalocação de Memória}
+
+Para desalocar uma lista de tokens WeaveTeX, podemos usar:
+
+@<Funções Auxiliares Locais (metafont.c)@>+=
+void free_tex_tokens(struct tex_token *t){
+  if(temporary_free != NULL){
+    while(t != NULL){
+      struct tex_token *next = t -> next;
+      temporary_free(t);
+      t = next;
+    }
+  }
 }
 @
 
@@ -19344,9 +19368,7 @@ interpretado e convertido em um token, e o caractere seguinte que vem
 depois dele. Saber o próximo caractere é útil para podermos computar
 corretamente o kerning. Além disso, teremos ponteiros para onde na
 string de entrada estão estes dois caracteres seguintes, e um ponteiro
-para o próximo caractere que ainda não foi interpretado. Vamos
-declarar também uma variável para armazenar o estado do nosso
-analisador, o qual descreveremos na próxima seção.
+para o próximo caractere que ainda não foi interpretado.
 
 O laço de repetição deve ser interrompido assim que detectarmos que o
 próximo caractere é o fim da string ou se o ponteiro para este
@@ -19357,8 +19379,9 @@ o primeiro token da lista.
 
 @<Funções Auxiliares Locais (metafont.c)@>+=
 struct tex_token *tex_lexer(struct metafont *mf, unsigned char *source){
-  struct tex_token *first_token = NULL, *last_token = NULL;
-  int state = 'N';
+  struct tex_token *first_token, *last_token = NULL;
+  first_token = last_token = (struct tex_token *) new_tex_kern(0.0);
+  bool beginning_of_line = true;
   unsigned char *next_char = source, *next_next_char, *next_next_next_char;
   unsigned char next_utf8[4], next_next_utf8[4];
   next_next_char = tex_readchar(mf, next_char, next_utf8);
@@ -19388,6 +19411,39 @@ descartados. Isso pode ser feito com o código abaixo:
     next_next_next_char = tex_readchar(mf, next_next_char, next_next_utf8);
     goto continue_lexer_loop;
   }
+@
+
+\subsubsection{22.2.4. Lidando com Espaços e Quebras} % Pág 57 TeX Book
+
+WeaveTeX trata quebras de linhas como espaços, dois ou mais espaços
+sucessivos como um só espaço e uma linha em branco denota o fim do
+parágrafo. Espaços em branco no fim da linha são também ignorados.
+
+Tais regras podem ser implementadas com:
+
+@<Análise Léxica TeX@>+=
+if(next_utf8[0] == ' ' || next_utf8[0] == '\t'){
+  if(next_next_utf8[0] == ' ' || next_next_utf8[0] == '\t' ||
+     next_next_utf8[0] == '\n')
+    goto continue_lexer_loop;
+  else{
+    beginning_of_line = false;
+    //@<TeX: Token de Espaço@>
+    goto continue_lexer_loop;
+  }
+}
+else if(next_utf8[0] == '\n' || next_utf8[0] == '\0'){
+  if(beginning_of_line){
+    //@<TeX: Quebra de Parágrafo@>
+    goto continue_lexer_loop;
+  }
+  else{
+    //@<TeX: Token de Espaço@>
+    beginning_of_line = true;
+    goto continue_lexer_loop;
+  }
+}
+beginning_of_line = false;
 @
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

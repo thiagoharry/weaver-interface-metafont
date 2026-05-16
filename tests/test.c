@@ -2604,8 +2604,10 @@ void test_tex(void){
   // Commment test:
   {
     unsigned char text_with_comment[] = "%Isso é um comentário\n%Isso também.";
-    struct tex_token *t = tex_lexer(mf, text_with_comment);
-    assert("Testing WeaveTeX comments", t == NULL);
+    struct tex_kern_token *t = (struct tex_kern_token *) tex_lexer(mf, text_with_comment);
+    assert("Testing WeaveTeX comments", t != NULL && t -> type == TEX_KERN &&
+	   t -> next == NULL);
+    free_tex_tokens((struct tex_token *) t);
   }
   free_token_list(first);
   destroy_context(cx);
