@@ -292,6 +292,8 @@ Imagens Vazias \indice{178}
 
 22.2.4. Lidando com Espaços e Quebras
 
+22.2.5. Espaçamento entre Palavras
+
 Apêndice A: Tratamento de Erros \indice{291}
 
 A.1. ERROR\_DISCONTINUOUS\_PATH \indice{295}
@@ -19067,10 +19069,16 @@ struct tex_glue_token{
 @
 
 @<Funções Auxiliares Locais (metafont.c)@>+=
-struct tex_glue_token *new_tex_glue(void){
+struct tex_glue_token *new_tex_glue(float size, float stretch, float shrink){
   struct tex_glue_token *t;
   t = (struct tex_glue_token *) temporary_alloc(sizeof(struct tex_glue_token));
-  t -> type = TEX_GLUE;
+  if(t != NULL){
+    t -> size = size;
+    t -> stretch = stretch;
+    t -> shrink = shrink;
+    t -> next = t -> prev = NULL;
+    t -> type = TEX_GLUE;
+  }
   return t;
 }
 @
@@ -19385,6 +19393,7 @@ struct tex_token *tex_lexer(struct metafont *mf, unsigned char *source){
   unsigned char *next_char = source, *next_next_char, *next_next_next_char;
   unsigned char next_utf8[4], next_next_utf8[4];
   next_next_char = tex_readchar(mf, next_char, next_utf8);
+  float spacefactor = 1000.0;
   while(next_char != NULL && next_utf8[0] != '\0'){
     next_next_next_char = tex_readchar(mf, next_next_char, next_next_utf8);
     @<Análise Léxica TeX@>
@@ -19397,7 +19406,7 @@ continue_lexer_loop:
 }
 @
 
-\subsubsection{22.2.3. Comentários}
+\subsubsecao{22.2.3. Comentários}
 
 Toda vez que o caractere de porcentagem é encontrado, este caractere e
 todo o restante da linha (incluindo a quebra de linha) devem ser
@@ -19413,7 +19422,7 @@ descartados. Isso pode ser feito com o código abaixo:
   }
 @
 
-\subsubsection{22.2.4. Lidando com Espaços e Quebras} % Pág 57 TeX Book
+\subsubsecao{22.2.4. Lidando com Espaços e Quebras} % Pág 57 TeX Book
 
 WeaveTeX trata quebras de linhas como espaços, dois ou mais espaços
 sucessivos como um só espaço e uma linha em branco denota o fim do
@@ -19424,11 +19433,10 @@ Tais regras podem ser implementadas com:
 @<Análise Léxica TeX@>+=
 if(next_utf8[0] == ' ' || next_utf8[0] == '\t'){
   if(next_next_utf8[0] == ' ' || next_next_utf8[0] == '\t' ||
-     next_next_utf8[0] == '\n')
+     next_next_utf8[0] == '\n' || beginning_of_line)
     goto continue_lexer_loop;
   else{
-    beginning_of_line = false;
-    //@<TeX: Token de Espaço@>
+    @<TeX: Token de Espaço@>
     goto continue_lexer_loop;
   }
 }
@@ -19438,13 +19446,112 @@ else if(next_utf8[0] == '\n' || next_utf8[0] == '\0'){
     goto continue_lexer_loop;
   }
   else{
-    //@<TeX: Token de Espaço@>
+    @<TeX: Token de Espaço@>
     beginning_of_line = true;
     goto continue_lexer_loop;
   }
 }
 beginning_of_line = false;
 @
+
+\subsubsecao{22.2.5. Espaçamento entre Palavras}
+
+Por padrão, a cola a ser inserida entre palavras de um texto deve ter
+um tamanho natural de 1/3 pontos tipográficos multiplicado pelo
+tamanho. Ela pode ser esticada em até 1/6 pontos tipográficos vezes o
+tamanho. Pode ser comprimida em até 1/9 pontos tipográficos vezes o
+tamanho. E o espaço extra a ser colocado quando queremos um espaço
+maior (após fim de frase e dois pontos, por exemplo) é de 1/9 pontos
+tipográficos vezes o tamanho.
+
+Tais valores padronizados de 1/3, 1/6, 1/9 e 1/9 podem ser
+sobrescritos pela fonte tipográfica por meio de variáveis globais:
+\monoespaco{normalspace}, \monoespaco{normalstretch},
+\monoespaco{normalshrink} e \monoespaco{extraspace}. Se tais variáveis
+não forem definidas, usamos os valores padrão.
+
+A estrutura metafont possuirá uma variável booleana que estabelecerá
+se sempre usaremos este espaço padronizado, ou se poderemos ajustar
+ele para valores diferentes baseando-se na presença de pontuação e
+ponto final. Esta variável começará valendo falso (o que permite um
+cálculo mais rico de espaçamento), mas sefor mudada para verdadeiro
+irá padronizar todos os espaços deixando eles iguais:
+
+@<Atributos (struct metafont)@>+=
+bool frenchspacing;
+@
+
+@<Inicialização (struct metafont)@>+=
+  mf -> frenchspacing = false;
+@
+
+Além disso, durante a análise léxica WeaveFont, usamos uma variável
+\monoespaco{spacefactor} para determinar que espaçamento vamos ter
+quando a variável acima é falsa. A variável \monoespaco{spacefactor}
+por padrão é 1000. Quando seu valor é exatamente este, sempre usamos o
+espaçamento padrão sem modificações. Mas os seguintes caracteres podem
+gerar espaçamento diferente:
+
+@<Análise Léxica TeX@>+=
+if(!(mf -> frenchspacing) && next_utf8[0] != ')' && strcmp(next_utf8, "”") &&
+   next_utf8[0] != ']'){
+  if(next_utf8[0] == '.' || next_utf8[0] == '!' || next_utf8[0] == '?'){
+    if(spacefactor < 1000.0)
+      spacefactor = 1000.0;
+    else spacefactor = 3000.0;
+  }
+  else if(next_utf8[0] >= 'A' && next_utf8[0] <= 'Z')
+    spacefactor = 999.0;
+  else if(next_utf8[0] == ':')
+    spacefactor = 2000.0;
+  else if(next_utf8[0] == ';')
+    spacefactor = 1500.0;
+  else if(next_utf8[0] == ',')
+    spacefactor = 1250.0;
+  else
+    spacefactor = 1000.0;
+}
+@
+
+Quando temos um espaço, checamos o \monoespaco{spacefactor}. Se ele
+for igual a 1000, usamos os valores padrão. Se não for, multiplicamos
+a esticabilidade por \monoespaco{spacefactor}/1000 e multiplicamos a
+compressibilidade por 1000/\monoespaco{spacefactor}. Por fim, se o
+\monoespaco{spacefactor} for maior ou igual a 2000, também adicionamos
+o espaço extra ao tamanho natural do espaço:
+
+@<TeX: Token de Espaço@>=
+{
+  float size, pt;
+  float normalspace, normalstretch, normalshrink, extraspace;
+  pt = mf -> internal_numeric_variables[INTERNAL_NUMERIC_PT].value;
+  size = _Wread_numeric_variable(mf, "size");
+  if(isnan(size)) size = 10.0;
+  normalspace = _Wread_numeric_variable(mf, "normalspace");
+  if(isnan(normalspace)) normalspace = 1.0/3.0;
+  normalstretch = _Wread_numeric_variable(mf, "normalstretch");
+  if(isnan(normalstretch)) normalstretch = 1.0/6.0;
+  normalshrink = _Wread_numeric_variable(mf, "normalshrink");
+  if(isnan(normalshrink)) normalshrink = 1.0/9.0;
+  extraspace = _Wread_numeric_variable(mf, "extraspace");
+  if(isnan(extraspace)) extraspace = 1.0/9.0;
+  if(spacefactor < 2000.0) extraspace = 0.0;
+  normalstretch *= spacefactor/1000.0;
+  normalshrink *= 1000.0/spacefactor;
+  normalspace += extraspace;
+  normalspace *= size*pt;
+  normalshrink *= size * pt;
+  normalstretch *= size * pt;
+  struct tex_glue_token *t = new_tex_glue(normalspace + extraspace,
+                                          normalstretch, normalshrink);
+  if(t != NULL){
+    t -> prev = last_token;
+    last_token -> next = (struct tex_token *) t;
+    last_token = (struct tex_token *) t;
+  }
+}
+@
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -19458,7 +19565,7 @@ cada meta-fonte variáveis que, em caso de erro, conterão um
 diagnóstico do quê aconteceu de errado:
 
 @<Atributos (struct metafont)@>+=
-  int err, errno_line; // Código de erro, linnha em que teve erro
+  int err, errno_line; // Código de erro, linha em que teve erro
   char errno_character[5]; // Caractere sendo renderizado durante erro
   char errno_str[32]; // Informações adicionais na forma de string
   int errno_int; // INformações adicionais na forma de inteiro

@@ -22,8 +22,8 @@
 \def\matrix#1#2#3#4#5#6#7#8#9{\left[{{#1 \atop #4}\atop
       {\scriptstyle #7}}{{#2 \atop #5}\atop {\scriptstyle #8}}{{#3\atop
       #6}\atop{\scriptstyle #9}}\right]}
-\def\vector#1#2#3{\left[{{#1 \atop #4}\atop
-      {\scriptstyle #7}}\right]}
+\def\vector#1#2#3{\left[{{#1 \atop #2}\atop
+      {\scriptstyle #3}}\right]}
 
 
 \long\def\abstract#1{\parshape 10 0.8cm 13.4cm 0.8cm 13.4cm
@@ -276,6 +276,8 @@
 22.2.3. Comments
 
 22.2.4. Dealing with Spaces and Line Breaks
+
+22.2.5. Spacing Between Words
 
 Appendix A: Handling Errors \indice{294}
 
@@ -3240,7 +3242,7 @@ if(permanent_free != NULL)
 Likewise, when we finalize a context, we also deallocate its three
 numeric variables:
 
-@<Finalização (struct context)@>+=
+@<Finalization (struct context)@>+=
 if(temporary_free != NULL)
   temporary_free(cx -> internal_numeric_variables);
 @
@@ -16443,7 +16445,7 @@ void *mono_expr_begin, *mono_expr_end;
 
 The pointers  are initialized as null:
 
-@<Inicialização (struct metafont)@>+=
+@<Initialization (struct metafont)@>+=
 mf -> mono_expr_begin = mf -> mono_expr_end = NULL;
 @
 
@@ -18754,10 +18756,16 @@ struct tex_glue_token{
 @
 
 @<Auxiliary Local Functions (metafont.c)@>+=
-struct tex_glue_token *new_tex_glue(void){
+struct tex_glue_token *new_tex_glue(float size, float stretch, float shrink){
   struct tex_glue_token *t;
   t = (struct tex_glue_token *) temporary_alloc(sizeof(struct tex_glue_token));
-  t -> type = TEX_GLUE;
+  if(t != NULL){
+    t -> size = size;
+    t -> stretch = stretch;
+    t -> shrink = shrink;
+    t -> next = t -> prev = NULL;
+    t -> type = TEX_GLUE;
+  }
   return t;
 }
 @
@@ -18875,7 +18883,7 @@ struct tex_format_token *new_tex_format(void){
 }
 @
 
-\subsubsection{22.1.8. Memory Deallocation}
+\subsubsecao{22.1.8. Memory Deallocation}
 
 We can deallocate a list of WeaveTeX tokens using:
 
@@ -19076,6 +19084,7 @@ struct tex_token *tex_lexer(struct metafont *mf, unsigned char *source){
   unsigned char *next_char = source, *next_next_char, *next_next_next_char;
   unsigned char next_utf8[4], next_next_utf8[4];
   next_next_char = tex_readchar(mf, next_char, next_utf8);
+  float spacefactor = 1000.0;
   while(next_char != NULL && next_utf8[0] != '\0'){
     next_next_next_char = tex_readchar(mf, next_next_char, next_next_utf8);
     @<TeX Lexer@>
@@ -19088,7 +19097,7 @@ continue_lexer_loop:
 }
 @
 
-\subsubsection{22.2.3. Comments}
+\subsubsecao{22.2.3. Comments}
 
 Whenever a percent character is found, this character and the
 remainder of the line (including the line break) must be
@@ -19104,7 +19113,7 @@ discarded. This can be done with the code below:
   }
 @
 
-\subsubsection{22.2.4. Dealing with Spaces and Line Breaks}
+\subsubsecao{22.2.4. Dealing with Spaces and Line Breaks}
 
 WeaveTeX treats line breaks as spaces, two or more successive spaces
 as a single space, and a blank line denotes the end of the
@@ -19119,7 +19128,7 @@ if(next_utf8[0] == ' ' || next_utf8[0] == '\t'){
     goto continue_lexer_loop;
   else{
     beginning_of_line = false;
-    //@<TeX: Spacing Token@>
+    @<TeX: Spacing Token@>
     goto continue_lexer_loop;
   }
 }
@@ -19129,12 +19138,103 @@ else if(next_utf8[0] == '\n' || next_utf8[0] == '\0'){
     goto continue_lexer_loop;
   }
   else{
-    //@<TeX: Spacing Token@>
+    @<TeX: Spacing Token@>
     beginning_of_line = true;
     goto continue_lexer_loop;
   }
 }
 beginning_of_line = false;
+@
+
+\subsubsecao{22.2.5. Spacing Between Words}
+
+By default, the glue to be inserted between words in a text should
+have a natural size of 1/3 typographic points multiplied by the font
+size. It can be stretched by up to 1/6 typographic points times the
+font size. It can be shrunk by up to 1/9 typographic points times the
+font size. And the extra space to be added when we want a larger space
+(for example, after the end of a sentence or a colon) is 1/9
+typographic points times the font size.
+
+These standardized values of 1/3, 1/6, 1/9, and 1/9 can be overridden
+by the typographic font through global variables:
+\monoespaco{normalspace}, \monoespaco{normalstretch},
+\monoespaco{normalshrink}, and \monoespaco{extraspace}. If such
+variables are not defined, we use the default values.
+
+@<Attributes (struct metafont)@>+=
+bool frenchspacing;
+@
+
+@<Initialization (struct metafont)@>+=
+  mf -> frenchspacing = false;
+@
+
+Additionally, during WeaveFont lexical analysis, we use a variable
+\monoespaco{spacefactor} to determine what spacing we will have when
+the above variable is false. The \monoespaco{spacefactor} variable
+defaults to 1000. When its value is exactly that, we always use the
+default spacing without modifications. But the following characters
+can generate different spacing:
+
+@<TeX Lexer@>+=
+if(!(mf -> frenchspacing) && next_utf8[0] != ')' && strcmp(next_utf8, "”") &&
+   next_utf8[0] != ']'){
+  if(next_utf8[0] == '.' || next_utf8[0] == '!' || next_utf8[0] == '?'){
+    if(spacefactor < 1000.0)
+      spacefactor = 1000.0;
+    else spacefactor = 3000.0;
+  }
+  else if(next_utf8[0] >= 'A' && next_utf8[0] <= 'Z')
+    spacefactor = 999.0;
+  else if(next_utf8[0] == ':')
+    spacefactor = 2000.0;
+  else if(next_utf8[0] == ';')
+    spacefactor = 1500.0;
+  else if(next_utf8[0] == ',')
+    spacefactor = 1250.0;
+  else
+    spacefactor = 1000.0;
+}
+@
+
+When we have a space, we check the \monoespaco{spacefactor}. If it
+equals 1000, we use the default values. If not, we multiply the
+stretchability by \monoespaco{spacefactor}/1000 and multiply the
+shrinkability by 1000/\monoespaco{spacefactor}. Finally, if the
+\monoespaco{spacefactor} is greater than or equal to 2000, we also add
+the extra space to the natural size of the space:
+
+@<TeX: Spacing Token@>=
+{
+  float size, pt;
+  float normalspace, normalstretch, normalshrink, extraspace;
+  pt = mf -> internal_numeric_variables[INTERNAL_NUMERIC_PT].value;
+  size = _Wread_numeric_variable(mf, "size");
+  if(isnan(size)) size = 10.0;
+  normalspace = _Wread_numeric_variable(mf, "normalspace");
+  if(isnan(normalspace)) normalspace = 1.0/3.0;
+  normalstretch = _Wread_numeric_variable(mf, "normalstretch");
+  if(isnan(normalstretch)) normalstretch = 1.0/6.0;
+  normalshrink = _Wread_numeric_variable(mf, "normalshrink");
+  if(isnan(normalshrink)) normalshrink = 1.0/9.0;
+  extraspace = _Wread_numeric_variable(mf, "extraspace");
+  if(isnan(extraspace)) extraspace = 1.0/9.0;
+  if(spacefactor < 2000.0) extraspace = 0.0;
+  normalstretch *= spacefactor/1000.0;
+  normalshrink *= 1000.0/spacefactor;
+  normalspace += extraspace;
+  normalspace *= size*pt;
+  normalshrink *= size * pt;
+  normalstretch *= size * pt;
+  struct tex_glue_token *t = new_tex_glue(normalspace + extraspace,
+                                          normalstretch, normalshrink);
+  if(t != NULL){
+    t -> prev = last_token;
+    last_token -> next = (struct tex_token *) t;
+    last_token = (struct tex_token *) t;
+  }
+}
 @
 
 
