@@ -276,11 +276,9 @@ Imagens Vazias \indice{178}
 
 22.1.5. Comandos
 
-22.1.6. Penalidades
+22.1.6. Formatação
 
-22.1.7. Formatação
-
-22.1.8. Desalocação de Memória
+22.1.7. Demarcação de Parágrafo
 
 22.2. WeaveTeX: Analizador Léxico
 
@@ -18978,12 +18976,14 @@ kerns, cola, marca de separação silábica, comandos, penalidades e
 formatações. Vamos passar por cada um deles.
 
 Todo token WeaveTeX possui como primeiro valor um inteiro
-representando seu tipo e ponteiros para o token anterior e para o
-próximo token. Permitindo a eles formar listas duplamente encadeadas:
+representando seu tipo, uma penalidade representando o quão
+indesejável é uma quebra de linha após eles e ponteiros para o token
+anterior e para o próximo token. Permitindo a eles formar listas
+duplamente encadeadas:
 
 @<Estrutura de Dados Locais (metafont.c)@>+=
 struct tex_token{
-  int type;
+  int type, penalty;
   struct tex_token *prev, *next;
 };
 // Lista de tipos:
@@ -18993,8 +18993,7 @@ struct tex_token{
 #define TEX_GLUE      3
 #define TEX_DISC_MARK 4
 #define TEX_COMMAND   5
-#define TEX_PENALTY   6
-#define TEX_FORMAT    7
+#define TEX_FORMAT    6
 @
 
 \subsubsecao{22.1.1. Caixa}
@@ -19006,7 +19005,7 @@ o valor de zero caso ela ainda não tenha sido gerada.
 
 @<Estrutura de Dados Locais (metafont.c)@>+=
 struct tex_box_token{
-  int type;
+  int type, penalty;
   struct tex_token *prev, *next;
   float width, height, depth;
   GLuint texture;
@@ -19033,7 +19032,7 @@ em pixels.
 
 @<Estrutura de Dados Locais (metafont.c)@>+=
 struct tex_kern_token{
-  int type;
+  int type, penalty;
   struct tex_token *prev, *next;
   float size;
 };
@@ -19047,6 +19046,7 @@ struct tex_kern_token *new_tex_kern(float size){
     t -> size = size;
     t -> next = t -> prev = NULL;
     t -> type = TEX_KERN;
+    t -> penalty = 0;
   }
   return t;
 }
@@ -19058,13 +19058,15 @@ Uma cola é um espaçamento assim como o Kern. A diferença é que ela não
 possui um tamanho fixo. Ela possui um tamanho natural, um número de
 esticabilidade e um número de compressibilidade. Uma cola então pode
 se apresentar coom um tamanho entre o tamanho natural menos a
-compressiblidade e o tamanho natural mais a esticabilidade.
+compressiblidade e o tamanho natural mais a esticabilidade. Esta
+esticabilidade e compressibilidade pode também ser infinita.
 
 @<Estrutura de Dados Locais (metafont.c)@>+=
 struct tex_glue_token{
-  int type;
+  int type, penalty;
   struct tex_token *prev, *next;
   float size, stretch, shrink;
+  int infinity_stretch, infinity_shrink;
 };
 @
 
@@ -19078,6 +19080,9 @@ struct tex_glue_token *new_tex_glue(float size, float stretch, float shrink){
     t -> shrink = shrink;
     t -> next = t -> prev = NULL;
     t -> type = TEX_GLUE;
+    t -> penalty = 0;
+    t -> infinity_stretch = 0;
+    t -> infinity_shrink = 0;
   }
   return t;
 }
@@ -19100,7 +19105,7 @@ seja inserida uma quebra ali.
 
 @<Estrutura de Dados Locais (metafont.c)@>+=
 struct tex_discretionary_token{
-  int type;
+  int type, penalty;
   struct tex_token *prev, *next;
   struct tex_token *nobreak, *prebreak, *postbreak;
 };
@@ -19124,7 +19129,7 @@ ser executado.
 
 @<Estrutura de Dados Locais (metafont.c)@>+=
 struct tex_command_token{
-  int type;
+  int type, penalty;
   struct tex_token *prev, *next;
   char name[16];
 };
@@ -19140,36 +19145,7 @@ struct tex_command_token *new_tex_command(void){
 }
 @
 
-\subsubsecao{22.1.6. Penalidades}
-
-Uma penalidade é uma marcação que indica o quão desejável ou
-indesejável é inserir uma quebra de linha em determinada região de
-texto. Uma penalidade negativa é um incentivo para que uma quebra seja
-inserida ali e uma penalidade positiva é um desincentivo.
-
-Penalidades variam entre -10000 e 10000. Um valor de -10000 é
-interpretado como uma quebra de linha obrigatória. Um valor de 10000 é
-tratado como uma proibição absoluta para a inserção de quebra de linha.
-
-@<Estrutura de Dados Locais (metafont.c)@>+=
-struct tex_penalty_token{
-  int type;
-  struct tex_token *prev, *next;
-  int penalty;
-};
-@
-
-@<Funções Auxiliares Locais (metafont.c)@>+=
-struct tex_penalty_token *new_tex_penalty(void){
-  struct tex_penalty_token *t;
-  t = (struct tex_penalty_token *)
-                             temporary_alloc(sizeof(struct tex_penalty_token));
-  t -> type = TEX_PENALTY;
-  return t;
-}
-@
-
-\subsubsecao{22.1.7. Formatações}
+\subsubsecao{22.1.6. Formatações}
 
 Formatações são mudanças de variáveis feitas na fonte WeaveFont. Tais
 mudanças são feitas para que o estilo dos glifos possa mudar (negrito,
@@ -19180,7 +19156,7 @@ será mudada e um número em ponto flutuante representando o novo valor.
 
 @<Estrutura de Dados Locais (metafont.c)@>+=
 struct tex_format_token{
-  int type;
+  int type, penalty;
   struct tex_token *prev, *next;
   struct named_variable *var;
   float value;  
@@ -19197,7 +19173,33 @@ struct tex_format_token *new_tex_format(void){
 }
 @
 
-\subsubsecao{22.1.8. Desalocação de Memória}
+\subsubsecao{22.1.7. Demarcação de Parágrafo}
+
+Quando queremos separar tokens em parágrafos, criamos a seguinte
+estrutura que armazena uma lista de tokens que estão todos no mesmo
+parágrafo:
+
+@<Estrutura de Dados Locais (metafont.c)@>+=
+struct tex_paragraph{
+  struct tex_paragraph *prev, *next;
+  struct tex_token *first, *last;
+};
+@
+
+@<Funções Auxiliares Locais (metafont.c)@>+=
+struct tex_paragraph *new_tex_paragraph(void){
+  struct tex_paragraph *t;
+  t = (struct tex_paragraph *) temporary_alloc(sizeof(struct tex_paragraph));
+  if(t != NULL){
+    t -> prev = t -> next = NULL;
+    t -> first = t -> last = NULL;
+  }
+  return t;
+}
+@
+
+
+\subsubsecao{22.1.9. Funções Auxiliares para Tokens WeaveTex}
 
 Para desalocar uma lista de tokens WeaveTeX, podemos usar:
 
@@ -19210,6 +19212,21 @@ void free_tex_tokens(struct tex_token *t){
       t = next;
     }
   }
+}
+@
+
+Para checar se um parágrafo é vazio (formadosó por kerns e colas),
+podemos usar:
+
+@<Funções Auxiliares Locais (metafont.c)@>+=
+bool tex_paragraph_is_empty(struct tex_paragraph *p){
+  struct tex_token *t = p -> first;
+  while(t != NULL){
+    if(t -> type != TEX_KERN && t -> type != TEX_GLUE)
+      return false;
+    t = t -> next;
+  }
+  return true;
 }
 @
 
@@ -19367,7 +19384,7 @@ A função que efetivamente faz a análise léxica deve receber uma string
 e retornar uma lista encadeada de tokens WeaveTeX:
 
 @<Declaração de Função Local (metafont.c)@>+=
-struct tex_token *tex_lexer(struct metafont *mf, unsigned char *source);
+struct tex_paragraph *tex_lexer(struct metafont *mf, unsigned char *source);
 @
 
 A função consiste em um laço de repetição onde como invariante iremos
@@ -19386,14 +19403,15 @@ Ao fim, a funçao retorna a lista de tokens, retornando o ponteiro para
 o primeiro token da lista.
 
 @<Funções Auxiliares Locais (metafont.c)@>+=
-struct tex_token *tex_lexer(struct metafont *mf, unsigned char *source){
+struct tex_paragraph *tex_lexer(struct metafont *mf, unsigned char *source){
   struct tex_token *first_token, *last_token = NULL;
-  first_token = last_token = (struct tex_token *) new_tex_kern(0.0);
+  struct tex_paragraph *first_paragraph = NULL, *last_paragraph = NULL;
   bool beginning_of_line = true;
   unsigned char *next_char = source, *next_next_char, *next_next_next_char;
   unsigned char next_utf8[4], next_next_utf8[4];
   next_next_char = tex_readchar(mf, next_char, next_utf8);
   float spacefactor = 1000.0;
+  @<tex_lexer: Inicialização@>
   while(next_char != NULL && next_utf8[0] != '\0'){
     next_next_next_char = tex_readchar(mf, next_next_char, next_next_utf8);
     @<Análise Léxica TeX@>
@@ -19402,7 +19420,176 @@ continue_lexer_loop:
     next_next_char = next_next_next_char;
     memcpy(next_utf8, next_next_utf8, 4);
   }
-  return first_token;
+  @<tex_lexer: Finalização@>
+  return first_paragraph;
+}
+@
+
+A função irá produzir uma lista de parágrafos não-vazios, ou NULL se
+houverem apenas parágrafos vazios. Para ajudar com o objetivo, teremos
+uma lista encadeada de todos os tokens produzidos e outra com todos os
+parágrafos.
+
+Inicialmente, para que as estruturas estejam todas inicializadas,
+criaremos um token com espaçamento vazio e o adicionaremos ao
+parágrafo atual:
+
+@<tex_lexer: Inicialização@>=
+first_token = last_token = (struct tex_token *) new_tex_kern(0.0);
+if(first_token == NULL) return NULL;
+first_paragraph = last_paragraph = new_tex_paragraph();
+if(first_paragraph == NULL){
+  free_tex_tokens(first_token);
+  return NULL;
+}
+first_paragraph -> first = first_paragraph -> last = first_token;
+@
+
+Para adicionar um novo token em um parágrafo atual, podemos usar:
+
+@<tex_lexer: Inicialização@>+=
+#define TEX_LEXER_ADD_TOKEN(t)                   \
+{                                                \
+  if(t != NULL){                                 \
+    last_token -> next = (struct tex_token *) t; \
+    t -> prev = last_token;                      \
+    last_token = (struct tex_token *) t;         \
+    last_paragraph -> last = last_token;         \
+  }                                              \
+}
+@
+
+Algumas vezes podemos querer remover umúltimo token de kern
+colocado. Por exemplo, quando vamos inserir a cola (espaço) entre
+palavras. Mas nós nunca removemos um kern que tem tamanho zero. Isso
+garante que nós não vamos remover o primeiro token de um parágrafo,
+deixando-o sem tokens:
+
+@<tex_lexer: Inicialização@>+=
+#define TEX_LEXER_REMOVE_KERN()                                       \
+{                                                                     \
+  if(last_token -> type == TEX_KERN){                                 \
+    struct tex_kern_token *_t = (struct tex_kern_token *) last_token; \
+    if(_t -> size != 0.0){                                            \
+      last_token = last_token -> prev;                                \
+      last_token -> next = NULL;                                      \
+      free_tex_tokens((struct tex_token *) _t);                       \
+      last_paragraph -> last = last_token;                            \
+    }                                                                 \
+  }                                                                   \
+}
+@
+
+Outras vezes podemos querer remover qualquer útimo espaço, seja ele um
+kern ou uma cola. Nesse caso, podemos usar a macro:
+
+@<tex_lexer: Inicialização@>+=
+#define TEX_LEXER_REMOVE_SPACE()                                      \
+{                                                                     \
+  if(last_token -> type == TEX_KERN){                                 \
+    struct tex_kern_token *_t = (struct tex_kern_token *) last_token; \
+    if(_t -> size != 0.0){                                            \
+      last_token = last_token -> prev;                                \
+      last_token -> next = NULL;                                      \
+      free_tex_tokens((struct tex_token *) _t);                       \
+      last_paragraph -> last = last_token;                            \
+    }                                                                 \
+  }                                                                   \
+  else if(last_token -> type == TEX_GLUE){                            \
+    last_token = last_token -> prev;                                  \
+    free_tex_tokens(last_token -> next);                              \
+    last_token -> next = NULL;                                        \
+    last_paragraph -> last = last_token;                              \
+  }                                                                   \
+}
+@
+
+Caso tenhamos produzido um parágrafo totalmente vazio em algum
+momento, podemos querer apagá-lo:
+
+@<tex_lexer: Inicialização@>+=
+#define TEX_LEXER_REMOVE_PARAGRAPH()                           \
+{                                                              \ 
+  if(first_paragraph == last_paragraph){                       \
+    if(first_paragraph -> first -> next != NULL)               \
+      free_tex_tokens(first_paragraph -> first -> next);       \
+    first_paragraph -> first -> next = NULL;                   \
+    last_token = first_paragraph -> first;                     \
+    last_paragraph -> last = last_token;                       \
+  }                                                            \
+  else{                                                        \
+    last_token = last_paragraph -> prev -> last;               \
+    last_token -> next = NULL;                                 \
+    free_tex_tokens(last_paragraph -> first);                  \
+    last_paragraph = last_paragraph -> prev;                   \
+    if(temporary_free != NULL)                                 \
+      temporary_free(last_paragraph -> next);                  \
+    last_paragraph -> next = NULL;                             \
+    last_paragraph -> last = last_token;                       \
+  }                                                            \
+}
+@
+
+E finalmente, podemos criar um novo parágrafo com:
+
+@<tex_lexer: Inicialização@>+=
+#define TEX_LEXER_NEW_PARAGRAPH()                                   \
+{                                                                   \
+  last_paragraph -> next = new_tex_paragraph();                     \
+  if(last_paragraph -> next == NULL) return first_paragraph;        \
+  last_paragraph -> next -> prev = last_paragraph;                  \
+  last_paragraph = last_paragraph -> next;                          \
+  last_paragraph -> first = (struct tex_token *) new_tex_kern(0.0); \
+  if(last_paragraph -> first == NULL){                              \
+    last_paragraph -> prev -> next = NULL;                          \
+    if(temporary_free != NULL)                                      \
+      temporary_free(last_paragraph);                               \
+    return first_paragraph;                                         \
+  }                                                                 \
+  last_paragraph -> last = last_paragraph -> first;                 \
+  last_token = last_paragraph -> first;                             \
+  last_token -> prev = last_paragraph -> prev -> last;              \
+  last_token -> prev -> next = last_token;                          \
+}
+@
+
+É possível verificar que mantemos as seguintes invariantes durante o
+laço do lexer, desde que usemos somente as macros e funções acima para
+gerenciar a lsita encadeada de tokens e parágrafos:
+
+1) A variável \monoespaco{first\_token} é sempre não-nula e aponta
+para o primeiro token produzido pelo lexer. A variável
+\monoespaco{first\_paragraph} ésempre não-nula e aponta para o
+primeiro parágrafo da sequência.
+
+2) A variável \monoespaco{last\_token} aponta sempre para a última
+variável produzida que não foi apagada. E a vari[avel
+\monoespaco{last\_paragraph} para o último parágrafo produzido que não
+foi apagado. Eles nunca são nulos, pois sempre mantemos pelo menos um
+parágrafo com um espaço vazio na lista.
+
+3) Em cada parágrafo, o ponteiro para o primeiro e último token nunca
+é nulo. Temos sempre pelo menos um kern vazio em cada parágrafo.
+
+4) O último token do parágrafo atual é sempre igual ao último token
+produzido.
+
+5) O ponteiro para o próximo parágrafo do último parágrafo é nulo. O
+ponteiro para o próximo token do último token é nulo.
+
+Por fim, para terminar a função de lexer, podemos usar as macros para
+verificar na finalização se conseguimos produzir algo, ou obtivemos
+apenas parágrafos vazios. No segundo caso, devemos retornar NULL:
+
+@<tex_lexer: Finalização@>=
+if(tex_paragraph_is_empty(last_paragraph))
+  TEX_LEXER_REMOVE_PARAGRAPH();
+if(first_paragraph == last_paragraph &&
+   tex_paragraph_is_empty(first_paragraph)){
+  free_token_list(first_token);
+  if(temporary_free != NULL)
+    temporary_free(first_paragraph);
+  return NULL;
 }
 @
 
@@ -19442,7 +19629,7 @@ if(next_utf8[0] == ' ' || next_utf8[0] == '\t'){
 }
 else if(next_utf8[0] == '\n' || next_utf8[0] == '\0'){
   if(beginning_of_line){
-    //@<TeX: Quebra de Parágrafo@>
+    @<TeX: Quebra de Parágrafo@>
     goto continue_lexer_loop;
   }
   else{
@@ -19544,14 +19731,32 @@ o espaço extra ao tamanho natural do espaço:
   normalstretch *= size * pt;
   struct tex_glue_token *t = new_tex_glue(normalspace + extraspace,
                                           normalstretch, normalshrink);
-  if(t != NULL){
-    t -> prev = last_token;
-    last_token -> next = (struct tex_token *) t;
-    last_token = (struct tex_token *) t;
-  }
+  TEX_LEXER_REMOVE_KERN();
+  TEX_LEXER_ADD_TOKEN(t)
 }
 @
 
+\subsubsecao{22.2.6. Fim do Parágrafo}
+
+Quando terminamos um parágrafo, sempre removemos o token anterior caso
+seja um token de espaço, proibimos a quebra de linha após o token
+anterior restante, inserimos uma cola de esticabilidade infinita e
+deixamos um comando para finalizar o parágrafo.
+
+@<TeX: Quebra de Parágrafo@>=
+TEX_LEXER_REMOVE_SPACE();
+if(tex_paragraph_is_empty(last_paragraph)){
+  TEX_LEXER_REMOVE_PARAGRAPH();
+}
+else{
+  last_token -> penalty = 10000;
+  struct tex_glue_token *parfill = new_tex_glue(0.0, 1.0, 0.0);
+  if(parfill != NULL)
+    parfill -> infinity_stretch = 1;
+  TEX_LEXER_ADD_TOKEN(parfill);
+}
+TEX_LEXER_NEW_PARAGRAPH();
+@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

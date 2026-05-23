@@ -261,11 +261,11 @@
 
 22.1.5. Commands
 
-22.1.6. Penalties
+22.1.6. Formats
 
-22.1.7. Formats
+22.1.7. Paragraph Delimitation
 
-22.1.8. Memory Deallocation
+22.1.8. Auxiliary Functions for WeaveTeX Tokens
 
 22.2. WeaveTeX: Lexer
 
@@ -278,6 +278,8 @@
 22.2.4. Dealing with Spaces and Line Breaks
 
 22.2.5. Spacing Between Words
+
+22.2.6. End of Paragraph
 
 Appendix A: Handling Errors \indice{294}
 
@@ -18665,12 +18667,13 @@ hyphenation marks, commands, penalties, and formats. Let's go through
 each one of them.
 
 Every WeaveTeX token has, as its first value, an integer representing
-its type, as well as pointers to the previous token and the next
+its type, a penalty describing how undesirable is a line break after
+them, as well as pointers to the previous token and the next
 token. This allows them to form doubly linked lists:
 
 @<Local Data Structures (metafont.c)@>+=
 struct tex_token{
-  int type;
+  int type, penalty;
   struct tex_token *prev, *next;
 };
 // List of types:
@@ -18680,8 +18683,7 @@ struct tex_token{
 #define TEX_GLUE      3
 #define TEX_DISC_MARK 4
 #define TEX_COMMAND   5
-#define TEX_PENALTY   6
-#define TEX_FORMAT    7
+#define TEX_FORMAT    6
 @
 
 
@@ -18694,7 +18696,7 @@ zero if it has not yet been generated.
 
 @<Local Data Structures (metafont.c)@>+=
 struct tex_box_token{
-  int type;
+  int type, penalty;
   struct tex_token *prev, *next;
   float width, height, depth;
   GLuint texture;
@@ -18720,7 +18722,7 @@ it. It consists of a number representing the spacing in pixels.
 
 @<Local Data Structures (metafont.c)@>+=
 struct tex_kern_token{
-  int type;
+  int type, penalty;
   struct tex_token *prev, *next;
   float size;
 };
@@ -18734,6 +18736,7 @@ struct tex_kern_token *new_tex_kern(float size){
     t -> size = size;
     t -> next = t -> prev = NULL;
     t -> type = TEX_KERN;
+    t -> penalty = 0;
   }
   return t;
 }
@@ -18745,13 +18748,14 @@ Glue is a spacing element similar to a kern. The difference is that it
 does not have a fixed size. It has a natural size, a stretchability
 value, and a shrinkability value. Glue can therefore assume a size
 between the natural size minus the shrinkability and the natural size
-plus the stretchability.
+plus the stretchability. Both of them can be infinite.
 
 @<Local Data Structures (metafont.c)@>+=
 struct tex_glue_token{
-  int type;
+  int type, penalty;
   struct tex_token *prev, *next;
   float size, stretch, shrink;
+  int infinity_stretch, infinity_shrink;
 };
 @
 
@@ -18765,6 +18769,9 @@ struct tex_glue_token *new_tex_glue(float size, float stretch, float shrink){
     t -> shrink = shrink;
     t -> next = t -> prev = NULL;
     t -> type = TEX_GLUE;
+    t -> penalty = 0;
+    t -> infinity_stretch = 0;
+    t -> infinity_shrink = 0;
   }
   return t;
 }
@@ -18786,7 +18793,7 @@ is inserted there.
 
 @<Local Data Structures (metafont.c)@>+=
 struct tex_discretionary_token{
-  int type;
+  int type, penalty;
   struct tex_token *prev, *next;
   struct tex_token *nobreak, *prebreak, *postbreak;
 };
@@ -18809,7 +18816,7 @@ made up of strings containing the name of the command to be executed.
 
 @<Local Data Structures (metafont.c)@>+=
 struct tex_command_token{
-  int type;
+  int type, penalty;
   struct tex_token *prev, *next;
   char name[16];
 };
@@ -18825,36 +18832,7 @@ struct tex_command_token *new_tex_command(void){
 }
 @
 
-\subsubsecao{22.1.6. Penalties}
-
-A penalty is a marker that indicates how desirable or undesirable it
-is to insert a line break at a particular region of text. A negative
-penalty encourages a line break to be inserted there, while a positive
-penalty discourages it.
-
-Penalties range from -10000 to 10000. A value of -10000 is interpreted
-as a mandatory line break. A value of 10000 is treated as an absolute
-prohibition against inserting a line break.
-
-@<Local Data Structures (metafont.c)@>+=
-struct tex_penalty_token{
-  int type;
-  struct tex_token *prev, *next;
-  int penalty;
-};
-@
-
-@<Auxiliary Local Functions (metafont.c)@>+=
-struct tex_penalty_token *new_tex_penalty(void){
-  struct tex_penalty_token *t;
-  t = (struct tex_penalty_token *)
-                             temporary_alloc(sizeof(struct tex_penalty_token));
-  t -> type = TEX_PENALTY;
-  return t;
-}
-@
-
-\subsubsecao{22.1.7. Formats}
+\subsubsecao{22.1.6. Formats}
 
 Formats are changes to variables made in the WeaveFont source. Such
 changes are made so that the style of glyphs can change (bold, italic,
@@ -18866,7 +18844,7 @@ value.
 
 @<Local Data Structures (metafont.c)@>+=
 struct tex_format_token{
-  int type;
+  int type, penalty;
   struct tex_token *prev, *next;
   struct named_variable *var;
   float value;  
@@ -18883,7 +18861,32 @@ struct tex_format_token *new_tex_format(void){
 }
 @
 
-\subsubsecao{22.1.8. Memory Deallocation}
+\subsubsecao{22.1.7. Paragraph Delimitation}
+
+When we want to separate tokens into paragraphs, we create the
+following structure that stores a list of tokens that are all in the
+same paragraph:
+
+@<Local Data Structures (metafont.c)@>+=
+struct tex_paragraph{
+  struct tex_paragraph *prev, *next;
+  struct tex_token *first, *last;
+};
+@
+
+@<Auxiliary Local Functions (metafont.c)@>+=
+struct tex_paragraph *new_tex_paragraph(void){
+  struct tex_paragraph *t;
+  t = (struct tex_paragraph *) temporary_alloc(sizeof(struct tex_paragraph));
+  if(t != NULL){
+    t -> prev = t -> next = NULL;
+    t -> first = t -> last = NULL;
+  }
+  return t;
+}
+@
+
+\subsubsecao{22.1.8. Auxiliary Functions for WeaveTeX Tokens}
 
 We can deallocate a list of WeaveTeX tokens using:
 
@@ -18899,6 +18902,21 @@ void free_tex_tokens(struct tex_token *t){
 }
 @
 
+To check whether a paragraph is empty (consisting only of kerns and
+glue), we can use:
+
+
+@<Auxiliary Local Functions (metafont.c)@>+=
+bool tex_paragraph_is_empty(struct tex_paragraph *p){
+  struct tex_token *t = p -> first;
+  while(t != NULL){
+    if(t -> type != TEX_KERN && t -> type != TEX_GLUE)
+      return false;
+    t = t -> next;
+  }
+  return true;
+}
+@
 
 \subsubsecao{22.2. WeaveTeX: Lexer}
 
@@ -19055,7 +19073,7 @@ The function that actually performs the lexical analysis must receive
 a string and return a linked list of WeaveTeX tokens:
 
 @<Local Function Declaration (metafont.c)@>+=
-struct tex_token *tex_lexer(struct metafont *mf, unsigned char *source);
+struct tex_paragraph *tex_lexer(struct metafont *mf, unsigned char *source);
 @
 
 The function consists of a loop where, as an invariant, we will always
@@ -19077,14 +19095,15 @@ In the end, the function returns the list of tokens, returning a
 pointer to the first token in the list.
 
 @<Auxiliary Local Functions (metafont.c)@>+=
-struct tex_token *tex_lexer(struct metafont *mf, unsigned char *source){
+struct tex_paragraph *tex_lexer(struct metafont *mf, unsigned char *source){
   struct tex_token *first_token, *last_token = NULL;
-  first_token = last_token = (struct tex_token *) new_tex_kern(0.0);
+  struct tex_paragraph *first_paragraph = NULL, *last_paragraph = NULL;
   bool beginning_of_line = true;
   unsigned char *next_char = source, *next_next_char, *next_next_next_char;
   unsigned char next_utf8[4], next_next_utf8[4];
   next_next_char = tex_readchar(mf, next_char, next_utf8);
   float spacefactor = 1000.0;
+  @<tex_lexer: Initialization@>
   while(next_char != NULL && next_utf8[0] != '\0'){
     next_next_next_char = tex_readchar(mf, next_next_char, next_next_utf8);
     @<TeX Lexer@>
@@ -19093,7 +19112,175 @@ continue_lexer_loop:
     next_next_char = next_next_next_char;
     memcpy(next_utf8, next_next_utf8, 4);
   }
-  return first_token;
+  @<tex_lexer: Finalization@>
+  return first_paragraph;
+}
+@
+
+The function will produce a list of non-empty paragraphs, or NULL if
+there are only empty paragraphs. To help achieve this goal, we will
+have a linked list of all produced tokens and another one with all the
+paragraphs.
+
+Initially, to have all structures properly initialized, we will create
+a token with empty spacing and add it to the current paragraph:
+
+@<tex_lexer: Initialization@>=
+first_token = last_token = (struct tex_token *) new_tex_kern(0.0);
+if(first_token == NULL) return NULL;
+first_paragraph = last_paragraph = new_tex_paragraph();
+if(first_paragraph == NULL){
+  free_tex_tokens(first_token);
+  return NULL;
+}
+first_paragraph -> first = first_paragraph -> last = first_token;
+@
+
+To add a new token to the current paragraph, we can use:
+
+@<tex_lexer: Initialization@>+=
+#define TEX_LEXER_ADD_TOKEN(t)                   \
+{                                                \
+  if(t != NULL){                                 \
+    last_token -> next = (struct tex_token *) t; \
+    t -> prev = last_token;                      \
+    last_token = (struct tex_token *) t;         \
+    last_paragraph -> last = last_token;         \
+  }                                              \
+}
+@
+
+Sometimes we may want to remove the last kern token that was
+placed. For example, when we are about to insert glue (space) between
+words. But we never remove a kern that has zero size. This ensures
+that we will not remove the first token of a paragraph, leaving it
+empty:
+
+@<tex_lexer: Initialization@>+=
+#define TEX_LEXER_REMOVE_KERN()                                       \
+{                                                                     \
+  if(last_token -> type == TEX_KERN){                                 \
+    struct tex_kern_token *_t = (struct tex_kern_token *) last_token; \
+    if(_t -> size != 0.0){                                            \
+      last_token = last_token -> prev;                                \
+      last_token -> next = NULL;                                      \
+      free_tex_tokens((struct tex_token *) _t);                       \
+      last_paragraph -> last = last_token;                            \
+    }                                                                 \
+  }                                                                   \
+}
+@
+
+Other times we may want to remove any last space, whether it is a kern
+or glue. In that case, we can use the macro:
+
+@<tex_lexer: Initialization@>+=
+#define TEX_LEXER_REMOVE_SPACE()                                      \
+{                                                                     \
+  if(last_token -> type == TEX_KERN){                                 \
+    struct tex_kern_token *_t = (struct tex_kern_token *) last_token; \
+    if(_t -> size != 0.0){                                            \
+      last_token = last_token -> prev;                                \
+      last_token -> next = NULL;                                      \
+      free_tex_tokens((struct tex_token *) _t);                       \
+      last_paragraph -> last = last_token;                            \
+    }                                                                 \
+  }                                                                   \
+  else if(last_token -> type == TEX_GLUE){                            \
+    last_token = last_token -> prev;                                  \
+    free_tex_tokens(last_token -> next);                              \
+    last_token -> next = NULL;                                        \
+    last_paragraph -> last = last_token;                              \
+  }                                                                   \
+}
+@
+
+In case we have produced a completely empty paragraph at some point,
+we may want to delete it:
+
+@<tex_lexer: Initialization@>+=
+#define TEX_LEXER_REMOVE_PARAGRAPH()                           \
+{                                                              \ 
+  if(first_paragraph == last_paragraph){                       \
+    if(first_paragraph -> first -> next != NULL)               \
+      free_tex_tokens(first_paragraph -> first -> next);       \
+    first_paragraph -> first -> next = NULL;                   \
+    last_token = first_paragraph -> first;                     \
+    last_paragraph -> last = last_token;                       \
+  }                                                            \
+  else{                                                        \
+    last_token = last_paragraph -> prev -> last;               \
+    last_token -> next = NULL;                                 \
+    free_tex_tokens(last_paragraph -> first);                  \
+    last_paragraph = last_paragraph -> prev;                   \
+    if(temporary_free != NULL)                                 \
+      temporary_free(last_paragraph -> next);                  \
+    last_paragraph -> next = NULL;                             \
+    last_paragraph -> last = last_token;                       \
+  }                                                            \
+}
+@
+
+Finally, we can create a new paragraph using:
+
+@<tex_lexer: Initialization@>+=
+#define TEX_LEXER_NEW_PARAGRAPH()                                   \
+{                                                                   \
+  last_paragraph -> next = new_tex_paragraph();                     \
+  if(last_paragraph -> next == NULL) return first_paragraph;        \
+  last_paragraph -> next -> prev = last_paragraph;                  \
+  last_paragraph = last_paragraph -> next;                          \
+  last_paragraph -> first = (struct tex_token *) new_tex_kern(0.0); \
+  if(last_paragraph -> first == NULL){                              \
+    last_paragraph -> prev -> next = NULL;                          \
+    if(temporary_free != NULL)                                      \
+      temporary_free(last_paragraph);                               \
+    return first_paragraph;                                         \
+  }                                                                 \
+  last_paragraph -> last = last_paragraph -> first;                 \
+  last_token = last_paragraph -> first;                             \
+  last_token -> prev = last_paragraph -> prev -> last;              \
+  last_token -> prev -> next = last_token;                          \
+}
+@
+
+It is possible to verify that we maintain the following invariants
+during the lexer loop, as long as we use only the macros and functions
+above to manage the linked list of tokens and paragraphs:
+
+1) The variable \monoespaco{first_token} is always non-null and points
+to the first token produced by the lexer. The variable
+\monoespaco{first_paragraph} is always non-null and points to the first
+paragraph in the sequence.
+
+2) The variable \monoespaco{last_token} always points to the last
+token produced that has not been deleted. And the variable
+\monoespaco{last_paragraph} points to the last paragraph produced that
+has not been deleted. They are never null, because we always keep at
+least one paragraph with an empty space in the list.
+
+3) In each paragraph, the pointer to the first and last token is never
+null. We always have at least one empty kern in each paragraph.
+
+4) The last token of the current paragraph is always equal to the last
+token produced.
+
+5) The pointer to the next paragraph of the last paragraph is
+null. The pointer to the next token of the last token is null.
+
+Finally, to finish the lexer function, we can use the macros to check
+at the end whether we managed to produce something, or whether we only
+got empty paragraphs. In the second case, we must return NULL:
+
+@<tex_lexer: Finalization@>=
+if(tex_paragraph_is_empty(last_paragraph))
+  TEX_LEXER_REMOVE_PARAGRAPH();
+if(first_paragraph == last_paragraph &&
+   tex_paragraph_is_empty(first_paragraph)){
+  free_token_list(first_token);
+  if(temporary_free != NULL)
+    temporary_free(first_paragraph);
+  return NULL;
 }
 @
 
@@ -19134,7 +19321,7 @@ if(next_utf8[0] == ' ' || next_utf8[0] == '\t'){
 }
 else if(next_utf8[0] == '\n' || next_utf8[0] == '\0'){
   if(beginning_of_line){
-    //@<TeX: End of Paragraph@>
+    @<TeX: End of Paragraph@>
     goto continue_lexer_loop;
   }
   else{
@@ -19229,14 +19416,32 @@ the extra space to the natural size of the space:
   normalstretch *= size * pt;
   struct tex_glue_token *t = new_tex_glue(normalspace + extraspace,
                                           normalstretch, normalshrink);
-  if(t != NULL){
-    t -> prev = last_token;
-    last_token -> next = (struct tex_token *) t;
-    last_token = (struct tex_token *) t;
-  }
+  TEX_LEXER_REMOVE_KERN();
+  TEX_LEXER_ADD_TOKEN(t)
 }
 @
 
+\subsubsecao{22.2.6. End of Paragraph}
+
+When we finish a paragraph, we always remove the previous token if it
+is a space token, forbid line breaking after the remaining previous
+token, insert an infinite stretchability glue, and add a command to
+end the paragraph.
+
+@<TeX: End of Paragraph@>=
+TEX_LEXER_REMOVE_SPACE();
+if(tex_paragraph_is_empty(last_paragraph)){
+  TEX_LEXER_REMOVE_PARAGRAPH();
+}
+else{
+  last_token -> penalty = 10000;
+  struct tex_glue_token *parfill = new_tex_glue(0.0, 1.0, 0.0);
+  if(parfill != NULL)
+    parfill -> infinity_stretch = 1;
+  TEX_LEXER_ADD_TOKEN(parfill);
+}
+TEX_LEXER_NEW_PARAGRAPH();
+@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
