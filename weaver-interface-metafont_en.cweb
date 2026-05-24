@@ -281,6 +281,8 @@
 
 22.2.6. End of Paragraph
 
+22.2.7. Grouping
+
 Appendix A: Handling Errors \indice{294}
 
 A.1. ERROR\_DISCONTINUOUS\_PATH \indice{298}
@@ -19273,6 +19275,7 @@ at the end whether we managed to produce something, or whether we only
 got empty paragraphs. In the second case, we must return NULL:
 
 @<tex_lexer: Finalization@>=
+@<tex_lexer: Pre-Finalization@>
 if(tex_paragraph_is_empty(last_paragraph))
   TEX_LEXER_REMOVE_PARAGRAPH();
 if(first_paragraph == last_paragraph &&
@@ -19280,7 +19283,7 @@ if(first_paragraph == last_paragraph &&
   free_token_list(first_token);
   if(temporary_free != NULL)
     temporary_free(first_paragraph);
-  return NULL;
+  first_paragraph = last_paragraph = NULL;
 }
 @
 
@@ -19442,6 +19445,128 @@ else{
 }
 TEX_LEXER_NEW_PARAGRAPH();
 @
+
+\subsubsecao{22.2.7. Grouping}
+
+Many commands in WeaveTeX have a group scope: they produce effects
+that work for a limited time while inside a group. A new group is
+created with the character ``\{'' and is closed with the character
+``\}''. It is possible to have groups within groups. The scope of many
+commands is always that of the innermost group to which they belong.
+
+The way we manage groups is by maintaining a stack where the first
+element is the global group that always exists, and the others are the
+additional groups that are created. Whenever we encounter a ``\{''
+character, we create a new group and push it onto the stack. When we
+encounter a ``\}'', we pop it off the stack.
+
+Some commands that have scope work by making some change to WeaveTeX's
+behavior or to typographic font variables. When such commands are
+executed, we generate another command that undoes their effect and
+push it onto the last group. When popping a group, we also pop all the
+stacked commands that undo the modifications made and execute them.
+
+To implement our group stack where each element has its own stack of
+commands, we will take advantage of the paragraph structure we
+have. Each group can be represented by a paragraph (even if it is not
+one) and the commands stacked within them would be the content of such
+pseudo-paragraphs. Below we declare our group structure and create the
+global group:
+
+@<tex_lexer: Initialization@>+=
+struct tex_paragraph *first_group = NULL, *last_group = NULL;
+first_group = last_group = new_tex_paragraph();
+if(first_group == NULL){
+  free_tex_tokens(first_token);
+  if(temporary_free != NULL)
+    temporary_free(first_paragraph);
+  return NULL;
+}
+first_group -> first = first_group -> last = NULL;
+@
+
+Unlike paragraphs, a group can be completely empty of content and of
+stacked commands. To add content to the current group, we use:
+
+@<tex_lexer: Initialization@>+=
+#define TEX_LEXER_INTERPRET_LATER(t)                       \
+{                                                          \
+  if(t != NULL){                                           \
+    if(last_group -> last == NULL)                         \
+      last_group -> first = last_group -> last = t;        \
+    else{                                                  \
+      last_group -> last -> next = (struct tex_token *) t; \
+      t -> prev = last_group -> last;                      \
+      last_group -> last = (struct tex_token *) t;         \
+    }                                                      \
+  }                                                        \
+}
+@
+
+We create a new group with:
+
+@<tex_lexer: Initialization@>+=
+#define TEX_LEXER_NEW_GROUP()                        \
+{                                                    \
+  last_group -> next = new_tex_paragraph();          \
+  if(last_group -> next != NULL){                    \
+    last_group -> next -> prev = last_group;         \
+    last_group = last_group -> next;                 \
+    last_group -> first = last_group -> last = NULL; \
+  }                                                  \
+}
+@
+
+We end a group with:
+
+@<tex_lexer: Initialization@>+=
+#define TEX_LEXER_REMOVE_GROUP()                   \
+{                                                  \ 
+  struct tex_token *_p = last_group -> last;       \
+  while(_p != NULL){                               \
+    struct tex_token *_pp = _p -> prev;            \
+    _p -> prev = _p -> next = NULL;                \
+    if(_pp != NULL)                                \
+      _pp -> next = NULL;                          \
+    /*tex_lexer_run(mf, _p);*/                     \
+    TEX_LEXER_ADD_TOKEN(_p);                       \
+    _p = _pp;                                      \
+  }                                                \
+  last_group -> first = last_group -> last = NULL; \
+  if(last_group != first_group){                   \
+    last_group = last_group -> prev;               \
+    if(temporary_free != NULL)                     \
+      temporary_free(last_group -> next);          \
+    last_group -> next = NULL;                     \
+  }                                                \
+}
+@
+
+Before the end of our lexer function, we should always empty and
+finalize all our groups:
+
+@<tex_lexer: Pre-Finalization@>=
+while(first_group != last_group)
+  TEX_LEXER_REMOVE_GROUP();
+TEX_LEXER_REMOVE_GROUP();
+if(temporary_free != NULL)
+  temporary_free(first_group);
+@
+
+Now we can start interpreting the beginning and end of groups. When we
+find a group delimiter character:
+
+@<TeX Lexer@>+=
+if(next_utf8[0] == '{'){
+  TEX_LEXER_NEW_GROUP();
+  goto continue_lexer_loop;
+}
+else if(next_utf8[0] == '}'){
+  TEX_LEXER_REMOVE_GROUP();
+  goto continue_lexer_loop;
+}
+@
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

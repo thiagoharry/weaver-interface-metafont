@@ -2607,6 +2607,11 @@ void test_tex(void){
     struct tex_paragraph *t = tex_lexer(mf, text_with_comment);
     assert("Testing WeaveTeX comments", t == NULL);
   }
+  { // Empty paragraphs test:
+    unsigned char text[] = "\n\n%Comentário\n\n{{}}\n\n";
+    struct tex_paragraph *t = tex_lexer(mf, text);
+    assert("Testing WeaveTeX comments", t == NULL);
+  }
   free_token_list(first);
   destroy_context(cx);
   _Wdestroy_metafont(mf);

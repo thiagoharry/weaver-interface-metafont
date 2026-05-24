@@ -292,6 +292,10 @@ Imagens Vazias \indice{178}
 
 22.2.5. Espaçamento entre Palavras
 
+22.2.6. Fim do Parágrafo
+
+22.2.7. Agrupamento
+
 Apêndice A: Tratamento de Erros \indice{291}
 
 A.1. ERROR\_DISCONTINUOUS\_PATH \indice{295}
@@ -19582,6 +19586,7 @@ verificar na finalização se conseguimos produzir algo, ou obtivemos
 apenas parágrafos vazios. No segundo caso, devemos retornar NULL:
 
 @<tex_lexer: Finalização@>=
+@<tex_lexer: Pré-Finalização@>
 if(tex_paragraph_is_empty(last_paragraph))
   TEX_LEXER_REMOVE_PARAGRAPH();
 if(first_paragraph == last_paragraph &&
@@ -19589,7 +19594,7 @@ if(first_paragraph == last_paragraph &&
   free_token_list(first_token);
   if(temporary_free != NULL)
     temporary_free(first_paragraph);
-  return NULL;
+  first_paragraph = last_paragraph = NULL;
 }
 @
 
@@ -19756,6 +19761,130 @@ else{
   TEX_LEXER_ADD_TOKEN(parfill);
 }
 TEX_LEXER_NEW_PARAGRAPH();
+@
+
+\subsubsecao{22.2.7. Agrupamento}
+
+Muitos comandos em WeaveTeX tem um escopo de grupo: eles geram efeitos
+que funcionam por tempo limitado enquanto se está dentro de um
+grupo. Um novo grupo é criado com o caractere ``\{'' e é finalizado
+com o caractere ``\}''. É possível ter grupos dentro de grupos. O
+escopo de muitos comandos é sempre o do grupo mais interno ao qual
+eles pertencem.
+
+O modo como gerenciamos os grupos é mantendo uma pilha onde o primeiro
+elemento é o grupo global que sempre existe, e os demais são os demais
+grupos criados. Toda vez que encontramos um caractere ``\{'', no
+criamos um novo grupo e o empilhamos. Quando encontramos um ``}'', nós
+o desempilhamos.
+
+Alguns comandos que possuem escopo funcionam efetuando alguma mudança
+no comportamento de WeaveTeX ou de variáveis da fonte
+tipográfica. Quando tais comandos são executados, nós geramos um outro
+comando que desfaz o seu efeito e o empilhamos dentro do último
+grupo. Ao desempilhar um grupo, desempilhamos também todos os comandos
+empilhados que desfazem modificações feitas e os executamos.
+
+Para implementar nossa pilha de grupos onde cada elemento possui uma
+pilha de comandos, vamos aproveitar a estrutura de parágrafos que
+temos. Cada grupo pode ser representado por um parágrafo (mesmo que
+não seja um) e os comandos empilhados neles seriam o conteúdo de tais
+pseudo-parágrafos. Abaixo declaramos nossa estrutura de grupo e
+criamos o grupo global:
+
+@<tex_lexer: Inicialização@>+=
+struct tex_paragraph *first_group = NULL, *last_group = NULL;
+first_group = last_group = new_tex_paragraph();
+if(first_group == NULL){
+  free_tex_tokens(first_token);
+  if(temporary_free != NULL)
+    temporary_free(first_paragraph);
+  return NULL;
+}
+first_group -> first = first_group -> last = NULL;
+@
+
+Ao contrário de parágrafos, um grupo pode ser completamente vazio de
+conteúdo e de comandos empilhados. Para adicionar conteúdo ao grupo
+atual, usamos:
+
+@<tex_lexer: Inicialização@>+=
+#define TEX_LEXER_INTERPRET_LATER(t)                       \
+{                                                          \
+  if(t != NULL){                                           \
+    if(last_group -> last == NULL)                         \
+      last_group -> first = last_group -> last = t;        \
+    else{                                                  \
+      last_group -> last -> next = (struct tex_token *) t; \
+      t -> prev = last_group -> last;                      \
+      last_group -> last = (struct tex_token *) t;         \
+    }                                                      \
+  }                                                        \
+}
+@
+
+Para criar um novo grupo:
+
+@<tex_lexer: Inicialização@>+=
+#define TEX_LEXER_NEW_GROUP()                        \
+{                                                    \
+  last_group -> next = new_tex_paragraph();          \
+  if(last_group -> next != NULL){                    \
+    last_group -> next -> prev = last_group;         \
+    last_group = last_group -> next;                 \
+    last_group -> first = last_group -> last = NULL; \
+  }                                                  \
+}
+@
+
+Para terminar um grupo:
+
+@<tex_lexer: Inicialização@>+=
+#define TEX_LEXER_REMOVE_GROUP()                   \
+{                                                  \ 
+  struct tex_token *_p = last_group -> last;       \
+  while(_p != NULL){                               \
+    struct tex_token *_pp = _p -> prev;            \
+    _p -> prev = _p -> next = NULL;                \
+    if(_pp != NULL)                                \
+      _pp -> next = NULL;                          \
+    /*tex_lexer_run(mf, _p);*/                     \
+    TEX_LEXER_ADD_TOKEN(_p);                       \
+    _p = _pp;                                      \
+  }                                                \
+  last_group -> first = last_group -> last = NULL; \
+  if(last_group != first_group){                   \
+    last_group = last_group -> prev;               \
+    if(temporary_free != NULL)                     \
+      temporary_free(last_group -> next);          \
+    last_group -> next = NULL;                     \
+  }                                                \
+}
+@
+    
+Antes de terminar nosso lexer, sempre devemos esvaziar e finalizar
+todos os grupos:
+
+@<tex_lexer: Pré-Finalização@>=
+while(first_group != last_group)
+  TEX_LEXER_REMOVE_GROUP();
+TEX_LEXER_REMOVE_GROUP();
+if(temporary_free != NULL)
+  temporary_free(first_group);
+@
+
+Agora podemos começar a interpretar o início e o fim de grupos. Quanto
+encontramos um caractere delimitador de grupos:
+
+@<Análise Léxica TeX@>+=
+if(next_utf8[0] == '{'){
+  TEX_LEXER_NEW_GROUP();
+  goto continue_lexer_loop;
+}
+else if(next_utf8[0] == '}'){
+  TEX_LEXER_REMOVE_GROUP();
+  goto continue_lexer_loop;
+}
 @
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
