@@ -296,6 +296,8 @@ Imagens Vazias \indice{178}
 
 22.2.7. Agrupamento
 
+22.2.8. Comandos Léxicos
+
 Apêndice A: Tratamento de Erros \indice{291}
 
 A.1. ERROR\_DISCONTINUOUS\_PATH \indice{295}
@@ -19605,6 +19607,7 @@ todo o restante da linha (incluindo a quebra de linha) devem ser
 descartados. Isso pode ser feito com o código abaixo:
 
 @<Análise Léxica TeX@>=
+@<tex_lexer: Comandos Léxicos@>
   if(*next_char == '%'){
     while(*next_char != '\n' && *next_char != '\0')
       next_char ++;
@@ -19737,7 +19740,7 @@ o espaço extra ao tamanho natural do espaço:
   struct tex_glue_token *t = new_tex_glue(normalspace + extraspace,
                                           normalstretch, normalshrink);
   TEX_LEXER_REMOVE_KERN();
-  TEX_LEXER_ADD_TOKEN(t)
+  TEX_LEXER_ADD_TOKEN(t);
 }
 @
 
@@ -19886,6 +19889,78 @@ else if(next_utf8[0] == '}'){
   goto continue_lexer_loop;
 }
 @
+
+\subsubsecao{22.2.8. Comandos Léxicos}
+
+Em WeaveTeX, um comando é uma sequência de caracteres que começa com
+uma contrabarra. Depois da contrabarra, um comando é composto ou por
+uma sequência de letras não acentuadas maiúsculas ou minúsculas da
+tabela ASCII ou por um único caractere de qualquer outro tipo.
+
+À medida que lemos caracteres UTF-8 de código WeaveFont, usamos
+avariável booleana abaixo para indicar quando estamos lendo um comando
+ou não estamos, e usamos o seguinte buffer abaixo para armazenar o
+nome do comando encontrado:
+
+@<tex_lexer: Inicialização@>+=
+bool reading_command = false;
+unsigned char command_buffer[32];
+int command_size = 0; // How many command characters after '\' we read
+@
+
+Quando lemos um caractere de contrabarra e não estamos em modo de
+leitura de comando, devemos imediatamente entrar em modo de leitura de
+comando:
+
+@<tex_lexer: Comandos Léxicos@>=
+if(!reading_command && next_utf8[0] == '\\'){
+  reading_command = true;
+  command_size = 0;
+  goto continue_lexer_loop;
+}
+@
+
+E se estamos em modo de leitura, copiamos os caracteres lidos para o
+nosso buffer de comando. Todos os comandos válidos são formados sempre
+por caracteres ASCII, então podemos sempre assumir que todos tem
+exatamente 1 byte:
+
+@<tex_lexer: Comandos Léxicos@>+=
+else if(reading_command){
+  command_buffer[command_size] = next_utf8[0];
+  if(command_size < 30)
+    command_size ++;
+  bool alpha = (next_utf8[0] >= 'a' && next_utf8[0] <= 'z') ||
+               (next_utf8[0] >= 'A' && next_utf8[0] <= 'Z');
+  bool next_alpha = (next_next_utf8[0] >= 'a' && next_next_utf8[0] <= 'z') ||
+                    (next_next_utf8[0] >= 'A' && next_next_utf8[0] <= 'Z');
+  if((command_size == 1 && !alpha) || !next_alpha){
+    struct tex_token *new_token = NULL;
+    int char_skip = 0;
+    command_buffer[command_size] = '\0';
+    //new_token = tex_lexer_command(command_buffer, next_char, &char_skip);
+    while(char_skip > 0){
+      next_char = next_next_char;
+      next_next_char = next_next_next_char;
+      memcpy(next_utf8, next_next_utf8, 4);
+      char_skip --;
+    }
+    if(new_token != NULL && new_token -> type == TEX_GLUE)
+      TEX_LEXER_REMOVE_KERN();
+    TEX_LEXER_ADD_TOKEN(new_token);
+    reading_command = false;
+    goto continue_lexer_loop;
+  }
+}
+@
+
+A parte não-explicada do código acima é a função
+\monoespaco{tex\_lexer\_command}. Esta função interpreta o comando e
+baseado neles pode produzir tokens que devem ser adicionados à nossa
+lista de tokens. Além disso, a função pode ler os próximos caracteres
+pendentes e depois pedir para ignorarmos um certo número de próximos
+caracteres. Isso ocorre porque alguns comandos leem parâmetros que são
+encontrados à seguir. E tais parâmetros devem depois ser ignorados.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

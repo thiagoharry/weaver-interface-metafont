@@ -283,6 +283,8 @@
 
 22.2.7. Grouping
 
+22.2.8. Lexical Commands
+
 Appendix A: Handling Errors \indice{294}
 
 A.1. ERROR\_DISCONTINUOUS\_PATH \indice{298}
@@ -19108,7 +19110,7 @@ struct tex_paragraph *tex_lexer(struct metafont *mf, unsigned char *source){
   @<tex_lexer: Initialization@>
   while(next_char != NULL && next_utf8[0] != '\0'){
     next_next_next_char = tex_readchar(mf, next_next_char, next_next_utf8);
-    @<TeX Lexer@>
+    @<tex_lexer: TeX Lexer@>
 continue_lexer_loop:
     next_char = next_next_char;
     next_next_char = next_next_next_char;
@@ -19293,7 +19295,8 @@ Whenever a percent character is found, this character and the
 remainder of the line (including the line break) must be
 discarded. This can be done with the code below:
 
-@<TeX Lexer@>=
+@<tex_lexer: TeX Lexer@>=
+  @<tex_lexer: Lexical Commands@>
   if(*next_char == '%'){
     while(*next_char != '\n' && *next_char != '\0')
       next_char ++;
@@ -19311,7 +19314,7 @@ paragraph. Whitespace at the end of the line is also ignored.
 
 Such rules can be implemented with:
 
-@<TeX Lexer@>+=
+@<tex_lexer: TeX Lexer@>+=
 if(next_utf8[0] == ' ' || next_utf8[0] == '\t'){
   if(next_next_utf8[0] == ' ' || next_next_utf8[0] == '\t' ||
      next_next_utf8[0] == '\n')
@@ -19367,7 +19370,7 @@ defaults to 1000. When its value is exactly that, we always use the
 default spacing without modifications. But the following characters
 can generate different spacing:
 
-@<TeX Lexer@>+=
+@<tex_lexer: TeX Lexer@>+=
 if(!(mf -> frenchspacing) && next_utf8[0] != ')' && strcmp(next_utf8, "”") &&
    next_utf8[0] != ']'){
   if(next_utf8[0] == '.' || next_utf8[0] == '!' || next_utf8[0] == '?'){
@@ -19556,7 +19559,7 @@ if(temporary_free != NULL)
 Now we can start interpreting the beginning and end of groups. When we
 find a group delimiter character:
 
-@<TeX Lexer@>+=
+@<tex_lexer: TeX Lexer@>+=
 if(next_utf8[0] == '{'){
   TEX_LEXER_NEW_GROUP();
   goto continue_lexer_loop;
@@ -19566,6 +19569,77 @@ else if(next_utf8[0] == '}'){
   goto continue_lexer_loop;
 }
 @
+
+\subsubsecao{22.2.8. Lexical Commands}
+
+In WeaveTeX, a command is a sequence of characters that begins with a
+backslash. After the backslash, a command consists either of a
+sequence of unaccented uppercase or lowercase ASCII letters, or of a
+single character of any other type.
+
+As we read UTF-8 characters of WeaveFont code, we use the boolean
+variable below to indicate whether we are reading a command or not,
+and we use the following buffer below to store the name of the command
+found:
+
+@<tex_lexer: Initialization@>+=
+bool reading_command = false;
+unsigned char command_buffer[32];
+int command_size = 0; // How many command characters after '\' we read
+@
+
+When we read a backslash character and we are not in command reading
+mode, we must immediately enter command reading mode:"
+
+@<tex_lexer: Lexical Commands@>=
+if(!reading_command && next_utf8[0] == '\\'){
+  reading_command = true;
+  command_size = 0;
+  goto continue_lexer_loop;
+}
+@
+
+And if we are in reading mode, we copy the read characters to our
+command buffer. All valid commands are always formed by ASCII
+characters, so we can always assume that they are exactly 1 byte
+each:
+
+@<tex_lexer: Lexical Commands@>+=
+else if(reading_command){
+  command_buffer[command_size] = next_utf8[0];
+  if(command_size < 30)
+    command_size ++;
+  bool alpha = (next_utf8[0] >= 'a' && next_utf8[0] <= 'z') ||
+               (next_utf8[0] >= 'A' && next_utf8[0] <= 'Z');
+  bool next_alpha = (next_next_utf8[0] >= 'a' && next_next_utf8[0] <= 'z') ||
+                    (next_next_utf8[0] >= 'A' && next_next_utf8[0] <= 'Z');
+  if((command_size == 1 && !alpha) || !next_alpha){
+    struct tex_token *new_token = NULL;
+    int char_skip = 0;
+    command_buffer[command_size] = '\0';
+    //new_token = tex_lexer_command(command_buffer, next_char, &char_skip);
+    while(char_skip > 0){
+      next_char = next_next_char;
+      next_next_char = next_next_next_char;
+      memcpy(next_utf8, next_next_utf8, 4);
+      char_skip --;
+    }
+    if(new_token != NULL && new_token -> type == TEX_GLUE)
+      TEX_LEXER_REMOVE_KERN();
+    TEX_LEXER_ADD_TOKEN(new_token);
+    reading_command = false;
+    goto continue_lexer_loop;
+  }
+}
+@
+
+The unexplained part of the code above is the function
+\monoespaco{tex\_lexer\_command}. This function interprets the command and,
+based on it, may produce tokens that must be added to our token
+list. Furthermore, the function may read the next pending characters
+and then ask us to skip a certain number of upcoming characters. This
+happens because some commands read parameters that follow them. And
+such parameters must then be ignored.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
