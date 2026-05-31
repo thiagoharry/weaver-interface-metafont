@@ -285,6 +285,8 @@
 
 22.2.8. Lexical Commands
 
+22.2.9. Unicode Spacing and Line Break Characters
+
 Appendix A: Handling Errors \indice{294}
 
 A.1. ERROR\_DISCONTINUOUS\_PATH \indice{298}
@@ -19640,6 +19642,266 @@ list. Furthermore, the function may read the next pending characters
 and then ask us to skip a certain number of upcoming characters. This
 happens because some commands read parameters that follow them. And
 such parameters must then be ignored.
+
+\subsubsecao{22.2.9. Unicode Spacing and Line Break Characters}
+
+Unicode provides several special characters that affect spacing and
+line breaks. The first one is U+00A0, which is a space that prohibits
+line breaks. The character U+202F does the same, but inserts a smaller
+space. In this case, our space will have half the size,
+stretchability, and shrinkability:
+
+@<tex_lexer: TeX Lexer@>+=
+if((next_utf8[0] == 194 && next_utf8[1] == 160) ||
+   (next_utf8[0] == 226 && next_utf8[1] == 128 && next_utf8[2] == 175)){
+  last_token -> penalty = 10000;
+  @<TeX: Spacing Token@>
+  if(next_utf8[0] == 226){
+    struct tex_glue_token *last = (struct tex_glue_token *) last_token;
+    last -> size *= 0.5;
+    last -> stretch *= 0.5;
+    last -> shrink *= 0.5;
+  }
+  goto continue_lexer_loop;
+}
+@
+
+Another character is U+2001 and U+2003. They are respectively the 'en
+space' and 'em space'. They instruct us to insert a space of '1em'
+into the text. We treat this space as synonymous with the em dash
+space. If the em dash is not defined in the font, we use the width of
+an 'M' instead. If neither is defined, we ignore the spacing.
+
+@<tex_lexer: TeX Lexer@>+=
+if((next_utf8[0] == 226 && next_utf8[1] == 128 && next_utf8[2] == 129) ||
+   (next_utf8[0] == 226 && next_utf8[1] == 128 && next_utf8[2] == 131)){
+  int dummy, width = 0;
+  GLuint udummy;
+  if(!_Wrender_glyph(mf, "—", "", &udummy,  &width, &dummy, &dummy, &dummy,
+                    &dummy))
+    _Wrender_glyph(mf, "M", "", &udummy,  &width, &dummy, &dummy, &dummy,
+                   &dummy);
+  if(width != 0){
+    struct tex_glue_token *t = new_tex_glue((float) width, 0.0, 0.0);
+    TEX_LEXER_REMOVE_KERN();
+    TEX_LEXER_ADD_TOKEN(t);
+  }
+  goto continue_lexer_loop;
+}
+@
+
+There are also the characters U+2002 and U+2000, which represent half
+of the '1em' space:
+
+@<tex_lexer: TeX Lexer@>+=
+if((next_utf8[0] == 226 && next_utf8[1] == 128 && next_utf8[2] == 128) ||
+   (next_utf8[0] == 226 && next_utf8[1] == 128 && next_utf8[2] == 130)){
+  int dummy, width = 0;
+  GLuint udummy;
+  if(!_Wrender_glyph(mf, "—", "", &udummy,  &width, &dummy, &dummy, &dummy,
+                    &dummy))
+    _Wrender_glyph(mf, "M", "", &udummy,  &width, &dummy, &dummy, &dummy,
+                   &dummy);
+  if(width != 0){
+    struct tex_glue_token *t = new_tex_glue((float) width * 0.5, 0.0, 0.0);
+    TEX_LEXER_REMOVE_KERN();
+    TEX_LEXER_ADD_TOKEN(t);
+  }
+  goto continue_lexer_loop;
+}
+@
+
+The character U+2004 represents 1/3 of the size of '1em':
+
+@<tex_lexer: TeX Lexer@>+=
+if(next_utf8[0] == 226 && next_utf8[1] == 128 && next_utf8[2] == 132){
+  int dummy, width = 0;
+  GLuint udummy;
+  if(!_Wrender_glyph(mf, "—", "", &udummy,  &width, &dummy, &dummy, &dummy,
+                    &dummy))
+    _Wrender_glyph(mf, "M", "", &udummy,  &width, &dummy, &dummy, &dummy,
+                   &dummy);
+  if(width != 0){
+    struct tex_glue_token *t = new_tex_glue((float) width / 3.0, 0.0, 0.0);
+    TEX_LEXER_REMOVE_KERN();
+    TEX_LEXER_ADD_TOKEN(t);
+  }
+  goto continue_lexer_loop;
+}
+@
+
+The character U+2005 represents 1/4 of the size of '1em':
+
+@<tex_lexer: TeX Lexer@>+=
+if(next_utf8[0] == 226 && next_utf8[1] == 128 && next_utf8[2] == 133){
+  int dummy, width = 0;
+  GLuint udummy;
+  if(!_Wrender_glyph(mf, "—", "", &udummy,  &width, &dummy, &dummy, &dummy,
+                    &dummy))
+    _Wrender_glyph(mf, "M", "", &udummy,  &width, &dummy, &dummy, &dummy,
+                   &dummy);
+  if(width != 0){
+    struct tex_glue_token *t = new_tex_glue((float) width / 4.0, 0.0, 0.0);
+    TEX_LEXER_REMOVE_KERN();
+    TEX_LEXER_ADD_TOKEN(t);
+  }
+  goto continue_lexer_loop;
+}
+@
+
+The character U+2006 represents 1/6 of the size of '1em':
+
+@<tex_lexer: TeX Lexer@>+=
+if(next_utf8[0] == 226 && next_utf8[1] == 128 && next_utf8[2] == 134){
+  int dummy, width = 0;
+  GLuint udummy;
+  if(!_Wrender_glyph(mf, "—", "", &udummy,  &width, &dummy, &dummy, &dummy,
+                    &dummy))
+    _Wrender_glyph(mf, "M", "", &udummy,  &width, &dummy, &dummy, &dummy,
+                   &dummy);
+  if(width != 0){
+    struct tex_glue_token *t = new_tex_glue((float) width / 6.0, 0.0, 0.0);
+    TEX_LEXER_REMOVE_KERN();
+    TEX_LEXER_ADD_TOKEN(t);
+  }
+  goto continue_lexer_loop;
+}
+@
+
+The character U+2007 is the figure space. Preferred space to represent
+a gap where a digit may be placed. We will set it to the width of a
+``0'' if it is defined:
+
+@<tex_lexer: TeX Lexer@>+=
+if(next_utf8[0] == 226 && next_utf8[1] == 128 && next_utf8[2] == 135){
+  int dummy, width = 0;
+  GLuint udummy;
+  _Wrender_glyph(mf, "0", "", &udummy,  &width, &dummy, &dummy, &dummy,
+                 &dummy);
+  if(width != 0){
+    struct tex_glue_token *t = new_tex_glue((float) width, 0.0, 0.0);
+    TEX_LEXER_REMOVE_KERN();
+    TEX_LEXER_ADD_TOKEN(t);
+  }
+  goto continue_lexer_loop;
+}
+@
+
+The character U+2008 represents a punctuation space. It is the width
+of a period:
+
+@<tex_lexer: TeX Lexer@>+=
+if(next_utf8[0] == 226 && next_utf8[1] == 128 && next_utf8[2] == 136){
+  int dummy, width = 0;
+  GLuint udummy;
+  _Wrender_glyph(mf, ".", "", &udummy,  &width, &dummy, &dummy, &dummy,
+                 &dummy);
+  if(width != 0){
+    struct tex_glue_token *t = new_tex_glue((float) width, 0.0, 0.0);
+    TEX_LEXER_REMOVE_KERN();
+    TEX_LEXER_ADD_TOKEN(t);
+  }
+  goto continue_lexer_loop;
+}
+@
+
+The character U+2009 represents 1/5 of the size of '1em':
+
+@<tex_lexer: TeX Lexer@>+=
+if(next_utf8[0] == 226 && next_utf8[1] == 128 && next_utf8[2] == 137){
+  int dummy, width = 0;
+  GLuint udummy;
+  if(!_Wrender_glyph(mf, "—", "", &udummy,  &width, &dummy, &dummy, &dummy,
+                    &dummy))
+    _Wrender_glyph(mf, "M", "", &udummy,  &width, &dummy, &dummy, &dummy,
+                   &dummy);
+  if(width != 0){
+    struct tex_glue_token *t = new_tex_glue((float) width / 5.0, 0.0, 0.0);
+    TEX_LEXER_REMOVE_KERN();
+    TEX_LEXER_ADD_TOKEN(t);
+  }
+  goto continue_lexer_loop;
+}
+@
+
+The character U+200A should be smaller than the previous one. We will
+implement this by giving it the same size, but adding 50\%
+shrinkability:
+
+@<tex_lexer: TeX Lexer@>+=
+if(next_utf8[0] == 226 && next_utf8[1] == 128 && next_utf8[2] == 138){
+  int dummy, width = 0;
+  GLuint udummy;
+  if(!_Wrender_glyph(mf, "—", "", &udummy,  &width, &dummy, &dummy, &dummy,
+                    &dummy))
+    _Wrender_glyph(mf, "M", "", &udummy,  &width, &dummy, &dummy, &dummy,
+                   &dummy);
+  if(width != 0){
+    struct tex_glue_token *t = new_tex_glue((float) width / 5.0, 0.0,
+                                            (float) width / 10.0);
+    TEX_LEXER_REMOVE_KERN();
+    TEX_LEXER_ADD_TOKEN(t);
+  }
+  goto continue_lexer_loop;
+}
+@
+
+The character U+200B is a zero-width space. It can be useful for
+allowing lines to be broken within a word. In the presence of an empty
+space, we do not remove the kerning from the previous letter.
+
+@<tex_lexer: TeX Lexer@>+=
+if(next_utf8[0] == 226 && next_utf8[1] == 128 && next_utf8[2] == 139){
+  struct tex_glue_token *t = new_tex_glue(0.0, 0.0, 0.0);
+  TEX_LEXER_ADD_TOKEN(t);
+  goto continue_lexer_loop;
+}
+@
+
+The character U+205F represents 4/18 of the size of '1em':
+
+@<tex_lexer: TeX Lexer@>+=
+if(next_utf8[0] == 226 && next_utf8[1] == 129 && next_utf8[2] == 159){
+  int dummy, width = 0;
+  GLuint udummy;
+  if(!_Wrender_glyph(mf, "—", "", &udummy,  &width, &dummy, &dummy, &dummy,
+                    &dummy))
+    _Wrender_glyph(mf, "M", "", &udummy,  &width, &dummy, &dummy, &dummy,
+                   &dummy);
+  if(width != 0){
+    struct tex_glue_token *t = new_tex_glue((float) width * (4.0/18.0), 0.0,
+                                            0.0);
+    TEX_LEXER_REMOVE_KERN();
+    TEX_LEXER_ADD_TOKEN(t);
+  }
+  goto continue_lexer_loop;
+}
+@
+
+Finally, the character U+3000 is an ideographic space. A space
+equivalent to that occupied by a Chinese, Korean, or Japanese
+logogram.
+
+@<tex_lexer: TeX Lexer@>+=
+if(next_utf8[0] == 227 && next_utf8[1] == 128 && next_utf8[2] == 128){
+  int dummy, width = 0;
+  GLuint udummy;
+  _Wrender_glyph(mf, "一", "", &udummy,  &width, &dummy, &dummy, &dummy,
+                 &dummy) ||  // Testing chinese logogram
+  _Wrender_glyph(mf, "お", "", &udummy,  &width, &dummy, &dummy, &dummy,
+                 &dummy) || // Testing hiragana
+  _Wrender_glyph(mf, "コ", "", &udummy,  &width, &dummy, &dummy, &dummy,
+                 &dummy) || // Testing katakana
+  _Wrender_glyph(mf, "가", "", &udummy,  &width, &dummy, &dummy, &dummy,
+                 &dummy); // Testing hangul
+  if(width != 0){
+    struct tex_glue_token *t = new_tex_glue((float) width, 0.0, 0.0);
+    TEX_LEXER_REMOVE_KERN();
+    TEX_LEXER_ADD_TOKEN(t);
+  }
+  goto continue_lexer_loop;
+}
+@
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
